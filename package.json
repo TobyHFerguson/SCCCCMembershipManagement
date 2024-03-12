@@ -1,0 +1,21 @@
+{
+  "name": "sccccmanagement",
+  "version": "1.0.0",
+  "description": "Management utilities for SCCCC written in GAS",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "push": "npx clasp-env --folder . --scriptId 1m11ZhZl2TxlXkNKwvSfhqkO57ZBgu_KdfLUYIV1Lzksa64kiqQ32x5xA && clasp push -w",
+    "pull": "npx clasp-env --folder . --scriptId 1m11ZhZl2TxlXkNKwvSfhqkO57ZBgu_KdfLUYIV1Lzksa64kiqQ32x5xA && clasp pull"
+ 
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TobyHFerguson/SCCCCManagement.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node": "^21.7.1"
+  }
+}
