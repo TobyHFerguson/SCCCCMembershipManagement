@@ -1,0 +1,21 @@
+{
+  "timeZone": "America/Los_Angeles",
+  "dependencies": {
+    "libraries": [
+      {
+        "userSymbol": "bmPreFiddler",
+        "version": "34",
+        "libraryId": "13JUFGY18RHfjjuKmIRRfvmGlCYrEkEtN6uUm-iLUcxOUFRJD-WBX-tkR"
+      }
+    ],
+    "enabledAdvancedServices": [
+      {
+        "userSymbol": "AdminDirectory",
+        "version": "directory_v1",
+        "serviceId": "admin"
+      }
+    ]
+  },
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8"
+}
