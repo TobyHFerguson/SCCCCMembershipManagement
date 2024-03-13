@@ -5,9 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "push": "npx clasp-env --folder . --scriptId 1m11ZhZl2TxlXkNKwvSfhqkO57ZBgu_KdfLUYIV1Lzksa64kiqQ32x5xA && clasp push -w",
+    "push:watch": "npx clasp-env --folder . --scriptId 1m11ZhZl2TxlXkNKwvSfhqkO57ZBgu_KdfLUYIV1Lzksa64kiqQ32x5xA && clasp push -w",
+    "push": "npx clasp-env --folder . --scriptId 1m11ZhZl2TxlXkNKwvSfhqkO57ZBgu_KdfLUYIV1Lzksa64kiqQ32x5xA && clasp push",
     "pull": "npx clasp-env --folder . --scriptId 1m11ZhZl2TxlXkNKwvSfhqkO57ZBgu_KdfLUYIV1Lzksa64kiqQ32x5xA && clasp pull"
- 
+
   },
   "repository": {
     "type": "git",
