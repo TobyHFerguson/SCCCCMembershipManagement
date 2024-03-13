@@ -127,7 +127,9 @@ const MembershipFunctions = (() => {
 
 
   /**
-   * @matchTransactionToMember - return a value depending on whether the transaction matches a member
+   * @function matchTransactionToMember - return a value depending on whether the transaction matches a member
+   * @param {Transaction} transaction
+   * @param {Member} member
    * @return {int} - -1 if partial match, 0 if no match, +1 if full match
    */
   internal.matchTransactionToMember = (txn, member) => {
@@ -138,14 +140,29 @@ const MembershipFunctions = (() => {
     let phonesMatch = mobilePhone == txn["Phone Number"]
     return (emailsMatch && phonesMatch) ? 1 : (emailsMatch || phonesMatch) ? -1 : 0
   }
-  const processPaidTransactions = () => {
+  /**
+   * @typedef {Object} Transaction
+   * @property {string} Timestamp - date of transaction
+   * @property {string} Email Address - home address of user
+   * @property {string} First Name
+   * @property {string} Last Name
+   * @property {string|Number} Phone Number - string will be E164 phone number; number needs to be converted
+   * @property {string} Proccessed - date of processing - blank if not yet processed
+   * @property {string} Payable Status - starts with 'paid' if transaction is paid
+   * 
+   */
+  /**
+   * 
+   * @param {Transaction[]} transactions 
+   * @param {Directory} directory 
+   */
+  const processPaidTransactions = (transactions, directory) => {
     let processedDate = new Date().toLocaleDateString();
     // get all the transaction and membership data
-    let members = getAllUsers()
-    let transactionFiddler = getTransactionsFiddler_();
+    let members = directory.getAllUsers()
 
     // We filter only those transactions that have been paid and not processed
-    let txns = transactionFiddler.getData().filter((txn) => txn['Payable Status'].startsWith('paid') && !txn.Processed)
+    let txns = transactions.filter((txn) => txn['Payable Status'].startsWith('paid') && !txn.Processed)
     txns.forEach((t) => console.log(t))
     // Now we step through the longer list (memberships), looking up a matching txn for each one, again making sure these are 
     // transactions that haven't yet been process.
@@ -153,12 +170,12 @@ const MembershipFunctions = (() => {
     try {
       members.forEach((member) => {
         txns.filter((txn) => txn['Payable Status'].startsWith('paid') && !txn.Processed).forEach((txn) => {
-          let match = matchTransactionToMember(txn, member)
+          let match = internal.matchTransactionToMember(txn, member)
           if (match === 1) { // Known member - renewal
             let expires = new Date(member.customSchemas.Club_Membership.expires)
             expires.setFullYear(expires.getFullYear() + 1);
             member.customSchemas.Club_Membership.expires = expires
-            updateUser_(member, { customSchemas: { Club_Membership: { expires: internal.convertToYYYYMMDDFormat(expires) } } })
+            directory(member, { customSchemas: { Club_Membership: { expires: internal.convertToYYYYMMDDFormat(expires) } } })
             txn.Processed = processedDate
             console.log(`Member ${member.primaryEmail} has renewed until: ${member.customSchemas.Club_Membership.expires}`)
           } else if (match === -1) { // problem with this user. Mark transaction for followup}
@@ -177,9 +194,9 @@ const MembershipFunctions = (() => {
     // spreadsheet iff they are successfully inserted into the org.
     let joinTxns = txns.filter((txn) => txn['Payable Status'].startsWith('paid') && !txn.Processed && !txn.undecided)
     joinTxns.forEach((txn) => {
-      let user = createUserFromTransaction(txn)
+      let user = internal.createUserFromTransaction(txn)
       try {
-        addUser_(user)
+        directory.addUser_(user)
         txn.Processed = processedDate
       } catch (err) {
         if (!err.message.endsWith('Entity already exists.')) {
@@ -187,9 +204,9 @@ const MembershipFunctions = (() => {
           throw err
         } else {
           for (const x of Array(10).keys()) {
-            user = createUserFromTransaction(txn, x + 1)
+            user = internal.createUserFromTransaction(txn, x + 1)
             try {
-              addUser_(user)
+              directory.addUser_(user)
               txn.Processed = processedDate
               break
             } catch (e) {
@@ -210,11 +227,7 @@ const MembershipFunctions = (() => {
       delete txn.undecided
     }
     )
-
-    // Now store the transactions - any that weren't processed will be tried again.
-    transactionFiddler.dumpValues();
-
-  }
+}
 
   const createMembershipReport = () => {
     const membersFiddler = getMembersFiddler_();
