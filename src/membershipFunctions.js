@@ -2,7 +2,7 @@ const MembershipFunctions = (() => {
   const internal = {}
 
   internal.getOrgUnitPath = (type) => { return type === "Board" ? "/privileged users" : "/members" }
- 
+
   internal.getUserFiddler = () => {
     return bmPreFiddler.PreFiddler().getFiddler({
       id: null,
@@ -46,42 +46,44 @@ const MembershipFunctions = (() => {
       OrgID: `${txn['First Name']}.${txn['Last Name']}@santacruzcountycycling.club`,
       Type: "Member"
     }
-       // Need to figure out best way to construct the original users.
+    // Need to figure out best way to construct the original users.
     return member
   }
+
+  /*
+  Need to include this info for the user:
+  Home email
+  "emails": [
+      {
+        "address": "toby.h.ferguson@icloud.com",
+        "type": "home"
+      },
+      {
+        "address": "a.b@santacruzcountycycling.club",
+        "primary": true
+      }
+    ],
   
-  // Need to include this info for the user:
-  // Home email
-  // "emails": [
-  //     {
-  //       "address": "toby.h.ferguson@icloud.com",
-  //       "type": "home"
-  //     },
-  //     {
-  //       "address": "a.b@santacruzcountycycling.club",
-  //       "primary": true
-  //     }
-  //   ],
-  //
-  // Mobile Phone
-  //
-  //   "phones": [
-  //     {
-  //       "value": "+14083869343",
-  //       "type": "mobile"
-  //     }
-  //   ],
-  //
-  // Expiry date
-  //
-  //  "customSchemas": {
-  //     "Club_Membership": {
-  //       "expires": "2024-03-08",
-  //       "Join_Date": "2024-02-01"
-  //     }
-  //   },
-  // See https://developers.google.com/admin-sdk/directory/reference/rest/v1/users/get to retrieve user objects and see how they're structured.
-  // A user object is defined: https://developers.google.com/admin-sdk/directory/reference/rest/v1/users#User
+  Mobile Phone
+  
+    "phones": [
+      {
+        "value": "+14083869343",
+        "type": "mobile"
+      }
+    ],
+  
+  Expiry date
+  
+   "customSchemas": {
+      "Club_Membership": {
+        "expires": "2024-03-08",
+        "Join_Date": "2024-02-01"
+      }
+    },
+  See https://developers.google.com/admin-sdk/directory/reference/rest/v1/users/get to retrieve user objects and see how they're structured.
+  A user object is defined: https://developers.google.com/admin-sdk/directory/reference/rest/v1/users#User 
+  */
   internal.createUserObject = (primaryEmail, givenName, familyName, email, phone, joinDate = new Date(), orgUnitPath = "/members", expiryDate) => {
     phone += ""
     phone = phone.startsWith('+1') ? phone : '+1' + phone
@@ -293,8 +295,6 @@ const MembershipFunctions = (() => {
     }).dumpValues()
   }
 
-  const testUpdateUsers = () => updateUsers(2);
-  const testDeleteUsers = () => deleteUsers(2)
 
   return {
     internal,
@@ -302,15 +302,3 @@ const MembershipFunctions = (() => {
   }
 
 })();
-
-const MembershipTests = (() => { 
-  function testCreateUser() {
-  let user = MembershipFunctions.internal.createUserObject("J.K@santacruzcountycycling.club", "J", "K", "j.k@icloud.com", "+14083869343")
-  addUser_(user)
-}
-
-const testUpdateUsers = () => MembershipFunctions.updateUsers(2);
-const testDeleteUsers = () => MembershipFunctions.deleteUsers(2)
-  return {
-    testCreateUser
-  } })();
