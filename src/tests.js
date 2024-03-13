@@ -7,7 +7,24 @@
 //   })
 //   return {unit}
 // })()
+function testProcessPaidTransactions() {
+  const dir = Exports.Directory;
+  const mfs = Exports.MembershipFunctions;
+  const members = dir.getAllUsers()
+  const transactions = mfs.internal.getTransactionsFiddler().getValues()
+  mfs.processPaidTransactions(transactions, dir)
+  transactions.forEach((t) => console.log(t))
+}
 
+function testGetAllUsers() {
+  const dir = Exports.Directory
+  const unit = new bmUnitTester.Unit({showErrorsOnly: true })
+  unit.section(() => {
+    let actual = dir.getAllUsers().filter((u) => u.primaryEmail === "toby.ferguson@santacruzcountycycling.club").length
+    let expected = 1
+    unit.is(expected, actual)
+  })
+}
 function runUnitTest() {
   const unit = new bmUnitTester.Unit()
   const mf = Exports.MembershipFunctions
