@@ -1,14 +1,13 @@
 class User {
-  constructor(primaryEmail, givenName, familyName, email, phone, joinDate = new Date(), orgUnitPath = "/members", expiryDate) {
-    function convertToYYYYMMDDFormat(date) {
-      const offset = date.getTimezoneOffset();
-      let myDate = new Date(date - (offset * 60 * 1000))
-      return myDate.toISOString().split('T')[0];
-    }
+  constructor(primaryEmail, givenName, familyName, email, phone, Join_Date = new Date(), orgUnitPath = "/members", expiryDate) {
+
     phone += ""
     phone = phone.startsWith('+1') ? phone : '+1' + phone
-    expiryDate = expiryDate ? expiryDate : new Date()
-    expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+    expiryDate = expiryDate ? expiryDate : (() => {
+      let e = new Date()
+      e.setFullYear(e.getFullYear() + 1)
+      return e
+    })()
     let name = (givenName || familyName) ? { givenName, familyName } : undefined
     this.object = {
       primaryEmail,
@@ -27,8 +26,8 @@ class User {
       ],
       "customSchemas": {
         "Club_Membership": {
-          "expires": convertToYYYYMMDDFormat(expiryDate),
-          "Join_Date": convertToYYYYMMDDFormat(joinDate)
+          "expires": expiryDate,
+          Join_Date
         }
       },
       orgUnitPath,
@@ -36,7 +35,15 @@ class User {
       recoveryPhone: phone
     }
   }
+  convertToYYYYMMDDFormat(date) {
+    date = new Date(date)
+    const offset = date.getTimezoneOffset();
+    let myDate = new Date(date - (offset * 60 * 1000))
+    return myDate.toISOString().split('T')[0];
+  }
   getObject() {
+    this.object.customSchemas.Club_Membership.expires = this.convertToYYYYMMDDFormat(this.object.customSchemas.Club_Membership.expires)
+    this.object.customSchemas.Club_Membership.Join_Date = this.convertToYYYYMMDDFormat(this.object.customSchemas.Club_Membership.Join_Date)
     return this.object
   }
 
