@@ -207,64 +207,6 @@ const MembershipFunctions = (() => {
     )
   }
 
-  const printHeaders = () => {
-    let x = getUserFiddler_().getHeaders()
-    x
-  }
-
-
-
-
-  const updateUsers = (rowNum) => {
-    const membership = getUserFiddler_();
-    membership.mapRows((row, properties) => {
-      const thisRow = (rowNum === undefined) || (properties.rowOffset === rowNum - 2)
-      if (!thisRow) return row;
-      try {
-        updateUser_(createUserObjectFromRow_(row))
-        row.Timestamp = new Date().toLocaleDateString()
-      } catch (err) {
-        console.error(`${row.OrgID} could not be updated: ${err.message}`);
-      }
-      return row;
-    });
-  }
-
-  const provisionUsers = () => {
-    const membership = getUserFiddler_();
-    membership.mapRows((row, properties) => {
-      if (!row.Timestamp) {
-        try {
-          addUser_(createUserObjectFromRow_(row))
-          row.Timestamp = new Date().toISOString()
-        } catch (err) {
-          console.error(`${row.OrgID} could not be created: ${err.message}`);
-        }
-      }
-      return row;
-    })
-    membership.dumpValues();
-  }
-
-  const deleteUsers = (rowNum) => {
-    getUserFiddler_().filterRows((row, properties) => {
-      const thisRow = (rowNum === undefined) || (properties.rowOffset === rowNum - 2)
-      console.log(`thisRow: ${thisRow}`)
-      const action = row.Action.toLowerCase()
-      console.log(`Delete row ${properties.rowOffset + 2}? ${thisRow && action === "delete"}`)
-      if (!(thisRow && action === "delete")) return true;
-      try {
-        deleteUser_(createUserObjectFromRow_(row))
-        return false; // Indicates that row should be deleted from membership
-      }
-      catch (err) {
-        console.log(`Deletion of ${row.OrgID} Failed with error ${err.message}`)
-      }
-      return true;
-    }).dumpValues()
-  }
-
-
   return {
     internal,
     processPaidTransactions
