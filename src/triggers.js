@@ -12,6 +12,7 @@ function onOpen() {
   //     .addItem('Send Emails', 'sendEmails')
   //     .addToUi();
   ui.createMenu('Membership Management')
+  .addItem('Create Membership Report', 'createMembershipReport')
     .addItem('Process Transactions', 'processPaidTransactions')
     .addToUi()
 }

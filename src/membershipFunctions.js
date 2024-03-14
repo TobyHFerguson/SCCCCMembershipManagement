@@ -24,23 +24,6 @@ const MembershipFunctions = (() => {
     let myDate = new Date(date - (offset * 60 * 1000))
     return myDate.toISOString().split('T')[0];
   }
-  internal.memberFromTxn = (txn) => {
-    const today = new Date();
-    const expires = new Date();
-    expires.setFullYear(today.getFullYear() + 1)
-    const member = {
-      Email: txn['Email Address'],
-      First: txn['First Name'],
-      Last: txn['Last Name'],
-      Phone: `+1${txn['Phone Number']}`,
-      Joined: today.toLocaleDateString(),
-      Expires: internal.convertToYYYYMMDDFormat(expires),
-      OrgID: `${txn['First Name']}.${txn['Last Name']}@santacruzcountycycling.club`,
-      Type: "Member"
-    }
-    // Need to figure out best way to construct the original users.
-    return member
-  }
 
   /*
   Need to include this info for the user:
@@ -80,7 +63,7 @@ const MembershipFunctions = (() => {
     phone += ""
     phone = phone.startsWith('+1') ? phone : '+1' + phone
     expiryDate = expiryDate ? expiryDate : new Date()
-    expires.setFullYear(expires.getFullYear() + 1);
+    expiryDate.setFullYear(expiryDate.getFullYear() + 1);
     let name = (givenName || familyName) ? { givenName, familyName } : undefined
     return {
       primaryEmail,
@@ -109,7 +92,8 @@ const MembershipFunctions = (() => {
     }
   }
 
-  internal.createUserFromTransaction = (txn, suffix = "") => {
+  internal.createUserFromTransaction = (txn, suffix = 0) => {
+    suffix = suffix === 0 ? "" : "" + suffix
     return internal.createUserObject(`${txn["First Name"]}.${txn["Last Name"]}${suffix}@santacruzcountycycling.club`,
       txn["First Name"],
       txn["Last Name"],
@@ -117,7 +101,47 @@ const MembershipFunctions = (() => {
       txn["Phone Number"]
     )
   }
+  internal.processMembershipUndecided = (member, txn) => {
+    console.log("Partial match");
+    console.log(`Member: ${member.primaryEmail} ${member.email} ${member.phone}`);
+    console.log(`txn: ${txn['Email Address']} ${txn['Email Address']} ${txn['Phone Number']}`);
+    txn.undecided = true;
+  }
 
+  internal.processMembershipRenew = (member, directory, internal, txn, processedDate) => {
+    let expires = new Date(member.customSchemas.Club_Membership.expires);
+    expires.setFullYear(expires.getFullYear() + 1);
+    member.customSchemas.Club_Membership.expires = expires;
+    try {
+      directory.updateUser_(member, { customSchemas: { Club_Membership: { expires: internal.convertToYYYYMMDDFormat(expires) } } });
+      txn.Processed = processedDate;
+      console.log(`Member ${member.primaryEmail} has renewed until: ${member.customSchemas.Club_Membership.expires}`);
+    } catch (err) {
+      console.error(`Error while renewing member ${member.primaryEmail}: ${err.message}`);
+      console.error(member);
+    }
+  }
+
+  internal.processMembershipJoin = (directory, txn, internal) => {
+    const join = (suffix) => {
+      let user = internal.createUserFromTransaction(txn, suffix)
+      directory.addUser_(user)
+      txn.Processed = new Date().toLocaleDateString()
+    }
+    let i = 0;
+    while (true) {
+      try {
+        return join(i)
+      } catch (err) {
+        if (!err.message.endsWith('Entity already exists.')) {
+          console.error(`Error while attempting to add new user from transaction ${txn}: ${err.message}`)
+          throw err
+        } else {
+          i += 1
+        }
+      }
+    }
+  }
 
   /**
    * @function matchTransactionToMember - return a value depending on whether the transaction matches a member
@@ -140,7 +164,7 @@ const MembershipFunctions = (() => {
    * @property {string} First Name
    * @property {string} Last Name
    * @property {string|Number} Phone Number - string will be E164 phone number; number needs to be converted
-   * @property {string} Proccessed - date of processing - blank if not yet processed
+   * @property {string} Processed - date of processing - blank if not yet processed
    * @property {string} Payable Status - starts with 'paid' if transaction is paid
    * 
    */
@@ -162,22 +186,9 @@ const MembershipFunctions = (() => {
       txns.filter((txn) => txn['Payable Status'].startsWith('paid') && !txn.Processed).forEach((txn) => {
         let match = internal.matchTransactionToMember(txn, member)
         if (match === 1) { // Known member - renewal
-          let expires = new Date(member.customSchemas.Club_Membership.expires)
-          expires.setFullYear(expires.getFullYear() + 1);
-          member.customSchemas.Club_Membership.expires = expires
-          try {
-            directory.updateUser_(member, { customSchemas: { Club_Membership: { expires: internal.convertToYYYYMMDDFormat(expires) } } })
-            txn.Processed = processedDate
-            console.log(`Member ${member.primaryEmail} has renewed until: ${member.customSchemas.Club_Membership.expires}`)
-          } catch (err) {
-            console.error(`Error while renewing member ${member.primaryEmail}: ${err.message}`)
-            console.error(member)
-          }
+          internal.processMembershipRenew(member, directory, internal, txn, processedDate);
         } else if (match === -1) { // problem with this user. Mark transaction for followup}
-          console.log("Partial match")
-          console.log(`Member: ${member.primaryEmail} ${member.email} ${member.phone}`)
-          console.log(`txn: ${txn['Email Address']} ${txn['Email Address']} ${txn['Phone Number']}`)
-          txn.undecided = true
+          internal.processMembershipUndecided(member, txn);
         }
       });
     });
@@ -185,31 +196,7 @@ const MembershipFunctions = (() => {
     // spreadsheet iff they are successfully inserted into the org.
     let joinTxns = txns.filter((txn) => txn['Payable Status'].startsWith('paid') && !txn.Processed && !txn.undecided)
     joinTxns.forEach((txn) => {
-      let user = internal.createUserFromTransaction(txn)
-      try {
-        directory.addUser_(user)
-        txn.Processed = processedDate
-      } catch (err) {
-        if (!err.message.endsWith('Entity already exists.')) {
-          console.error(`Error while attempting to add new user ${user.primaryEmail}: ${err.message}`)
-          throw err
-        } else {
-          for (const x of Array(10).keys()) {
-            user = internal.createUserFromTransaction(txn, x + 1)
-            try {
-              directory.addUser_(user)
-              txn.Processed = processedDate
-              break
-            } catch (e) {
-              if (!e.message.endsWith('Entity already exists.')) {
-                throw e
-              } else {
-                continue
-              }
-            }
-          }
-        }
-      }
+      internal.processMembershipJoin(directory, txn, internal)
     })
     // For now just print out the errored users:
     txns.filter((txn) => txn['Payable Status'].startsWith('paid') && !txn.Processed && txn.undecided).forEach((txn) => {
@@ -284,3 +271,5 @@ const MembershipFunctions = (() => {
   }
 
 })();
+
+
