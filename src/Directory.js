@@ -109,6 +109,7 @@ const Directory = (() => {
   }
   return {
     getAllUsers,
-    addUser_
+    addUser_,
+    updateUser_
   }
 })()
