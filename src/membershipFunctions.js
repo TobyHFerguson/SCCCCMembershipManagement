@@ -94,7 +94,7 @@ const MembershipFunctions = (() => {
 
   internal.createUserFromTransaction = (txn, suffix = 0) => {
     suffix = suffix === 0 ? "" : "" + suffix
-    return internal.createUserObject(`${txn["First Name"]}.${txn["Last Name"]}${suffix}@santacruzcountycycling.club`,
+    return new Exports.User(`${txn["First Name"]}.${txn["Last Name"]}${suffix}@santacruzcountycycling.club`,
       txn["First Name"],
       txn["Last Name"],
       txn["Email Address"],
@@ -125,7 +125,7 @@ const MembershipFunctions = (() => {
   internal.processMembershipJoin = (directory, txn, internal) => {
     const join = (suffix) => {
       let user = internal.createUserFromTransaction(txn, suffix)
-      directory.addUser_(user)
+      directory.addUser_(user.getObject())
       txn.Processed = new Date().toLocaleDateString()
     }
     let i = 0;
