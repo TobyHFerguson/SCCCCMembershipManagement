@@ -4,5 +4,8 @@ var Exports = {
   },
   get Directory() {
     return Directory
+  },
+  get User() {
+    return User
   }
 }
