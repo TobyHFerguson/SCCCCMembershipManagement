@@ -125,7 +125,7 @@ const MembershipFunctions = (() => {
   internal.processMembershipJoin = (directory, txn, internal) => {
     const join = (suffix) => {
       let user = internal.createUserFromTransaction(txn, suffix)
-      directory.addUser_(user.getObject())
+      try { directory.addUser_(user.getObject()) } catch (err) { console.error(user.getObject()); throw err }
       txn.Processed = new Date().toLocaleDateString()
     }
     let i = 0;
