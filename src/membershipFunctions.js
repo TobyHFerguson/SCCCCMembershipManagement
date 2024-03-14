@@ -125,7 +125,12 @@ const MembershipFunctions = (() => {
   internal.processMembershipJoin = (directory, txn, internal) => {
     const join = (suffix) => {
       let user = internal.createUserFromTransaction(txn, suffix)
-      try { directory.addUser_(user.getObject()) } catch (err) { console.error(user.getObject()); throw err }
+      try { directory.addUser_(user.getObject()) } catch (err) {
+        if (!err.message.endsWith('Entity already exists.')) {
+          console.error(`Error while attempting to add new user ${user.getObject()}`)
+        }; 
+        throw err
+      }
       txn.Processed = new Date().toLocaleDateString()
     }
     let i = 0;
