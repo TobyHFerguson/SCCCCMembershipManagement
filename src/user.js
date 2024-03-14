@@ -42,9 +42,10 @@ class User {
     return myDate.toISOString().split('T')[0];
   }
   getObject() {
-    this.object.customSchemas.Club_Membership.expires = this.convertToYYYYMMDDFormat(this.object.customSchemas.Club_Membership.expires)
-    this.object.customSchemas.Club_Membership.Join_Date = this.convertToYYYYMMDDFormat(this.object.customSchemas.Club_Membership.Join_Date)
-    return this.object
+    const result = {...this.object}
+    result.customSchemas.Club_Membership.expires = this.convertToYYYYMMDDFormat(this.object.customSchemas.Club_Membership.expires)
+    result.customSchemas.Club_Membership.Join_Date = this.convertToYYYYMMDDFormat(this.object.customSchemas.Club_Membership.Join_Date)
+    return result
   }
 
 }
