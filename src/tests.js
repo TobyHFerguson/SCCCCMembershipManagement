@@ -10,10 +10,11 @@
 function testProcessPaidTransactions() {
   const dir = Exports.Directory;
   const mfs = Exports.MembershipFunctions;
-  const members = dir.getAllUsers()
-  const transactions = mfs.internal.getTransactionsFiddler().getValues()
+  const transactionsFiddler = mfs.internal.getTransactionsFiddler()
+  const transactions = transactionsFiddler.getData()
   mfs.processPaidTransactions(transactions, dir)
   transactions.forEach((t) => console.log(t))
+  transactionsFiddler.dumpValues()
 }
 
 function testGetAllUsers() {
