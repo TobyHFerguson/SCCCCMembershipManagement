@@ -36,10 +36,7 @@ class User {
     }
   }
   convertToYYYYMMDDFormat(date) {
-    date = new Date(date)
-    const offset = date.getTimezoneOffset();
-    let myDate = new Date(date - (offset * 60 * 1000))
-    return myDate.toISOString().split('T')[0];
+    return new Date(date).toISOString().split('T')[0];
   }
   getObject() {
     const result = {...this.object}

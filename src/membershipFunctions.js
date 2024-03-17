@@ -20,6 +20,7 @@ const MembershipFunctions = (() => {
   }
 
   internal.convertToYYYYMMDDFormat = (date) => {
+    date = new Date(date)
     const offset = date.getTimezoneOffset();
     let myDate = new Date(date - (offset * 60 * 1000))
     return myDate.toISOString().split('T')[0];
@@ -62,7 +63,7 @@ const MembershipFunctions = (() => {
   internal.createUserObject = (primaryEmail, givenName, familyName, email, phone, joinDate = new Date(), orgUnitPath = "/members", expiryDate) => {
     phone += ""
     phone = phone.startsWith('+1') ? phone : '+1' + phone
-    expiryDate = expiryDate ? expiryDate : new Date()
+    expiryDate = expiryDate ? new Date(expiryDate) : new Date()
     expiryDate.setFullYear(expiryDate.getFullYear() + 1);
     let name = (givenName || familyName) ? { givenName, familyName } : undefined
     return {

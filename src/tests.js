@@ -30,10 +30,15 @@ function runUnitTest() {
   const unit = new bmUnitTester.Unit()
   const mf = Exports.MembershipFunctions
   unit.section(() => {
+    const jd = new Date().toISOString().split('T')[0];
+    const ed = new Date().toISOString().split('T')[0];
     const expected = {
-      "primaryEmail": "J.K@santacruzcountycycling.club", "name": { "givenName": "J", "familyName": "K" }, "emails": [{ "address": "j.k@icloud.com", "type": "home" }], "phones": [{ "value": "+14083869343", "type": "mobile" }], "customSchemas": { "Club_Membership": { "expires": "2024-03-13", "Join_Date": "2024-03-13" } }, "orgUnitPath": "/members", "recoveryEmail": "j.k@icloud.com", "recoveryPhone": "+14083869343"
+      "primaryEmail": "J.K@santacruzcountycycling.club", "name": { "givenName": "J", "familyName": "K" }, "emails": [{ "address": "j.k@icloud.com", "type": "home" }], "phones": [{ "value": "+14083869343", "type": "mobile" }], "customSchemas": { "Club_Membership": { "expires": ed, "Join_Date": jd } }, "orgUnitPath": "/members", "recoveryEmail": "j.k@icloud.com", "recoveryPhone": "+14083869343"
     }
-    let actual = mf.internal.createUserObject("J.K@santacruzcountycycling.club", "J", "K", "j.k@icloud.com", "+14083869343")
+    let actual = new Exports.User("J.K@santacruzcountycycling.club", "J", "K", "j.k@icloud.com",  "+14083869343", jd, "/members", ed).getObject()
+    unit.is(expected.emails, actual.emails)
+    unit.is(expected.phones, actual.phones)
+    unit.is(expected.customSchemas, actual.customSchemas)
     unit.is(expected, actual)
   })
   unit.section(() => {
