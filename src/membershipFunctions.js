@@ -98,7 +98,7 @@ const MembershipFunctions = (() => {
       try { directory.addUser_(user.getObject()) } catch (err) {
         if (!err.message.endsWith('Entity already exists.')) {
           console.error(`Error while attempting to add new user ${user.getObject()}`)
-        }; 
+        };
         throw err
       }
       txn.Processed = new Date().toLocaleDateString()
@@ -130,7 +130,8 @@ const MembershipFunctions = (() => {
     let mobilePhone = (member.phones === undefined ? [{ value: null }] : member.phones).filter((p) => p.type === "mobile")[0].value
     let emailsMatch = homeEmail == txn["Email Address"]
     let phonesMatch = mobilePhone == txn["Phone Number"]
-    return (emailsMatch && phonesMatch) ? {full: true} : (emailsMatch || phonesMatch) ? {full: false} : {}
+    let result = (emailsMatch && phonesMatch) ? { full: true } : (emailsMatch || phonesMatch) ? { full: false } : false
+    return result
   }
   /**
    * @typedef {Object} Transaction
@@ -148,40 +149,25 @@ const MembershipFunctions = (() => {
    * @param {Transaction[]} transactions 
    * @param {Directory} directory 
    */
-  const processPaidTransactions = (transactions, members, match = internal.matchTransactionToMember, join, renew, partial) => {
-    let processedDate = new Date().toLocaleDateString();
-    t
-
-
+  const processPaidTransactions = (transactions, members, join, renew, partial, matcher = internal.matchTransactionToMember,) => {
     // We filter only those transactions that have been paid and not processed
     let txns = transactions.filter((txn) => txn['Payable Status'].startsWith('paid') && !txn.Processed)
-    
+
     // Now we step through the longer list (memberships), looking up a matching txn for each one, again making sure these are 
     // transactions that haven't yet been process.
     // If we find a txn then we update the Expires field of the member, and add the Processed timestamp to the corresponding txn
-    members.forEach((member) => {
-      txns.filter.forEach((txn) => {
-        let match = internal.matchTransactionToMember(txn, member)
-        if (match === 1) { // Known member - renewal
-          internal.processMembershipRenew(member, directory, internal, txn, processedDate);
-        } else if (match === -1) { // problem with this user. Mark transaction for followup}
-          internal.processMembershipUndecided(member, txn);
+    txns.forEach((txn) => {
+      let match = members.find((m) => matcher(txn, m)) // returns matched member, or undefined
+      if (match) { //
+        if (matcher(txn, match).full) {
+          renew(txn, match)
+        } else {
+          partial(txn, match)
         }
-      });
+      } else { // problem with this user. Mark transaction for followup}
+        join(txn, match)
+      }
     });
-    // Now we use any paid but unprocessed transactions which are not undecided to create new members, only adding them to the
-    // spreadsheet iff they are successfully inserted into the org.
-    let joinTxns = txns.filter((txn) => txn['Payable Status'].startsWith('paid') && !txn.Processed && !txn.undecided)
-    joinTxns.forEach((txn) => {
-      internal.processMembershipJoin(directory, txn, internal)
-    })
-    // For now just print out the errored users:
-    txns.filter((txn) => txn['Payable Status'].startsWith('paid') && !txn.Processed && txn.undecided).forEach((txn) => {
-      console.log("Txns which only partially matched")
-      console.log(txn)
-      delete txn.undecided
-    }
-    )
   }
 
   return {
