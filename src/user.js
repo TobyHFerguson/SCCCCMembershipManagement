@@ -1,14 +1,17 @@
 class User {
-  constructor(primaryEmail, givenName, familyName, email, phone, Join_Date = new Date(), orgUnitPath = "/members", expiryDate) {
-
-    phone += ""
+  constructor(txn) {
+    let givenName = txn['First Name'];
+    let familyName = txn['Last Name'];
+    let email = txn['Email Address'];
+    let phone  = txn['Phone Number'];
+    const name = (givenName || familyName) ? { givenName, familyName } : undefined
+    const primaryEmail = `${givenName}.${familyName}@santacruzcountycycling.club`
+    const orgUnitPath = "/members"
+    const Join_Date = new Date();
     phone = phone.startsWith('+1') ? phone : '+1' + phone
-    expiryDate = expiryDate ? expiryDate : (() => {
-      let e = new Date()
-      e.setFullYear(e.getFullYear() + 1)
-      return e
-    })()
-    let name = (givenName || familyName) ? { givenName, familyName } : undefined
+    const expiryDate = new Date()
+    expiryDate.setFullYear(expiryDate.getFullYear() + 1)
+
     this.object = {
       primaryEmail,
       name,
@@ -39,7 +42,7 @@ class User {
     return new Date(date).toISOString().split('T')[0];
   }
   getObject() {
-    const result = {...this.object}
+    const result = { ...this.object }
     result.customSchemas.Club_Membership.expires = this.convertToYYYYMMDDFormat(this.object.customSchemas.Club_Membership.expires)
     result.customSchemas.Club_Membership.Join_Date = this.convertToYYYYMMDDFormat(this.object.customSchemas.Club_Membership.Join_Date)
     return result
