@@ -60,38 +60,7 @@ const MembershipFunctions = (() => {
   See https://developers.google.com/admin-sdk/directory/reference/rest/v1/users/get to retrieve user objects and see how they're structured.
   A user object is defined: https://developers.google.com/admin-sdk/directory/reference/rest/v1/users#User 
   */
-  internal.createUserObject = (primaryEmail, givenName, familyName, email, phone, joinDate = new Date(), orgUnitPath = "/members", expiryDate) => {
-    phone += ""
-    phone = phone.startsWith('+1') ? phone : '+1' + phone
-    expiryDate = expiryDate ? new Date(expiryDate) : new Date()
-    expiryDate.setFullYear(expiryDate.getFullYear() + 1);
-    let name = (givenName || familyName) ? { givenName, familyName } : undefined
-    return {
-      primaryEmail,
-      name,
-      "emails": [
-        {
-          "address": email,
-          "type": "home"
-        },
-      ],
-      "phones": [
-        {
-          "value": phone,
-          "type": "mobile"
-        }
-      ],
-      "customSchemas": {
-        "Club_Membership": {
-          "expires": internal.convertToYYYYMMDDFormat(expiryDate),
-          "Join_Date": internal.convertToYYYYMMDDFormat(joinDate)
-        }
-      },
-      orgUnitPath,
-      recoveryEmail: email,
-      recoveryPhone: phone
-    }
-  }
+
 
   internal.createUserFromTransaction = (txn, suffix = 0) => {
     suffix = suffix === 0 ? "" : "" + suffix
