@@ -1,5 +1,5 @@
 function runUnitTest() {
-  const unit = new bmUnitTester.Unit({showErrorsOnly: true})
+  const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
   const mf = Exports.MembershipFunctions
   unit.section(() => {
     const txn = {
@@ -29,17 +29,25 @@ function runUnitTest() {
     const match = Exports.MembershipFunctions.internal.matchTransactionToMember
     const email = "email"
     const phone = "phone"
-    let txn = { 'Email Address': email, 'Phone Number': phone}
-    const member = { emails: [ {type : 'home', address: email }], phones: [ {type: 'mobile', value: phone}]}
-    const expected = 1
-    const actual = match(txn, member)
-    unit.is(1, match(txn, member))
-    unit.is(0, match({ 'Email Address': 'foo', 'Phone Number': 'bar'}, member))
-    unit.is(-1, match({...txn, 'Email Address': 'foo'}, member))
-    unit.is(-1, match({...txn, 'Phone Number': 'foo'}, member))
-  }, 
-  {description: "matcher tests",
-})
+    let txn = { 'Email Address': email, 'Phone Number': phone }
+    const partial1 = { ...txn, 'Email Address': 'foo' }
+    const partial2 = { ...txn, 'Phone Number': 'foo' }
+    const nomatch = { 'Email Address': 'foo', 'Phone Number': 'bar' }
+    const member = { emails: [{ type: 'home', address: email }], phones: [{ type: 'mobile', value: phone }] }
+    unit.is({ full: true }, match(txn, member))
+    unit.is({}, match(nomatch, member))
+    unit.is({ full: false }, match(partial1, member))
+    unit.is({ full: false }, match(partial2, member))
+    let members = [member]
+    unit.is(member, members.find((m) => match(txn, m)))
+    unit.not(undefined, members.find((m) => match(nomatch, m)))
+    unit.is(member, members.find((m) => match(partial1, m)))
+    unit.is(member, members.find((m) => match(partial2, m)))
+
+  },
+    {
+      description: "matcher tests",
+    })
 
   return unit.isGood()
 }

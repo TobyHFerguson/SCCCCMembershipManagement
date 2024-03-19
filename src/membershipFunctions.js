@@ -130,7 +130,7 @@ const MembershipFunctions = (() => {
     let mobilePhone = (member.phones === undefined ? [{ value: null }] : member.phones).filter((p) => p.type === "mobile")[0].value
     let emailsMatch = homeEmail == txn["Email Address"]
     let phonesMatch = mobilePhone == txn["Phone Number"]
-    return (emailsMatch && phonesMatch) ? 1 : (emailsMatch || phonesMatch) ? -1 : 0
+    return (emailsMatch && phonesMatch) ? {full: true} : (emailsMatch || phonesMatch) ? {full: false} : {}
   }
   /**
    * @typedef {Object} Transaction
