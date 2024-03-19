@@ -15,14 +15,20 @@ function runUnitTest() {
     const expected = {
       "primaryEmail": "J.K@santacruzcountycycling.club", "name": { "givenName": "J", "familyName": "K" }, "emails": [{ "address": "j.k@icloud.com", "type": "home" }], "phones": [{ "value": "+14083869343", "type": "mobile" }], "customSchemas": { "Club_Membership": { "expires": ed, "Join_Date": jd } }, "orgUnitPath": "/members", "recoveryEmail": "j.k@icloud.com", "recoveryPhone": "+14083869343"
     }
-    let actual = new Exports.User(txn).getObject()
+    let user = new Exports.User(txn)
+    let actual = user.getObject()
     unit.is(expected.emails, actual.emails)
     unit.is(expected.phones, actual.phones)
     unit.is(expected.customSchemas, actual.customSchemas)
     unit.is(expected, actual)
+    user.incrementExpirationDate();
+    ed = new Date(ed)
+    ed.setFullYear(ed.getFullYear() + 1)
+    ed = ed.toISOString().split('T')[0];
+    unit.is(ed, user.getObject().customSchemas.Club_Membership.expires)
   },
     {
-      description: "Unit Constructor",
+      description: "User Constructor",
       skip: false
     })
   unit.section(() => {

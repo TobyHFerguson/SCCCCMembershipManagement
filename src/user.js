@@ -38,6 +38,11 @@ class User {
       recoveryPhone: phone
     }
   }
+  incrementExpirationDate() {
+    let ed = new Date(this.object.customSchemas.Club_Membership.expires)
+    ed.setFullYear(ed.getFullYear() + 1)
+    this.object.customSchemas.Club_Membership.expires = ed
+  }
   convertToYYYYMMDDFormat(date) {
     return new Date(date).toISOString().split('T')[0];
   }
