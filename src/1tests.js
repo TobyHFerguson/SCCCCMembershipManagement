@@ -1,5 +1,5 @@
 function runUnitTest() {
-  const unit = new bmUnitTester.Unit()
+  const unit = new bmUnitTester.Unit({showErrorsOnly: true})
   const mf = Exports.MembershipFunctions
   unit.section(() => {
     const txn = {
@@ -21,8 +21,25 @@ function runUnitTest() {
     unit.is(expected.customSchemas, actual.customSchemas)
     unit.is(expected, actual)
   },
-  { description: "Unit Constructor",
-  showErrorsOnly: true})
+    {
+      description: "Unit Constructor",
+      skip: false
+    })
+  unit.section(() => {
+    const match = Exports.MembershipFunctions.internal.matchTransactionToMember
+    const email = "email"
+    const phone = "phone"
+    let txn = { 'Email Address': email, 'Phone Number': phone}
+    const member = { emails: [ {type : 'home', address: email }], phones: [ {type: 'mobile', value: phone}]}
+    const expected = 1
+    const actual = match(txn, member)
+    unit.is(1, match(txn, member))
+    unit.is(0, match({ 'Email Address': 'foo', 'Phone Number': 'bar'}, member))
+    unit.is(-1, match({...txn, 'Email Address': 'foo'}, member))
+    unit.is(-1, match({...txn, 'Phone Number': 'foo'}, member))
+  }, 
+  {description: "matcher tests",
+})
 
   return unit.isGood()
 }

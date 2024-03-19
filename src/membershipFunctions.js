@@ -148,17 +148,19 @@ const MembershipFunctions = (() => {
    * @param {Transaction[]} transactions 
    * @param {Directory} directory 
    */
-  const processPaidTransactions = (transactions, directory) => {
+  const processPaidTransactions = (transactions, members, match = internal.matchTransactionToMember, join, renew, partial) => {
     let processedDate = new Date().toLocaleDateString();
-    let members = directory.getAllUsers()
+    t
+
 
     // We filter only those transactions that have been paid and not processed
     let txns = transactions.filter((txn) => txn['Payable Status'].startsWith('paid') && !txn.Processed)
+    
     // Now we step through the longer list (memberships), looking up a matching txn for each one, again making sure these are 
     // transactions that haven't yet been process.
     // If we find a txn then we update the Expires field of the member, and add the Processed timestamp to the corresponding txn
     members.forEach((member) => {
-      txns.filter((txn) => txn['Payable Status'].startsWith('paid') && !txn.Processed).forEach((txn) => {
+      txns.filter.forEach((txn) => {
         let match = internal.matchTransactionToMember(txn, member)
         if (match === 1) { // Known member - renewal
           internal.processMembershipRenew(member, directory, internal, txn, processedDate);
