@@ -54,6 +54,7 @@ function runUnitTest() {
     description: 'entire sections can be skipped',
     skip: true
   })
+  return unit.isGood() ? "OK" : "Bad"
 }
 function runTest() {
   const i = Exports.MembershipFunctions.internal

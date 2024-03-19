@@ -4,7 +4,7 @@
   "description": "Management utilities for SCCCC written in GAS",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npx clasp-env --folder . --scriptId 1m11ZhZl2TxlXkNKwvSfhqkO57ZBgu_KdfLUYIV1Lzksa64kiqQ32x5xA && clasp push && clasp run runUnitTest",
     "push:watch": "npx clasp-env --folder . --scriptId 1m11ZhZl2TxlXkNKwvSfhqkO57ZBgu_KdfLUYIV1Lzksa64kiqQ32x5xA && clasp push -w",
     "push": "npx clasp-env --folder . --scriptId 1m11ZhZl2TxlXkNKwvSfhqkO57ZBgu_KdfLUYIV1Lzksa64kiqQ32x5xA && clasp push",
     "pull": "npx clasp-env --folder . --scriptId 1m11ZhZl2TxlXkNKwvSfhqkO57ZBgu_KdfLUYIV1Lzksa64kiqQ32x5xA && clasp pull"
