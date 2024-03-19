@@ -48,6 +48,22 @@ function runUnitTest() {
     {
       description: "matcher tests",
     })
+  unit.section(() => {
+    const result = { join: "", renew: "", partial: ""}
+    const join = () => result.join = "joined"
+    const renew = () => result.renew = "renewed"
+    const partial = () => result.partial = "partial"
+    const email = "email"
+    const phone = "phone"
+    let txn = { 'Email Address': email, 'Phone Number': phone, "Payable Status": "paid" }
+    const partial1 = { ...txn, 'Email Address': 'foo' }
+    const partial2 = { ...txn, 'Phone Number': 'foo' }
+    const nomatch = { 'Email Address': 'foo', 'Phone Number': 'bar' }
+    const member = { emails: [{ type: 'home', address: email }], phones: [{ type: 'mobile', value: phone }] }
+    mf.processPaidTransactions([txn], [member], join, renew, partial)
+    unit.is("renewed", result.renew)
+  },
+    { description: "processPaidTransaction tests" })
 
   return unit.isGood()
 }
