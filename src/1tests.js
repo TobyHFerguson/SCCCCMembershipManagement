@@ -1,31 +1,3 @@
-// const ns = (() => {
-//   const unit = new bmUnitTester.Unit()
-//   const mf = new Exports.MembershipFunctions
-//   unit.section(() => {
-//     let user = mf.internal.createUserObject("J.K@santacruzcountycycling.club", "J", "K", "j.k@icloud.com", "+14083869343")
-//     unit.is({}, user)
-//   })
-//   return {unit}
-// })()
-function testProcessPaidTransactions() {
-  const dir = Exports.Directory;
-  const mfs = Exports.MembershipFunctions;
-  const transactionsFiddler = mfs.internal.getTransactionsFiddler()
-  const transactions = transactionsFiddler.getData()
-  mfs.processPaidTransactions(transactions, dir)
-  transactions.forEach((t) => console.log(t))
-  transactionsFiddler.dumpValues()
-}
-
-function testGetAllUsers() {
-  const dir = Exports.Directory
-  const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
-  unit.section(() => {
-    let actual = dir.getAllUsers().filter((u) => u.primaryEmail === "toby.ferguson@santacruzcountycycling.club").length
-    let expected = 1
-    unit.is(expected, actual)
-  })
-}
 function runUnitTest() {
   const unit = new bmUnitTester.Unit()
   const mf = Exports.MembershipFunctions
@@ -53,6 +25,34 @@ function runUnitTest() {
   showErrorsOnly: true})
 
   return unit.isGood()
+}
+// const ns = (() => {
+//   const unit = new bmUnitTester.Unit()
+//   const mf = new Exports.MembershipFunctions
+//   unit.section(() => {
+//     let user = mf.internal.createUserObject("J.K@santacruzcountycycling.club", "J", "K", "j.k@icloud.com", "+14083869343")
+//     unit.is({}, user)
+//   })
+//   return {unit}
+// })()
+function testProcessPaidTransactions() {
+  const dir = Exports.Directory;
+  const mfs = Exports.MembershipFunctions;
+  const transactionsFiddler = mfs.internal.getTransactionsFiddler()
+  const transactions = transactionsFiddler.getData()
+  mfs.processPaidTransactions(transactions, dir)
+  transactions.forEach((t) => console.log(t))
+  transactionsFiddler.dumpValues()
+}
+
+function testGetAllUsers() {
+  const dir = Exports.Directory
+  const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
+  unit.section(() => {
+    let actual = dir.getAllUsers().filter((u) => u.primaryEmail === "toby.ferguson@santacruzcountycycling.club").length
+    let expected = 1
+    unit.is(expected, actual)
+  })
 }
 
 
