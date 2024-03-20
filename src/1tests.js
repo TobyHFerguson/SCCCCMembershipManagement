@@ -24,7 +24,7 @@ function test() {
     unit.is(2, members.length)
     expected = txns.map((t) => new Exports.User(t))
     unit.is(expected, members)
-    unit.is(["J.K@santacruzcountycycling.club joined", "A.B@santacruzcountycycling.club joined"], notifier.joinLog)
+    unit.is([expected], notifier.joinLog)
     txns.forEach((t) => {
       unit.not(undefined, t.Processed, { neverUndefined: false })
     })
