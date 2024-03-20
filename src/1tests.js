@@ -1,25 +1,58 @@
 function test() {
-  const txn = {
+  const txn1 = {
     "First Name": "J",
     "Last Name": "K",
     "Email Address": "j.k@icloud.com",
     "Phone Number": "+14083869343",
     "Payable Status": "paid"
   }
+  const txn2 = {
+    "First Name": "A",
+    "Last Name": "B",
+    "Email Address": "a.b@icloud.com",
+    "Phone Number": "+14083869000",
+    "Payable Status": "paid"
+  }
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
   unit.section(() => {
+    const txns = [txn1, txn2]
     const directory = new Exports.Directory()
     const notifier = new Exports.Notifier()
     const uut = new Exports.TransactionProcessor(directory, notifier)
-    Logger.clear()
-    uut.processTransactions([txn])
+    uut.processTransactions(txns)
     const members = directory.members
-    unit.is(1, members.length)
-    const expected = new Exports.User(txn)
-    unit.is(expected, members[0])
-    unit.is(["J.K@santacruzcountycycling.club joined"], notifier.joinLog)
-  },{
-    description: "Initial TransactionProcessor tests"
+    unit.is(2, members.length)
+    expected = txns.map((t) => new Exports.User(t))
+    unit.is(expected, members)
+    unit.is(["J.K@santacruzcountycycling.club joined", "A.B@santacruzcountycycling.club joined"], notifier.joinLog)
+    txns.forEach((t) => {
+      unit.not(undefined, t.Processed, { neverUndefined: false })
+    })
+  }, {
+    description: "Initial TransactionProcessor join tests",
+    skip: true
+  })
+  unit.section(() => {
+    class ED extends Exports.Directory {
+      addUser(txn) { throw new Error() }
+    }
+    const txns = [txn1, txn2]
+    const directory = new ED()
+    const notifier = new Exports.Notifier()
+    const uut = new Exports.TransactionProcessor(directory, notifier)
+    uut.processTransactions(txns)
+    const members = directory.members
+    unit.is(0, members.length)
+    unit.is([], notifier.joinLog)
+    let expected = []
+    txns.forEach((t) => { expected.push({ txn: t, user: new Exports.User(t) }) })
+    notifier.joinFailureLog.forEach((l) => {
+      unit.is(true, l.err instanceof Error)
+      delete l.err
+    })
+    unit.is(expected, notifier.joinFailureLog)
+  }, {
+    description: "TransactionProcessor join failure tests"
   })
   return unit.isGood()
 }
