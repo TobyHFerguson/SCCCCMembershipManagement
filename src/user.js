@@ -3,7 +3,7 @@ class User {
     let givenName = txn['First Name'];
     let familyName = txn['Last Name'];
     let email = txn['Email Address'];
-    let phone  = txn['Phone Number'];
+    let phone = txn['Phone Number'];
     const name = (givenName || familyName) ? { givenName, familyName } : undefined
     const primaryEmail = `${givenName}.${familyName}@santacruzcountycycling.club`
     const orgUnitPath = "/members"
@@ -12,47 +12,39 @@ class User {
     const expiryDate = new Date()
     expiryDate.setFullYear(expiryDate.getFullYear() + 1)
 
-    this.object = {
-      primaryEmail,
-      name,
-      "emails": [
-        {
-          "address": email,
-          "type": "home"
-        },
-      ],
-      "phones": [
+    this.primaryEmail = primaryEmail
+    this.name = name
+    this.emails = [
+      {
+        "address": email,
+        "type": "home"
+      },
+    ],
+      this.phones = [
         {
           "value": phone,
           "type": "mobile"
         }
       ],
-      "customSchemas": {
+      this.customSchemas = {
         "Club_Membership": {
-          "expires": expiryDate,
-          Join_Date
+          "expires": this.convertToYYYYMMDDFormat_(expiryDate),
+          Join_Date: this.convertToYYYYMMDDFormat_(Join_Date)
         }
       },
-      orgUnitPath,
-      recoveryEmail: email,
-      recoveryPhone: phone
-    }
-  }
-  incrementExpirationDate() {
-    let ed = new Date(this.object.customSchemas.Club_Membership.expires)
-    ed.setFullYear(ed.getFullYear() + 1)
-    this.object.customSchemas.Club_Membership.expires = ed
-  }
-  convertToYYYYMMDDFormat(date) {
-    return new Date(date).toISOString().split('T')[0];
-  }
-  getObject() {
-    const result = { ...this.object }
-    result.customSchemas.Club_Membership.expires = this.convertToYYYYMMDDFormat(this.object.customSchemas.Club_Membership.expires)
-    result.customSchemas.Club_Membership.Join_Date = this.convertToYYYYMMDDFormat(this.object.customSchemas.Club_Membership.Join_Date)
-    return result
+      this.orgUnitPath = orgUnitPath,
+      this.recoveryEmail = email,
+      this.recoveryPhone = phone
   }
 
+  incrementExpirationDate() {
+    let ed = new Date(this.customSchemas.Club_Membership.expires)
+    ed.setFullYear(ed.getFullYear() + 1)
+    this.customSchemas.Club_Membership.expires = this.convertToYYYYMMDDFormat_(ed)
+  }
+  convertToYYYYMMDDFormat_(date) {
+    return new Date(date).toISOString().split('T')[0];
+  }
 }
 
 
