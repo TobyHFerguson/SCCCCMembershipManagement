@@ -97,6 +97,7 @@ const Directory = (() => {
     user.changePasswordAtNextLogin = true;
     user = AdminDirectory.Users.insert(user);
     console.log(`user ${user.primaryEmail} created`)
+    return user
   }
 
   const deleteUser = (user) => {
@@ -110,6 +111,7 @@ const Directory = (() => {
   return {
     getAllUsers,
     addUser_,
-    updateUser_
+    updateUser_,
+    deleteUser
   }
 })()
