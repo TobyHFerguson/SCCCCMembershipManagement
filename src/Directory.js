@@ -1,5 +1,9 @@
 class Directory {
-  get members() {
-    return [1]
+  constructor() {
+    this.members = [];
+  }
+
+  addUser(user) {
+    this.members.push(user)
   }
 }
