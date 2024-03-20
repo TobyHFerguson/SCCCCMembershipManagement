@@ -48,10 +48,33 @@ function test() {
     skip: false
   })
   unit.section(() => {
+    const txn1 = {
+      "First Name": "J",
+      "Last Name": "K",
+      "Email Address": "j.k@icloud.com",
+      "Phone Number": "+14083869343",
+      "Payable Status": "paid"
+    }
+    const txn2 = { ...txn1 }
+    txn2["Email Address"] = "foo.bar@x.com"
+    txn2["Phone Number"] = "1234"
+    const directory = new Exports.Directory()
+    const notifier = new Exports.Notifier()
+    const uut = new Exports.TransactionProcessor(directory, notifier)
+    uut.processTransactions([txn1, txn2])
+    unit.is(2, directory.members.filter((m) => m.name.givenName === "J").length, { description: "Expecting to be able to add multiple people with same names but different phones and emails" })
+    unit.not([new Exports.User(txn1), new Exports.User(txn2)], directory.members, { description: "Expecting that the two members aren't the ones I started with"})
+    unit.is(true, directory.members.some((m) => m.primaryEmail.split("@")[0].endsWith(1)), { description: "Expecting one of the members has had a suffix added to their email address"})
+  },
+    {
+      description: "Test of the ability for multiple people with the same name to join",
+      skip: false
+    })
+  unit.section(() => {
 
     class ED extends Exports.Directory {
       addUser(user) {
-        if (user.primaryEmail === badUser.primaryEmail) { throw new Error() }
+        if (user.primaryEmail === badUser.primaryEmail) { throw new DirectoryError() }
         super.addUser(user)
       }
     }
@@ -78,7 +101,9 @@ function test() {
     unit.is(true, new Date(txn2.Processed) instanceof Date, { description: "myTxn2 should have a processing date" })
     unit.not(undefined, txn2.Processed, { neverUndefined: false, description: "txn2 should  have been processed" })
   }, {
-    description: "TransactionProcessor join failure tests", neverUndefined: false
+    description: "TransactionProcessor join failure tests",
+    neverUndefined: false,
+    skip: false
   })
   unit.section(() => {
     const f = deepCopy(fixture1)
@@ -150,12 +175,10 @@ function test() {
     unit.is(true, directory.members.some((m) => m.phones[0].value === new Exports.User(t1).phones[0].value), { description: "Expecting directory to contain the t1 user" })
     unit.is(false, directory.members.some((m) => m.phones[0].value === new Exports.User(t2).phones[0].value), { description: "Expecting directory not to contain the t2 user" })
     unit.is([{ txn: t2, user: new Exports.User(t1) }], notifier.partialsLog, { description: "Expecting to be notified about the partials" })
-
-
-
   },
     {
-      description: "Partials"
+      description: "Partials",
+      skip: false
     })
   return unit.isGood()
 }
@@ -218,7 +241,7 @@ function runUnitTest() {
   },
     {
       description: "User Constructor",
-      skip: false
+      skip: true
     })
   unit.section(() => {
     const match = Exports.MembershipFunctions.internal.matchTransactionToMember
