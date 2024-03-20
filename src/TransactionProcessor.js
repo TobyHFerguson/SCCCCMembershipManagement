@@ -14,7 +14,7 @@ class TransactionProcessor {
       try {
         this.directory.addUser(user)
         txn.Processed = new Date().toISOString().split("T")[0]
-        this.notifier.processJoin(txn, user)
+        this.notifier.joinSuccess(txn, user)
       } catch (err) {
         this.notifier.joinFailure(txn, user, err)
       }

@@ -8,7 +8,7 @@ class Notifier {
      * @param {Transaction} txn The transaction that caused the join
      * @param {User} user The user that was joined
      */
-    processJoin(txn, user) {
+    joinSuccess(txn, user) {
         this.joinLog.push(`${user.primaryEmail} joined`)
     }
     joinFailure(txn, user, err) {
