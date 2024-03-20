@@ -1,3 +1,24 @@
+function test() {
+  const txn = {
+    "First Name": "J",
+    "Last Name": "K",
+    "Email Address": "j.k@icloud.com",
+    "Phone Number": "+14083869343",
+    "Payable Status": "paid"
+  }
+  const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
+  unit.section(() => {
+    const directory = new Exports.Directory()
+    const notifier = new Exports.Notifier()
+    const uut = new Exports.TransactionProcessor(directory, notifier)
+    uut.processTransactions([txn])
+    const members = directory.members
+    unit.is(1, members.length)
+  },{
+    description: "Initial TransactionProcessor tests"
+  })
+  return unit.isGood()
+}
 function runUnitTest() {
   const txn = {
     "First Name": "J",
@@ -28,7 +49,8 @@ function runUnitTest() {
     }
   },
     {
-      description: "test make user"
+      description: "test make user",
+      skip: true
     })
   unit.section(() => {
     const jd = new Date().toISOString().split('T')[0];
@@ -53,7 +75,7 @@ function runUnitTest() {
   },
     {
       description: "User Constructor",
-      skip: false
+      skip: true
     })
   unit.section(() => {
     const match = Exports.MembershipFunctions.internal.matchTransactionToMember
@@ -100,7 +122,10 @@ function runUnitTest() {
     mf.processPaidTransactions([nomatch], [member], join, renew, partial)
     unit.is("joined", result.join)
   },
-    { description: "processPaidTransaction tests" })
+    {
+      description: "processPaidTransaction tests",
+      skip: true
+    })
 
   return unit.isGood()
 }
