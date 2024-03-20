@@ -1,40 +1,52 @@
 class User {
-  constructor(txn) {
-    let givenName = txn['First Name'];
-    let familyName = txn['Last Name'];
-    let email = txn['Email Address'];
-    let phone = txn['Phone Number'];
-    const name = (givenName || familyName) ? { givenName, familyName } : undefined
-    const primaryEmail = `${givenName}.${familyName}@santacruzcountycycling.club`
-    const orgUnitPath = "/members"
-    const Join_Date = new Date();
-    phone = phone.startsWith('+1') ? phone : '+1' + phone
-    const expiryDate = new Date()
-    expiryDate.setFullYear(expiryDate.getFullYear() + 1)
+  constructor(obj) {
+    if (obj.primaryEmail === undefined){
+      const txn = obj
+      let givenName = txn['First Name'];
+      let familyName = txn['Last Name'];
+      let email = txn['Email Address'];
+      let phone = txn['Phone Number'];
+      const name = (givenName || familyName) ? { givenName, familyName } : undefined
+      const primaryEmail = `${givenName}.${familyName}@santacruzcountycycling.club`
+      const orgUnitPath = "/members"
+      const Join_Date = new Date();
+      phone = phone.startsWith('+1') ? phone : '+1' + phone
+      const expiryDate = new Date()
+      expiryDate.setFullYear(expiryDate.getFullYear() + 1)
 
-    this.primaryEmail = primaryEmail
-    this.name = name
-    this.emails = [
-      {
-        "address": email,
-        "type": "home"
-      },
-    ],
-      this.phones = [
+      this.primaryEmail = primaryEmail
+      this.name = name
+      this.emails = [
         {
-          "value": phone,
-          "type": "mobile"
-        }
+          "address": email,
+          "type": "home"
+        },
       ],
-      this.customSchemas = {
-        "Club_Membership": {
-          "expires": this.convertToYYYYMMDDFormat_(expiryDate),
-          Join_Date: this.convertToYYYYMMDDFormat_(Join_Date)
-        }
-      },
-      this.orgUnitPath = orgUnitPath,
-      this.recoveryEmail = email,
-      this.recoveryPhone = phone
+        this.phones = [
+          {
+            "value": phone,
+            "type": "mobile"
+          }
+        ],
+        this.customSchemas = {
+          "Club_Membership": {
+            "expires": this.convertToYYYYMMDDFormat_(expiryDate),
+            Join_Date: this.convertToYYYYMMDDFormat_(Join_Date)
+          }
+        },
+        this.orgUnitPath = orgUnitPath,
+        this.recoveryEmail = email,
+        this.recoveryPhone = phone
+    } else {// Simply copy the values, deeply
+      this.primaryEmail = JSON.parse(JSON.stringify(obj.primaryEmail))
+      this.name = JSON.parse(JSON.stringify(obj.name))
+      this.emails = JSON.parse(JSON.stringify(obj.emails))
+      this.phones = JSON.parse(JSON.stringify(obj.phones))
+      this.customSchemas = JSON.parse(JSON.stringify(obj.customSchemas))
+      this.orgUnitPath = JSON.parse(JSON.stringify(obj.orgUnitPath))
+      this.recoveryEmail = JSON.parse(JSON.stringify(obj.recoveryEmail))
+      this.recoveryPhone = JSON.parse(JSON.stringify(obj.recoveryPhone))
+    }
   }
 
   incrementExpirationDate() {

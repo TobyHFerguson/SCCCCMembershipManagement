@@ -3,6 +3,8 @@ class Notifier {
         this.joinLog = []
         this.joinFailureLog = []
         this.renewalSuccessLog = []
+        this.renewalFailureLog = []
+        this.partialsLog = []
     }
     /**
      * Notify anyone interested that a user has been added as a consequence of the transaction
@@ -19,6 +21,9 @@ class Notifier {
       this.renewalSuccessLog.push({txn, user})
     }
     renewalFailure(txn, user, err) {
-      Logger.log(`renewalFailure: ${err}`)
+      this.renewalFailureLog.push({txn, user, err})
+    }
+    partial(txn, user) {
+      this.partialsLog.push({txn, user})
     }
 }

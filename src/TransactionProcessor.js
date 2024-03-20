@@ -9,16 +9,19 @@ class TransactionProcessor {
       this.notifier = notifier
   }
   processTransactions(transactions, matcher = this.matchTransactionToMember_) {
-    const txns = transactions.filter((txn) => txn['Payable Status'].startsWith('paid') && !txn.Processed)
+    const txns = transactions.filter((txn) => txn['Payable Status'] !== undefined && txn['Payable Status'].startsWith('paid') && !txn.Processed)
     txns.forEach((txn) => {
       let match = this.directory.members.find((m) => matcher(txn, m))
       if (match) { //
         if (matcher(txn, match).full) {
+          Logger.log("TP.pt - renew_")
           this.renew_(txn, match)
         } else {
+           Logger.log("TP.pt - partial_")
           this.partial_(txn, match)
         }
       } else { // problem with this user. Mark transaction for followup}
+      Logger.log("TP.pt - join_")
         this.join_(txn)
       }
     });
@@ -53,15 +56,17 @@ class TransactionProcessor {
    * @param (Transaction) txn the transaction causing the renewal
    * @param (User) member the member that is renewing their membership
    */
-  renew_(txn, member) { 
-    member.incrementExpirationDate()
+  renew_(txn, member) {
+    let updatedMember = new Exports.User(member).incrementExpirationDate()
     try {
-      this.directory.updateUser(member)
+      this.directory.updateUser(updatedMember)
       txn.Processed = new Date()
-      this.notifier.renewalSuccess(txn, member)
-      } catch (err) {
-        this.notifier.renewalFailure(txn, member, err)
-      }
+      this.notifier.renewalSuccess(txn, updatedMember)
+    } catch (err) {
+      this.notifier.renewalFailure(txn, member, err)
+    }
   }
-  partial_(txn, member) { console.info("partial_")}
+  partial_(txn, member) { 
+    this.notifier.partial(txn, member)
+   }
 }
