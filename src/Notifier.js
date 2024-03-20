@@ -9,7 +9,7 @@ class Notifier {
      * @param {User} user The user that was joined
      */
     joinSuccess(txn, user) {
-        this.joinLog.push(`${user.primaryEmail} joined`)
+        this.joinLog.push(user)
     }
     joinFailure(txn, user, err) {
       this.joinFailureLog.push({ txn, user, err})
