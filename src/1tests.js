@@ -38,7 +38,7 @@ function test() {
     unit.is(2, members.length, { description: "Expected to have 2 new members" })
     let expectedMembers = txns.map((t) => new Exports.User(t))
     unit.is(expectedMembers, members, { desription: "Expected new members to be made from the transactions" })
-    let expectedLog = txns.map((t, i) => {return {txn:t, user: expectedMembers[i]}})
+    let expectedLog = txns.map((t, i) => { return { txn: t, user: expectedMembers[i] } })
     unit.is(expectedLog, notifier.joinLog, { description: "Expected notification log to contain the transactions and the members" })
     txns.forEach((t) => {
       unit.not(undefined, t.Processed, { neverUndefined: false, description: "Expected both transactions to have been processed" })
@@ -67,7 +67,7 @@ function test() {
     const members = directory.members
     unit.is(1, members.length, { description: "Only one member expected" })
     unit.is([new Exports.User(txn2)], members, { description: "Expect myTxn2 to have become a member" })
-    unit.is([{txn: txn2, user: new Exports.User(txn2)}], notifier.joinLog, { description: "successful join notification is expected to be txn2" })
+    unit.is([{ txn: txn2, user: new Exports.User(txn2) }], notifier.joinLog, { description: "successful join notification is expected to be txn2" })
     unit.is(1, notifier.joinFailureLog.length, { description: "one join failure expected" })
     notifier.joinFailureLog.forEach((l) => {
       unit.is(true, l.err instanceof Error)
@@ -84,23 +84,79 @@ function test() {
     const f = deepCopy(fixture1)
     const txns = [f.txn1, f.txn2]
     const renewalTxn = txns[0]
+    const renewingUser = new Exports.User(renewalTxn)
     const joinTxn = txns[1]
+    const joiningUser = new Exports.User(joinTxn)
     const directory = new Exports.Directory()
-    directory.members = [new Exports.User(renewalTxn)]
+    directory.members = [renewingUser]
     const notifier = new Exports.Notifier()
     const uut = new Exports.TransactionProcessor(directory, notifier)
     uut.processTransactions(txns)
-    const expected = new Exports.User(renewalTxn)
-    expected.incrementExpirationDate()
-    unit.is([expected, new Exports.User(joinTxn)], directory.members, { description: "The joined and renewed users are expected to be members of the Directory" })
-    unit.is([{ txn: renewalTxn, user: expected }], notifier.renewalSuccessLog, { description: "notification of renewal expected" })
-    unit.not(undefined, renewalTxn.Processed, { description: "renewalTxn has been processed"})
+    const updatedRenewingUser = new Exports.User(renewalTxn)
+    updatedRenewingUser.incrementExpirationDate()
+    unit.is(true, directory.members.some((m) => m.primaryEmail = updatedRenewingUser.primaryEmail), { description: "The renewed user is expected to be a member of the Directory" })
+    unit.is(true, directory.members.some((m) => m.primaryEmail = joiningUser.primaryEmail), { description: "The joining user is expected to be a member of the Directory" })
+
+    unit.is([{ txn: renewalTxn, user: updatedRenewingUser }], notifier.renewalSuccessLog, { description: "notification of renewal expected" })
+    unit.not(undefined, renewalTxn.Processed, { description: "renewalTxn has been processed" })
     unit.is([{ txn: joinTxn, user: new Exports.User(joinTxn) }], notifier.joinLog, { description: "notification of join expected" })
-    unit.not(undefined, joinTxn.Processed, { description: "joinTxn has been processed"})
-    
+    unit.not(undefined, joinTxn.Processed, { description: "joinTxn has been processed" })
+
   }, {
-    description: "Renewal Tests"
+    description: "Renewal Tests",
+    skip: false
   })
+  unit.section(() => {
+    const f = deepCopy(fixture1)
+    const renewalTxn = f.txn1
+    const badUser = new Exports.User(renewalTxn);
+    const expectedMember = new Exports.User(badUser)
+    unit.is(badUser, expectedMember, { description: "users should be the same" })
+    unit.not(badUser.incrementExpirationDate, expectedMember, { description: "users should be different" })
+    const txns = [renewalTxn];
+    class BadRenewalDirectory extends Exports.Directory {
+      updateUser(user) {
+        if (user.primaryEmail === badUser.primaryEmail) { throw new Error() }
+        super.updateUser(user)
+      }
+    }
+    const directory = new BadRenewalDirectory()
+    directory.members = [badUser]
+    const notifier = new Exports.Notifier()
+    const uut = new Exports.TransactionProcessor(directory, notifier)
+    uut.processTransactions(txns)
+    unit.is([expectedMember], directory.members, { description: "Expecting member to be untouched" })
+    unit.is(undefined, renewalTxn.Processed, { description: "Expecting renewalTxn to not have been processed", neverUndefined: false })
+    let rfl = notifier.renewalFailureLog
+    delete rfl[0].err
+    unit.is([{ txn: renewalTxn, user: expectedMember }], rfl, { description: "Expecting renewalTxn and expectedMember to be in the renewalFailureLog" })
+  },
+    {
+      description: "Renewal failure tests",
+      skip: false
+    })
+  unit.section(() => {
+    const f = deepCopy(fixture1)
+    const t1 = f.txn1
+    const t2 = deepCopy(t1)
+    const directory = new Exports.Directory()
+    const notifier = new Exports.Notifier()
+    const uut = new Exports.TransactionProcessor(directory, notifier)
+    uut.processTransactions([t1]);
+    t2["Phone Number"] = "+1234"
+    uut.processTransactions([t2]);
+    unit.is(1, directory.members.length, { description: "something was added as a member" })
+    unit.is(new Exports.User(t1), directory.members[0], { description: "t1 added as a member" })
+    unit.is(true, directory.members.some((m) => m.phones[0].value === new Exports.User(t1).phones[0].value), { description: "Expecting directory to contain the t1 user" })
+    unit.is(false, directory.members.some((m) => m.phones[0].value === new Exports.User(t2).phones[0].value), { description: "Expecting directory not to contain the t2 user" })
+    unit.is([{ txn: t2, user: new Exports.User(t1) }], notifier.partialsLog, { description: "Expecting to be notified about the partials" })
+
+
+
+  },
+    {
+      description: "Partials"
+    })
   return unit.isGood()
 }
 function runUnitTest() {
@@ -155,11 +211,14 @@ function runUnitTest() {
     ed.setFullYear(ed.getFullYear() + 1)
     ed = ed.toISOString().split('T')[0];
     unit.is(ed, user.customSchemas.Club_Membership.expires)
-
+    let user2 = new Exports.User(user)
+    unit.is(user, user2, { description: "Expected the copy constructor to make identical copies" })
+    user2.incrementExpirationDate()
+    unit.not(user, user2, { description: "Expected deep copies, not shallow copies" })
   },
     {
       description: "User Constructor",
-      skip: true
+      skip: false
     })
   unit.section(() => {
     const match = Exports.MembershipFunctions.internal.matchTransactionToMember
