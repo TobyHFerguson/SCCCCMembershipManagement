@@ -17,7 +17,7 @@ function test() {
     unit.is(1, members.length)
     const expected = new Exports.User(txn)
     unit.is(expected, members[0])
-    unit.is("J.K@santacruzcountycycling.club joined", Logger.getLog().split("INFO: ")[1].trim())
+    unit.is(["J.K@santacruzcountycycling.club joined"], notifier.joinLog)
   },{
     description: "Initial TransactionProcessor tests"
   })
