@@ -11,11 +11,13 @@ function test() {
     const directory = new Exports.Directory()
     const notifier = new Exports.Notifier()
     const uut = new Exports.TransactionProcessor(directory, notifier)
+    Logger.clear()
     uut.processTransactions([txn])
     const members = directory.members
     unit.is(1, members.length)
     const expected = new Exports.User(txn)
     unit.is(expected, members[0])
+    unit.is("J.K@santacruzcountycycling.club joined", Logger.getLog().split("INFO: ")[1].trim())
   },{
     description: "Initial TransactionProcessor tests"
   })
