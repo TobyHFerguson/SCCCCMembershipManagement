@@ -41,6 +41,7 @@ class User {
     let ed = new Date(this.customSchemas.Club_Membership.expires)
     ed.setFullYear(ed.getFullYear() + 1)
     this.customSchemas.Club_Membership.expires = this.convertToYYYYMMDDFormat_(ed)
+    return this
   }
   convertToYYYYMMDDFormat_(date) {
     return new Date(date).toISOString().split('T')[0];

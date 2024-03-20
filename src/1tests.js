@@ -1,40 +1,54 @@
 function test() {
-  const txn1 = {
-    "First Name": "J",
-    "Last Name": "K",
-    "Email Address": "j.k@icloud.com",
-    "Phone Number": "+14083869343",
-    "Payable Status": "paid"
+  function deepCopy(obj) {
+    return JSON.parse(JSON.stringify(obj))
   }
-  const txn2 = {
-    "First Name": "A",
-    "Last Name": "B",
-    "Email Address": "a.b@icloud.com",
-    "Phone Number": "+14083869000",
-    "Payable Status": "paid"
+  const fixture1 = {
+    txn1: {
+      "First Name": "J",
+      "Last Name": "K",
+      "Email Address": "j.k@icloud.com",
+      "Phone Number": "+14083869343",
+      "Payable Status": "paid"
+    },
+    txn2: {
+      "First Name": "A",
+      "Last Name": "B",
+      "Email Address": "a.b@icloud.com",
+      "Phone Number": "+14083869000",
+      "Payable Status": "paid"
+    },
+    badTxn: {
+      "First Name": "J",
+      "Last Name": "K",
+      "Email Address": "j.k@icloud.com",
+      "Phone Number": "+14083869343",
+      "Payable Status": "paid"
+    },
   }
+  const badUser = new Exports.User(fixture1.txn1)
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
   unit.section(() => {
-    const txns = [txn1, txn2]
+    const f = deepCopy(fixture1)
+    const txns = [f.txn1, f.txn2]
     const directory = new Exports.Directory()
     const notifier = new Exports.Notifier()
     const uut = new Exports.TransactionProcessor(directory, notifier)
     uut.processTransactions(txns)
     const members = directory.members
-    unit.is(2, members.length)
-    expected = txns.map((t) => new Exports.User(t))
-    unit.is(expected, members)
-    unit.is([expected], notifier.joinLog)
+    unit.is(2, members.length, { description: "Expected to have 2 new members" })
+    let expectedMembers = txns.map((t) => new Exports.User(t))
+    unit.is(expectedMembers, members, { desription: "Expected new members to be made from the transactions" })
+    let expectedLog = txns.map((t, i) => {return {txn:t, user: expectedMembers[i]}})
+    unit.is(expectedLog, notifier.joinLog, { description: "Expected notification log to contain the transactions and the members" })
     txns.forEach((t) => {
-      unit.not(undefined, t.Processed, { neverUndefined: false })
+      unit.not(undefined, t.Processed, { neverUndefined: false, description: "Expected both transactions to have been processed" })
     })
   }, {
     description: "Initial TransactionProcessor join tests",
-    skip: true
+    skip: false
   })
   unit.section(() => {
-    const badTxn = txn1
-    const badUser = new Exports.User(badTxn)
+
     class ED extends Exports.Directory {
       addUser(user) {
         if (user.primaryEmail === badUser.primaryEmail) { throw new Error() }
@@ -42,24 +56,50 @@ function test() {
       }
     }
 
-    const txns = [badTxn, txn2]
+    const f = deepCopy(fixture1)
+    const txns = [f.txn1, f.txn2]
+    const badTxn = f.txn1
+    const txn2 = f.txn2
     const directory = new ED()
     const notifier = new Exports.Notifier()
     const uut = new Exports.TransactionProcessor(directory, notifier)
     uut.processTransactions(txns)
     const members = directory.members
-    unit.is(1, members.length, { description: "Only one member expected"})
-    unit.is([new Exports.User(txn2)], notifier.joinLog, { description: "successful join notification is expected to be txn2"})
-    unit.is(1, notifier.joinFailureLog.length, { description: "one join failure expected"})
+    unit.is(1, members.length, { description: "Only one member expected" })
+    unit.is([new Exports.User(txn2)], members, { description: "Expect myTxn2 to have become a member" })
+    unit.is([{txn: txn2, user: new Exports.User(txn2)}], notifier.joinLog, { description: "successful join notification is expected to be txn2" })
+    unit.is(1, notifier.joinFailureLog.length, { description: "one join failure expected" })
     notifier.joinFailureLog.forEach((l) => {
       unit.is(true, l.err instanceof Error)
       delete l.err
     })
-    unit.is([{txn: badTxn, user: badUser}], notifier.joinFailureLog, { description: "Join failure is expected to be badTxn"})
+    unit.is([{ txn: badTxn, user: badUser }], notifier.joinFailureLog, { description: "Join failure is expected to be badTxn" })
     unit.is(undefined, badTxn.Processed, { neverUndefined: false, description: "badTxn should not have been processed" })
-   unit.not(undefined, txn2.Processed, { neverUndefined: false, description: "txn2 should  have been processed" })
+    unit.is(true, new Date(txn2.Processed) instanceof Date, { description: "myTxn2 should have a processing date" })
+    unit.not(undefined, txn2.Processed, { neverUndefined: false, description: "txn2 should  have been processed" })
   }, {
-    description: "TransactionProcessor join failure tests"
+    description: "TransactionProcessor join failure tests", neverUndefined: false
+  })
+  unit.section(() => {
+    const f = deepCopy(fixture1)
+    const txns = [f.txn1, f.txn2]
+    const renewalTxn = txns[0]
+    const joinTxn = txns[1]
+    const directory = new Exports.Directory()
+    directory.members = [new Exports.User(renewalTxn)]
+    const notifier = new Exports.Notifier()
+    const uut = new Exports.TransactionProcessor(directory, notifier)
+    uut.processTransactions(txns)
+    const expected = new Exports.User(renewalTxn)
+    expected.incrementExpirationDate()
+    unit.is([expected, new Exports.User(joinTxn)], directory.members, { description: "The joined and renewed users are expected to be members of the Directory" })
+    unit.is([{ txn: renewalTxn, user: expected }], notifier.renewalSuccessLog, { description: "notification of renewal expected" })
+    unit.not(undefined, renewalTxn.Processed, { description: "renewalTxn has been processed"})
+    unit.is([{ txn: joinTxn, user: new Exports.User(joinTxn) }], notifier.joinLog, { description: "notification of join expected" })
+    unit.not(undefined, joinTxn.Processed, { description: "joinTxn has been processed"})
+    
+  }, {
+    description: "Renewal Tests"
   })
   return unit.isGood()
 }
