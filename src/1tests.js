@@ -33,24 +33,31 @@ function test() {
     skip: true
   })
   unit.section(() => {
+    const badTxn = txn1
+    const badUser = new Exports.User(badTxn)
     class ED extends Exports.Directory {
-      addUser(txn) { throw new Error() }
+      addUser(user) {
+        if (user.primaryEmail === badUser.primaryEmail) { throw new Error() }
+        super.addUser(user)
+      }
     }
-    const txns = [txn1, txn2]
+
+    const txns = [badTxn, txn2]
     const directory = new ED()
     const notifier = new Exports.Notifier()
     const uut = new Exports.TransactionProcessor(directory, notifier)
     uut.processTransactions(txns)
     const members = directory.members
-    unit.is(0, members.length)
-    unit.is([], notifier.joinLog)
-    let expected = []
-    txns.forEach((t) => { expected.push({ txn: t, user: new Exports.User(t) }) })
+    unit.is(1, members.length, { description: "Only one member expected"})
+    unit.is([new Exports.User(txn2)], notifier.joinLog, { description: "successful join notification is expected to be txn2"})
+    unit.is(1, notifier.joinFailureLog.length, { description: "one join failure expected"})
     notifier.joinFailureLog.forEach((l) => {
       unit.is(true, l.err instanceof Error)
       delete l.err
     })
-    unit.is(expected, notifier.joinFailureLog)
+    unit.is([{txn: badTxn, user: badUser}], notifier.joinFailureLog, { description: "Join failure is expected to be badTxn"})
+    unit.is(undefined, badTxn.Processed, { neverUndefined: false, description: "badTxn should not have been processed" })
+   unit.not(undefined, txn2.Processed, { neverUndefined: false, description: "txn2 should  have been processed" })
   }, {
     description: "TransactionProcessor join failure tests"
   })
