@@ -7,5 +7,11 @@ var Exports = {
   },
   get User() {
     return User
+  },
+  get Notifier() {
+    return Notifier
+  },
+  get TransactionProcessor(){
+    return TransactionProcessor
   }
 }
