@@ -1,5 +1,6 @@
 class User {
   constructor(obj) {
+    this.generation_ = 0
     if (obj.primaryEmail === undefined){
       const txn = obj
       let givenName = txn['First Name'];
@@ -13,7 +14,6 @@ class User {
       phone = phone.startsWith('+1') ? phone : '+1' + phone
       const expiryDate = new Date()
       expiryDate.setFullYear(expiryDate.getFullYear() + 1)
-
       this.primaryEmail = primaryEmail
       this.name = name
       this.emails = [
@@ -49,6 +49,10 @@ class User {
     }
   }
 
+  incrementGeneration() {
+    this.generation_ += 1
+    this.primaryEmail = `${this.name.givenName}.${this.name.familyName}${this.generation_}@santacruzcountycycling.club` 
+  }
   incrementExpirationDate() {
     let ed = new Date(this.customSchemas.Club_Membership.expires)
     ed.setFullYear(ed.getFullYear() + 1)

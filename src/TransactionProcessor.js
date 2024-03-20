@@ -17,11 +17,11 @@ class TransactionProcessor {
           Logger.log("TP.pt - renew_")
           this.renew_(txn, match)
         } else {
-           Logger.log("TP.pt - partial_")
+          Logger.log("TP.pt - partial_")
           this.partial_(txn, match)
         }
       } else { // problem with this user. Mark transaction for followup}
-      Logger.log("TP.pt - join_")
+        Logger.log("TP.pt - join_")
         this.join_(txn)
       }
     });
@@ -42,13 +42,23 @@ class TransactionProcessor {
     return result
   }
   join_(txn) {
-    const member = new Exports.User(txn)
-    try {
-      this.directory.addUser(member)
-      txn.Processed = new Date().toISOString().split("T")[0]
-      this.notifier.joinSuccess(txn, member)
-    } catch (err) {
-      this.notifier.joinFailure(txn, member, err)
+    let member = new Exports.User(txn)
+    while (true) {
+      try {
+        this.directory.addUser(member)
+        txn.Processed = new Date().toISOString().split("T")[0]
+        this.notifier.joinSuccess(txn, member)
+        break
+      } catch (err) {
+        if (err instanceof UserAlreadyExistsError) {
+          console.log('TP - join retry')
+          member.incrementGeneration()
+        } else {
+          console.log(`TP - join_ err`)
+          this.notifier.joinFailure(txn, member, err)
+          break
+        }
+      }
     }
   }
   /**
@@ -66,7 +76,7 @@ class TransactionProcessor {
       this.notifier.renewalFailure(txn, member, err)
     }
   }
-  partial_(txn, member) { 
+  partial_(txn, member) {
     this.notifier.partial(txn, member)
-   }
+  }
 }
