@@ -1,6 +1,7 @@
 class Notifier {
     constructor() {
         this.joinLog = []
+        this.joinFailureLog = []
     }
     /**
      * Notify anyone interested that a user has been added as a consequence of the transaction
@@ -9,5 +10,8 @@ class Notifier {
      */
     processJoin(txn, user) {
         this.joinLog.push(`${user.primaryEmail} joined`)
+    }
+    joinFailure(txn, user, err) {
+      this.joinFailureLog.push({ txn, user, err})
     }
 }
