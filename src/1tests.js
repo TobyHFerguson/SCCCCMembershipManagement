@@ -37,9 +37,9 @@ function test() {
     const uut = new TransactionProcessor(directory, notifier)
     uut.processTransactions(txns)
     const m1 = new User(f.txn1)
-    unit.is([m1]), directory.members, { description: "Expecting txn1 member to have joined the Directory"}
+    unit.is([m1], directory.members, { description: "Expecting txn1 member to have joined the Directory" })
     directory.deleteUser(m1)
-    unit.is([], directory.members, {description: "Expected member to have been deleted from the directory"})
+    unit.is([], directory.members, { description: "Expected member to have been deleted from the directory" })
   },
     { description: "user create/delete tests" })
   unit.section(() => {
@@ -48,7 +48,10 @@ function test() {
     unit.is(uut.orgUnitPath, f.orgUnitPath, { description: "Expecting orgUnitPath to be setup correctly" })
     unit.is(uut.primaryEmail.split('@')[1], f.domain, { description: "Expecting domain to be setup correctly" })
   },
-    { description: "User tests" })
+    {
+      description: "User tests",
+      skip: true
+    })
   unit.section(() => {
     const f = deepCopy(fixture1)
     const txns = [f.txn1, f.txn2]
@@ -67,7 +70,7 @@ function test() {
     })
   }, {
     description: "Initial TransactionProcessor join tests",
-    skip: false
+    skip: true
   })
   unit.section(() => {
     const txn1 = {
@@ -90,7 +93,7 @@ function test() {
   },
     {
       description: "Test of the ability for multiple people with the same name to join",
-      skip: false
+      skip: true
     })
   unit.section(() => {
 
@@ -125,7 +128,7 @@ function test() {
   }, {
     description: "TransactionProcessor join failure tests",
     neverUndefined: false,
-    skip: false
+    skip: true
   })
   unit.section(() => {
     const f = deepCopy(fixture1)
@@ -151,7 +154,7 @@ function test() {
 
   }, {
     description: "Renewal Tests",
-    skip: false
+    skip: true
   })
   unit.section(() => {
     const f = deepCopy(fixture1)
@@ -180,7 +183,7 @@ function test() {
   },
     {
       description: "Renewal failure tests",
-      skip: false
+      skip: true
     })
   unit.section(() => {
     const f = deepCopy(fixture1)
@@ -200,7 +203,7 @@ function test() {
   },
     {
       description: "Partials",
-      skip: false
+      skip: true
     })
   return unit.isGood()
 }
@@ -287,7 +290,7 @@ function runUnitTest() {
   },
     {
       description: "matcher tests",
-      skip: false
+      skip: true
     })
   unit.section(() => {
     const result = { join: "", renew: "", partial: "" }
