@@ -1,39 +1,69 @@
 function test() {
-  function deepCopy(obj) {
-    return JSON.parse(JSON.stringify(obj))
+  class TestDirectory extends Directory {
+    constructor() {
+      super();
+      this.users = [];
+    }
+    get members() {
+      return this.users
+    }
+    set members(members) {
+      this.users = members
+    }
+    addUser(user) {
+      if (this.users.some((m) => m.primaryEmail === user.primaryEmail)) throw new UserAlreadyExistsError
+      this.users.push(new User(user))
+    }
+    /**
+     * Delete the given user
+     * @param {User} user the user to be deleted
+     */
+    deleteUser(user) {
+      let i = this.users.findIndex((u) => u.primaryEmail === user.primaryEmail)
+      if (i > -1) this.users.splice(i, 1)
+    }
+
+    updateUser(user) {
+      let i = this.users.find((m) => m.primaryEmail === user.primaryEmail)
+      this.users[i] = new User(user)
+    }
   }
-  const fixture1 = {
-    txn1: {
-      "First Name": "J",
-      "Last Name": "K",
-      "Email Address": "j.k@icloud.com",
-      "Phone Number": "+14083869343",
-      "Payable Status": "paid"
-    },
-    txn2: {
-      "First Name": "A",
-      "Last Name": "B",
-      "Email Address": "a.b@icloud.com",
-      "Phone Number": "+14083869000",
-      "Payable Status": "paid"
-    },
-    badTxn: {
-      "First Name": "J",
-      "Last Name": "K",
-      "Email Address": "j.k@icloud.com",
-      "Phone Number": "+14083869343",
-      "Payable Status": "paid"
-    },
-    domain: 'a.b',
-    orgUnitPath: '/test'
+  class Fixture1 {
+    constructor() {
+      this.txn1 = {
+        "First Name": "J",
+        "Last Name": "K",
+        "Email Address": "j.k@icloud.com",
+        "Phone Number": "+14083869343",
+        "Payable Status": "paid"
+      }
+      this.txn2 = {
+        "First Name": "A",
+        "Last Name": "B",
+        "Email Address": "a.b@icloud.com",
+        "Phone Number": "+14083869000",
+        "Payable Status": "paid"
+      }
+      this.badTxn = {
+        "First Name": "J",
+        "Last Name": "K",
+        "Email Address": "j.k@icloud.com",
+        "Phone Number": "+14083869343",
+        "Payable Status": "paid"
+      }
+      this.domain = 'a.b';
+      this.orgUnitPath = '/test';
+      this.directory = new TestDirectory();
+      this.notifier = new Notifier();
+    }
   }
-  const badUser = new User(fixture1.txn1)
+  const badUser = new User(new Fixture1().txn1)
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
   unit.section(() => {
-    const f = deepCopy(fixture1)
+    const f = new Fixture1()
     const txns = [f.txn1]
-    const directory = new Directory()
-    const notifier = new Notifier()
+    const directory = f.directory
+    const notifier = f.notifier
     const uut = new TransactionProcessor(directory, notifier)
     uut.processTransactions(txns)
     const m1 = new User(f.txn1)
@@ -43,7 +73,7 @@ function test() {
   },
     { description: "user create/delete tests" })
   unit.section(() => {
-    const f = deepCopy(fixture1)
+    const f = new Fixture1()
     const uut = new User(f.txn1, f.orgUnitPath, f.domain)
     unit.is(uut.orgUnitPath, f.orgUnitPath, { description: "Expecting orgUnitPath to be setup correctly" })
     unit.is(uut.primaryEmail.split('@')[1], f.domain, { description: "Expecting domain to be setup correctly" })
@@ -53,10 +83,10 @@ function test() {
       skip: true
     })
   unit.section(() => {
-    const f = deepCopy(fixture1)
+    const f = new Fixture1()
     const txns = [f.txn1, f.txn2]
-    const directory = new Directory()
-    const notifier = new Notifier()
+    const directory = f.directory
+    const notifier = f.notifier
     const uut = new TransactionProcessor(directory, notifier)
     uut.processTransactions(txns)
     const members = directory.members
@@ -83,8 +113,8 @@ function test() {
     const txn2 = { ...txn1 }
     txn2["Email Address"] = "foo.bar@x.com"
     txn2["Phone Number"] = "1234"
-    const directory = new Directory()
-    const notifier = new Notifier()
+    const directory = f.directory
+    const notifier = f.notifier
     const uut = new TransactionProcessor(directory, notifier)
     uut.processTransactions([txn1, txn2])
     unit.is(2, directory.members.filter((m) => m.name.givenName === "J").length, { description: "Expecting to be able to add multiple people with same names but different phones and emails" })
@@ -104,12 +134,12 @@ function test() {
       }
     }
 
-    const f = deepCopy(fixture1)
+    const f = new Fixture1()
     const txns = [f.txn1, f.txn2]
     const badTxn = f.txn1
     const txn2 = f.txn2
     const directory = new ED()
-    const notifier = new Notifier()
+    const notifier = f.notifier
     const uut = new TransactionProcessor(directory, notifier)
     uut.processTransactions(txns)
     const members = directory.members
@@ -131,15 +161,15 @@ function test() {
     skip: true
   })
   unit.section(() => {
-    const f = deepCopy(fixture1)
+    const f = new Fixture1()
     const txns = [f.txn1, f.txn2]
     const renewalTxn = txns[0]
     const renewingUser = new User(renewalTxn)
     const joinTxn = txns[1]
     const joiningUser = new User(joinTxn)
-    const directory = new Directory()
+    const directory = f.directory
     directory.members = [renewingUser]
-    const notifier = new Notifier()
+    const notifier = f.notifier
     const uut = new TransactionProcessor(directory, notifier)
     uut.processTransactions(txns)
     const updatedRenewingUser = new User(renewalTxn)
@@ -157,7 +187,7 @@ function test() {
     skip: true
   })
   unit.section(() => {
-    const f = deepCopy(fixture1)
+    const f = new Fixture1()
     const renewalTxn = f.txn1
     const badUser = new User(renewalTxn);
     const expectedMember = new User(badUser)
@@ -172,7 +202,7 @@ function test() {
     }
     const directory = new BadRenewalDirectory()
     directory.members = [badUser]
-    const notifier = new Notifier()
+    const notifier = f.notifier
     const uut = new TransactionProcessor(directory, notifier)
     uut.processTransactions(txns)
     unit.is([expectedMember], directory.members, { description: "Expecting member to be untouched" })
@@ -186,11 +216,11 @@ function test() {
       skip: true
     })
   unit.section(() => {
-    const f = deepCopy(fixture1)
+    const f = new Fixture1()
     const t1 = f.txn1
     const t2 = deepCopy(t1)
-    const directory = new Directory()
-    const notifier = new Notifier()
+    const directory = f.directory
+    const notifier = f.notifier
     const uut = new TransactionProcessor(directory, notifier)
     uut.processTransactions([t1]);
     t2["Phone Number"] = "+1234"
