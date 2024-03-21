@@ -53,6 +53,7 @@ class User {
   incrementGeneration() {
     this.generation_ += 1
     this.primaryEmail = `${this.name.givenName}.${this.name.familyName}${this.generation_}@${this.domain}` 
+    return this
   }
   incrementExpirationDate() {
     let ed = new Date(this.customSchemas.Club_Membership.expires)
