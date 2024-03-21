@@ -31,6 +31,19 @@ function test() {
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
   unit.section(() => {
     const f = deepCopy(fixture1)
+    const txns = [f.txn1]
+    const directory = new Directory()
+    const notifier = new Notifier()
+    const uut = new TransactionProcessor(directory, notifier)
+    uut.processTransactions(txns)
+    const m1 = new User(f.txn1)
+    unit.is([m1]), directory.members, { description: "Expecting txn1 member to have joined the Directory"}
+    directory.deleteUser(m1)
+    unit.is([], directory.members, {description: "Expected member to have been deleted from the directory"})
+  },
+    { description: "user create/delete tests" })
+  unit.section(() => {
+    const f = deepCopy(fixture1)
     const uut = new User(f.txn1, f.orgUnitPath, f.domain)
     unit.is(uut.orgUnitPath, f.orgUnitPath, { description: "Expecting orgUnitPath to be setup correctly" })
     unit.is(uut.primaryEmail.split('@')[1], f.domain, { description: "Expecting domain to be setup correctly" })
