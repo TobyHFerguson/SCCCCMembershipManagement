@@ -24,9 +24,18 @@ function test() {
       "Phone Number": "+14083869343",
       "Payable Status": "paid"
     },
+    domain: 'a.b',
+    orgUnitPath: '/test'
   }
   const badUser = new User(fixture1.txn1)
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
+  unit.section(() => {
+    const f = deepCopy(fixture1)
+    const uut = new User(f.txn1, f.orgUnitPath, f.domain)
+    unit.is(uut.orgUnitPath, f.orgUnitPath, { description: "Expecting orgUnitPath to be setup correctly" })
+    unit.is(uut.primaryEmail.split('@')[1], f.domain, { description: "Expecting domain to be setup correctly" })
+  },
+    { description: "User tests" })
   unit.section(() => {
     const f = deepCopy(fixture1)
     const txns = [f.txn1, f.txn2]
@@ -63,8 +72,8 @@ function test() {
     const uut = new TransactionProcessor(directory, notifier)
     uut.processTransactions([txn1, txn2])
     unit.is(2, directory.members.filter((m) => m.name.givenName === "J").length, { description: "Expecting to be able to add multiple people with same names but different phones and emails" })
-    unit.not([new User(txn1), new User(txn2)], directory.members, { description: "Expecting that the two members aren't the ones I started with"})
-    unit.is(true, directory.members.some((m) => m.primaryEmail.split("@")[0].endsWith(1)), { description: "Expecting one of the members has had a suffix added to their email address"})
+    unit.not([new User(txn1), new User(txn2)], directory.members, { description: "Expecting that the two members aren't the ones I started with" })
+    unit.is(true, directory.members.some((m) => m.primaryEmail.split("@")[0].endsWith(1)), { description: "Expecting one of the members has had a suffix added to their email address" })
   },
     {
       description: "Test of the ability for multiple people with the same name to join",
@@ -196,7 +205,7 @@ function runUnitTest() {
     Directory.deleteUser(user)
     Utilities.sleep(5 * 1000)
     let newUser = Directory.addUser_(user)
-    unit.is("J.K@santacruzcountycycling.club", newUser.primaryEmail)
+    unit.is(`J.K@${domain}`, newUser.primaryEmail)
     while (true) {
       try {
         Directory.deleteUser(user)
@@ -221,7 +230,7 @@ function runUnitTest() {
     ed.setFullYear(ed.getFullYear() + 1)
     ed = ed.toISOString().split('T')[0];
     const expected = {
-      "primaryEmail": "J.K@santacruzcountycycling.club", "name": { "givenName": "J", "familyName": "K" }, "emails": [{ "address": "j.k@icloud.com", "type": "home" }], "phones": [{ "value": "+14083869343", "type": "mobile" }], "customSchemas": { "Club_Membership": { "expires": ed, "Join_Date": jd } }, "orgUnitPath": "/members", "recoveryEmail": "j.k@icloud.com", "recoveryPhone": "+14083869343"
+      "primaryEmail": `J.K@${domain}`, "name": { "givenName": "J", "familyName": "K" }, "emails": [{ "address": "j.k@icloud.com", "type": "home" }], "phones": [{ "value": "+14083869343", "type": "mobile" }], "customSchemas": { "Club_Membership": { "expires": ed, "Join_Date": jd } }, "orgUnitPath": "/members", "recoveryEmail": "j.k@icloud.com", "recoveryPhone": "+14083869343"
     }
     let user = new User(txn)
     let actual = user

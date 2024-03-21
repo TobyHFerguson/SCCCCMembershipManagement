@@ -1,5 +1,7 @@
 class User {
-  constructor(obj) {
+  constructor(obj, orgUnitPath='/members', domain='${domain}') {
+    this.orgUnitPath = orgUnitPath
+    this.domain=domain
     this.generation_ = 0
     if (obj.primaryEmail === undefined){
       const txn = obj
@@ -8,8 +10,7 @@ class User {
       let email = txn['Email Address'];
       let phone = txn['Phone Number'];
       const name = (givenName || familyName) ? { givenName, familyName } : undefined
-      const primaryEmail = `${givenName}.${familyName}@santacruzcountycycling.club`
-      const orgUnitPath = "/members"
+      const primaryEmail = `${givenName}.${familyName}@${domain}`
       const Join_Date = new Date();
       phone = phone.startsWith('+1') ? phone : '+1' + phone
       const expiryDate = new Date()
@@ -34,7 +35,7 @@ class User {
             Join_Date: this.convertToYYYYMMDDFormat_(Join_Date)
           }
         },
-        this.orgUnitPath = orgUnitPath,
+        this.orgUnitPath = this.orgUnitPath,
         this.recoveryEmail = email,
         this.recoveryPhone = phone
     } else {// Simply copy the values, deeply
@@ -51,7 +52,7 @@ class User {
 
   incrementGeneration() {
     this.generation_ += 1
-    this.primaryEmail = `${this.name.givenName}.${this.name.familyName}${this.generation_}@santacruzcountycycling.club` 
+    this.primaryEmail = `${this.name.givenName}.${this.name.familyName}${this.generation_}@${this.domain}` 
   }
   incrementExpirationDate() {
     let ed = new Date(this.customSchemas.Club_Membership.expires)
@@ -66,11 +67,11 @@ class User {
 
 
 // { isMailboxSetup: true,
-//   primaryEmail: 'ron@santacruzcountycycling.club',
+//   primaryEmail: 'ron@${domain}',
 //   kind: 'admin#directory#user',
 //   emails: 
 //    [ { type: 'work', address: 'ron.r.olson@gmail.com' },
-//      { primary: true, address: 'ron@santacruzcountycycling.club' } ],
+//      { primary: true, address: 'ron@${domain}' } ],
 //   lastLoginTime: '2024-02-02T23:54:59.000Z',
 //   isEnrolledIn2Sv: false,
 //   isAdmin: false,
