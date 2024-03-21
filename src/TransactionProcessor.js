@@ -42,7 +42,7 @@ class TransactionProcessor {
     return result
   }
   join_(txn) {
-    let member = new Exports.User(txn)
+    let member = new User(txn)
     while (true) {
       try {
         this.directory.addUser(member)
@@ -67,7 +67,7 @@ class TransactionProcessor {
    * @param (User) member the member that is renewing their membership
    */
   renew_(txn, member) {
-    let updatedMember = new Exports.User(member).incrementExpirationDate()
+    let updatedMember = new User(member).incrementExpirationDate()
     try {
       this.directory.updateUser(updatedMember)
       txn.Processed = new Date()

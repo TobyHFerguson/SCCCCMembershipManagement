@@ -3,19 +3,19 @@ class Directory {
     this.members = [];
   }
   get members() {
-    return this.members_.map((m) => new Exports.User(m))
+    return this.members_.map((m) => new User(m))
   }
   set members(members) {
-    this.members_ = members.map((m) => new Exports.User(m))
+    this.members_ = members.map((m) => new User(m))
   }
   addUser(user) {
     if (this.members_.some((m) => m.primaryEmail === user.primaryEmail)) throw new UserAlreadyExistsError
-    this.members_.push(new Exports.User(user))
+    this.members_.push(new User(user))
   }
 
   updateUser(user) {
     let i = this.members_.find((m) => m.primaryEmail === user.primaryEmail)
-    this.members_[i] = new Exports.User(user)
+    this.members_[i] = new User(user)
   }
 }
 
