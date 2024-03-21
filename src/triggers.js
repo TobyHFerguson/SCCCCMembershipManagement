@@ -18,7 +18,7 @@ function onOpen() {
 }
 
 function createMembershipReport() {
-  const members = Exports.Directory.getAllUsers();
+  const members = Directory.getAllUsers();
   let reportMembers = members.filter((m) => m.orgUnitPath.startsWith('/members')).map((m) => {
     try {
       // console.log(m)
