@@ -12,6 +12,14 @@ class Directory {
     if (this.members_.some((m) => m.primaryEmail === user.primaryEmail)) throw new UserAlreadyExistsError
     this.members_.push(new User(user))
   }
+  /**
+   * Delete the given user
+   * @param {User} user the user to be deleted
+   */
+  deleteUser(user) {
+    let i = this.members.indexOf(user)
+    if (i > -1) members.splice(i, 1) 
+  }
 
   updateUser(user) {
     let i = this.members_.find((m) => m.primaryEmail === user.primaryEmail)
