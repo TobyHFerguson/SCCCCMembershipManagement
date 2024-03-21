@@ -1,29 +1,29 @@
 class Directory {
   constructor() {
-    this.members = [];
+    this.users = [];
   }
   get members() {
-    return this.members_.map((m) => new User(m))
+    return this.users
   }
   set members(members) {
-    this.members_ = members.map((m) => new User(m))
+    this.users = members
   }
   addUser(user) {
-    if (this.members_.some((m) => m.primaryEmail === user.primaryEmail)) throw new UserAlreadyExistsError
-    this.members_.push(new User(user))
+    if (this.users.some((m) => m.primaryEmail === user.primaryEmail)) throw new UserAlreadyExistsError
+    this.users.push(new User(user))
   }
   /**
    * Delete the given user
    * @param {User} user the user to be deleted
    */
   deleteUser(user) {
-    let i = this.members.indexOf(user)
-    if (i > -1) members.splice(i, 1) 
+    let i = this.users.findIndex((u) => u.primaryEmail === user.primaryEmail)
+    if (i > -1) this.users.splice(i, 1) 
   }
 
   updateUser(user) {
-    let i = this.members_.find((m) => m.primaryEmail === user.primaryEmail)
-    this.members_[i] = new User(user)
+    let i = this.users.find((m) => m.primaryEmail === user.primaryEmail)
+    this.users[i] = new User(user)
   }
 }
 

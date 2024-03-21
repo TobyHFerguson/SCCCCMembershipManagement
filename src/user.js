@@ -1,5 +1,5 @@
 class User {
-  constructor(obj, orgUnitPath='/members', domain='${domain}') {
+  constructor(obj, orgUnitPath='/members', domain='santacruzcountycycling.club') {
     this.orgUnitPath = orgUnitPath
     this.domain=domain
     this.generation_ = 0
