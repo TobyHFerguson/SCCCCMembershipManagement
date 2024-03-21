@@ -1,14 +1,14 @@
 class Directory {
-  get members() {}
-  set members(members) {}
-  addUser(user) {}
+  get members() { }
+  set members(members) { }
+  addUser(user) { }
   /**
    * Delete the given user
    * @param {User} user the user to be deleted
    */
-  deleteUser(user) {}
+  deleteUser(user) { }
 
-  updateUser(user) {}
+  updateUser(user) { }
 }
 
 class DirectoryError extends Error {
@@ -22,5 +22,12 @@ class UserAlreadyExistsError extends DirectoryError {
   constructor(message) {
     super(message)
     this.name = "UserAlreadyExistsError"
+  }
+}
+
+class UserNotFoundError extends DirectoryError {
+  constructor(message) {
+    super(message);
+    this.name = "UserNotFoundError"
   }
 }

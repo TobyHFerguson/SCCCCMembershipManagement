@@ -19,13 +19,22 @@ function test() {
      * @param {User} user the user to be deleted
      */
     deleteUser(user) {
-      let i = this.users.findIndex((u) => u.primaryEmail === user.primaryEmail)
-      if (i > -1) this.users.splice(i, 1)
+      const i = this.findUser_(user);
+      if (i > -1) this.users.splice(i, 1);
+      return this;
     }
 
     updateUser(user) {
-      let i = this.users.find((m) => m.primaryEmail === user.primaryEmail)
-      this.users[i] = new User(user)
+      const i = this.findUser_(user);
+      if (i > -1) {
+        this.users.splice(i, 1, new User(user))
+        return this;
+      } else {
+        throw new UserNotFoundError(`Directory: Attempt to update uknown user ${user.primaryEmail}`);
+      }
+    }
+    findUser_(user) {
+      return this.users.findIndex((u) => u.primaryEmail === user.primaryEmail);
     }
   }
   class Fixture1 {
@@ -59,6 +68,42 @@ function test() {
   }
   const badUser = new User(new Fixture1().txn1)
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
+  /**
+   * 
+   * @param {Directory} directory 
+   * @param {string} description 
+   */
+  function testDirectory(directory, description) {
+    const fixture = new Fixture1()
+    unit.section(() => {
+      unit.is([], directory.members, { description: "Expected members to be empty" })
+      let user = new User(fixture.txn1)
+      directory.addUser(user)
+      const expected = new User(fixture.txn1)
+      unit.is([expected], directory.members, { description: "Expected user to be in members" })
+      directory.updateUser(user.incrementExpirationDate())
+      expected.incrementExpirationDate()
+      unit.is([expected], directory.members, { description: "Expected updated user to be in members" })
+      function unf() {
+        try {
+          directory.updateUser(new User(fixture.txn2))
+        } catch (err) {
+          return err
+        }
+        return new Error("Expecting an error")
+      }
+      unit.is(true, unf() instanceof UserNotFoundError, { description: "Expecting update of uknown user to throw UserNotFoundException" })
+      directory.deleteUser(user)
+      unit.is([], directory.members, { description: "Expected memberto have been deleted" })
+      directory.deleteUser(user)
+      unit.is([], directory.members, { description: "Expected deletion to be idempotent" })
+    },
+      {
+        description: description,
+        skip: false
+      })
+  }
+  testDirectory(new TestDirectory(), "Directory test");
   unit.section(() => {
     const f = new Fixture1()
     const txns = [f.txn1]
@@ -80,7 +125,7 @@ function test() {
   },
     {
       description: "User tests",
-      skip: true
+      skip: false
     })
   unit.section(() => {
     const f = new Fixture1()
@@ -100,7 +145,7 @@ function test() {
     })
   }, {
     description: "Initial TransactionProcessor join tests",
-    skip: true
+    skip: false
   })
   unit.section(() => {
     const txn1 = {
@@ -113,6 +158,7 @@ function test() {
     const txn2 = { ...txn1 }
     txn2["Email Address"] = "foo.bar@x.com"
     txn2["Phone Number"] = "1234"
+    const f = new Fixture1()
     const directory = f.directory
     const notifier = f.notifier
     const uut = new TransactionProcessor(directory, notifier)
@@ -123,11 +169,11 @@ function test() {
   },
     {
       description: "Test of the ability for multiple people with the same name to join",
-      skip: true
+      skip: false
     })
   unit.section(() => {
 
-    class ED extends Directory {
+    class ED extends TestDirectory {
       addUser(user) {
         if (user.primaryEmail === badUser.primaryEmail) { throw new DirectoryError() }
         super.addUser(user)
@@ -158,7 +204,7 @@ function test() {
   }, {
     description: "TransactionProcessor join failure tests",
     neverUndefined: false,
-    skip: true
+    skip: false
   })
   unit.section(() => {
     const f = new Fixture1()
@@ -184,7 +230,7 @@ function test() {
 
   }, {
     description: "Renewal Tests",
-    skip: true
+    skip: false
   })
   unit.section(() => {
     const f = new Fixture1()
@@ -194,7 +240,7 @@ function test() {
     unit.is(badUser, expectedMember, { description: "users should be the same" })
     unit.not(badUser.incrementExpirationDate, expectedMember, { description: "users should be different" })
     const txns = [renewalTxn];
-    class BadRenewalDirectory extends Directory {
+    class BadRenewalDirectory extends TestDirectory {
       updateUser(user) {
         if (user.primaryEmail === badUser.primaryEmail) { throw new Error() }
         super.updateUser(user)
@@ -213,12 +259,12 @@ function test() {
   },
     {
       description: "Renewal failure tests",
-      skip: true
+      skip: false
     })
   unit.section(() => {
     const f = new Fixture1()
     const t1 = f.txn1
-    const t2 = deepCopy(t1)
+    const t2 = JSON.parse(JSON.stringify(t1))
     const directory = f.directory
     const notifier = f.notifier
     const uut = new TransactionProcessor(directory, notifier)
@@ -233,7 +279,7 @@ function test() {
   },
     {
       description: "Partials",
-      skip: true
+      skip: false
     })
   return unit.isGood()
 }
@@ -268,7 +314,7 @@ function runUnitTest() {
   },
     {
       description: "test make user",
-      skip: true
+      skip: false
     })
   unit.section(() => {
     const jd = new Date().toISOString().split('T')[0];
@@ -296,7 +342,7 @@ function runUnitTest() {
   },
     {
       description: "User Constructor",
-      skip: true
+      skip: false
     })
   unit.section(() => {
     const match = MembershipFunctions.internal.matchTransactionToMember
@@ -320,7 +366,7 @@ function runUnitTest() {
   },
     {
       description: "matcher tests",
-      skip: true
+      skip: false
     })
   unit.section(() => {
     const result = { join: "", renew: "", partial: "" }
@@ -345,7 +391,7 @@ function runUnitTest() {
   },
     {
       description: "processPaidTransaction tests",
-      skip: true
+      skip: false
     })
 
   return unit.isGood()
