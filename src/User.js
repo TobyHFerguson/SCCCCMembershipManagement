@@ -51,10 +51,12 @@ class User {
       this.recoveryPhone = deepCopy(obj.recoveryPhone)
     }
   }
-
+  makePrimaryEmail_(given, family, generation, domain) {
+    return `${given}.${family}${generation}@${domain}`.toLowerCase()
+  }
   incrementGeneration() {
     this.generation_ += 1
-    this.primaryEmail = `${this.name.givenName}.${this.name.familyName}${this.generation_}@${this.domain}`
+    this.primaryEmail = this.makePrimaryEmail_(this.name.givenName,this.name.familyName,this.generation_,this.domain)
     return this
   }
   incrementExpirationDate() {
