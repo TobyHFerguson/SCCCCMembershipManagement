@@ -1,8 +1,5 @@
 
 
-
-
-
 function test() {
   const SKIP = false
 
@@ -72,16 +69,19 @@ function test() {
   testCreateDeleteTests(new TestDirectory(), "user create/delete tests", SKIP)
   testCreateDeleteTests(new TestDirectory(), "user create/delete tests", SKIP)
 
-  unit.section(() => {
-    const f = new Fixture1()
-    const uut = f.directory.makeUser(f.txn1, f.orgUnitPath, f.domain)
-    unit.is(uut.orgUnitPath, f.orgUnitPath, { description: "Expecting orgUnitPath to be setup correctly" })
-    unit.is(uut.primaryEmail.split('@')[1], f.domain, { description: "Expecting domain to be setup correctly" })
+  function testUser(directory, description, skip = false){
+    unit.section(() => {
+    const f = new Fixture1(directory)
+    const uut = f.directory.makeUser(f.txn1)
+    unit.is(uut.orgUnitPath, f.directory.orgUnitPath, { description: "Expecting orgUnitPath to be setup correctly" })
+    unit.is(uut.primaryEmail.split('@')[1], f.directory.domain, { description: "Expecting domain to be setup correctly" })
   },
     {
-      description: "User tests",
-      skip: true
-    })
+      description,
+      skip
+    })}
+
+  testUser(new TestDirectory(), "User tests", SKIP)
   unit.section(() => {
     const f = new Fixture1()
     const txns = [f.txn1, f.txn2]
