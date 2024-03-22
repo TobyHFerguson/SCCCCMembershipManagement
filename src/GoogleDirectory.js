@@ -54,7 +54,7 @@ class GoogleDirectory extends Directory {
 
   updateUser(user) {
     let { customSchemas } = user
-    return this.updateUser_(user, {customSchemas})
+    return Utils.retryOnError(() => this.updateUser_(user, { customSchemas }), UserCreationNotCompletedError)
   }
 
   updateUser_(user, patch) {
@@ -67,7 +67,7 @@ class GoogleDirectory extends Directory {
         err.message = err.message.replace("userKey", key)
         throw (new UserNotFoundError(err))
       } else if (err.message.includes("User creation is not complete.")) {
-        throw new UserCreationNotCompleteError(err)
+        throw new UserCreationNotCompletedError(err)
       }
       throw new DirectoryError(err)
     }
@@ -86,9 +86,9 @@ class GoogleDirectory extends Directory {
     user.password = Math.random().toString(36);
     user.changePasswordAtNextLogin = true;
     try {
-    user = AdminDirectory.Users.insert(user);
-    console.log(`user ${user.primaryEmail} created`)
-    return user
+      user = AdminDirectory.Users.insert(user);
+      console.log(`user ${user.primaryEmail} created`)
+      return user
     } catch (err) {
       if (err.message.includes("API call to directory.users.insert failed with error: Entity already exists.")) {
         throw new UserAlreadyExistsError(err)
@@ -98,9 +98,18 @@ class GoogleDirectory extends Directory {
     }
 
   }
-
-  deleteUser(user) {
-    try { AdminDirectory.Users.remove(user.primaryEmail.toLowerCase()) }
+  /**
+   * Delete the given user
+   * @param {User} user
+   * @param {boolean} wait wait for deletion to finish before returning
+   */
+  deleteUser(user, wait = true) {
+    function deleteWithRetry() {
+      Utils.retryOnError(() => AdminDirectory.Users.remove(user.primaryEmail.toLowerCase()), UserCreationNotCompletedError)
+    }
+    try {
+      Utils.waitNTimesOnCondition(wait ? 400 : 1, () => deleteWithRetry())
+    }
     catch (err) {
       // Only throw the error if the user might still exist, otherwise ignore it since the user not existing is what we want!
       if (!err.message.endsWith("Resource Not Found: userKey")) throw new UserNotFoundError(err)

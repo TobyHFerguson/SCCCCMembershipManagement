@@ -5,32 +5,11 @@ function testGoogleDirectory() {
   const fixture = new Fixture1()
   let user = new User(fixture.txn1)
   directory.addUser(user)
-  console.error(waitNTimesOnCondition_(20, () => directory.isKnownUser(user)) ? "Known" : "unknown")
+  console.error(waitNTimesOnCondition(20, () => directory.isKnownUser(user)) ? "Known" : "unknown")
 
 }
 
-function waitForError_(f, error) {
-  while (true) {
-    try {
-      f()
-      break
-    } catch (err) {
-      if (err instanceof error) {
-        Utilities.sleep(5 * 1000)
-      }
-      throw err
-    }
-  }
-}
-function waitNTimesOnCondition_(n, c, t = 5) {
-  for (i = 0; i < n; i++) {
-    if (c()) {
-      return true
-    }
-    Utilities.sleep(t * 1000)
-  }
-  return false
-}
+
 function test() {
   const badUser = new User(new Fixture1().txn1)
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
@@ -76,11 +55,11 @@ function test() {
     let user = new User(fixture.txn1)
     directory.addUser(user)
     const expected = new User(fixture.txn1)
-    waitNTimesOnCondition_(20, () => directory.isKnownUser(expected))
+    Utils.waitNTimesOnCondition(20, () => directory.isKnownUser(expected))
     unit.is(true, true, directory.isKnownUser(expected), { description: "Expected user to be in members" })
     user.incrementExpirationDate()
-    waitForError_(() => directory.updateUser(user), UserCreationNotCompletedError)
     expected.incrementExpirationDate()
+    directory.updateUser(user)
     unit.is(true, true, directory.isKnownUser(expected), { description: "Expected updated user to be in members" })
     function unf() {
       try {
@@ -92,9 +71,9 @@ function test() {
     }
     unit.is(true, unf() instanceof UserNotFoundError, { description: "Expecting update of uknown user to throw UserNotFoundException" })
     directory.deleteUser(user)
-    unit.is(true, waitNTimesOnCondition_(20, () => !directory.isKnownUser(expected)), { description: "Expected memberto have been deleted" })
-    directory.deleteUser(user)
-    unit.is(true, waitNTimesOnCondition_(20, () => !directory.isKnownUser(expected)), { description: "Expected deletion to be idempotent" })
+    unit.is(true, Utils.waitNTimesOnCondition(20, () => !directory.isKnownUser(expected)), { description: "Expected member to have been deleted" })
+    directory.deleteUser(user, false)
+    unit.is(true, !directory.isKnownUser(expected), { description: "Expected deletion to be idempotent" })
   },
     {
       description: "Google Directory test",
