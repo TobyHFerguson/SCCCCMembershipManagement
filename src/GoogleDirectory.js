@@ -49,7 +49,7 @@ class GoogleDirectory extends Directory {
       users = users.concat(page.users)
       pageToken = page.nextPageToken;
     } while (pageToken);
-    return users
+    return users.map((u) => new User(u))
   }
 
   updateUser(user) {
@@ -73,9 +73,9 @@ class GoogleDirectory extends Directory {
     }
   }
 
-  getUser_(primaryEmail) {
+  getUser(user) {
     try {
-      return AdminDirectory.Users.get(primaryEmail, { projection: "full", viewType: "admin_view" })
+      return new User(AdminDirectory.Users.get(user.primaryEmail, { projection: "full", viewType: "admin_view" }))
     } catch (err) {
       if (err.message.endsWith("Resource Not Found: userKey")) return {}
       throw new DirectoryError(err)

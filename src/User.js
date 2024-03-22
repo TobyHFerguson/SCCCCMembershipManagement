@@ -39,14 +39,15 @@ class User {
         this.recoveryEmail = email,
         this.recoveryPhone = phone
     } else {// Simply copy the values, deeply
+      function deepCopy(v) { return v ? JSON.parse(JSON.stringify(v)) : ""}
       this.primaryEmail = JSON.parse(JSON.stringify(obj.primaryEmail)).toLowerCase()
       this.name = JSON.parse(JSON.stringify(obj.name))
       this.emails = JSON.parse(JSON.stringify(obj.emails))
       this.phones = JSON.parse(JSON.stringify(obj.phones))
       this.customSchemas = JSON.parse(JSON.stringify(obj.customSchemas))
-      this.orgUnitPath = JSON.parse(JSON.stringify(obj.orgUnitPath))
-      this.recoveryEmail = JSON.parse(JSON.stringify(obj.recoveryEmail))
-      this.recoveryPhone = JSON.parse(JSON.stringify(obj.recoveryPhone))
+      this.orgUnitPath = deepCopy(obj.orgUnitPath)
+      this.recoveryEmail = deepCopy(obj.recoveryEmail)
+      this.recoveryPhone = deepCopy(obj.recoveryPhone) 
     }
   }
 
