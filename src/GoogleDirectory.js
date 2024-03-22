@@ -3,6 +3,10 @@
  * @property {}
  */
 class GoogleDirectory extends Directory {
+  constructor(userFactory) {
+    super()
+    this.userFactory = userFactory
+  }
   listAllUsers() {
     let pageToken;
     let page;
@@ -32,12 +36,13 @@ class GoogleDirectory extends Directory {
     let users = [];
     let pageToken;
     let page;
+    const { orgUnitPath } = userFactory()
     do {
       page = AdminDirectory.Users.list({
         customer: 'my_customer',
         orderBy: 'givenName',
         viewType: "admin_view",
-        query: "orgUnitPath:/members",
+        query: orgUnitPath,
         maxResults: 500,
         pageToken: pageToken,
         projection: "full"
@@ -49,7 +54,7 @@ class GoogleDirectory extends Directory {
       users = users.concat(page.users)
       pageToken = page.nextPageToken;
     } while (pageToken);
-    return users.map((u) => new User(u))
+    return users.map((u) => this.UserFactory(newUser(u)))
   }
 
   updateUser(user) {
