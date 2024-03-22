@@ -1,5 +1,5 @@
 class Fixture1 {
-    constructor(directory = new TestDirectory(), notifier = new Notifier) {
+    constructor(directory, notifier) {
       this.txn1 = {
         "First Name": "J",
         "Last Name": "K",
@@ -21,8 +21,6 @@ class Fixture1 {
         "Phone Number": "+14083869343",
         "Payable Status": "paid"
       }
-      this.domain = 'a.b';
-      this.orgUnitPath = '/test';
       this.directory = directory;
       this.notifier = notifier;
     }
