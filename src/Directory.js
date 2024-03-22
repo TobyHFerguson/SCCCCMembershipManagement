@@ -1,7 +1,16 @@
+/**
+ * @typedef {Object} Transaction
+ *  
+ */
+
 class Directory {
   get members() { throw new Error('You should subclass the Directory class') }
   set members(members) { throw new Error('You should subclass the Directory class') }
-  addUser(user) { throw new Error('You should subclass the Directory class') }
+  /**
+   * 
+   * @param {Transaction} transaction 
+   */
+  addUserFromTransaction(transaction) { throw new Error('You should subclass the Directory class') }
   /**
    * Delete the given user
    * @param {User} user the user to be deleted
@@ -15,6 +24,8 @@ class Directory {
   }
 
   getUser(user) { throw new Error('You should subclass the Directory class') }
+
+  makeUser(txn) { throw new Error('You should subclass the Directory class') }
 }
 
 class DirectoryError extends Error {

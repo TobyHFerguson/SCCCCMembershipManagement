@@ -4,12 +4,11 @@ class TransactionProcessor {
    * @param {Directory} directory 
    * @param {Notifier} notifier 
    */
-  constructor(directory, notifier, userFactory=UserFactory()) {
-    this.directory = directory,
-      this.notifier = notifier,
-      this.userFactory = userFactory
+  constructor(directory, notifier) {
+    this.directory = directory;
+    this.notifier = notifier;
   }
-  processTransactions(transactions,  matcher = this.matchTransactionToMember_) {
+  processTransactions(transactions, matcher = this.matchTransactionToMember_) {
     const txns = transactions.filter((txn) => txn['Payable Status'] !== undefined && txn['Payable Status'].startsWith('paid') && !txn.Processed)
     txns.forEach((txn) => {
       let match = this.directory.members.find((m) => matcher(txn, m))
@@ -43,10 +42,10 @@ class TransactionProcessor {
     return result
   }
   join_(txn) {
-    let member = this.userFactory(txn)
+    let member = this.directory.makeUser(txn)
     while (true) {
       try {
-        this.directory.addUser(member)
+        this.directory.addUserFromTransaction(member)
         txn.Processed = new Date().toISOString().split("T")[0]
         this.notifier.joinSuccess(txn, member)
         break
@@ -68,7 +67,7 @@ class TransactionProcessor {
    * @param (User) member the member that is renewing their membership
    */
   renew_(txn, member) {
-    let updatedMember = userFactory(member).incrementExpirationDate()
+    let updatedMember = this.directory.makeUser(member).incrementExpirationDate()
     try {
       this.directory.updateUser(updatedMember)
       txn.Processed = new Date()
