@@ -1,14 +1,18 @@
 class Directory {
-  get members() { }
-  set members(members) { }
-  addUser(user) { }
+  get members() { throw new Error('You should subclass the Directory class')}
+  set members(members) { throw new Error('You should subclass the Directory class')}
+  addUser(user) { throw new Error('You should subclass the Directory class')}
   /**
    * Delete the given user
    * @param {User} user the user to be deleted
    */
-  deleteUser(user) { }
+  deleteUser(user) { throw new Error('You should subclass the Directory class')}
 
-  updateUser(user) { }
+  updateUser(user) { throw new Error('You should subclass the Directory class')}
+
+  isKnownUser(user) { 
+    return this.members.some((m) => m.primaryEmail === user.primaryEmail)
+  }
 }
 
 class DirectoryError extends Error {
@@ -29,5 +33,12 @@ class UserNotFoundError extends DirectoryError {
   constructor(message) {
     super(message);
     this.name = "UserNotFoundError"
+  }
+}
+
+class UserCreationNotCompletedError extends DirectoryError {
+  constructor(message) {
+    super(message);
+    this.name = "UserConstructionNotCompletedError"
   }
 }

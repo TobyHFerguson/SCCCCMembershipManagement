@@ -2,8 +2,8 @@
  * @typedef {Object} Directory
  * @property {}
  */
-const GoogleDirectory = (() => {
-  const listAllUsers = () => {
+class GoogleDirectory extends Directory {
+  listAllUsers() {
     let pageToken;
     let page;
     do {
@@ -28,7 +28,7 @@ const GoogleDirectory = (() => {
    * Get all the members of the organization
    * @returns {Member[]} An array of members
    */
-  const getAllUsers = () => {
+  get members() {
     let users = [];
     let pageToken;
     let page;
@@ -52,66 +52,59 @@ const GoogleDirectory = (() => {
     return users
   }
 
-  const testGetAllUsers = () => {
-    getAllUsers().forEach((u) => console.log(`User: ${u.primaryEmail}`))
+  updateUser(user) {
+    let { customSchemas } = user
+    return this.updateUser_(user, {customSchemas})
   }
 
-  const testUserObject = () => {
-    let u = createUserObject_("p", "gn", "fN", "re", "rp", "oup")
-    console.log(u);
-    u = createUserObject_("p")
-    console.log(u);
-  }
-
-
-  const testUpdateUser = () => {
-    let user = AdminDirectory.Users.get("X.Y@santacruzcountycycling.club")
-    console.log(user)
-    AdminDirectory.Users.update(user, "X.Y@santacruzcountycycling.club")
-  }
-  const updateUser_ = (user, patch) => {
+  updateUser_(user, patch) {
     const key = user.primaryEmail
     try {
-      AdminDirectory.Users.update(patch, key);
+      AdminDirectory.Users.update(JSON.stringify(patch), key);
       console.log(`user ${key} updated`)
     } catch (err) {
-      err.message = err.message.replace("userKey", key)
-      console.error(err)
-      throw (err)
+      if (err.message.includes("userKey")) {
+        err.message = err.message.replace("userKey", key)
+        throw (new UserNotFoundError(err))
+      } else if (err.message.includes("User creation is not complete.")) {
+        throw new UserCreationNotCompleteError(err)
+      }
+      throw new DirectoryError(err)
     }
   }
 
-  const getUser = (primaryEmail) => {
+  getUser_(primaryEmail) {
     try {
       return AdminDirectory.Users.get(primaryEmail, { projection: "full", viewType: "admin_view" })
     } catch (err) {
       if (err.message.endsWith("Resource Not Found: userKey")) return {}
-      throw err
+      throw new DirectoryError(err)
     }
   }
 
-  const testGetUser = () => { console.log(getUser("Jane@santacruzcountycycling.club")) }
-
-  const addUser_ = (user) => {
+  addUser(user) {
     user.password = Math.random().toString(36);
     user.changePasswordAtNextLogin = true;
+    try {
     user = AdminDirectory.Users.insert(user);
     console.log(`user ${user.primaryEmail} created`)
     return user
+    } catch (err) {
+      if (err.message.includes("API call to directory.users.insert failed with error: Entity already exists.")) {
+        throw new UserAlreadyExistsError(err)
+      } else {
+        throw new DirectoryError(err)
+      }
+    }
+
   }
 
-  const deleteUser = (user) => {
+  deleteUser(user) {
     try { AdminDirectory.Users.remove(user.primaryEmail.toLowerCase()) }
     catch (err) {
       // Only throw the error if the user might still exist, otherwise ignore it since the user not existing is what we want!
-      if (!err.message.endsWith("Resource Not Found: userKey")) throw err
+      if (!err.message.endsWith("Resource Not Found: userKey")) throw new UserNotFoundError(err)
     }
     console.log('User %s deleted.', user.primaryEmail);
   }
-  return {
-    getAllUsers,
-    addUser_,
-    updateUser_,
-    deleteUser
-  }
-})()
+}

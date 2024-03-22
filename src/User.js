@@ -10,7 +10,7 @@ class User {
       let email = txn['Email Address'];
       let phone = txn['Phone Number'];
       const name = (givenName || familyName) ? { givenName, familyName } : undefined
-      const primaryEmail = `${givenName}.${familyName}@${domain}`
+      const primaryEmail = `${givenName}.${familyName}@${domain}`.toLowerCase()
       const Join_Date = new Date();
       phone = phone.startsWith('+1') ? phone : '+1' + phone
       const expiryDate = new Date()
@@ -39,7 +39,7 @@ class User {
         this.recoveryEmail = email,
         this.recoveryPhone = phone
     } else {// Simply copy the values, deeply
-      this.primaryEmail = JSON.parse(JSON.stringify(obj.primaryEmail))
+      this.primaryEmail = JSON.parse(JSON.stringify(obj.primaryEmail)).toLowerCase()
       this.name = JSON.parse(JSON.stringify(obj.name))
       this.emails = JSON.parse(JSON.stringify(obj.emails))
       this.phones = JSON.parse(JSON.stringify(obj.phones))
