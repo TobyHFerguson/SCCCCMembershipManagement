@@ -1,7 +1,8 @@
 class TestDirectory extends Directory {
-    constructor(userFactory) {
+    constructor(orgUnitPath = "/test", domain="santacruzcountycycling.club") {
       super();
-      this.userFactory = userFactory
+      this.orgUnitPath = orgUnitPath;
+      this.domain = domain;
       this.users = [];
     }
     get members() {
@@ -10,9 +11,10 @@ class TestDirectory extends Directory {
     set members(members) {
       this.users = members
     }
-    addUser(user) {
+    addUserFromTransaction(txn) {
+      const user = this.makeUser(txn)
       if (this.users.some((m) => m.primaryEmail === user.primaryEmail)) throw new UserAlreadyExistsError
-      this.users.push(this.userFactory(user))
+      this.users.push(user)
     }
     /**
      * Delete the given user
@@ -27,7 +29,7 @@ class TestDirectory extends Directory {
     updateUser(user) {
       const i = this.findUser_(user);
       if (i > -1) {
-        this.users.splice(i, 1, this.userFactory(user))
+        this.users.splice(i, 1, this.makeUser(user))
         return this;
       } else {
         throw new UserNotFoundError(`Directory: Attempt to update uknown user ${user.primaryEmail}`);
@@ -40,5 +42,9 @@ class TestDirectory extends Directory {
     }
     findUser_(user) {
       return this.users.findIndex((u) => u.primaryEmail === user.primaryEmail);
+    }
+
+    makeUser(txn) {
+      return new User(txn, this.orgUnitPath, this.domain)
     }
   }

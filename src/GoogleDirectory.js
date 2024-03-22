@@ -3,9 +3,14 @@
  * @property {}
  */
 class GoogleDirectory extends Directory {
-  constructor(userFactory) {
+  constructor(orgUnitPath="/test", domain="santacruzcountycycling.club") {
     super()
-    this.userFactory = userFactory
+    this.orgUnitPath = orgUnitPath,
+    this.domain = domain
+  }
+
+  makeUser(obj) {
+    return new User(obj, this.orgUnitPath, this.domain)
   }
   listAllUsers() {
     let pageToken;
@@ -36,13 +41,12 @@ class GoogleDirectory extends Directory {
     let users = [];
     let pageToken;
     let page;
-    const { orgUnitPath } = userFactory()
     do {
       page = AdminDirectory.Users.list({
         customer: 'my_customer',
         orderBy: 'givenName',
         viewType: "admin_view",
-        query: orgUnitPath,
+        query: `orgUnitPath: ${this.orgUnitPath}`,
         maxResults: 500,
         pageToken: pageToken,
         projection: "full"
@@ -54,7 +58,7 @@ class GoogleDirectory extends Directory {
       users = users.concat(page.users)
       pageToken = page.nextPageToken;
     } while (pageToken);
-    return users.map((u) => this.UserFactory(newUser(u)))
+    return users.map((u) => this.makeUser(u))
   }
 
   updateUser(user) {
@@ -80,14 +84,15 @@ class GoogleDirectory extends Directory {
 
   getUser(user) {
     try {
-      return new User(AdminDirectory.Users.get(user.primaryEmail, { projection: "full", viewType: "admin_view" }))
+      return makeUser(AdminDirectory.Users.get(user.primaryEmail, { projection: "full", viewType: "admin_view" }))
     } catch (err) {
       if (err.message.endsWith("Resource Not Found: userKey")) return {}
       throw new DirectoryError(err)
     }
   }
 
-  addUser(user) {
+  addUserFromTransaction(txn) {
+    const user = new User(txn, this.orgUnitPath, this.domain)
     user.password = Math.random().toString(36);
     user.changePasswordAtNextLogin = true;
     try {
