@@ -5,8 +5,8 @@
 class GoogleDirectory extends Directory {
   constructor(orgUnitPath="/test", domain="santacruzcountycycling.club") {
     super()
-    this.orgUnitPath = orgUnitPath,
-    this.domain = domain
+    this.orgUnitPath = orgUnitPath.trim(),
+    this.domain = domain.trim()
   }
 
   makeUser(obj) {
@@ -42,18 +42,18 @@ class GoogleDirectory extends Directory {
     let pageToken;
     let page;
     do {
-      page = AdminDirectory.Users.list({
+      const listSpec = {
         customer: 'my_customer',
         orderBy: 'givenName',
         viewType: "admin_view",
-        query: `orgUnitPath: ${this.orgUnitPath}`,
+        query: `orgUnitPath:${this.orgUnitPath}`,
         maxResults: 500,
         pageToken: pageToken,
         projection: "full"
-      });
+      }
+      page = AdminDirectory.Users.list(listSpec);
       if (!page.users) {
-        console.log('No users found.');
-        return;
+        return [];
       }
       users = users.concat(page.users)
       pageToken = page.nextPageToken;
@@ -84,7 +84,7 @@ class GoogleDirectory extends Directory {
 
   getUser(user) {
     try {
-      return makeUser(AdminDirectory.Users.get(user.primaryEmail, { projection: "full", viewType: "admin_view" }))
+      return this.makeUser(AdminDirectory.Users.get(user.primaryEmail, { projection: "full", viewType: "admin_view" }))
     } catch (err) {
       if (err.message.endsWith("Resource Not Found: userKey")) return {}
       throw new DirectoryError(err)
@@ -96,9 +96,9 @@ class GoogleDirectory extends Directory {
     user.password = Math.random().toString(36);
     user.changePasswordAtNextLogin = true;
     try {
-      user = AdminDirectory.Users.insert(user);
+      let newUser = AdminDirectory.Users.insert(user);
       console.log(`user ${user.primaryEmail} created`)
-      return user
+      return newUser
     } catch (err) {
       if (err.message.includes("API call to directory.users.insert failed with error: Entity already exists.")) {
         throw new UserAlreadyExistsError(err)

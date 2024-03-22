@@ -49,7 +49,7 @@ function test() {
       })
   }
   testDirectory(new TestDirectory(), "Directory test", SKIP);
-  testDirectory(new GoogleDirectory(), "Google Directory test", true)
+  testDirectory(new GoogleDirectory(), "Google Directory test", SKIP)
 
   function testCreateDeleteTests(directory, description, skip = false) {
     const f = new Fixture1(directory, new Notifier())
