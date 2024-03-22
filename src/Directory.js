@@ -1,18 +1,20 @@
 class Directory {
-  get members() { throw new Error('You should subclass the Directory class')}
-  set members(members) { throw new Error('You should subclass the Directory class')}
-  addUser(user) { throw new Error('You should subclass the Directory class')}
+  get members() { throw new Error('You should subclass the Directory class') }
+  set members(members) { throw new Error('You should subclass the Directory class') }
+  addUser(user) { throw new Error('You should subclass the Directory class') }
   /**
    * Delete the given user
    * @param {User} user the user to be deleted
    */
-  deleteUser(user) { throw new Error('You should subclass the Directory class')}
+  deleteUser(user) { throw new Error('You should subclass the Directory class') }
 
-  updateUser(user) { throw new Error('You should subclass the Directory class')}
+  updateUser(user) { throw new Error('You should subclass the Directory class') }
 
-  isKnownUser(user) { 
+  isKnownUser(user) {
     return this.members.some((m) => m.primaryEmail === user.primaryEmail)
   }
+
+  getUser(user) { throw new Error('You should subclass the Directory class') }
 }
 
 class DirectoryError extends Error {

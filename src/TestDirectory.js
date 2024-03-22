@@ -32,6 +32,11 @@ class TestDirectory extends Directory {
         throw new UserNotFoundError(`Directory: Attempt to update uknown user ${user.primaryEmail}`);
       }
     }
+    getUser(user) {
+      const i = this.findUser_(user);
+      if (i > -1) return this.users[i]
+      throw new UserNotFoundError(`No such user: ${user.primaryEmail}`)
+    }
     findUser_(user) {
       return this.users.findIndex((u) => u.primaryEmail === user.primaryEmail);
     }

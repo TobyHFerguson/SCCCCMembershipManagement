@@ -3,10 +3,15 @@
 function testGoogleDirectory() {
   const directory = new GoogleDirectory()
   const fixture = new Fixture1()
-  let user = new User(fixture.txn1)
-  directory.addUser(user)
-  console.error(waitNTimesOnCondition(20, () => directory.isKnownUser(user)) ? "Known" : "unknown")
-
+  const user = new User(fixture.txn1)
+  let directoryUser = directory.getUser(user)
+  const old = directoryUser.customSchemas.Club_Membership.expires
+  console.log(old)
+  directoryUser.incrementExpirationDate()
+  let n = directoryUser.customSchemas.Club_Membership.expires
+  directory.updateUser(directoryUser)
+  directoryUser = directory.getUser(directoryUser)
+  console.log(directoryUser.customSchemas.Club_Membership.expires)
 }
 
 
@@ -19,16 +24,21 @@ function test() {
    * @param {string} description 
    */
   function testDirectory(directory, description) {
-    const fixture = new Fixture1()
+    const fixture = new Fixture1(directory)
     unit.section(() => {
-      unit.is([], directory.members, { description: "Expected members to be empty" })
+      const directory = fixture.directory
       let user = new User(fixture.txn1)
       directory.addUser(user)
       const expected = new User(fixture.txn1)
-      unit.is(true, directory.isKnownUser(expected), { description: "Expected user to be in members" })
-      user.incrementExpirationDate()
+      Utils.waitNTimesOnCondition(20, () => directory.isKnownUser(expected))
+      unit.is(true, true, directory.isKnownUser(expected), { description: "Expected user to be in members" })
+      const old = user.customSchemas.Club_Membership.expires
+      const directoryUser = directory.getUser(user)
+      directory.updateUser(user)
+      Utils.waitNTimesOnCondition(20, () => directory.getUser(directoryUser).customSchemas.Club_Membership.expires !== old)
+      unit.not(old, directoryUser.incrementExpirationDate().customSchemas.Club_Membership.expires, { description: "Expected old and new dates to differ" })
       expected.incrementExpirationDate()
-      unit.is(true, directory.isKnownUser(expected), { description: "Expected updated user to be in members" })
+      unit.is(true, true, directory.isKnownUser(expected), { description: "Expected updated user to be in members" })
       function unf() {
         try {
           directory.updateUser(new User(fixture.txn2))
@@ -39,46 +49,17 @@ function test() {
       }
       unit.is(true, unf() instanceof UserNotFoundError, { description: "Expecting update of uknown user to throw UserNotFoundException" })
       directory.deleteUser(user)
-      unit.is(false, directory.members, { description: "Expected memberto have been deleted" })
-      directory.deleteUser(user)
-      unit.is([], directory.members, { description: "Expected deletion to be idempotent" })
+      unit.is(true, Utils.waitNTimesOnCondition(20, () => !directory.isKnownUser(expected)), { description: "Expected member to have been deleted" })
+      directory.deleteUser(user, false)
+      unit.is(true, !directory.isKnownUser(expected), { description: "Expected deletion to be idempotent" })
     },
       {
         description: description,
-        skip: true
+        skip: false
       })
   }
   testDirectory(new TestDirectory(), "Directory test");
-  unit.section(() => {
-    const fixture = new Fixture1(new GoogleDirectory())
-    const directory = fixture.directory
-    let user = new User(fixture.txn1)
-    directory.addUser(user)
-    const expected = new User(fixture.txn1)
-    Utils.waitNTimesOnCondition(20, () => directory.isKnownUser(expected))
-    unit.is(true, true, directory.isKnownUser(expected), { description: "Expected user to be in members" })
-    user.incrementExpirationDate()
-    expected.incrementExpirationDate()
-    directory.updateUser(user)
-    unit.is(true, true, directory.isKnownUser(expected), { description: "Expected updated user to be in members" })
-    function unf() {
-      try {
-        directory.updateUser(new User(fixture.txn2))
-      } catch (err) {
-        return err
-      }
-      return new Error("Expecting an error")
-    }
-    unit.is(true, unf() instanceof UserNotFoundError, { description: "Expecting update of uknown user to throw UserNotFoundException" })
-    directory.deleteUser(user)
-    unit.is(true, Utils.waitNTimesOnCondition(20, () => !directory.isKnownUser(expected)), { description: "Expected member to have been deleted" })
-    directory.deleteUser(user, false)
-    unit.is(true, !directory.isKnownUser(expected), { description: "Expected deletion to be idempotent" })
-  },
-    {
-      description: "Google Directory test",
-      skip: false
-    })
+  testDirectory(new GoogleDirectory(), "Google Directory test")
   unit.section(() => {
     const f = new Fixture1()
     const txns = [f.txn1]
@@ -100,7 +81,7 @@ function test() {
   },
     {
       description: "User tests",
-      skip: true
+      skip: false
     })
   unit.section(() => {
     const f = new Fixture1()
@@ -120,7 +101,7 @@ function test() {
     })
   }, {
     description: "Initial TransactionProcessor join tests",
-    skip: true
+    skip: false
   })
   unit.section(() => {
     const txn1 = {
@@ -144,7 +125,7 @@ function test() {
   },
     {
       description: "Test of the ability for multiple people with the same name to join",
-      skip: true
+      skip: false
     })
   unit.section(() => {
 
@@ -179,7 +160,7 @@ function test() {
   }, {
     description: "TransactionProcessor join failure tests",
     neverUndefined: false,
-    skip: true
+    skip: false
   })
   unit.section(() => {
     const f = new Fixture1()
@@ -205,7 +186,7 @@ function test() {
 
   }, {
     description: "Renewal Tests",
-    skip: true
+    skip: false
   })
   unit.section(() => {
     const f = new Fixture1()
@@ -234,7 +215,7 @@ function test() {
   },
     {
       description: "Renewal failure tests",
-      skip: true
+      skip: false
     })
   unit.section(() => {
     const f = new Fixture1()
@@ -254,7 +235,7 @@ function test() {
   },
     {
       description: "Partials",
-      skip: true
+      skip: false
     })
   return unit.isGood()
 }
@@ -289,7 +270,7 @@ function runUnitTest() {
   },
     {
       description: "test make user",
-      skip: true
+      skip: false
     })
   unit.section(() => {
     const jd = new Date().toISOString().split('T')[0];
@@ -317,7 +298,7 @@ function runUnitTest() {
   },
     {
       description: "User Constructor",
-      skip: true
+      skip: false
     })
   unit.section(() => {
     const match = MembershipFunctions.internal.matchTransactionToMember
@@ -341,7 +322,7 @@ function runUnitTest() {
   },
     {
       description: "matcher tests",
-      skip: true
+      skip: false
     })
   unit.section(() => {
     const result = { join: "", renew: "", partial: "" }
@@ -366,7 +347,7 @@ function runUnitTest() {
   },
     {
       description: "processPaidTransaction tests",
-      skip: true
+      skip: false
     })
 
   return unit.isGood()
