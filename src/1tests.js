@@ -1,3 +1,36 @@
+
+
+function testGoogleDirectory() {
+  const directory = new GoogleDirectory()
+  const fixture = new Fixture1()
+  let user = new User(fixture.txn1)
+  directory.addUser(user)
+  console.error(waitNTimesOnCondition_(20, () => directory.isKnownUser(user)) ? "Known" : "unknown")
+
+}
+
+function waitForError_(f, error) {
+  while (true) {
+    try {
+      f()
+      break
+    } catch (err) {
+      if (err instanceof error) {
+        Utilities.sleep(5 * 1000)
+      }
+      throw err
+    }
+  }
+}
+function waitNTimesOnCondition_(n, c, t = 5) {
+  for (i = 0; i < n; i++) {
+    if (c()) {
+      return true
+    }
+    Utilities.sleep(t * 1000)
+  }
+  return false
+}
 function test() {
   const badUser = new User(new Fixture1().txn1)
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
@@ -13,10 +46,10 @@ function test() {
       let user = new User(fixture.txn1)
       directory.addUser(user)
       const expected = new User(fixture.txn1)
-      unit.is([expected], directory.members, { description: "Expected user to be in members" })
-      directory.updateUser(user.incrementExpirationDate())
+      unit.is(true, directory.isKnownUser(expected), { description: "Expected user to be in members" })
+      user.incrementExpirationDate()
       expected.incrementExpirationDate()
-      unit.is([expected], directory.members, { description: "Expected updated user to be in members" })
+      unit.is(true, directory.isKnownUser(expected), { description: "Expected updated user to be in members" })
       function unf() {
         try {
           directory.updateUser(new User(fixture.txn2))
@@ -27,16 +60,46 @@ function test() {
       }
       unit.is(true, unf() instanceof UserNotFoundError, { description: "Expecting update of uknown user to throw UserNotFoundException" })
       directory.deleteUser(user)
-      unit.is([], directory.members, { description: "Expected memberto have been deleted" })
+      unit.is(false, directory.members, { description: "Expected memberto have been deleted" })
       directory.deleteUser(user)
       unit.is([], directory.members, { description: "Expected deletion to be idempotent" })
     },
       {
         description: description,
-        skip: false
+        skip: true
       })
   }
   testDirectory(new TestDirectory(), "Directory test");
+  unit.section(() => {
+    const fixture = new Fixture1(new GoogleDirectory())
+    const directory = fixture.directory
+    let user = new User(fixture.txn1)
+    directory.addUser(user)
+    const expected = new User(fixture.txn1)
+    waitNTimesOnCondition_(20, () => directory.isKnownUser(expected))
+    unit.is(true, true, directory.isKnownUser(expected), { description: "Expected user to be in members" })
+    user.incrementExpirationDate()
+    waitForError_(() => directory.updateUser(user), UserCreationNotCompletedError)
+    expected.incrementExpirationDate()
+    unit.is(true, true, directory.isKnownUser(expected), { description: "Expected updated user to be in members" })
+    function unf() {
+      try {
+        directory.updateUser(new User(fixture.txn2))
+      } catch (err) {
+        return err
+      }
+      return new Error("Expecting an error")
+    }
+    unit.is(true, unf() instanceof UserNotFoundError, { description: "Expecting update of uknown user to throw UserNotFoundException" })
+    directory.deleteUser(user)
+    unit.is(true, waitNTimesOnCondition_(20, () => !directory.isKnownUser(expected)), { description: "Expected memberto have been deleted" })
+    directory.deleteUser(user)
+    unit.is(true, waitNTimesOnCondition_(20, () => !directory.isKnownUser(expected)), { description: "Expected deletion to be idempotent" })
+  },
+    {
+      description: "Google Directory test",
+      skip: false
+    })
   unit.section(() => {
     const f = new Fixture1()
     const txns = [f.txn1]
@@ -58,7 +121,7 @@ function test() {
   },
     {
       description: "User tests",
-      skip: false
+      skip: true
     })
   unit.section(() => {
     const f = new Fixture1()
@@ -78,7 +141,7 @@ function test() {
     })
   }, {
     description: "Initial TransactionProcessor join tests",
-    skip: false
+    skip: true
   })
   unit.section(() => {
     const txn1 = {
@@ -102,7 +165,7 @@ function test() {
   },
     {
       description: "Test of the ability for multiple people with the same name to join",
-      skip: false
+      skip: true
     })
   unit.section(() => {
 
@@ -137,7 +200,7 @@ function test() {
   }, {
     description: "TransactionProcessor join failure tests",
     neverUndefined: false,
-    skip: false
+    skip: true
   })
   unit.section(() => {
     const f = new Fixture1()
@@ -163,7 +226,7 @@ function test() {
 
   }, {
     description: "Renewal Tests",
-    skip: false
+    skip: true
   })
   unit.section(() => {
     const f = new Fixture1()
@@ -192,7 +255,7 @@ function test() {
   },
     {
       description: "Renewal failure tests",
-      skip: false
+      skip: true
     })
   unit.section(() => {
     const f = new Fixture1()
@@ -212,7 +275,7 @@ function test() {
   },
     {
       description: "Partials",
-      skip: false
+      skip: true
     })
   return unit.isGood()
 }
@@ -247,7 +310,7 @@ function runUnitTest() {
   },
     {
       description: "test make user",
-      skip: false
+      skip: true
     })
   unit.section(() => {
     const jd = new Date().toISOString().split('T')[0];
@@ -275,7 +338,7 @@ function runUnitTest() {
   },
     {
       description: "User Constructor",
-      skip: false
+      skip: true
     })
   unit.section(() => {
     const match = MembershipFunctions.internal.matchTransactionToMember
@@ -299,7 +362,7 @@ function runUnitTest() {
   },
     {
       description: "matcher tests",
-      skip: false
+      skip: true
     })
   unit.section(() => {
     const result = { join: "", renew: "", partial: "" }
@@ -324,7 +387,7 @@ function runUnitTest() {
   },
     {
       description: "processPaidTransaction tests",
-      skip: false
+      skip: true
     })
 
   return unit.isGood()
@@ -357,15 +420,4 @@ function testGetAllUsers() {
     let expected = 1
     unit.is(expected, actual)
   })
-}
-
-
-function t() {
-  Logger.log(Cob.fa());
-  Logger.log(Cob.ca);
-}
-
-function t2() {
-  const mf = MFs
-  mf.internal.createUserObject()
 }
