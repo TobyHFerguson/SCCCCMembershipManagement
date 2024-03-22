@@ -18,6 +18,7 @@ function testGoogleDirectory() {
  * @callback UserFactory
  */
 function test() {
+  const SKIP = false
   const testUserFactory = UserFactory()
 
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
@@ -33,7 +34,6 @@ function test() {
     unit.section(() => {
       const directory = fixture.directory
       let user = userFactory(fixture.txn1)
-      console.error(user)
       directory.addUser(user)
       const expected = userFactory(fixture.txn1)
       Utils.waitNTimesOnCondition(20, () => directory.isKnownUser(expected))
@@ -64,8 +64,8 @@ function test() {
         skip
       })
   }
-  testDirectory(new TestDirectory(testUserFactory), testUserFactory, "Directory test", skip = false);
-  testDirectory(new GoogleDirectory(testUserFactory), testUserFactory, "Google Directory test", skip = true)
+  testDirectory(new TestDirectory(testUserFactory), testUserFactory, "Directory test", SKIP);
+  testDirectory(new GoogleDirectory(testUserFactory), testUserFactory, "Google Directory test", SKIP)
 
   function testCreateDeleteTests(directory, userFactory, description, skip = false) {
     const f = new Fixture1(directory, new Notifier())
@@ -85,8 +85,8 @@ function test() {
         skip
       })
   }
-  testCreateDeleteTests(new TestDirectory(testUserFactory), testUserFactory, "user create/delete tests", skip = false)
-testCreateDeleteTests(new TestDirectory(UserFactory("/members", "a.com")), UserFactory("/members", "a.com"), "user create/delete tests", skip = false)
+  testCreateDeleteTests(new TestDirectory(testUserFactory), testUserFactory, "user create/delete tests", SKIP)
+testCreateDeleteTests(new TestDirectory(UserFactory("/members", "a.com")), UserFactory("/members", "a.com"), "user create/delete tests", SKIP)
 
   unit.section(() => {
     const f = new Fixture1()
