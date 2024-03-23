@@ -1,7 +1,9 @@
 
 
 function test() {
-  const SKIP = false
+  const SKIP = false;
+  // const sdk = Admin;
+  const sdk = AdminDirectory;
 
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
   /**
@@ -14,28 +16,28 @@ function test() {
     const fixture = new Fixture1(directory)
     unit.section(() => {
       const directory = fixture.directory
-      let user = directory.makeUser(fixture.txn1)
-      directory.addUserFromTransaction(fixture.txn1)
-      const expected = directory.makeUser(fixture.txn1)
-      unit.is(true, directory.isKnownUser(expected), { description: "Expected user to be in members" })
+      let user = directory.makeMember(fixture.txn1)
+      directory.addMemberFromTransaction(fixture.txn1)
+      const expected = directory.makeMember(fixture.txn1)
+      unit.is(true, directory.isKnownMember(expected), { description: "Expected user to be in members" })
       const old = user.customSchemas.Club_Membership.expires
-      const updatedUser = directory.getUser(user).incrementExpirationDate()
-      directory.updateUser(updatedUser)
+      const updatedUser = directory.getMember(user).incrementExpirationDate()
+      directory.updateMember(updatedUser)
       unit.not(old, updatedUser.incrementExpirationDate().customSchemas.Club_Membership.expires, { description: "Expected old and new dates to differ" })
       expected.incrementExpirationDate()
-      unit.is(true, directory.isKnownUser(expected), { description: "Expected updated user to be in members" })
+      unit.is(true, directory.isKnownMember(expected), { description: "Expected updated user to be in members" })
       function unf() {
         try {
-          directory.updateUser(directory.makeUser(fixture.txn2))
+          directory.updateMember(directory.makeMember(fixture.txn2))
         } catch (err) {
           return err
         }
         return new Error("Expecting an error")
       }
-      unit.is(true, unf() instanceof UserNotFoundError, { description: "Expecting update of uknown user to throw UserNotFoundException" })
-      directory.deleteUser(user)
-      directory.deleteUser(user, false)
-      unit.is(true, !directory.isKnownUser(expected), { description: "Expected deletion to be idempotent" })
+      unit.is(true, unf() instanceof MemberNotFoundError, { description: "Expecting update of uknown user to throw UserNotFoundException" })
+      directory.deleteMember(user)
+      directory.deleteMember(user, false)
+      unit.is(true, !directory.isKnownMember(expected), { description: "Expected deletion to be idempotent" })
     },
       {
         description,
@@ -46,15 +48,13 @@ function test() {
   function testDirectory(directory, description, skip = false) {
     cleanUp_(testDirectory_, directory, description, skip)
   }
-  testDirectory(new TestDirectory(), "Directory test", SKIP)
-  testDirectory(new GoogleDirectory(AdminDirectory), "Google Directory test", SKIP)
-  testDirectory(new GoogleDirectory(Admin), "Directory Test with Admin", SKIP)
+  testDirectory(new Directory(sdk), "Google Directory test", SKIP)
 
   function cleanUp_(f, directory, description, skip) {
     try {
       f(directory, description, skip)
     } finally {
-      directory.members.forEach((m, i, em) => directory.deleteUser(m, (i === em.length - 1)))
+      directory.members.forEach((m, i, em) => directory.deleteMember(m, (i === em.length - 1)))
     }
   }
   function testCreateDeleteTests_(directory, description, skip = false) {
@@ -65,10 +65,10 @@ function test() {
       const notifier = f.notifier
       const uut = new TransactionProcessor(directory, notifier)
       uut.processTransactions(txns)
-      const expected = directory.makeUser(f.txn1)
-      unit.is(true, directory.isKnownUser(expected), { description: "Expecting txn1 member to have joined the Directory" })
-      directory.deleteUser(expected)
-      unit.is(false, directory.isKnownUser(expected), { description: "Expected member to have been deleted from the directory" })
+      const expected = directory.makeMember(f.txn1)
+      unit.is(true, directory.isKnownMember(expected), { description: "Expecting txn1 member to have joined the Directory" })
+      directory.deleteMember(expected)
+      unit.is(false, directory.isKnownMember(expected), { description: "Expected member to have been deleted from the directory" })
     },
       {
         description,
@@ -78,13 +78,12 @@ function test() {
   function testCreateDeleteTests(directory, description, skip = false) {
     cleanUp_(testCreateDeleteTests_, directory, description, skip)
   }
-  testCreateDeleteTests(new GoogleDirectory(Admin), "user create/delete tests", SKIP)
-  testCreateDeleteTests(new GoogleDirectory(), "Google user create/delete tests", SKIP)
+  testCreateDeleteTests(new Directory(sdk), "user create/delete tests", SKIP)
 
   function testUser(directory, description, skip = false) {
     const f = new Fixture1(directory)
     unit.section(() => {
-      const uut = f.directory.makeUser(f.txn1)
+      const uut = f.directory.makeMember(f.txn1)
       unit.is(uut.orgUnitPath, f.directory.orgUnitPath, { description: "Expecting orgUnitPath to be setup correctly" })
       unit.is(uut.primaryEmail.split('@')[1], f.directory.domain, { description: "Expecting domain to be setup correctly" })
     },
@@ -94,7 +93,7 @@ function test() {
       })
   }
 
-  testUser(new GoogleDirectory(Admin), "User tests", SKIP)
+  testUser(new Directory(sdk), "User tests", SKIP)
 
   function initialTPJoinTests(directory, description, skip = false) {
     cleanUp_(initialTPJoinTests_, directory, description, skip)
@@ -112,7 +111,7 @@ function test() {
       uut.processTransactions(txns)
       let actualMembers = directory.members
       let expectedMembers = txns.map((t, i, ts) => {
-        const nu = directory.makeUser(t); if (i < ts.length - 1) { return nu } else {
+        const nu = directory.makeMember(t); if (i < ts.length - 1) { return nu } else {
           nu.primaryEmail = `${t["First Name"]}.${t["Last Name"]}1@${directory.domain}`.toLowerCase();
           nu.emails.filter((e) => e.primary).forEach((e) => e.address = nu.primaryEmail)
           return nu
@@ -141,8 +140,7 @@ function test() {
     })
 
   }
-  initialTPJoinTests(new GoogleDirectory(Admin), "TransactionProcessor join tests", SKIP)
-  initialTPJoinTests(new GoogleDirectory(), "Google TransactionProcessor join tests", SKIP)
+  initialTPJoinTests(new Directory(sdk), "TransactionProcessor join tests", SKIP)
 
 
   unit.section(() => {
@@ -162,7 +160,7 @@ function test() {
     const uut = new TransactionProcessor(directory, notifier)
     uut.processTransactions([txn1, txn2])
     unit.is(2, directory.members.filter((m) => m.name.givenName === "J").length, { description: "Expecting to be able to add multiple people with same names but different phones and emails" })
-    unit.not([directory.makeUser(txn1), directory.makeUser(txn2)], directory.members, { description: "Expecting that the two members aren't the ones I started with" })
+    unit.not([directory.makeMember(txn1), directory.makeMember(txn2)], directory.members, { description: "Expecting that the two members aren't the ones I started with" })
     unit.is(true, directory.members.some((m) => m.primaryEmail.split("@")[0].endsWith(1)), { description: "Expecting one of the members has had a suffix added to their email address" })
   },
     {
@@ -171,10 +169,13 @@ function test() {
     })
   unit.section(() => {
 
-    class ED extends TestDirectory {
-      addUserFromTransaction(user) {
-        if (user.primaryEmail === badUser.primaryEmail) { throw new DirectoryError() }
-        super.addUserFromTransaction(user)
+    class ED  {
+      constructor(directory) {
+        this.directory = directory
+      }
+      addMemberFromTransaction(txn) {
+        if (txn.primaryEmail === badUser.primaryEmail) { throw new DirectoryError() }
+        directory.addMemberFromTransaction(txn)
       }
     }
 
@@ -188,8 +189,8 @@ function test() {
     uut.processTransactions(txns)
     const members = directory.members
     unit.is(1, members.length, { description: "Only one member expected" })
-    unit.is([directory.makeUser(txn2)], members, { description: "Expect myTxn2 to have become a member" })
-    unit.is([{ txn: txn2, user: directory.makeUser(txn2) }], notifier.joinLog, { description: "successful join notification is expected to be txn2" })
+    unit.is([directory.makeMember(txn2)], members, { description: "Expect myTxn2 to have become a member" })
+    unit.is([{ txn: txn2, user: directory.makeMember(txn2) }], notifier.joinLog, { description: "successful join notification is expected to be txn2" })
     unit.is(1, notifier.joinFailureLog.length, { description: "one join failure expected" })
     notifier.joinFailureLog.forEach((l) => {
       unit.is(true, l.err instanceof Error)
@@ -208,22 +209,22 @@ function test() {
     const f = new Fixture1()
     const txns = [f.txn1, f.txn2]
     const renewalTxn = txns[0]
-    const renewingUser = f.directory.makeUser(renewalTxn)
+    const renewingUser = f.directory.makeMember(renewalTxn)
     const joinTxn = txns[1]
-    const joiningUser = f.directory.makeUser(joinTxn)
+    const joiningUser = f.directory.makeMember(joinTxn)
     const directory = f.directory
     directory.members = [renewingUser]
     const notifier = f.notifier
     const uut = new TransactionProcessor(directory, notifier)
     uut.processTransactions(txns)
-    const updatedRenewingUser = f.directory.makeUser(renewalTxn)
+    const updatedRenewingUser = f.directory.makeMember(renewalTxn)
     updatedRenewingUser.incrementExpirationDate()
     unit.is(true, directory.members.some((m) => m.primaryEmail = updatedRenewingUser.primaryEmail), { description: "The renewed user is expected to be a member of the Directory" })
     unit.is(true, directory.members.some((m) => m.primaryEmail = joiningUser.primaryEmail), { description: "The joining user is expected to be a member of the Directory" })
 
     unit.is([{ txn: renewalTxn, user: updatedRenewingUser }], notifier.renewalSuccessLog, { description: "notification of renewal expected" })
     unit.not(undefined, renewalTxn.Processed, { description: "renewalTxn has been processed" })
-    unit.is([{ txn: joinTxn, user: f.directory.makeUser(joinTxn) }], notifier.joinLog, { description: "notification of join expected" })
+    unit.is([{ txn: joinTxn, user: f.directory.makeMember(joinTxn) }], notifier.joinLog, { description: "notification of join expected" })
     unit.not(undefined, joinTxn.Processed, { description: "joinTxn has been processed" })
 
   }, {
@@ -233,15 +234,15 @@ function test() {
   unit.section(() => {
     const f = new Fixture1()
     const renewalTxn = f.txn1
-    const badUser = f.directory.makeUser(renewalTxn);
-    const expectedMember = f.directory.makeUser(badUser)
+    const badUser = f.directory.makeMember(renewalTxn);
+    const expectedMember = f.directory.makeMember(badUser)
     unit.is(badUser, expectedMember, { description: "users should be the same" })
     unit.not(badUser.incrementExpirationDate, expectedMember, { description: "users should be different" })
     const txns = [renewalTxn];
     class BadRenewalDirectory extends TestDirectory {
-      updateUser(user) {
+      updateMember(user) {
         if (user.primaryEmail === badUser.primaryEmail) { throw new Error() }
-        super.updateUser(user)
+        super.updateMember(user)
       }
     }
     const directory = new BadRenewalDirectory()
@@ -270,10 +271,10 @@ function test() {
     t2["Phone Number"] = "+1234"
     uut.processTransactions([t2]);
     unit.is(1, directory.members.length, { description: "something was added as a member" })
-    unit.is(f.directory.makeUser(t1), directory.members[0], { description: "t1 added as a member" })
-    unit.is(true, directory.members.some((m) => m.phones[0].value === f.directory.makeUser(t1).phones[0].value), { description: "Expecting directory to contain the t1 user" })
-    unit.is(false, directory.members.some((m) => m.phones[0].value === f.directory.makeUser(t2).phones[0].value), { description: "Expecting directory not to contain the t2 user" })
-    unit.is([{ txn: t2, user: f.directory.makeUser(t1) }], notifier.partialsLog, { description: "Expecting to be notified about the partials" })
+    unit.is(f.directory.makeMember(t1), directory.members[0], { description: "t1 added as a member" })
+    unit.is(true, directory.members.some((m) => m.phones[0].value === f.directory.makeMember(t1).phones[0].value), { description: "Expecting directory to contain the t1 user" })
+    unit.is(false, directory.members.some((m) => m.phones[0].value === f.directory.makeMember(t2).phones[0].value), { description: "Expecting directory not to contain the t2 user" })
+    unit.is([{ txn: t2, user: f.directory.makeMember(t1) }], notifier.partialsLog, { description: "Expecting to be notified about the partials" })
   },
     {
       description: "Partials",
@@ -291,7 +292,7 @@ function runUnitTest() {
       "primaryEmail": `J.K@${domain}`, "name": { "givenName": "J", "familyName": "K" }, "emails": [{ "address": "j.k@icloud.com", "type": "home" }], "phones": [{ "value": "+14083869343", "type": "mobile" }], "customSchemas": { "Club_Membership": { "expires": ed, "Join_Date": jd } }, "orgUnitPath": "/members", "recoveryEmail": "j.k@icloud.com", "recoveryPhone": "+14083869343"
     }
     const f = new Fixture1()
-    let user = f.directory.makeUser(txn)
+    let user = f.directory.makeMember(txn)
     let actual = user
     unit.is(expected.emails, actual.emails)
     unit.is(expected.phones, actual.phones)
@@ -302,7 +303,7 @@ function runUnitTest() {
     ed.setFullYear(ed.getFullYear() + 1)
     ed = ed.toISOString().split('T')[0];
     unit.is(ed, user.customSchemas.Club_Membership.expires)
-    let user2 = f.directory.makeUser(user)
+    let user2 = f.directory.makeMember(user)
     unit.is(user, user2, { description: "Expected the copy constructor to make identical copies" })
     user2.incrementExpirationDate()
     unit.not(user, user2, { description: "Expected deep copies, not shallow copies" })

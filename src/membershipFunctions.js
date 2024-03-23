@@ -3,7 +3,7 @@ const MembershipFunctions = (() => {
 
   internal.getOrgUnitPath = (type) => { return type === "Board" ? "/privileged users" : "/members" }
 
-  internal.getUserFiddler = () => {
+  internal.getMemberFiddler = () => {
     return bmPreFiddler.PreFiddler().getFiddler({
       id: null,
       sheetName: 'Users',
@@ -83,7 +83,7 @@ const MembershipFunctions = (() => {
     expires.setFullYear(expires.getFullYear() + 1);
     member.customSchemas.Club_Membership.expires = expires;
     try {
-      directory.updateUser_(member, { customSchemas: { Club_Membership: { expires: internal.convertToYYYYMMDDFormat(expires) } } });
+      directory.updateMember_(member, { customSchemas: { Club_Membership: { expires: internal.convertToYYYYMMDDFormat(expires) } } });
       txn.Processed = processedDate;
       console.log(`Member ${member.primaryEmail} has renewed until: ${member.customSchemas.Club_Membership.expires}`);
     } catch (err) {
