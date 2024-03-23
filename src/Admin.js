@@ -1,0 +1,37 @@
+/** Based on Admin SDK:  Directory API: https://developers.google.com/admin-sdk/directory/reference/rest */
+const Admin = (() => {
+    class Users_ {
+        constructor() {
+            this.users = []
+        }
+        get(primaryEmail) {
+            return this.users.find((u) => u.primaryEmail === primaryEmail)
+        }
+        insert(user) {
+            if (this.get(user.primaryEmail)) throw new Error("API call to directory.users.insert failed with error: Entity already exists.")
+            const newUser = {...user}
+            this.users.push(newUser)
+            return newUser
+        }
+        list(queryParameters) {
+            return {users: JSON.parse(JSON.stringify(this.users))}
+         }
+        remove(primaryEmail) {
+            let i = this.users.findIndex((u) => u.primaryEmail === primaryEmail);
+            if (i === -1) throw new Error("Resource Not Found: userKey");
+            this.users.splice(i,1)
+        }
+        update(patch, primaryEmail) {
+            let i = this.users.findIndex((u) => u.primaryEmail === primaryEmail);
+            if (i === -1) throw new Error("Resource Not Found: userKey");
+            const oldUser = this.users[i]
+            const newUser = { ...oldUser, ...JSON.parse(patch)}
+            this.users.splice(i, 1, newUser)
+            return {...newUser}
+        }
+    }
+    return {
+        Users: new Users_()
+    }
+    
+})()

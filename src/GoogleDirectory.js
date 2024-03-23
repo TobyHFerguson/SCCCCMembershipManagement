@@ -3,8 +3,9 @@
  * @property {}
  */
 class GoogleDirectory extends Directory {
-  constructor(orgUnitPath="/test", domain="santacruzcountycycling.club") {
+  constructor(adminDirectory = AdminDirectory, orgUnitPath="/test", domain="santacruzcountycycling.club", ) {
     super()
+    this.adminDirectory = adminDirectory
     this.orgUnitPath = orgUnitPath.trim(),
     this.domain = domain.trim()
   }
@@ -16,7 +17,7 @@ class GoogleDirectory extends Directory {
     let pageToken;
     let page;
     do {
-      page = AdminDirectory.Users.list({
+      page = this.adminDirectory.Users.list({
         customer: 'my_customer',
         orderBy: 'givenName',
         viewType: "admin_view",
@@ -51,25 +52,25 @@ class GoogleDirectory extends Directory {
         pageToken: pageToken,
         projection: "full"
       }
-      page = AdminDirectory.Users.list(listSpec);
+      page = this.adminDirectory.Users.list(listSpec);
       if (!page.users) {
         return [];
       }
       users = users.concat(page.users)
       pageToken = page.nextPageToken;
     } while (pageToken);
-    return users.map((u) => this.makeUser(u))
+    return users
   }
 
   updateUser(user) {
     let { customSchemas } = user
-    return Utils.retryOnError(() => this.updateUser_(user, { customSchemas }), UserCreationNotCompletedError)
+    return Utils.retryOnError(() => this.makeUser(this.updateUser_(user, { customSchemas })), UserCreationNotCompletedError)
   }
 
   updateUser_(user, patch) {
     const key = user.primaryEmail
     try {
-      AdminDirectory.Users.update(JSON.stringify(patch), key);
+      return this.adminDirectory.Users.update(JSON.stringify(patch), key);
       console.log(`user ${key} updated`)
     } catch (err) {
       if (err.message.includes("userKey")) {
@@ -84,7 +85,7 @@ class GoogleDirectory extends Directory {
 
   getUser(user) {
     try {
-      return this.makeUser(AdminDirectory.Users.get(user.primaryEmail, { projection: "full", viewType: "admin_view" }))
+      return this.makeUser(this.adminDirectory.Users.get(user.primaryEmail, { projection: "full", viewType: "admin_view" }))
     } catch (err) {
       if (err.message.endsWith("Resource Not Found: userKey")) return {}
       throw new DirectoryError(err)
@@ -96,7 +97,7 @@ class GoogleDirectory extends Directory {
     user.password = Math.random().toString(36);
     user.changePasswordAtNextLogin = true;
     try {
-      let newUser = AdminDirectory.Users.insert(user);
+      let newUser = this.makeUser(this.adminDirectory.Users.insert(user));
       if (wait) {
         Utils.waitNTimesOnCondition(4000, () => this.isKnownUser(newUser))
       }
@@ -118,7 +119,7 @@ class GoogleDirectory extends Directory {
    */
   deleteUser(user, wait = true) {
     try {
-      Utils.retryOnError(() => {AdminDirectory.Users.remove(user.primaryEmail.toLowerCase()); console.log(`user ${user.primaryEmail} deleted`); return true}, UserCreationNotCompletedError)
+      Utils.retryOnError(() => {this.adminDirectory.Users.remove(user.primaryEmail.toLowerCase()); console.log(`user ${user.primaryEmail} deleted`); return true}, UserCreationNotCompletedError)
       Utils.waitNTimesOnCondition(wait ? 400 : 1, () => !this.isKnownUser(user))
     }
     catch (err) {

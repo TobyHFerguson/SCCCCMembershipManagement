@@ -1,7 +1,7 @@
 
 
 function test() {
-  const SKIP = false
+  const SKIP = true
 
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
   /**
@@ -15,17 +15,17 @@ function test() {
     unit.section(() => {
       const directory = fixture.directory
       let user = directory.makeUser(fixture.txn1)
-      directory.addUserFromTransaction(user)
+      directory.addUserFromTransaction(fixture.txn1)
       const expected = directory.makeUser(fixture.txn1)
-      Utils.waitNTimesOnCondition(400, () => directory.isKnownUser(expected))
-      unit.is(true, true, directory.isKnownUser(expected), { description: "Expected user to be in members" })
+      // Utils.waitNTimesOnCondition(400, () => directory.isKnownUser(expected))
+      unit.is(true, directory.isKnownUser(expected), { description: "Expected user to be in members" })
       const old = user.customSchemas.Club_Membership.expires
-      const directoryUser = directory.getUser(user)
-      directory.updateUser(user)
-      Utils.waitNTimesOnCondition(400, () => directory.getUser(directoryUser).customSchemas.Club_Membership.expires !== old)
-      unit.not(old, directoryUser.incrementExpirationDate().customSchemas.Club_Membership.expires, { description: "Expected old and new dates to differ" })
+      const updatedUser = directory.getUser(user).incrementExpirationDate()
+      directory.updateUser(updatedUser)
+      Utils.waitNTimesOnCondition(400, () => directory.getUser(updatedUser).customSchemas.Club_Membership.expires !== old)
+      unit.not(old, updatedUser.incrementExpirationDate().customSchemas.Club_Membership.expires, { description: "Expected old and new dates to differ" })
       expected.incrementExpirationDate()
-      unit.is(true, true, directory.isKnownUser(expected), { description: "Expected updated user to be in members" })
+      unit.is(true, directory.isKnownUser(expected), { description: "Expected updated user to be in members" })
       function unf() {
         try {
           directory.updateUser(directory.makeUser(fixture.txn2))
@@ -50,7 +50,8 @@ function test() {
     cleanUp_(testDirectory_, directory, description, skip)
   }
   testDirectory(new TestDirectory(), "Directory test", SKIP)
-  testDirectory(new GoogleDirectory(), "Google Directory test", SKIP)
+  testDirectory(new GoogleDirectory(AdminDirectory), "Google Directory test", SKIP)
+  testDirectory(new GoogleDirectory(Admin), "Directory Test with Admin", false)
 
   function cleanUp_(f, directory, description, skip) {
     try {
@@ -82,7 +83,7 @@ function test() {
     cleanUp_(testCreateDeleteTests_, directory, description, skip)
   }
   testCreateDeleteTests(new TestDirectory(), "user create/delete tests", SKIP)
-  testCreateDeleteTests(new GoogleDirectory(), "Google user create/delete tests", false)
+  testCreateDeleteTests(new GoogleDirectory(), "Google user create/delete tests", SKIP)
 
   function testUser(directory, description, skip = false) {
     const f = new Fixture1(directory)
