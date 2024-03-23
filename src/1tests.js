@@ -1,7 +1,7 @@
 
 
 function test() {
-  const SKIP = true
+  const SKIP = false
 
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
   /**
@@ -17,12 +17,10 @@ function test() {
       let user = directory.makeUser(fixture.txn1)
       directory.addUserFromTransaction(fixture.txn1)
       const expected = directory.makeUser(fixture.txn1)
-      // Utils.waitNTimesOnCondition(400, () => directory.isKnownUser(expected))
       unit.is(true, directory.isKnownUser(expected), { description: "Expected user to be in members" })
       const old = user.customSchemas.Club_Membership.expires
       const updatedUser = directory.getUser(user).incrementExpirationDate()
       directory.updateUser(updatedUser)
-      Utils.waitNTimesOnCondition(400, () => directory.getUser(updatedUser).customSchemas.Club_Membership.expires !== old)
       unit.not(old, updatedUser.incrementExpirationDate().customSchemas.Club_Membership.expires, { description: "Expected old and new dates to differ" })
       expected.incrementExpirationDate()
       unit.is(true, directory.isKnownUser(expected), { description: "Expected updated user to be in members" })
@@ -36,7 +34,6 @@ function test() {
       }
       unit.is(true, unf() instanceof UserNotFoundError, { description: "Expecting update of uknown user to throw UserNotFoundException" })
       directory.deleteUser(user)
-      unit.is(true, Utils.waitNTimesOnCondition(400, () => !directory.isKnownUser(expected)), { description: "Expected member to have been deleted" })
       directory.deleteUser(user, false)
       unit.is(true, !directory.isKnownUser(expected), { description: "Expected deletion to be idempotent" })
     },
@@ -51,7 +48,7 @@ function test() {
   }
   testDirectory(new TestDirectory(), "Directory test", SKIP)
   testDirectory(new GoogleDirectory(AdminDirectory), "Google Directory test", SKIP)
-  testDirectory(new GoogleDirectory(Admin), "Directory Test with Admin", false)
+  testDirectory(new GoogleDirectory(Admin), "Directory Test with Admin", SKIP)
 
   function cleanUp_(f, directory, description, skip) {
     try {
@@ -69,7 +66,6 @@ function test() {
       const uut = new TransactionProcessor(directory, notifier)
       uut.processTransactions(txns)
       const expected = directory.makeUser(f.txn1)
-      Utils.waitNTimesOnCondition(400, () => directory.isKnownUser(expected))
       unit.is(true, directory.isKnownUser(expected), { description: "Expecting txn1 member to have joined the Directory" })
       directory.deleteUser(expected)
       unit.is(false, directory.isKnownUser(expected), { description: "Expected member to have been deleted from the directory" })
@@ -82,7 +78,7 @@ function test() {
   function testCreateDeleteTests(directory, description, skip = false) {
     cleanUp_(testCreateDeleteTests_, directory, description, skip)
   }
-  testCreateDeleteTests(new TestDirectory(), "user create/delete tests", SKIP)
+  testCreateDeleteTests(new GoogleDirectory(Admin), "user create/delete tests", SKIP)
   testCreateDeleteTests(new GoogleDirectory(), "Google user create/delete tests", SKIP)
 
   function testUser(directory, description, skip = false) {
@@ -98,7 +94,7 @@ function test() {
       })
   }
 
-  testUser(new TestDirectory(), "User tests", SKIP)
+  testUser(new GoogleDirectory(Admin), "User tests", SKIP)
 
   function initialTPJoinTests(directory, description, skip = false) {
     cleanUp_(initialTPJoinTests_, directory, description, skip)
@@ -145,7 +141,7 @@ function test() {
     })
 
   }
-  initialTPJoinTests(new TestDirectory(), "TransactionProcessor join tests", false)
+  initialTPJoinTests(new GoogleDirectory(Admin), "TransactionProcessor join tests", SKIP)
   initialTPJoinTests(new GoogleDirectory(), "Google TransactionProcessor join tests", SKIP)
 
 
