@@ -8,9 +8,10 @@ class User {
       const txn = obj
       let givenName = txn['First Name'];
       let familyName = txn['Last Name'];
+      let fullName = `${givenName} ${familyName}`
       let email = txn['Email Address'];
       let phone = txn['Phone Number'];
-      const name = (givenName || familyName) ? { givenName, familyName } : undefined
+      const name = (givenName || familyName) ? { givenName, familyName, fullName } : undefined
       const primaryEmail = `${givenName}.${familyName}@${this.domain}`.toLowerCase()
       const Join_Date = new Date();
       phone = phone.startsWith('+1') ? phone : '+1' + phone
@@ -20,19 +21,23 @@ class User {
       this.name = name
       this.emails = [
         {
-          "address": email,
-          "type": "home"
+          address: email,
+          type: "home"
         },
+        {
+          address: primaryEmail,
+          primary: true
+        }
       ],
         this.phones = [
           {
-            "value": phone,
-            "type": "mobile"
+            value: phone,
+            type: "mobile"
           }
         ],
         this.customSchemas = {
-          "Club_Membership": {
-            "expires": this.convertToYYYYMMDDFormat_(expiryDate),
+          Club_Membership: {
+            expires: this.convertToYYYYMMDDFormat_(expiryDate),
             Join_Date: this.convertToYYYYMMDDFormat_(Join_Date)
           }
         },
@@ -56,7 +61,9 @@ class User {
   }
   incrementGeneration() {
     this.generation_ += 1
-    this.primaryEmail = this.makePrimaryEmail_(this.name.givenName,this.name.familyName,this.generation_,this.domain)
+    let pm = this.makePrimaryEmail_(this.name.givenName, this.name.familyName, this.generation_, this.domain)
+    this.primaryEmail = pm
+    this.emails.filter((e) => e.primary).forEach((e) => e.address = pm)
     return this
   }
   incrementExpirationDate() {
