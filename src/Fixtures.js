@@ -1,5 +1,6 @@
 class Fixture1 {
     constructor(directory, notifier) {
+      if (!directory) throw new Error("directory must be provided")
       this.txn1 = {
         "First Name": "J",
         "Last Name": "K",
@@ -15,10 +16,10 @@ class Fixture1 {
         "Payable Status": "paid"
       }
       this.badTxn = {
-        "First Name": "J",
-        "Last Name": "K",
-        "Email Address": "j.k@icloud.com",
-        "Phone Number": "+14083869343",
+        "First Name": "C",
+        "Last Name": "D",
+        "Email Address": "c.d@icloud.com",
+        "Phone Number": "+14083869340",
         "Payable Status": "paid"
       }
       this.directory = directory;

@@ -48,7 +48,7 @@ class Directory {
       users = users.concat(page.users)
       pageToken = page.nextPageToken;
     } while (pageToken);
-    return users
+    return users ? users : []
   }
 
   /**
@@ -99,7 +99,7 @@ class Directory {
    * @returns 
    */
   addMemberFromTransaction(txn, wait = true) {
-    const user = new Member(txn, this.orgUnitPath, this.domain)
+    const user = this.makeMember(txn)
     user.password = Math.random().toString(36);
     user.changePasswordAtNextLogin = true;
     try {
@@ -125,14 +125,13 @@ class Directory {
    */
   deleteMember(member, wait = true) {
     try {
-      Utils.retryOnError(() => { this.adminDirectory.Users.remove(member.primaryEmail.toLowerCase()); console.log(`user ${member.primaryEmail} deleted`); return true }, MemberCreationNotCompletedError)
+      Utils.retryOnError(() => { this.adminDirectory.Users.remove(member.primaryEmail.toLowerCase()); console.log(`Member ${member.primaryEmail} deleted`); return true }, MemberCreationNotCompletedError)
       Utils.waitNTimesOnCondition(wait ? 400 : 1, () => !this.isKnownMember(member))
     }
     catch (err) {
       // Only throw the error if the user might still exist, otherwise ignore it since the user not existing is what we want!
       if (!err.message.endsWith("Resource Not Found: userKey")) throw new MemberNotFoundError(err)
     }
-    console.log('Member %s deleted.', member.primaryEmail);
   }
 }
 
