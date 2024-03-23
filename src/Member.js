@@ -1,6 +1,6 @@
 
 
-class User {
+class Member {
   constructor(obj, orgUnitPath, domain) {
     this.domain = domain
     this.generation_ = 0

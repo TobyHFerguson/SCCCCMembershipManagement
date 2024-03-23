@@ -42,15 +42,15 @@ class TransactionProcessor {
     return result
   }
   join_(txn) {
-    let member = this.directory.makeUser(txn)
+    let member = this.directory.makeMember(txn)
     while (true) {
       try {
-        this.directory.addUserFromTransaction(member)
+        this.directory.addMemberFromTransaction(member)
         txn.Processed = new Date().toISOString().split("T")[0]
         this.notifier.joinSuccess(txn, member)
         break
       } catch (err) {
-        if (err instanceof UserAlreadyExistsError) {
+        if (err instanceof MemberAlreadyExistsError) {
           console.log('TP - join retry')
           member.incrementGeneration()
         } else {
@@ -67,9 +67,9 @@ class TransactionProcessor {
    * @param (User) member the member that is renewing their membership
    */
   renew_(txn, member) {
-    let updatedMember = this.directory.makeUser(member).incrementExpirationDate()
+    let updatedMember = this.directory.makeMember(member).incrementExpirationDate()
     try {
-      this.directory.updateUser(updatedMember)
+      this.directory.updateMember(updatedMember)
       txn.Processed = new Date()
       this.notifier.renewalSuccess(txn, updatedMember)
     } catch (err) {
