@@ -15,12 +15,15 @@ class Notifier {
         this.joinLog.push({txn, user})
     }
     joinFailure(txn, user, err) {
+      console.error(`Notifier.joinFailure()`)
+      console.error(err.message)
       this.joinFailureLog.push({ txn, user, err})
     }
     renewalSuccess(txn, user) {
       this.renewalSuccessLog.push({txn, user})
     }
     renewalFailure(txn, user, err) {
+      console.error(err.message)
       this.renewalFailureLog.push({txn, user, err})
     }
     partial(txn, user) {

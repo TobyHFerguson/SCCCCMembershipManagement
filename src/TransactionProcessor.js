@@ -10,7 +10,8 @@ class TransactionProcessor {
   }
   processTransactions(transactions, matcher = this.matchTransactionToMember_) {
     const txns = transactions.filter((txn) => txn['Payable Status'] !== undefined && txn['Payable Status'].startsWith('paid') && !txn.Processed)
-    txns.forEach((txn) => {
+    txns.forEach((txn, i) => {
+      console.error(`TP.pt - processing txn ${i}`)
       let match = this.directory.members.find((m) => matcher(txn, m))
       if (match) { //
         if (matcher(txn, match).full) {
@@ -48,15 +49,16 @@ class TransactionProcessor {
         this.directory.addMemberFromTransaction(member)
         txn.Processed = new Date().toISOString().split("T")[0]
         this.notifier.joinSuccess(txn, member)
-        break
+        return
       } catch (err) {
         if (err instanceof MemberAlreadyExistsError) {
           console.log('TP - join retry')
           member.incrementGeneration()
+          continue
         } else {
           console.log(`TP - join_ err`)
           this.notifier.joinFailure(txn, member, err)
-          break
+          return
         }
       }
     }
