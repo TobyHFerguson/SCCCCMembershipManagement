@@ -10,7 +10,7 @@ function test() {
    * @param {string} description - the descripton to be used
    * @param {boolean} [skip=false] - whether to skip this test or not
    */
-  function testDirectory(directory, description, skip = false) {
+  function testDirectory_(directory, description, skip = false) {
     const fixture = new Fixture1(directory)
     unit.section(() => {
       const directory = fixture.directory
@@ -45,10 +45,21 @@ function test() {
         skip
       })
   }
-  testDirectory(new TestDirectory(), "Directory test", SKIP);
+
+  function testDirectory(directory, description, skip = false) {
+    cleanUp_(testDirectory_, directory, description, skip)
+  }
+  testDirectory(new TestDirectory(), "Directory test", SKIP)
   testDirectory(new GoogleDirectory(), "Google Directory test", SKIP)
 
-  function testCreateDeleteTests(directory, description, skip = false) {
+  function cleanUp_(f, directory, description, skip) {
+    try {
+      f(directory, description, skip)
+    } finally {
+      directory.members.forEach((m, i, em) => directory.deleteUser(m, (i === em.length - 1)))
+    }
+  }
+  function testCreateDeleteTests_(directory, description, skip = false) {
     const f = new Fixture1(directory, new Notifier())
     unit.section(() => {
       const txns = [f.txn1]
@@ -60,12 +71,15 @@ function test() {
       Utils.waitNTimesOnCondition(400, () => directory.isKnownUser(expected))
       unit.is(true, directory.isKnownUser(expected), { description: "Expecting txn1 member to have joined the Directory" })
       directory.deleteUser(expected)
-      unit.is([], directory.members, { description: "Expected member to have been deleted from the directory" })
+      unit.is(false, directory.isKnownUser(expected), { description: "Expected member to have been deleted from the directory" })
     },
       {
         description,
         skip
       })
+  }
+  function testCreateDeleteTests(directory, description, skip = false) {
+    cleanUp_(testCreateDeleteTests_, directory, description, skip)
   }
   testCreateDeleteTests(new TestDirectory(), "user create/delete tests", SKIP)
   testCreateDeleteTests(new GoogleDirectory(), "Google user create/delete tests", false)
@@ -84,7 +98,11 @@ function test() {
   }
 
   testUser(new TestDirectory(), "User tests", SKIP)
+
   function initialTPJoinTests(directory, description, skip = false) {
+    cleanUp_(initialTPJoinTests_, directory, description, skip)
+  }
+  function initialTPJoinTests_(directory, description, skip = false) {
     const f = new Fixture1(directory, new Notifier())
     unit.section(() => {
       const txn3 = { ...f.txn1 }
@@ -96,34 +114,39 @@ function test() {
       const uut = new TransactionProcessor(directory, notifier)
       uut.processTransactions(txns)
       let actualMembers = directory.members
-      let expectedMembers = txns.map((t, i, ts) => { const nu = directory.makeUser(t); if (i < ts.length - 1) { return nu } else { nu.primaryEmail = `${t["First Name"]}.${t["Last Name"]}1@${directory.domain}`.toLowerCase(); return nu } })
-      //Utils.waitNTimesOnCondition(400, () => directory.isKnownUser(expectedMembers[2]))
-      unit.is(3, actualMembers.length, { description: "Expected to have 3 new members" })
-      expectedMembers.forEach((m, i) => {
-        unit.is(m, actualMembers[i], { description: "Expected member to be made from transaction" })
-        unit.is(m.name, actualMembers[i].name, { description: "Expected names to match" })
-        unit.is(m.emails, actualMembers[i].emails, { description: "Expected emails to match" })
-        unit.is(m.phones, actualMembers[i].phones, { description: "Expected phones to match" })
-        unit.is(m.customSchemas, actualMembers[i].customSchemas, { description: "Expected custom schemas to match" })
+      let expectedMembers = txns.map((t, i, ts) => {
+        const nu = directory.makeUser(t); if (i < ts.length - 1) { return nu } else {
+          nu.primaryEmail = `${t["First Name"]}.${t["Last Name"]}1@${directory.domain}`.toLowerCase();
+          nu.emails.filter((e) => e.primary).forEach((e) => e.address = nu.primaryEmail)
+          return nu
+        }
       })
-      unit.is(expectedMembers, actualMembers, { description: "Expected new members to be made from the transactions" })
+      unit.is(3, actualMembers.length, { description: "Expected to have 3 new members" })
+      expectedMembers.forEach((m) => {
+        let am = actualMembers.find((a) => a.primaryEmail === m.primaryEmail)
+        unit.is(m.name, am.name, { description: "Expected names to match" })
+        unit.is(m.emails, am.emails, { description: "Expected home emails to match" })
+        unit.is(m.phones, am.phones, { description: "Expected phones to match" })
+        unit.is(m.customSchemas, am.customSchemas, { description: "Expected custom schemas to match" })
+      })
       txns.forEach((t, i, ts) => {
         const el = { txn: t, user: expectedMembers[i] }
         if (i === ts.length - 1) el.user.generation_ = 1;
         unit.is(el, notifier.joinLog[i], { description: "Expected log entries to match" })
-
       })
-      let expectedLog = txns.map((t, i) => { return { txn: t, user: expectedMembers[i] } })
       txns.forEach((t) => {
         unit.not(undefined, t.Processed, { neverUndefined: false, description: "Expected all transactions to have been processed" })
       })
-      directory.members.forEach((m, i, em) => directory.deleteUser(m, (i === em.length - 1)))
-    }, {
+    },
+      {
       description,
       skip
     })
+
   }
   initialTPJoinTests(new TestDirectory(), "TransactionProcessor join tests", false)
+  initialTPJoinTests(new GoogleDirectory(), "Google TransactionProcessor join tests", SKIP)
+
 
   unit.section(() => {
     const txn1 = {

@@ -91,12 +91,15 @@ class GoogleDirectory extends Directory {
     }
   }
 
-  addUserFromTransaction(txn) {
+  addUserFromTransaction(txn, wait = true) {
     const user = new User(txn, this.orgUnitPath, this.domain)
     user.password = Math.random().toString(36);
     user.changePasswordAtNextLogin = true;
     try {
       let newUser = AdminDirectory.Users.insert(user);
+      if (wait) {
+        Utils.waitNTimesOnCondition(4000, () => this.isKnownUser(newUser))
+      }
       console.log(`user ${user.primaryEmail} created`)
       return newUser
     } catch (err) {
@@ -114,11 +117,9 @@ class GoogleDirectory extends Directory {
    * @param {boolean} wait wait for deletion to finish before returning
    */
   deleteUser(user, wait = true) {
-    function deleteWithRetry() {
-      Utils.retryOnError(() => AdminDirectory.Users.remove(user.primaryEmail.toLowerCase()), UserCreationNotCompletedError)
-    }
     try {
-      Utils.waitNTimesOnCondition(wait ? 400 : 1, () => deleteWithRetry())
+      Utils.retryOnError(() => {AdminDirectory.Users.remove(user.primaryEmail.toLowerCase()); console.log(`user ${user.primaryEmail} deleted`); return true}, UserCreationNotCompletedError)
+      Utils.waitNTimesOnCondition(wait ? 400 : 1, () => !this.isKnownUser(user))
     }
     catch (err) {
       // Only throw the error if the user might still exist, otherwise ignore it since the user not existing is what we want!
