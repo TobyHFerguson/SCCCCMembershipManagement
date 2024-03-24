@@ -1,4 +1,33 @@
 
+function testEmailNotifier() {
+  const drafts = {
+    joinSuccess: getGmailTemplateFromDrafts__("Thanks for joining SCCCC")
+  }
+  const sendMail = (recipient, subject, text, options) => {
+    console.log(`To: ${recipient}`)
+    console.log(`From: ${options.from}`)
+    console.log(`Reply-to: ${options.noReply}`)
+    console.log(`subject: ${subject}`)
+    console.log(options.htmlBody ? options.htmlBody : text)
+  }
+  const txn = {
+    "First Name": "J",
+    "Last Name": "K",
+    "Email Address": "j.k@icloud.com",
+    "Phone Number": "+14083869343",
+    "Payable Status": "paid",
+    "Payable Order ID": "CC-TF-RNB6"
+  }
+  const member = {
+    primayEmail: "j.k@foo.com",
+    fullName: "J K"
+  }
+
+  const notifier = new EmailNotifier(drafts, { sendMail })
+  notifier.joinSuccess(txn, member)
+}
+
+
 
 
 const SKIP = false
