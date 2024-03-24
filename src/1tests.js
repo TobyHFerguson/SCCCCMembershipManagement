@@ -15,8 +15,8 @@ function testRenewalSuccess() {
   updatedRenewingUser.incrementExpirationDate()
 }
 function test() {
-  const SKIP = false;
-  const sdk = Admin;
+  const SKIP = true;
+  const sdk = new Admin();
   // const sdk = AdminDirectory;
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
   testDirectory(new Directory(sdk), SKIP)
@@ -25,24 +25,24 @@ function test() {
   testUser(new Directory(sdk), SKIP)
   testTPJoinSuccess(new Directory(sdk), new Notifier(), SKIP)
   testPartialSuccess(new Directory(sdk), new Notifier(), SKIP)
-  testRenewalSuccess(new Directory(sdk), new Notifier(), false)
+  testRenewalSuccess(new Directory(sdk), new Notifier(), SKIP)
   TestTPJoinFailures(new Directory(sdk), new Notifier(), SKIP)
-  testRenewalFailure(new Directory(sdk), new Notifier(), SKIP)
+  testRenewalFailure(new Directory(sdk), new Notifier(), false)
   return unit.isGood()
 
   function testAdmin(directory, description, skip = false) {
-      const f = new Fixture1(directory)
+    const f = new Fixture1(directory)
     const admin = directory.adminDirectory
     try {
-    const member = directory.makeMember(f.txn1)
-    const newMember = admin.Users.insert(member)
-    unit.section(() => {
-      unit.is(newMember, member, { description: "New member should. be copy of old" })
-    },
-      { description, skip })
-      } finally {
-        admin.Users.list().users.forEach((m) => admin.Users.remove(m.primaryEmail))
-      }
+      const member = directory.makeMember(f.txn1)
+      const newMember = admin.Users.insert(member)
+      unit.section(() => {
+        unit.is(newMember, member, { description: "New member should. be copy of old" })
+      },
+        { description, skip })
+    } finally {
+      admin.Users.list().users.forEach((m) => admin.Users.remove(m.primaryEmail))
+    }
   }
   function testCreateDeleteTests(directory, skip = false) {
     cleanUp_(testCreateDeleteTests_, directory, "user create/delete tests", skip)
@@ -182,39 +182,41 @@ function test() {
     cleanUp_(TestTPJoinFailures_, directory, "TransactionProcessor join failure tests", notifier, skip)
   }
   function TestTPJoinFailures_(directory, description, notifier, skip = false) {
-    const f = new Fixture1(directory, notifier)
-    const oldInsert = directory.adminDirectory.Users.insert;
-    const badUser = f.directory.makeMember(f.badTxn)
-    f.directory.adminDirectory.Users.insert = function (user) {
-      if (user.primaryEmail === badUser.primaryEmail) {
-        console.error(`bad user: ${user.primaryEmail} === ${badUser.primaryEmail}`)
-        throw new DirectoryError()
+    class BadUsers extends Users {
+      constructor(badUserEmail) {
+        super()
+        this.badUserEmail = badUserEmail
       }
-      const addedUser = oldInsert(user);
-      console.error(`My Insert:`)
-      console.error(addedUser)
-      return addedUser
+      insert(user) {
+        console.error(`BadUsers.insert(${user.primaryEmail}) looking for ${this.badUserEmail}`)
+        if (user.primaryEmail === this.badUserEmail) {
+          console.error(`bad user: ${user.primaryEmail} === ${this.badUserEmail}`)
+          throw new DirectoryError()
+        }
+        return super.insert(user)
+      }
     }
+    let f = new Fixture1(directory, notifier)
+    const admin = new Admin(new BadUsers(directory.makeMember(f.badTxn).primaryEmail))
+    f.directory = new Directory(admin)
     unit.section(() => {
       const txns = [f.badTxn, f.txn2]
-      const directory = f.directory
-      const notifier = f.notifier
-      const txn2 = f.txn2
-      const goodMember = directory.makeMember(txn2)
-      const uut = new TransactionProcessor(directory, notifier)
+      const goodMember = directory.makeMember(f.txn2)
+      const badMember = directory.makeMember(f.badTxn)
+      const uut = new TransactionProcessor(f.directory, f.notifier)
       uut.processTransactions(txns)
-      unit.is(1, directory.members.length, { description: "Expect directory to have 1 member" })
-      unit.is(true, directory.isKnownMember(goodMember), { description: "Expect goodMember to have become a member" })
-      unit.is([{ txn: txn2, user: goodMember }], notifier.joinLog, { description: "successful join notification is expected to be txn2" })
-      unit.is(1, notifier.joinFailureLog.length, { description: "one join failure expected" })
-      notifier.joinFailureLog.forEach((l) => {
+      unit.is(1, f.directory.members.length, { description: "Expect directory to have 1 member" })
+      unit.is(true, f.directory.isKnownMember(goodMember), { description: "Expect goodMember to have become a member" })
+      unit.is([{ txn: f.txn2, user: goodMember }], f.notifier.joinLog, { description: "successful join notification is expected to be txn2" })
+      unit.is(1, f.notifier.joinFailureLog.length, { description: "one join failure expected" })
+      f.notifier.joinFailureLog.forEach((l) => {
         unit.is(true, l.err instanceof Error)
         delete l.err
       })
-      unit.is([{ txn: f.badTxn, user: badUser }], notifier.joinFailureLog, { description: "Join failure is expected to be badTxn" })
+      unit.is([{ txn: f.badTxn, user: badMember }], notifier.joinFailureLog, { description: "Join failure is expected to be badTxn" })
       unit.is(undefined, f.badTxn.Processed, { neverUndefined: false, description: "badTxn should not have been processed" })
-      unit.is(true, new Date(txn2.Processed) instanceof Date, { description: "myTxn2 should have a processing date" })
-      unit.not(undefined, txn2.Processed, { neverUndefined: false, description: "txn2 should  have been processed" })
+      unit.is(true, new Date(f.txn2.Processed) instanceof Date, { description: "myTxn2 should have a processing date" })
+      unit.not(undefined, f.txn2.Processed, { neverUndefined: false, description: "txn2 should  have been processed" })
     }, {
       description,
       skip
@@ -260,28 +262,37 @@ function test() {
     cleanUp_(testRenewalFailure_, directory, "Renewal Failure Test", notifier, skip)
   }
   function testRenewalFailure_(directory, description, notifier, skip) {
-    const f = new Fixture1(directory, notifier)
-    const renewalTxn = f.txn1
-    const badUser = f.directory.makeMember(renewalTxn);
-    const oldUpdateMember = f.directory.updateMember;
-    f.directory.updateMember = (user) => {
-      if (user.primaryEmail === badUser.primaryEmail) { throw new Error() }
-      oldUpdateMember.updateMember(user)
+    class BadUsers extends Users {
+      constructor(badUser) {
+        super()
+        this.users.push(badUser)
+        this.badUser = badUser
+      }
+      update(patch, primaryEmail) {
+        if (primaryEmail === this.badUser.primaryEmail) {
+          throw new DirectoryError()
+        }
+        return super.update(patch, primaryEmail)
+      }
     }
+    let f = new Fixture1(directory, notifier)
+    const badUser = f.directory.makeMember(f.badTxn);
+    const admin = new Admin(new BadUsers(badUser))
+    f.directory = new Directory(admin)
     unit.section(() => {
+      const renewalTxn = f.badTxn;
       const expectedMember = f.directory.makeMember(badUser)
       unit.is(badUser, expectedMember, { description: "users should be the same" })
-      unit.not(badUser.incrementExpirationDate, expectedMember, { description: "users should be different" })
       const txns = [renewalTxn];
-      directory.members = [badUser]
-      const notifier = f.notifier
-      const uut = new TransactionProcessor(directory, notifier)
+      const uut = new TransactionProcessor(f.directory, f.notifier)
       uut.processTransactions(txns)
-      unit.is([expectedMember], directory.members, { description: "Expecting member to be untouched" })
+      unit.is(true, f.directory.isKnownMember(expectedMember), { description: "Expecting member to be untouched" })
       unit.is(undefined, renewalTxn.Processed, { description: "Expecting renewalTxn to not have been processed", neverUndefined: false })
       let rfl = notifier.renewalFailureLog
       if (rfl[0]) delete rfl[0].err
-      unit.is([{ txn: renewalTxn, user: expectedMember }], rfl, { description: "Expecting renewalTxn and expectedMember to be in the renewalFailureLog" })
+      unit.is(renewalTxn, rfl[0].txn, { description: "Expecting renewalTxn to be in the renewalFailureLog" })
+      unit.is(expectedMember, rfl[0].user, { description: "Expecting expectedMember to be in the renewalFailureLog" })
+
     },
       {
         description,

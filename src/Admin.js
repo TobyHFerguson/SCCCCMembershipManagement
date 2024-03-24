@@ -1,5 +1,5 @@
 /** Based on Admin SDK:  Directory API: https://developers.google.com/admin-sdk/directory/reference/rest */
-class Users_ {
+class Users {
   constructor() {
     this.users = []
   }
@@ -30,9 +30,9 @@ class Users_ {
     return { ...newUser }
   }
 }
-const Admin = (() => {
-  return {
-    Users: new Users_()
-  }
 
-})()
+class Admin {
+    constructor(users = new Users()) {
+        this.Users = users
+    }
+}
