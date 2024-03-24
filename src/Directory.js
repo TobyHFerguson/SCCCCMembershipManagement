@@ -135,6 +135,12 @@ class Directory {
   }
 }
 
+class LocalDirectory extends Directory {
+  constructor() {
+    super(new Admin())
+  }
+}
+
 class DirectoryError extends Error {
   constructor(message) {
     super(message)
