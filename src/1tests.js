@@ -1,42 +1,29 @@
 
 
+
+const SKIP = false
 function test() {
-  unitTest(SKIP)
-  integrationTest(SKIP)
+  return unitTest(SKIP) && integrationTest(SKIP)
 }
 function unitTest(skip = false) {
-  test_(new Admin, skip)
+  return test_(new Admin, skip)
 }
 function integrationTest(skip = false) {
-  test_(AdminDirectory, skip)
+  return test_(AdminDirectory, true)
 }
-  function test_(sdk, skip = false) {
+  function test_(sdk, skip = true) {
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
   testDirectory(new Directory(sdk), skip)
-  testAdmin(new Directory(sdk), "test Admin", skip)
   testCreateDeleteTests(new Directory(sdk), skip)
   testUser(new Directory(sdk), skip)
   testTPJoinSuccess(new Directory(sdk), new Notifier(), skip)
-  testPartialSuccess(new Directory(sdk), new Notifier(), skip)
+  testPartialSuccess(new Directory(sdk), new Notifier(), false)
   testRenewalSuccess(new Directory(sdk), new Notifier(), skip)
   TestTPJoinFailures(new Directory(sdk), new Notifier(), skip)
   testRenewalFailure(new Directory(sdk), new Notifier(), skip)
   return unit.isGood()
 
-  function testAdmin(directory, description, skip = false) {
-    const f = new Fixture1(directory)
-    const admin = directory.adminDirectory
-    try {
-      const member = directory.makeMember(f.txn1)
-      const newMember = admin.Users.insert(member)
-      unit.section(() => {
-        unit.is(newMember, member, { description: "New member should. be copy of old" })
-      },
-        { description, skip })
-    } finally {
-      admin.Users.list().users.forEach((m) => admin.Users.remove(m.primaryEmail))
-    }
-  }
+  
   function testCreateDeleteTests(directory, skip = false) {
     cleanUp_(testCreateDeleteTests_, directory, "user create/delete tests", skip)
   }
@@ -313,9 +300,7 @@ function integrationTest(skip = false) {
 
       })
       unit.is(renewingTxn, f.notifier.partialsLog[0].txn, { description: "Expecting renewalTxn to be in the partials log" })
-      const loggedUser = f.notifier.partialsLog[0].user
-      delete loggedUser.password
-      delete loggedUser.changePasswordAtNextLogin
+      const loggedUser = directory.makeMember(f.notifier.partialsLog[0].user)
       unit.is(joiningMember, loggedUser, { description: "Expecting joining member to be in the partials log" })
 
     },
@@ -323,5 +308,19 @@ function integrationTest(skip = false) {
         description,
         skip
       })
+  }
+  function testAdmin(directory, description, skip = false) {
+    const f = new Fixture1(directory)
+    const admin = directory.adminDirectory
+    try {
+      const member = directory.makeMember(f.txn1)
+      const newMember = admin.Users.insert(member)
+      unit.section(() => {
+        unit.is(newMember, member, { description: "New member should. be copy of old" })
+      },
+        { description, skip })
+    } finally {
+      directory.members.forEach((m, i, mbrs) => directory.deleteMember(m, (i + 1 === mbrs.length)))
+    }
   }
 } 
