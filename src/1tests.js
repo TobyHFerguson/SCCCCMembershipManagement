@@ -15,7 +15,7 @@ function testRenewalSuccess() {
   updatedRenewingUser.incrementExpirationDate()
 }
 function test() {
-  const SKIP = true;
+  const SKIP = false;
   const sdk = new Admin();
   // const sdk = AdminDirectory;
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
@@ -24,7 +24,7 @@ function test() {
   testCreateDeleteTests(new Directory(sdk), SKIP)
   testUser(new Directory(sdk), SKIP)
   testTPJoinSuccess(new Directory(sdk), new Notifier(), SKIP)
-  testPartialSuccess(new Directory(sdk), new Notifier(), false)
+  testPartialSuccess(new Directory(sdk), new Notifier(), SKIP)
   testRenewalSuccess(new Directory(sdk), new Notifier(), SKIP)
   TestTPJoinFailures(new Directory(sdk), new Notifier(), SKIP)
   testRenewalFailure(new Directory(sdk), new Notifier(), SKIP)
@@ -188,7 +188,6 @@ function test() {
         this.badUserEmail = badUserEmail
       }
       insert(user) {
-        console.error(`BadUsers.insert(${user.primaryEmail}) looking for ${this.badUserEmail}`)
         if (user.primaryEmail === this.badUserEmail) {
           console.error(`bad user: ${user.primaryEmail} === ${this.badUserEmail}`)
           throw new DirectoryError()
