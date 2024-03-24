@@ -24,10 +24,10 @@ function test() {
   testCreateDeleteTests(new Directory(sdk), SKIP)
   testUser(new Directory(sdk), SKIP)
   testTPJoinSuccess(new Directory(sdk), new Notifier(), SKIP)
-  testPartialSuccess(new Directory(sdk), new Notifier(), SKIP)
+  testPartialSuccess(new Directory(sdk), new Notifier(), false)
   testRenewalSuccess(new Directory(sdk), new Notifier(), SKIP)
   TestTPJoinFailures(new Directory(sdk), new Notifier(), SKIP)
-  testRenewalFailure(new Directory(sdk), new Notifier(), false)
+  testRenewalFailure(new Directory(sdk), new Notifier(), SKIP)
   return unit.isGood()
 
   function testAdmin(directory, description, skip = false) {
@@ -306,19 +306,26 @@ function test() {
   function testPartialSuccess_(directory, description, notifier, skip) {
     const f = new Fixture1(directory, notifier)
     unit.section(() => {
-      const t1 = f.txn1
-      const t2 = JSON.parse(JSON.stringify(t1))
-      const directory = f.directory
-      const notifier = f.notifier
-      const uut = new TransactionProcessor(directory, notifier)
-      uut.processTransactions([t1]);
-      t2["Phone Number"] = "+1234"
-      uut.processTransactions([t2]);
-      unit.is(1, directory.members.length, { description: "something was added as a member" })
-      unit.is(true, f.directory.isKnownMember(f.directory.makeMember(t1)), { description: "t1 added as a member" })
-      unit.is(true, directory.members.some((m) => m.phones[0].value === f.directory.makeMember(t1).phones[0].value), { description: "Expecting directory to contain the t1 user" })
-      unit.is(false, directory.members.some((m) => m.phones[0].value === f.directory.makeMember(t2).phones[0].value), { description: "Expecting directory not to contain the t2 user" })
-      unit.is([{ txn: t2, user: f.directory.makeMember(t1) }], notifier.partialsLog, { description: "Expecting to be notified about the partials" })
+      const joiningTxn = f.txn1
+      let joiningMember = directory.makeMember(joiningTxn)
+      const renewingTxn = JSON.parse(JSON.stringify(joiningTxn))
+      renewingTxn["Phone Number"] = "+1234"
+      const renewingMember = f.directory.makeMember(renewingTxn);
+      const uut = new TransactionProcessor(f.directory, f.notifier)
+      uut.processTransactions([joiningTxn]);
+      unit.is(1, f.directory.members.length, { description: "something was added as a member" })
+      unit.is(true, f.directory.isKnownMember(joiningMember), { description: "member added from joiningTxn" })
+      uut.processTransactions([renewingTxn]);
+      f.directory.members.forEach((m) => {
+        m.phones.forEach((p) => unit.not(p.value, renewingMember.phones[0].value, { description: "Expecting directory member's phones not to include those from the renewing member" }))
+
+      })
+      unit.is(renewingTxn, f.notifier.partialsLog[0].txn, { description: "Expecting renewalTxn to be in the partials log" })
+      const loggedUser = f.notifier.partialsLog[0].user
+      delete loggedUser.password
+      delete loggedUser.changePasswordAtNextLogin
+      unit.is(joiningMember, loggedUser, { description: "Expecting joining member to be in the partials log" })
+
     },
       {
         description,

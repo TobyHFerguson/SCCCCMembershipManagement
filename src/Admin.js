@@ -8,7 +8,7 @@ class Users {
   }
   insert(user) {
     if (this.get(user.primaryEmail)) { throw new Error("API call to directory.users.insert failed with error: Entity already exists.") }
-    const newUser = { ...user }
+    const newUser = JSON.parse(JSON.stringify(user))
     this.users.push(newUser)
     return newUser
   }
@@ -27,7 +27,7 @@ class Users {
     const oldUser = this.users[i]
     const newUser = { ...oldUser, ...JSON.parse(patch) }
     this.users.splice(i, 1, newUser)
-    return { ...newUser }
+    return JSON.parse(JSON.stringify(newUser))
   }
 }
 
