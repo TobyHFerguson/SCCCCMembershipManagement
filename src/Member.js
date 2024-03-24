@@ -10,7 +10,7 @@ class Member {
       let familyName = txn['Last Name'];
       let fullName = `${givenName} ${familyName}`
       let email = txn['Email Address'];
-      let phone = txn['Phone Number'];
+      let phone = ""+txn['Phone Number'];
       const name = (givenName || familyName) ? { givenName, familyName, fullName } : undefined
       const primaryEmail = `${givenName}.${familyName}@${this.domain}`.toLowerCase()
       const Join_Date = new Date();
