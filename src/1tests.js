@@ -1,33 +1,26 @@
 
-function testRenewalSuccess() {
-  const directory = new Directory(Admin)
-  const notifier = new Notifier()
-  const f = new Fixture1(directory, notifier)
-  const txns = [f.txn1, f.txn2]
-  const renewalTxn = txns[0]
-  const renewingUser = f.directory.makeMember(renewalTxn)
-  const joinTxn = txns[1]
-  const joiningUser = f.directory.makeMember(joinTxn)
-  directory.addMemberFromTransaction(renewalTxn)
-  const uut = new TransactionProcessor(directory, notifier)
-  uut.processTransactions(txns)
-  const updatedRenewingUser = f.directory.makeMember(renewalTxn)
-  updatedRenewingUser.incrementExpirationDate()
-}
+
 function test() {
-  const SKIP = false;
-  const sdk = new Admin();
-  // const sdk = AdminDirectory;
+  unitTest(SKIP)
+  integrationTest(SKIP)
+}
+function unitTest(skip = false) {
+  test_(new Admin, skip)
+}
+function integrationTest(skip = false) {
+  test_(AdminDirectory, skip)
+}
+  function test_(sdk, skip = false) {
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
-  testDirectory(new Directory(sdk), SKIP)
-  testAdmin(new Directory(sdk), "test Admin", SKIP)
-  testCreateDeleteTests(new Directory(sdk), SKIP)
-  testUser(new Directory(sdk), SKIP)
-  testTPJoinSuccess(new Directory(sdk), new Notifier(), SKIP)
-  testPartialSuccess(new Directory(sdk), new Notifier(), SKIP)
-  testRenewalSuccess(new Directory(sdk), new Notifier(), SKIP)
-  TestTPJoinFailures(new Directory(sdk), new Notifier(), SKIP)
-  testRenewalFailure(new Directory(sdk), new Notifier(), SKIP)
+  testDirectory(new Directory(sdk), skip)
+  testAdmin(new Directory(sdk), "test Admin", skip)
+  testCreateDeleteTests(new Directory(sdk), skip)
+  testUser(new Directory(sdk), skip)
+  testTPJoinSuccess(new Directory(sdk), new Notifier(), skip)
+  testPartialSuccess(new Directory(sdk), new Notifier(), skip)
+  testRenewalSuccess(new Directory(sdk), new Notifier(), skip)
+  TestTPJoinFailures(new Directory(sdk), new Notifier(), skip)
+  testRenewalFailure(new Directory(sdk), new Notifier(), skip)
   return unit.isGood()
 
   function testAdmin(directory, description, skip = false) {
