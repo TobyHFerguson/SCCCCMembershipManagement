@@ -23,6 +23,7 @@ class Notifier {
       this.renewalSuccessLog.push({txn, user})
     }
     renewalFailure(txn, user, err) {
+      console.error(`Notifier.renewalFailure()`)
       console.error(err.message)
       this.renewalFailureLog.push({txn, user, err})
     }

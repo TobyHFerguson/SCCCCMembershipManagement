@@ -11,7 +11,6 @@ class TransactionProcessor {
   processTransactions(transactions, matcher = this.matchTransactionToMember_) {
     const txns = transactions.filter((txn) => txn['Payable Status'] !== undefined && txn['Payable Status'].startsWith('paid') && !txn.Processed)
     txns.forEach((txn, i) => {
-      console.error(`TP.pt - processing txn ${i}`)
       let match = this.directory.members.find((m) => matcher(txn, m))
       if (match) { //
         if (matcher(txn, match).full) {

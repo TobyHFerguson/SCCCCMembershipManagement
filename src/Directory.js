@@ -48,7 +48,7 @@ class Directory {
       users = users.concat(page.users)
       pageToken = page.nextPageToken;
     } while (pageToken);
-    return users ? users : []
+    return users
   }
 
   /**
