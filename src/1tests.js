@@ -9,7 +9,7 @@ function unitTest(skip = false) {
   return test_(new Admin, skip)
 }
 function integrationTest(skip = false) {
-  return test_(AdminDirectory, true)
+  return test_(AdminDirectory, skip)
 }
   function test_(sdk, skip = true) {
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
@@ -17,7 +17,7 @@ function integrationTest(skip = false) {
   testCreateDeleteTests(new Directory(sdk), skip)
   testUser(new Directory(sdk), skip)
   testTPJoinSuccess(new Directory(sdk), new Notifier(), skip)
-  testPartialSuccess(new Directory(sdk), new Notifier(), false)
+  testPartialSuccess(new Directory(sdk), new Notifier(), skip)
   testRenewalSuccess(new Directory(sdk), new Notifier(), skip)
   TestTPJoinFailures(new Directory(sdk), new Notifier(), skip)
   testRenewalFailure(new Directory(sdk), new Notifier(), skip)
@@ -309,18 +309,21 @@ function integrationTest(skip = false) {
         skip
       })
   }
-  function testAdmin(directory, description, skip = false) {
-    const f = new Fixture1(directory)
-    const admin = directory.adminDirectory
-    try {
-      const member = directory.makeMember(f.txn1)
-      const newMember = admin.Users.insert(member)
-      unit.section(() => {
-        unit.is(newMember, member, { description: "New member should. be copy of old" })
-      },
-        { description, skip })
-    } finally {
-      directory.members.forEach((m, i, mbrs) => directory.deleteMember(m, (i + 1 === mbrs.length)))
-    }
-  }
+  
 } 
+function testAdmin(skip = false) {
+  const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
+  const admin = new Admin(new Users)
+  const directory = new Directory(admin)
+  const f = new Fixture1(directory)
+  try {
+    const member = directory.makeMember(f.txn1)
+    const newMember = admin.Users.insert(member)
+    unit.section(() => {
+      unit.is(newMember, member, { description: "New member should. be copy of old" })
+    },
+      { description: "test Admin", skip })
+  } finally {
+    directory.members.forEach((m, i, mbrs) => directory.deleteMember(m, (i + 1 === mbrs.length)))
+  }
+}
