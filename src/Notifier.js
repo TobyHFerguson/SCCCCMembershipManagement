@@ -65,6 +65,7 @@ class Templates {
    */
   constructor(drafts, joinSuccessSubject, joinFailureSubject, renewalSuccessSubject, renewalFailureSubject, ambiguous) {
     this.joinSuccess = getGmailTemplateFromDrafts_(drafts, joinSuccessSubject)
+    this.joinFailure = getGmailTemplateFromDrafts_(drafts, joinFailureSubject)
   }
 }
 
@@ -95,22 +96,22 @@ class EmailNotifier extends Notifier {
   getRecipient_(txn) {
     return this.test ? `membershiptest@${this.domain}` : txn["Email Address"]
   }
-  makeSuccessBinding(txn, member) {
+  makeSuccessBinding_(txn, member) {
     return {
       timestamp: txn.Timestamp,
       orderID: txn["Payable Order ID"],
       primaryEmail: member.primaryEmail,
       givenName: member.name.givenName,
-      lastName: member.name.lastName,
+      familyName: member.name.familyName,
       expiry: member.customSchemas.Club_Membership.expires
     }
   }
-  makeFailureBinding(txn, member, error) {
-    body = this.makeSuccessBinding(txn, member)
+  makeFailureBinding_(txn, member, error) {
+    const body = this.makeSuccessBinding_(txn, member)
     body.errorMessage = error.message
     return body
   }
-  makeMessageObject(template, binding) {
+  makeMessageObject_(template, binding) {
     return bindMessage_(template.message, binding)
   }
   sendMail_(recipient, message, html= true) {
@@ -130,8 +131,14 @@ class EmailNotifier extends Notifier {
   }
   joinSuccess(txn, member) {
     super.joinSuccess(txn, member)
-    const binding = this.makeSuccessBinding(txn, member)
-    const message = this.makeMessageObject(this.templates.joinSuccess, binding)
+    const binding = this.makeSuccessBinding_(txn, member)
+    const message = this.makeMessageObject_(this.templates.joinSuccess, binding)
+    this.sendMail_(this.getRecipient_(txn), message, this.html)
+  }
+  joinFailure(txn, member, error) {
+    super.joinSuccess(txn, member)
+    const binding = this.makeFailureBinding_(txn, member, error)
+    const message = this.makeMessageObject_(this.templates.joinFailure, binding)
     this.sendMail_(this.getRecipient_(txn), message, this.html)
   }
 }
