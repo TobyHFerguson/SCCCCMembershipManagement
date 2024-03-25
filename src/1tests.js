@@ -1,4 +1,35 @@
 
+function testEmailNotificationJoinFailure(html = true) {
+  const templates = new Templates(GmailApp.getDrafts(), "Thanks for joining SCCCC", "Join Problem")
+  const sendMail = (recipient, subject, text, options) => {
+    console.log(`To: ${recipient}`)
+    console.log(`From: ${options.from}`)
+    console.log(`Reply-to: ${options.noReply}`)
+    console.log(`subject: ${subject}`)
+    console.log(html && options.htmlBody ? `${options.htmlBody}`  : `${text}`)
+  }
+  const txn = {
+    "First Name": "J",
+    "Last Name": "K",
+    "Email Address": "j.k@icloud.com",
+    "Phone Number": "+14083869343",
+    "Payable Status": "paid",
+    "Payable Order ID": "CC-TF-RNB6"
+  }
+  const member = {
+    primaryEmail: "j.k@foo.com",
+    name: {
+      givenName: "J",
+      familyName: "K"
+    },
+    customSchemas: { Club_Membership: {expires: "12/3/2024"}}
+  }
+  const error = new Error("this is the error message")
+
+  const notifier = new EmailNotifier(templates, { test: true, mailer: {sendMail}, html:false })
+  notifier.joinFailure(txn, member, error)
+}
+
 function testEmailNotifierWithNoDrafts() {
   try {
     const templates = new Templates(GmailApp.getDrafts(), "NO SUCH DRAFT")
