@@ -1,8 +1,6 @@
 
-function testEmailNotifier() {
-  const drafts = {
-    joinSuccess: getGmailTemplateFromDrafts__("Thanks for joining SCCCC")
-  }
+function testEmailNotifierWithNoDrafts() {
+  const templates = new Templates(GmailApp.getDrafts(), "Thanks for joining SCCC")
   const sendMail = (recipient, subject, text, options) => {
     console.log(`To: ${recipient}`)
     console.log(`From: ${options.from}`)
@@ -23,7 +21,32 @@ function testEmailNotifier() {
     fullName: "J K"
   }
 
-  const notifier = new EmailNotifier(drafts, { sendMail })
+  const notifier = new EmailNotifier(templates, { test: true, mailer: {sendMail} })
+  notifier.joinSuccess(txn, member)
+}
+function testEmailNotifier() {
+  const templates = new Templates(GmailApp.getDrafts(), "Thanks for joining SCCCC")
+  const sendMail = (recipient, subject, text, options) => {
+    console.log(`To: ${recipient}`)
+    console.log(`From: ${options.from}`)
+    console.log(`Reply-to: ${options.noReply}`)
+    console.log(`subject: ${subject}`)
+    console.log(options.htmlBody ? options.htmlBody : text)
+  }
+  const txn = {
+    "First Name": "J",
+    "Last Name": "K",
+    "Email Address": "j.k@icloud.com",
+    "Phone Number": "+14083869343",
+    "Payable Status": "paid",
+    "Payable Order ID": "CC-TF-RNB6"
+  }
+  const member = {
+    primayEmail: "j.k@foo.com",
+    fullName: "J K"
+  }
+
+  const notifier = new EmailNotifier(templates, { test: true, mailer: {sendMail} })
   notifier.joinSuccess(txn, member)
 }
 
@@ -40,7 +63,7 @@ function unitTest(skip = false) {
 function integrationTest(skip = false) {
   return test_(AdminDirectory, skip)
 }
-  function test_(sdk, skip = true) {
+function test_(sdk, skip = true) {
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
   testDirectory(new Directory(sdk), skip)
   testCreateDeleteTests(new Directory(sdk), skip)
@@ -52,7 +75,7 @@ function integrationTest(skip = false) {
   testRenewalFailure(new Directory(sdk), new Notifier(), skip)
   return unit.isGood()
 
-  
+
   function testCreateDeleteTests(directory, skip = false) {
     cleanUp_(testCreateDeleteTests_, directory, "user create/delete tests", skip)
   }
@@ -338,8 +361,8 @@ function integrationTest(skip = false) {
         skip
       })
   }
-  
-} 
+
+}
 function testAdmin(skip = false) {
   const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
   const admin = new Admin(new Users)
