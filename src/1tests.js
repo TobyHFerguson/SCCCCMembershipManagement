@@ -1,37 +1,25 @@
 
 function testEmailNotifierWithNoDrafts() {
-  const templates = new Templates(GmailApp.getDrafts(), "Thanks for joining SCCC")
-  const sendMail = (recipient, subject, text, options) => {
-    console.log(`To: ${recipient}`)
-    console.log(`From: ${options.from}`)
-    console.log(`Reply-to: ${options.noReply}`)
-    console.log(`subject: ${subject}`)
-    console.log(options.htmlBody ? options.htmlBody : text)
-  }
-  const txn = {
-    "First Name": "J",
-    "Last Name": "K",
-    "Email Address": "j.k@icloud.com",
-    "Phone Number": "+14083869343",
-    "Payable Status": "paid",
-    "Payable Order ID": "CC-TF-RNB6"
-  }
-  const member = {
-    primayEmail: "j.k@foo.com",
-    fullName: "J K"
-  }
-
-  const notifier = new EmailNotifier(templates, { test: true, mailer: {sendMail} })
-  notifier.joinSuccess(txn, member)
+  try {
+    const templates = new Templates(GmailApp.getDrafts(), "NO SUCH DRAFT")
+    console.error("Expected to see an error saying that the draft couldn't be found" )
+  } catch {}
+  
 }
-function testEmailNotifier() {
+function testEmailNotifierWithHTML() {
+  testEmailNotifier()
+}
+function testEmailNotifierText() {
+  testEmailNotifier(false)
+}
+function testEmailNotifier(html = true) {
   const templates = new Templates(GmailApp.getDrafts(), "Thanks for joining SCCCC")
   const sendMail = (recipient, subject, text, options) => {
     console.log(`To: ${recipient}`)
     console.log(`From: ${options.from}`)
     console.log(`Reply-to: ${options.noReply}`)
     console.log(`subject: ${subject}`)
-    console.log(options.htmlBody ? options.htmlBody : text)
+    console.log(html && options.htmlBody ? `${options.htmlBody}`  : `${text}`)
   }
   const txn = {
     "First Name": "J",
@@ -43,10 +31,14 @@ function testEmailNotifier() {
   }
   const member = {
     primayEmail: "j.k@foo.com",
-    fullName: "J K"
+    name: {
+      givenName: "J",
+      familyName: "K"
+    },
+    customSchemas: { Club_Membership: {expires: "12/3/2024"}}
   }
 
-  const notifier = new EmailNotifier(templates, { test: true, mailer: {sendMail} })
+  const notifier = new EmailNotifier(templates, { test: true, mailer: {sendMail}, html })
   notifier.joinSuccess(txn, member)
 }
 

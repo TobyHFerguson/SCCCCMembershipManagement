@@ -56,21 +56,106 @@ class Notifier {
 class Templates {
   /**
    * 
-   * @param {GmailDraft[]} drafts All the drafts in the users gmail account
-   * @param {string} joinSuccessSubject the subject line used to identify the joinSuccess draft email
+   * @param {GmailDraft[]} drafts draft emails with {{}} templatized bodies
+   * @param {string} joinSuccessSubject subject line used to find joinSuccess draft
+   * @param {string} joinFailureSubject subject line used to find joinFailure draft
+   * @param {string} renewalSuccessSubject subject line used to find renewalSuccess draft
+   * @param {string} renewalFailureSubject subject line used to find renewalFailure draft
+   * @param {string} ambiguous subject line used to find draft for when transaction is ambiguously matched against a user
    */
-  constructor(drafts, joinSuccessSubject) {
-    this.joinSuccess = getGmailTemplateFromDrafts__(drafts, joinSuccessSubject)
+  constructor(drafts, joinSuccessSubject, joinFailureSubject, renewalSuccessSubject, renewalFailureSubject, ambiguous) {
+    this.joinSuccess = getGmailTemplateFromDrafts_(drafts, joinSuccessSubject)
   }
 }
 
+
+
+/**
+ * @typedef MailerOptions
+ * @property {boolean} [test = true]
+ * @property {GMailApp} [mailer = GMailApp]
+ * @property {string} [domain = "santacruzcountycycling.club" ]
+ * @property {boolean} [html = true] send as html
+ */
+class EmailNotifier extends Notifier {
+  /**
+   * 
+   * @param {Templates} templates 
+   * @param {MailerOptions} options
+   */
+  constructor(templates, options) {
+    super()
+    const localOptions = { test: true, mailer: GmailApp, domain: "santacruzcountycycling.club", html: true, ...options }
+    this.templates = templates
+    this.test = localOptions.test
+    this.mailer = localOptions.mailer
+    this.domain = localOptions.domain
+    this.html = localOptions.html
+  }
+  getRecipient_(txn) {
+    return this.test ? `membershiptest@${this.domain}` : txn["Email Address"]
+  }
+  makeSuccessBinding(txn, member) {
+    return {
+      timestamp: txn.Timestamp,
+      orderID: txn["Payable Order ID"],
+      primaryEmail: member.primaryEmail,
+      givenName: member.name.givenName,
+      lastName: member.name.lastName,
+      expiry: member.customSchemas.Club_Membership.expires
+    }
+  }
+  makeFailureBinding(txn, member, error) {
+    body = this.makeSuccessBinding(txn, member)
+    body.errorMessage = error.message
+    return body
+  }
+  makeMessageObject(template, binding) {
+    return bindMessage_(template.message, binding)
+  }
+  sendMail_(recipient, message, html= true) {
+    const options = {
+      htmlBody: message.html,
+      // bcc: 'a.bcc@email.com',
+      // cc: 'a.cc@email.com',
+      from: `membership@${this.domain}`,
+      // name: 'name of the sender',
+      // replyTo: 'a.reply@email.com',
+      noReply: true, // if the email should be sent from a generic no-reply email address (not available to gmail.com users)
+      attachments: message.attachments,
+      inlineImages: message.inlineImages
+    }
+    if (!html) delete options.htmlBody
+    this.mailer.sendMail(recipient, message.subject, message.text, options)
+  }
+  joinSuccess(txn, member) {
+    super.joinSuccess(txn, member)
+    const binding = this.makeSuccessBinding(txn, member)
+    const message = this.makeMessageObject(this.templates.joinSuccess, binding)
+    this.sendMail_(this.getRecipient_(txn), message, this.html)
+  }
+}
+
+/**
+ * @typedef {object} Message
+ * @property {string} subject - subject line of message
+ * @property {string} text - plain text body of message
+ * @property {string} html - html version of text body
+ * 
+ */
+/**
+ * @typedef {object} Template - a template for a message
+ * @property {Message} message
+ * @property {GmailAttachment[]} attachments
+ * @property {GmailAttachment[]} inlineImages - inline images in format that can be used with an html message
+ */
 /**
   * Get a Gmail draft message by matching the subject line.
   * @param {GMailDraft[]} drafts
   * @param {string} subject_line to search for draft message
   * @return {Template} containing the draft message
   */
-function getGmailTemplateFromDrafts__(drafts, subject_line) {
+function getGmailTemplateFromDrafts_(drafts, subject_line) {
   // get drafts
   const draft = drafts.find(draft => draft.getMessage().getSubject() === subject_line);
   if (!draft) {
@@ -112,80 +197,6 @@ function getGmailTemplateFromDrafts__(drafts, subject_line) {
   }
 }
 
-/**
- * @typedef MailerOptions
- * @property {boolean} [test = true]
- * @property {GMailApp} [mailer = GMailApp]
- * @property {string} [domain = "santacruzcountycycling.club" ]
- */
-class EmailNotifier extends Notifier {
-  /**
-   * 
-   * @param {Templates} templates 
-   * @param {} options
-   */
-  constructor(templates, options) {
-    super()
-    const localOptions = { test: true, mailer: GmailApp, domain: "santacruzcountycycling.club", ...options}
-    this.templates = templates
-    this.test = localOptions.test
-    this.mailer = localOptions.mailer
-    this.domain = localOptions.domain
-  }
-  getRecipient_(txn) {
-    return this.test ? `membershiptest@${this.domain}` : txn["Email Address"]
-  }
-  makeSuccessBinding(txn, member) {
-    return {
-      timestamp: txn.Timestamp,
-      orderID: txn["Payable Order ID"],
-      primaryEmail: member.primaryEmail,
-      fullName: member.fullName
-    }
-  }
-  makeFailureBinding(txn, member, error) {
-    body = this.makeSuccessBinding(txn, member)
-    body.errorMessage = error.message
-    return body
-  }
-  makeMessageObject(template, binding) {
-    return bindMessage_(template.message, binding)
-  }
-  sendMail_(recipient, message) {
-    const options = {
-        htmlBody: message.html,
-        // bcc: 'a.bcc@email.com',
-        // cc: 'a.cc@email.com',
-        from: `membership@${this.domain}`,
-        // name: 'name of the sender',
-        // replyTo: 'a.reply@email.com',
-        noReply: true, // if the email should be sent from a generic no-reply email address (not available to gmail.com users)
-        attachments: message.attachments,
-        inlineImages: message.inlineImages
-      }
-    this.mailer.sendMail(recipient, message.subject, message.txt, options)
-  }
-  joinSuccess(txn, member) {
-    super.joinSuccess(txn, member)
-    const binding = this.makeSuccessBinding(txn, member)
-    const message = this.makeMessageObject(this.templates.joinSuccess, binding)
-    this.sendMail_(this.getRecipient_(txn), message)
-  }
-}
-
-/**
- * @typedef {object} Message
- * @property {string} subject - subject line of message
- * @property {string} text - plain text body of message
- * @property {string} html - html version of text body
- * 
- */
-/**
- * @typedef {object} Template - a template for a message
- * @property {Message} message
- * @property {GmailAttachment[]} attachments
- * @property {GmailAttachment[]} inlineImages - inline images in format that can be used with an html message
- */
 
 /**
  * Bind the message with the given token bindings
