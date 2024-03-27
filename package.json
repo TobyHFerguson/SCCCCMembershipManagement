@@ -8,7 +8,6 @@
     "push:watch": "npx clasp-env --folder . --scriptId 1m11ZhZl2TxlXkNKwvSfhqkO57ZBgu_KdfLUYIV1Lzksa64kiqQ32x5xA && clasp push -w",
     "push": "npx clasp-env --folder . --scriptId 1m11ZhZl2TxlXkNKwvSfhqkO57ZBgu_KdfLUYIV1Lzksa64kiqQ32x5xA && clasp push",
     "pull": "npx clasp-env --folder . --scriptId 1m11ZhZl2TxlXkNKwvSfhqkO57ZBgu_KdfLUYIV1Lzksa64kiqQ32x5xA && clasp pull"
-
   },
   "repository": {
     "type": "git",
@@ -18,5 +17,14 @@
   "license": "ISC",
   "dependencies": {
     "node": "^21.7.1"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.14",
+    "@types/google-apps-script": "^1.0.82",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.30",
+    "chai": "^5.1.0",
+    "mocha": "^10.4.0",
+    "ts-node": "^10.9.2"
   }
 }
