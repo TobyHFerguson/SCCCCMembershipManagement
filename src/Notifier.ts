@@ -1,35 +1,36 @@
 import { Logger, LogEntry } from './Types'
 
-class Notifier implements Logger {
-  #joinLog: LogEntry[] = []
-  #joinFailureLog: LogEntry[] = []
-  #renewalSuccessLog: LogEntry[] = []
-  #renewalFailureLog: LogEntry[] = []
-  #partialsLog: LogEntry[] = []
+class Notifier{
+  joinSuccessLog = Array();
+  joinFailureLog = Array();
+  renewalSuccessLog = Array();
+  renewalFailureLog = Array();
+  partialsLog = Array();
 
+ 
   /**
    * Notify anyone interested that a user has been added as a consequence of the transaction
    * @param {Transaction} txn The transaction that caused the join
    * @param {User} user The user that was joined
    */
-  joinSuccess(txn:Transaction, user:Member) {
-    this.#joinLog.push({ txn, user })
+  joinSuccess(txn, user) {
+    this.joinSuccessLog.push({ txn, user })
   }
   joinFailure(txn, user, err) {
     console.error(`Notifier.joinFailure()`)
     console.error(err.message)
-    this.#joinFailureLog.push({ txn, user, err })
+    this.joinFailureLog.push({ txn, user, err })
   }
   renewalSuccess(txn, user) {
-    this.#renewalSuccessLog.push({ txn, user })
+    this.renewalSuccessLog.push({ txn, user })
   }
   renewalFailure(txn, user, err) {
     console.error(`Notifier.renewalFailure()`)
     console.error(err.message)
-    this.#renewalFailureLog.push({ txn, user, err })
+    this.renewalFailureLog.push({ txn, user, err })
   }
   partial(txn, user) {
-    this.#partialsLog.push({ txn, user })
+    this.partialsLog.push({ txn, user })
   }
   log() {
     function reportSuccess(l, kind) {
@@ -38,11 +39,11 @@ class Notifier implements Logger {
     function reportFailure(l, kind) {
       l.forEach((e) => console.error(`Txn ${e.txn["Payable Order ID"]} had ${kind} error: ${e.user.err}`))
     }
-    reportSuccess(this.#joinLog, "joined")
-    reportFailure(this.#joinFailureLog, "join")
-    reportSuccess(this.#renewalSuccessLog, "renewed")
-    reportFailure(this.#renewalFailureLog, "renewal")
-    this.#partialsLog.forEach((p) => console.log(`Txn ${p.txn["Payable Order ID"]} matched only one of phone or email against this member: ${p.user.primaryEmail}`))
+    reportSuccess(this.joinSuccessLog, "joined")
+    reportFailure(this.joinFailureLog, "join")
+    reportSuccess(this.renewalSuccessLog, "renewed")
+    reportFailure(this.renewalFailureLog, "renewal")
+    this.partialsLog.forEach((p) => console.log(`Txn ${p.txn["Payable Order ID"]} matched only one of phone or email against this member: ${p.user.primaryEmail}`))
   }
 
 }
@@ -67,6 +68,13 @@ class Notifier implements Logger {
  * @property {GmailMessage} ambiguous
  */
 class Templates {
+  joinSuccess:any;
+  joinFailure;
+  renewalSuccess;
+  renewalFailure;
+  ambiguous;
+  expiryNotification;
+  expiration;
   /**
    * 
    * @param {GmailDraft[]} drafts draft emails with {{}} templatized bodies
@@ -93,6 +101,10 @@ class Templates {
  * @property {boolean} [html = true] send as html
  */
 class EmailNotifier extends Notifier {
+  templates;
+  test;
+  mailer;
+  domain;
   /**
    * 
    * @param {Templates} templates 
@@ -117,7 +129,7 @@ class EmailNotifier extends Notifier {
   }
   renewalSuccess(txn, member) {
     super.renewalSuccess(txn, member);
-    this.notify_(this.template.renewalSuccess, txn, member)
+    this.notify_(this.templates.renewalSuccess, txn, member)
   }
   renewalFailure(txn, member, error) {
     super.renewalFailure(txn, member, error)
@@ -127,7 +139,7 @@ class EmailNotifier extends Notifier {
     super.partial(txn, member)
     this.notify_(this.templates.ambiguous, txn, member)
   }
-  notify_(template, txn, member, error) {
+  notify_(template, txn, member, error?) {
     const binding = this.makeBinding_(txn, member, error)
     const message = this.makeMessageObject_(template, binding)
     this.sendMail_(this.getRecipient_(txn), message)
@@ -270,4 +282,4 @@ function escapeData_(str) {
     .replace(/[\t]/g, '\\t');
 };
 
-export = Notifier 
+export { Notifier }
