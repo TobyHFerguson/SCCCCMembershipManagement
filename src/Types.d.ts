@@ -1,9 +1,9 @@
 interface Logger {
-    joinSuccess(string, string)
-    joinFailure(string, string, string)
-    renewalSuccess(string, string)
-    joinFailure(string, string, string)
-    partial(string,string)
+    joinSuccess(any, any)
+    joinFailure(any, any, any)
+    renewalSuccess(any, any)
+    joinFailure(any, any, any)
+    partial(any, any)
 }
 
 interface LogEntry {
@@ -12,6 +12,7 @@ interface LogEntry {
     error?: string
 }
 
-
+type Transaction = any
+type Member = any
 
 export { Logger, LogEntry }
