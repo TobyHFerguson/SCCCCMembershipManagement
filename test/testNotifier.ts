@@ -41,4 +41,10 @@ describe('Notifier tests', () => {
         const actual = notifier.joinSuccessLog
         expect(actual).to.deep.equal([{txn: testFixtures.txn1, user: testFixtures.member1}])
     })
+    it('should log a failure', () => {
+      const notifier = new Notifier()
+      notifier.joinFailure(testFixtures.txn1, testFixtures.member1, testFixtures.error)
+      const actual = notifier.joinFailureLog
+      expect(actual).to.deep.equal([{txn: testFixtures.txn1, user: testFixtures.member1, error: testFixtures.error}])
+  })
 })
