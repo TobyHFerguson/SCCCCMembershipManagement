@@ -18,18 +18,18 @@ class Notifier implements Logger{
   joinSuccess(txn:Transaction, user:Member) {
     this.joinSuccessLog.push({ txn, user })
   }
-  joinFailure(txn, user, err) {
+  joinFailure(txn, user, error) {
     console.error(`Notifier.joinFailure()`)
-    console.error(err.message)
-    this.joinFailureLog.push({ txn, user, err })
+    console.error(error.message)
+    this.joinFailureLog.push({ txn, user, error })
   }
   renewalSuccess(txn, user) {
     this.renewalSuccessLog.push({ txn, user })
   }
-  renewalFailure(txn, user, err) {
+  renewalFailure(txn, user, error) {
     console.error(`Notifier.renewalFailure()`)
-    console.error(err.message)
-    this.renewalFailureLog.push({ txn, user, err })
+    console.error(error.message)
+    this.renewalFailureLog.push({ txn, user, error })
   }
   partial(txn, user) {
     this.partialsLog.push({ txn, user })
