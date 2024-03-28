@@ -78,10 +78,10 @@ interface AdminDirectoryType {
 
 // GmailApp
 interface MailAppType {
-    sendEmail(recipient: string, subject: string, body: string, options: sendEmailOptions): MailAppType;
+    sendEmail(recipient: string, subject: string, body: string, options: SendEmailOptions): MailAppType;
     getDrafts(): DraftType[];
 }
-interface sendEmailOptions {
+interface SendEmailOptions {
     attachments?: any[] | undefined;
     bcc?: string | undefined;
     cc?: string | undefined;
@@ -145,6 +145,7 @@ export {
     LogEntry,
     MailAppType,
     MailerOptions,
+    SendEmailOptions,
     SubjectLines,
     Template,
     UserType,

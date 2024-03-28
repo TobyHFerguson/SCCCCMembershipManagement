@@ -1,7 +1,7 @@
 
-import {Transaction} from './Types'
 import {Notifier} from './Notifier'
 import {Directory} from './Directory'
+import { Transaction } from './TransactionProcessor';
 
 export class Fixture1 {
   txn1: Transaction;

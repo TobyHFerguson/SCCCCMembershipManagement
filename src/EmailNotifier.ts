@@ -1,18 +1,18 @@
 import { Notifier } from './Notifier'
-import { MailAppType, MailerOptions, DraftType, SubjectLines, Template } from './Types'
+import { MailAppType, MailerOptions, DraftType, SubjectLines, Template, SendEmailOptions } from './Types'
 import { Member } from './Member'
 import { Transaction } from './TransactionProcessor';
 
 
 
 class Templates {
-    joinSuccess: object;
-    joinFailure: object;
-    renewalSuccess: object;;
-    renewalFailure: object;;
-    ambiguous: object;;
-    expiryNotification?: object;;
-    expiration?: object;;
+    joinSuccess: Template;
+    joinFailure: Template;
+    renewalSuccess: Template;
+    renewalFailure: Template;
+    ambiguous: Template;
+    expiryNotification?: Template;
+    expiration?: Template;
     /**
      * 
      * @param {GmailDraft[]} drafts draft emails with {{}} templatized bodies
@@ -57,28 +57,28 @@ class EmailNotifier extends Notifier {
 
     joinSuccess(txn: Transaction, member: Member) {
         super.joinSuccess(txn, member)
-        this.notify_(this.templates.joinSuccess, txn, member)
+        this.notifySuccess_(this.templates.joinSuccess, txn, member)
     }
     joinFailure(txn, member, error) {
         super.joinFailure(txn, member, error)
-        this.notify_(this.templates.joinFailure, txn, member)
+        this.notifySuccess_(this.templates.joinFailure, txn, member)
     }
     renewalSuccess(txn, member) {
         super.renewalSuccess(txn, member);
-        this.notify_(this.templates.renewalSuccess, txn, member)
+        this.notifySuccess_(this.templates.renewalSuccess, txn, member)
     }
     renewalFailure(txn, member, error) {
         super.renewalFailure(txn, member, error)
-        this.notify_(this.templates.renewalFailure, txn, member)
+        this.notifySuccess_(this.templates.renewalFailure, txn, member)
     }
     ambiguous(txn, member) {
         super.partial(txn, member)
-        this.notify_(this.templates.ambiguous, txn, member)
+        this.notifySuccess_(this.templates.ambiguous, txn, member)
     }
-    notify_(template, txn, member, error?) {
+    notifySuccess_(template, txn, member, error?) {
         const binding = this.makeBinding_(txn, member, error)
         const message = this.makeMessageObject_(template, binding)
-        this.sendMail_(this.getRecipient_(txn), message)
+        this.sendMail_(this.getRecipient_(txn), message, { cc: "membership@santacruzcountycycling.club"})
     }
     makeBinding_(txn, member, error) {
         const binding = {
@@ -100,8 +100,8 @@ class EmailNotifier extends Notifier {
         return this.test ? `membershiptest@${this.domain}` : txn["Email Address"]
     }
 
-    sendMail_(recipient, message) {
-        const options = {
+    sendMail_(recipient, message, options?:SendEmailOptions) {
+        const defaultOptions:SendEmailOptions = {
             htmlBody: message.html,
             // bcc: 'a.bcc@email.com',
             // cc: 'a.cc@email.com',
@@ -112,7 +112,8 @@ class EmailNotifier extends Notifier {
             attachments: message.attachments,
             inlineImages: message.inlineImages
         }
-        this.mailer.sendEmail(recipient, message.subject, message.text, options)
+        const finalOptions = {...defaultOptions, ...options}
+        this.mailer.sendEmail(recipient, message.subject, message.text, finalOptions)
     }
 
 
