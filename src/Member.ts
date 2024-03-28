@@ -1,5 +1,7 @@
 
 
+import {Transaction} from './Types'
+
 export class Member {
   domain: string;
   generation: number = 0;
@@ -14,10 +16,10 @@ export class Member {
   password?:string;
   changePasswordAtNextLogin?:boolean;
 
-  constructor(obj, orgUnitPath, domain) {
+  constructor(obj: Transaction | Member, orgUnitPath:string = '/test', domain:string = 'santacruzcountycyling.club'){
     this.domain = domain
-    if (obj.primaryEmail === undefined) {
-      const txn = obj
+    if (obj instanceof Transaction) {
+      const txn:Transaction = obj
       let givenName = txn['First Name'];
       let familyName = txn['Last Name'];
       let fullName = `${givenName} ${familyName}`

@@ -1,28 +1,52 @@
+import { Directory, MemberAlreadyExistsError } from './Directory';
+import { Notifier } from './Notifier';
+
+class Transaction {
+  "First Name": string;
+  "Last Name": string;
+  "Email Address": string;
+  "Phone Number": string;
+  "Payable Status": string;
+  "Processed"?: string;
+}
 class TransactionProcessor {
+  directory: Directory;
+  notifier: Notifier;
+
   /**
    * 
    * @param {Directory} directory 
    * @param {Notifier} notifier 
    */
-  constructor(directory, notifier) {
+  constructor(directory: Directory, notifier: Notifier = new Notifier()) {
     this.directory = directory;
     this.notifier = notifier;
   }
-  processTransactions(transactions, matcher = this.matchTransactionToMember_) {
+  processTransactions(transactions: Transaction[], matcher = this.matchTransactionToMember_) {
     const txns = transactions.filter((txn) => txn['Payable Status'] !== undefined && txn['Payable Status'].startsWith('paid') && !txn.Processed)
-    txns.forEach((txn, i) => {
-      let match = this.directory.members.find((m) => matcher(txn, m))
-      if (match) { //
-        if (matcher(txn, match).full) {
-          Logger.log("TP.pt - renew_")
-          this.renew_(txn, match)
+    txns.forEach((txn) => {
+      let matching = this.directory.members.filter((m) => matcher(txn, m))
+      if (matching.length === 0) { // Join
+        Logger.log("TP.pt - join_");
+        this.join_(txn);
+      } else {
+        if (matching.length > 1) {
+          matching.forEach(m => {
+            Logger.log("TP.pt - partial_")
+            this.partial_(txn, m)
+          })
         } else {
-          Logger.log("TP.pt - partial_")
-          this.partial_(txn, match)
+          const member = matching[0]
+          const matched = matcher(txn, member)
+          if (typeof matched === "boolean") throw new Error("Matching failure")
+          if (matched.full) {
+            Logger.log("TP.pt - renew_")
+            this.renew_(txn, member)
+          } else {
+            Logger.log("TP.pt - partial_")
+            this.partial_(txn, member)
+          }
         }
-      } else { // problem with this user. Mark transaction for followup}
-        Logger.log("TP.pt - join_")
-        this.join_(txn)
       }
     });
   }
@@ -81,3 +105,5 @@ class TransactionProcessor {
     this.notifier.partial(txn, member)
   }
 }
+
+export { Transaction, TransactionProcessor }
