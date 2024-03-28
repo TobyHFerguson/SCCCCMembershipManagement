@@ -255,7 +255,7 @@ function test_(sdk, skip = true) {
       badUser: Member;
       constructor(badUser) {
         super()
-        this.users.push(badUser)
+        this.#users.push(badUser)
         this.badUser = badUser
       }
       update(patch, primaryEmail) {

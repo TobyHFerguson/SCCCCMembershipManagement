@@ -1,4 +1,4 @@
-const Utils = (() => {
+export const Utils = (() => {
   return {
      retryOnError: (f, error, t = 250) => {
       while (true) {
