@@ -1,5 +1,9 @@
+import {AdminDirectoryType} from './Types'
+import {Member} from './Member'
+
 /** Based on Admin SDK:  Directory API: https://developers.google.com/admin-sdk/directory/reference/rest */
 class Users {
+  users: Member[]
   constructor() {
     this.users = []
   }
@@ -31,8 +35,11 @@ class Users {
   }
 }
 
-class Admin {
+class Admin implements AdminDirectoryType {
+  Users?:Users
     constructor(users = new Users()) {
         this.Users = users
     }
 }
+
+export {Users, Admin}

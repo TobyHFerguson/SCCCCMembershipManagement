@@ -13,7 +13,7 @@ const Utils = (() => {
       }
     },
      waitNTimesOnCondition: (n, c, t = 250) => {
-      for (i = 0; i < n; i++) {
+      for (let i = 0; i < n; i++) {
         if (c()) {
           return true
         }

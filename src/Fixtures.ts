@@ -1,5 +1,16 @@
-class Fixture1 {
-    constructor(directory, notifier) {
+
+import {Transaction} from './Types'
+import {Notifier} from './Notifier'
+import {Directory} from './Directory'
+
+export class Fixture1 {
+  txn1: Transaction;
+  txn2: Transaction;
+  badTxn: Transaction;
+  directory: Directory;
+  notifier?: Notifier;
+
+    constructor(directory, notifier?) {
       if (!directory) throw new Error("directory must be provided")
       this.txn1 = {
         "First Name": "J",

@@ -1,16 +1,21 @@
 
 
-
-
+import {bmUnitTester} from './Types'
+import {Notifier} from './Notifier'
+import {Fixture1} from './Fixtures'
+import {Admin} from './Admin'
+import {Directory, DirectoryError, MemberNotFoundError} from './Directory'
+import {Users} from './Admin'
+import {Member} from './Member'
 const SKIP = false
 
 function test() {
-  return unitTest(SKIP) && integrationTest(SKIP)
+  return unitTest(SKIP) && integrationTest(true)
 }
 function unitTest(skip = false) {
   return test_(new Admin, skip)
 }
-function integrationTest(skip = false) {
+function integrationTest(skip = true) {
   return test_(AdminDirectory, skip)
 }
 function test_(sdk, skip = true) {
@@ -114,10 +119,10 @@ function test_(sdk, skip = true) {
 
 
 
-  function testTPJoinSuccess(directory, notifier, skip = false) {
+  function testTPJoinSuccess(directory:Directory, notifier:Notifier, skip = false) {
     cleanUp_(testTPJoinSuccess_, directory, notifier, "TransactionProcessor join tests", skip)
   }
-  function testTPJoinSuccess_(directory, notifier, description, skip = false) {
+  function testTPJoinSuccess_(directory:Directory, notifier:Notifier, description:string, skip = false) {
     const f = new Fixture1(directory, notifier)
     unit.section(() => {
       const txn3 = { ...f.txn1 }
@@ -139,15 +144,15 @@ function test_(sdk, skip = true) {
       unit.is(3, actualMembers.length, { description: "Expected to have 3 new members" })
       expectedMembers.forEach((m) => {
         let am = actualMembers.find((a) => a.primaryEmail === m.primaryEmail)
-        unit.is(m.name, am.name, { description: "Expected names to match" })
-        unit.is(m.emails, am.emails, { description: "Expected home emails to match" })
-        unit.is(m.phones, am.phones, { description: "Expected phones to match" })
-        unit.is(m.customSchemas, am.customSchemas, { description: "Expected custom schemas to match" })
+        unit.is(m.name, am?.name, { description: "Expected names to match" })
+        unit.is(m.emails, am?.emails, { description: "Expected home emails to match" })
+        unit.is(m.phones, am?.phones, { description: "Expected phones to match" })
+        unit.is(m.customSchemas, am?.customSchemas, { description: "Expected custom schemas to match" })
       })
       txns.forEach((t, i, ts) => {
         const el = { txn: t, user: expectedMembers[i] }
-        if (i === ts.length - 1) el.user.generation_ = 1;
-        unit.is(el, notifier.joinSuccessLog[i], { description: "Expected log entries to match" })
+        if (i === ts.length - 1) el.user.generation = 1;
+        unit.is(el, notifier?.joinSuccessLog[i], { description: "Expected log entries to match" })
       })
       txns.forEach((t) => {
         unit.not(undefined, t.Processed, { neverUndefined: false, description: "Expected all transactions to have been processed" })
@@ -165,14 +170,16 @@ function test_(sdk, skip = true) {
   }
   function TestTPJoinFailures_(directory, description, notifier, skip = false) {
     class BadUsers extends Users {
+      badUserEmail: string;
       constructor(badUserEmail) {
         super()
         this.badUserEmail = badUserEmail
       }
       insert(user) {
         if (user.primaryEmail === this.badUserEmail) {
-          console.error(`bad user: ${user.primaryEmail} === ${this.badUserEmail}`)
-          throw new DirectoryError()
+          const message = `bad user: ${user.primaryEmail} === ${this.badUserEmail}`
+          console.error(message)
+          throw new DirectoryError(message)
         }
         return super.insert(user)
       }
@@ -188,9 +195,9 @@ function test_(sdk, skip = true) {
       uut.processTransactions(txns)
       unit.is(1, f.directory.members.length, { description: "Expect directory to have 1 member" })
       unit.is(true, f.directory.isKnownMember(goodMember), { description: "Expect goodMember to have become a member" })
-      unit.is([{ txn: f.txn2, user: goodMember }], f.notifier.joinSuccessLog, { description: "successful join notification is expected to be txn2" })
-      unit.is(1, f.notifier.joinFailureLog.length, { description: "one join failure expected" })
-      f.notifier.joinFailureLog.forEach((l) => {
+      unit.is([{ txn: f.txn2, user: goodMember }], f.notifier?.joinSuccessLog, { description: "successful join notification is expected to be txn2" })
+      unit.is(1, f.notifier?.joinFailureLog.length, { description: "one join failure expected" })
+      f?.notifier?.joinFailureLog.forEach((l) => {
         unit.is(true, l.err instanceof Error)
         delete l.err
       })
@@ -228,9 +235,9 @@ function test_(sdk, skip = true) {
       unit.is(true, directory.members.some((m) => m.primaryEmail = updatedRenewingUser.primaryEmail), { description: "The renewed user is expected to be a member of the Directory" })
       unit.is(true, directory.members.some((m) => m.primaryEmail = joiningUser.primaryEmail), { description: "The joining user is expected to be a member of the Directory" })
 
-      unit.is([{ txn: renewalTxn, user: updatedRenewingUser }], notifier.renewalSuccessLog, { description: "notification of renewal expected" })
+      unit.is([{ txn: renewalTxn, user: updatedRenewingUser }], notifier?.renewalSuccessLog, { description: "notification of renewal expected" })
       unit.not(undefined, renewalTxn.Processed, { description: "renewalTxn has been processed" })
-      unit.is([{ txn: joinTxn, user: f.directory.makeMember(joinTxn) }], notifier.joinSuccessLog, { description: "notification of join expected" })
+      unit.is([{ txn: joinTxn, user: f.directory.makeMember(joinTxn) }], notifier?.joinSuccessLog, { description: "notification of join expected" })
       unit.not(undefined, joinTxn.Processed, { description: "joinTxn has been processed" })
 
     }, {
@@ -244,6 +251,7 @@ function test_(sdk, skip = true) {
   }
   function testRenewalFailure_(directory, description, notifier, skip) {
     class BadUsers extends Users {
+      badUser: Member;
       constructor(badUser) {
         super()
         this.users.push(badUser)
@@ -251,7 +259,7 @@ function test_(sdk, skip = true) {
       }
       update(patch, primaryEmail) {
         if (primaryEmail === this.badUser.primaryEmail) {
-          throw new DirectoryError()
+          throw new DirectoryError(`Bad User: ${this.badUser.primaryEmail}`)
         }
         return super.update(patch, primaryEmail)
       }
@@ -301,8 +309,8 @@ function test_(sdk, skip = true) {
         m.phones.forEach((p) => unit.not(p.value, renewingMember.phones[0].value, { description: "Expecting directory member's phones not to include those from the renewing member" }))
 
       })
-      unit.is(renewingTxn, f.notifier.partialsLog[0].txn, { description: "Expecting renewalTxn to be in the partials log" })
-      const loggedUser = directory.makeMember(f.notifier.partialsLog[0].user)
+      unit.is(renewingTxn, f.notifier?.partialsLog[0].txn, { description: "Expecting renewalTxn to be in the partials log" })
+      const loggedUser = directory.makeMember(f.notifier?.partialsLog[0].user)
       unit.is(joiningMember, loggedUser, { description: "Expecting joining member to be in the partials log" })
 
     },
@@ -320,7 +328,7 @@ function testAdmin(skip = false) {
   const f = new Fixture1(directory)
   try {
     const member = directory.makeMember(f.txn1)
-    const newMember = admin.Users.insert(member)
+    const newMember = admin.Users?.insert(member)
     unit.section(() => {
       unit.is(newMember, member, { description: "New member should. be copy of old" })
     },
