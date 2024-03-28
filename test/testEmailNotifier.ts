@@ -83,4 +83,22 @@ describe("Email Notifier tests", () => {
         const actual = emailsSent[0]
         expect(expected).to.deep.equal(actual)
     })
+    it("should send an email to membership on failure", () => {
+        const emailsSent = new Array();
+        const mailer = new MyLocalMailer(emailsSent)
+        const templates = new Templates(mailer.getDrafts(), testFixtures.subject_lines)
+        const notifier = new EmailNotifier(templates, {mailer})
+        notifier.joinFailure(testFixtures.txn1, testFixtures.member1, "failure")
+        const expected = {
+            From: "membership@santacruzcountycycling.club",
+            noReply: true,
+            To: "membership@santacruzcountycycling.club",
+            html: "",
+            subject: "Join Problem",
+            text: ""
+        }
+        const actual = emailsSent[0]
+        expect(actual).to.deep.equal(expected)
+    })
+    
 })

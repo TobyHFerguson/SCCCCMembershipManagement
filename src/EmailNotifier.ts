@@ -61,7 +61,7 @@ class EmailNotifier extends Notifier {
     }
     joinFailure(txn, member, error) {
         super.joinFailure(txn, member, error)
-        this.notifySuccess_(this.templates.joinFailure, txn, member)
+        this.notifyFailure_(this.templates.joinFailure, txn, member)
     }
     renewalSuccess(txn, member) {
         super.renewalSuccess(txn, member);
@@ -79,6 +79,11 @@ class EmailNotifier extends Notifier {
         const binding = this.makeBinding_(txn, member, error)
         const message = this.makeMessageObject_(template, binding)
         this.sendMail_(this.getRecipient_(txn), message, { cc: "membership@santacruzcountycycling.club"})
+    }
+    notifyFailure_(template, txn, member, error?) {
+        const binding = this.makeBinding_(txn, member, error)
+        const message = this.makeMessageObject_(template, binding)
+        this.sendMail_("membership@santacruzcountycycling.club", message)
     }
     makeBinding_(txn, member, error) {
         const binding = {
