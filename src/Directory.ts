@@ -1,6 +1,13 @@
 
+import {Transaction, AdminDirectoryType} from './Types'
+import {Admin} from './Admin'
+import {Member} from './Member'
 class Directory {
-  constructor(adminDirectory = AdminDirectory, orgUnitPath = "/test", domain = "santacruzcountycycling.club",) {
+  adminDirectory:AdminDirectoryType;
+  orgUnitPath: string;
+  domain: string;
+  
+  constructor(adminDirectory:AdminDirectoryType = AdminDirectory, orgUnitPath = "/test", domain = "santacruzcountycycling.club",) {
     this.adminDirectory = adminDirectory
     this.orgUnitPath = orgUnitPath.trim(),
       this.domain = domain.trim()
@@ -11,7 +18,7 @@ class Directory {
    * @param {Member} member 
    * @returns true iff member is known
    */
-  isKnownMember(member) {
+  isKnownMember(member: Member) {
     return this.members.some((m) => m.primaryEmail === member.primaryEmail)
   }
   /**
@@ -19,7 +26,7 @@ class Directory {
    * @param {Member | Transaction} obj Object to be converted to Member
    * @returns new Member object
    */
-  makeMember(obj) {
+  makeMember(obj: Member | Transaction) {
     return new Member(obj, this.orgUnitPath, this.domain)
   }
 
@@ -27,7 +34,7 @@ class Directory {
    * Get all the members of the organization
    * @returns {Member[]} An array of members
    */
-  get members() {
+  get members(): Member[] {
     let users = [];
     let pageToken;
     let page;
@@ -56,7 +63,7 @@ class Directory {
    * @param {Member} member The member whose expiration date is to be updated
    * @returns a copy of the updated member
    */
-  updateMember(member) {
+  updateMember(member: Member) {
     let { customSchemas } = member
     return Utils.retryOnError(() => this.makeMember(this.updateMember_(member, { customSchemas })), MemberCreationNotCompletedError)
   }
@@ -67,8 +74,8 @@ class Directory {
       let newMember = this.adminDirectory.Users.update(JSON.stringify(patch), key);
       console.log(`newMember ${key} updated`);
       return newMember;
-    } catch (err) {
-      if (err.message.includes("userKey")) {
+    } catch (err:any) {
+      if (err.message && err.message.includes("userKey")) {
         err.message = err.message.replace("userKey", key)
         throw (new MemberNotFoundError(err))
       } else if (err.message.includes("User creation is not complete.")) {
@@ -84,11 +91,11 @@ class Directory {
    * @returns A copy of the member
    * @throws MemberNotFoundError if the user cannot be found
    */
-  getMember(member) {
+  getMember(member: Member) {
     try {
       return this.makeMember(this.adminDirectory.Users.get(member.primaryEmail, { projection: "full", viewType: "admin_view" }))
-    } catch (err) {
-      if (err.message.endsWith("Resource Not Found: userKey")) throw new MemberNotFoundError
+    } catch (err:any) {
+      if (err.message.endsWith("Resource Not Found: userKey")) throw new MemberNotFoundError(member.primaryEmail)
       throw new DirectoryError(err)
     }
   }
@@ -98,7 +105,7 @@ class Directory {
    * @param {boolean} [wait = true] whether to wait for the transaction to complete
    * @returns 
    */
-  addMemberFromTransaction(txn, wait = true) {
+  addMemberFromTransaction(txn: Transaction, wait: boolean = true) {
     const user = this.makeMember(txn)
     user.password = Math.random().toString(36);
     user.changePasswordAtNextLogin = true;
@@ -109,7 +116,7 @@ class Directory {
       }
       console.log(`user ${user.primaryEmail} created`)
       return newUser
-    } catch (err) {
+    } catch (err:any) {
       if (err.message.includes("API call to directory.users.insert failed with error: Entity already exists.")) {
         throw new MemberAlreadyExistsError(err)
       } else {
@@ -123,12 +130,12 @@ class Directory {
    * @param {Member} member
    * @param {boolean} [wait = true] wait for deletion to finish before returning
    */
-  deleteMember(member, wait = true) {
+  deleteMember(member: Member, wait: boolean = true) {
     try {
       Utils.retryOnError(() => { this.adminDirectory.Users.remove(member.primaryEmail.toLowerCase()); console.log(`Member ${member.primaryEmail} deleted`); return true }, MemberCreationNotCompletedError)
       Utils.waitNTimesOnCondition(wait ? 400 : 1, () => !this.isKnownMember(member))
     }
-    catch (err) {
+    catch (err:any) {
       // Only throw the error if the user might still exist, otherwise ignore it since the user not existing is what we want!
       if (!err.message.endsWith("Resource Not Found: userKey")) throw new MemberNotFoundError(err)
     }
@@ -168,3 +175,5 @@ class MemberCreationNotCompletedError extends DirectoryError {
     this.name = "UserConstructionNotCompletedError"
   }
 }
+
+export {Directory, LocalDirectory, DirectoryError, MemberAlreadyExistsError, MemberNotFoundError, MemberCreationNotCompletedError}

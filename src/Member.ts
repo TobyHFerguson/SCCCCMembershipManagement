@@ -1,9 +1,21 @@
 
 
-class Member {
+export class Member {
+  domain: string;
+  generation: number = 0;
+  primaryEmail: string;
+  name: {givenName: string, familyName: string, fullName: string}
+  emails: {address: string, type?:string, primary?: boolean}[];
+  phones: {value: string, type: string}[];
+  customSchemas: { Club_Membership: { expires: string, Join_Date: string}};
+  orgUnitPath: string;
+  recoveryEmail: string;
+  recoveryPhone: string;
+  password?:string;
+  changePasswordAtNextLogin?:boolean;
+
   constructor(obj, orgUnitPath, domain) {
     this.domain = domain
-    this.generation_ = 0
     if (obj.primaryEmail === undefined) {
       const txn = obj
       let givenName = txn['First Name'];
@@ -11,7 +23,7 @@ class Member {
       let fullName = `${givenName} ${familyName}`
       let email = txn['Email Address'];
       let phone = ""+txn['Phone Number'];
-      const name = (givenName || familyName) ? { givenName, familyName, fullName } : undefined
+      const name =  { givenName, familyName, fullName }
       const primaryEmail = `${givenName}.${familyName}@${this.domain}`.toLowerCase()
       const Join_Date = new Date();
       phone = phone.startsWith('+1') ? phone : '+1' + phone
@@ -60,8 +72,8 @@ class Member {
     return `${given}.${family}${generation}@${domain}`.toLowerCase()
   }
   incrementGeneration() {
-    this.generation_ += 1
-    let pm = this.makePrimaryEmail_(this.name.givenName, this.name.familyName, this.generation_, this.domain)
+    this.generation+= 1
+    let pm = this.makePrimaryEmail_(this.name.givenName, this.name.familyName, ""+this.generation, this.domain)
     this.primaryEmail = pm
     this.emails.filter((e) => e.primary).forEach((e) => e.address = pm)
     return this
