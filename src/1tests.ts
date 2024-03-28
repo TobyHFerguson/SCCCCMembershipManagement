@@ -7,6 +7,7 @@ import {Admin} from './Admin'
 import {Directory, DirectoryError, MemberNotFoundError} from './Directory'
 import {Users} from './Admin'
 import {Member} from './Member'
+import {TransactionProcessor} from './TransactionProcessor'
 const SKIP = false
 
 function test() {
@@ -203,7 +204,7 @@ function test_(sdk, skip = true) {
       })
       unit.is([{ txn: f.badTxn, user: badMember }], notifier.joinFailureLog, { description: "Join failure is expected to be badTxn" })
       unit.is(undefined, f.badTxn.Processed, { neverUndefined: false, description: "badTxn should not have been processed" })
-      unit.is(true, new Date(f.txn2.Processed) instanceof Date, { description: "myTxn2 should have a processing date" })
+      unit.is(true, new Date(f.txn2.Processed? f.txn2.Processed: "") instanceof Date, { description: "myTxn2 should have a processing date" })
       unit.not(undefined, f.txn2.Processed, { neverUndefined: false, description: "txn2 should  have been processed" })
     }, {
       description,
