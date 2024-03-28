@@ -19,8 +19,6 @@ class Notifier implements Logger{
     this.joinSuccessLog.push({ txn, user })
   }
   joinFailure(txn, user, error) {
-    console.error(`Notifier.joinFailure()`)
-    console.error(error.message)
     this.joinFailureLog.push({ txn, user, error })
   }
   renewalSuccess(txn, user) {
