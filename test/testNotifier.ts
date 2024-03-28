@@ -47,4 +47,10 @@ describe('Notifier tests', () => {
       const actual = notifier.joinFailureLog
       expect(actual).to.deep.equal([{txn: testFixtures.txn1, user: testFixtures.member1, error: testFixtures.error}])
   })
+  it('should log a partial', () => {
+    const notifier = new Notifier()
+    notifier.partial(testFixtures.txn1, testFixtures.member1)
+    const actual = notifier.partialsLog
+    expect(actual).to.deep.equal([{txn: testFixtures.txn1, user: testFixtures.member1}])
+})
 })
