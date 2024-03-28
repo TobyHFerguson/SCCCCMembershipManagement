@@ -45,7 +45,7 @@ function testTemplates() {
   const templates = new Templates(GmailApp.getDrafts(), testFixtures.subject_lines)
   testFixtures.unit.section(() => testFixtures.unit.is(templates.ambiguous.message.subject, testFixtures.subject_lines.ambiguousSubject, { description: "Expected a template created from the ambiguous subject line" }))
   try {
-    const templates = new Templates(GmailApp.getDrafts(), { ...testFixtures.subject_lines, joinSuccess: "NO SUCH DRAFT" })
+    const templates = new Templates(GmailApp.getDrafts(), { ...testFixtures.subject_lines, joinSuccessSubject: "NO SUCH DRAFT" })
     console.error("Expected to see an error saying that the draft couldn't be found")
   } catch { }
 }

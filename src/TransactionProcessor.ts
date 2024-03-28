@@ -8,6 +8,14 @@ class Transaction {
   "Phone Number": string;
   "Payable Status": string;
   "Processed"?: string;
+  constructor(fn, ln, ea, pn, ps, p){
+    this["First Name"] = fn;
+    this["Last Name"] = ln
+    this["Email Addres"] = ea;
+    this["Phone Number" ]= pn;
+    this["Payable Status"] = ps;
+    if (p) this["Processed"] = p;
+  }
 }
 class TransactionProcessor {
   directory: Directory;
@@ -69,7 +77,7 @@ class TransactionProcessor {
     let member = this.directory.makeMember(txn)
     while (true) {
       try {
-        this.directory.addMemberFromTransaction(member)
+        this.directory.addMemberFromTransaction(txn)
         txn.Processed = new Date().toISOString().split("T")[0]
         this.notifier.joinSuccess(txn, member)
         return

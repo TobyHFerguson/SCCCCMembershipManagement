@@ -1,4 +1,5 @@
-import { Logger, MailAppType, MailerOptions, Transaction } from './Types'
+import { Logger, } from './Types'
+import { Transaction } from './TransactionProcessor';
 import {Member} from './Member'
 
 class Notifier implements Logger{

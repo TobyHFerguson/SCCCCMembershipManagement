@@ -1,16 +1,21 @@
 
-import {Transaction, AdminDirectoryType} from './Types'
+import {AdminDirectoryType, UsersCollectionType, UserType} from './Types'
 import {Admin} from './Admin'
 import {Member} from './Member'
+import { Utils } from './Utils';
+import { Transaction } from './TransactionProcessor';
 class Directory {
   adminDirectory:AdminDirectoryType;
   orgUnitPath: string;
   domain: string;
+  users: UsersCollectionType;
   
   constructor(adminDirectory:AdminDirectoryType = AdminDirectory, orgUnitPath = "/test", domain = "santacruzcountycycling.club",) {
     this.adminDirectory = adminDirectory
     this.orgUnitPath = orgUnitPath.trim(),
       this.domain = domain.trim()
+      if (!adminDirectory.Users) throw new Error("Internal Error - adminDirectory.Users is undefined")
+      this.users=adminDirectory.Users;
   }
 
   /**
@@ -26,7 +31,7 @@ class Directory {
    * @param {Member | Transaction} obj Object to be converted to Member
    * @returns new Member object
    */
-  makeMember(obj: Member | Transaction) {
+  makeMember(obj: UserType | Transaction) {
     return new Member(obj, this.orgUnitPath, this.domain)
   }
 
@@ -48,7 +53,7 @@ class Directory {
         pageToken: pageToken,
         projection: "full"
       }
-      page = this.adminDirectory.Users.list(listSpec);
+      page = this.users?.list(listSpec);
       if (!page.users) {
         return [];
       }
@@ -68,11 +73,11 @@ class Directory {
     return Utils.retryOnError(() => this.makeMember(this.updateMember_(member, { customSchemas })), MemberCreationNotCompletedError)
   }
 
-  updateMember_(member, patch) {
+  updateMember_(member, patch: UserType) {
     const key = member.primaryEmail;
-    try {
-      let newMember = this.adminDirectory.Users.update(JSON.stringify(patch), key);
-      console.log(`newMember ${key} updated`);
+    try { 
+      const newMember:UserType = this.users?.update(patch, key);
+      console.log(`newMember ${key} updated`, newMember);
       return newMember;
     } catch (err:any) {
       if (err.message && err.message.includes("userKey")) {
@@ -93,7 +98,7 @@ class Directory {
    */
   getMember(member: Member) {
     try {
-      return this.makeMember(this.adminDirectory.Users.get(member.primaryEmail, { projection: "full", viewType: "admin_view" }))
+      return this.makeMember(this.users.get(member.primaryEmail, { projection: "full", viewType: "admin_view" }))
     } catch (err:any) {
       if (err.message.endsWith("Resource Not Found: userKey")) throw new MemberNotFoundError(member.primaryEmail)
       throw new DirectoryError(err)
@@ -110,7 +115,7 @@ class Directory {
     user.password = Math.random().toString(36);
     user.changePasswordAtNextLogin = true;
     try {
-      let newUser = this.makeMember(this.adminDirectory.Users.insert(user));
+      let newUser = this.makeMember(this.users.insert(user));
       if (wait) {
         Utils.waitNTimesOnCondition(4000, () => this.isKnownMember(newUser))
       }
@@ -132,7 +137,7 @@ class Directory {
    */
   deleteMember(member: Member, wait: boolean = true) {
     try {
-      Utils.retryOnError(() => { this.adminDirectory.Users.remove(member.primaryEmail.toLowerCase()); console.log(`Member ${member.primaryEmail} deleted`); return true }, MemberCreationNotCompletedError)
+      Utils.retryOnError(() => { this.users.remove(member.primaryEmail.toLowerCase()); console.log(`Member ${member.primaryEmail} deleted`); return true }, MemberCreationNotCompletedError)
       Utils.waitNTimesOnCondition(wait ? 400 : 1, () => !this.isKnownMember(member))
     }
     catch (err:any) {

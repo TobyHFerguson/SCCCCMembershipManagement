@@ -1,8 +1,9 @@
 
 
-import {Transaction} from './Types'
+import { UserType} from './Types'
+import { Transaction } from './TransactionProcessor';
 
-export class Member {
+export class Member implements UserType {
   domain: string;
   generation: number = 0;
   primaryEmail: string;
@@ -16,7 +17,7 @@ export class Member {
   password?:string;
   changePasswordAtNextLogin?:boolean;
 
-  constructor(obj: Transaction | Member, orgUnitPath:string = '/test', domain:string = 'santacruzcountycyling.club'){
+  constructor(obj: Transaction | UserType, orgUnitPath:string = '/test', domain:string = 'santacruzcountycyling.club'){
     this.domain = domain
     if (obj instanceof Transaction) {
       const txn:Transaction = obj
