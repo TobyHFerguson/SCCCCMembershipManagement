@@ -117,6 +117,9 @@ interface MailerOptions {
     mailer: MailAppType;
     domain?: string;
     html?: boolean;
+    bccOnSuccess: string;
+    toOnFailure: string;
+    bccOnFailure: string;
 }
 
 
