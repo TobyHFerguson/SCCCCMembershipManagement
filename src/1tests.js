@@ -147,7 +147,7 @@ function test_(sdk, skip = true) {
       txns.forEach((t, i, ts) => {
         const el = { txn: t, user: expectedMembers[i] }
         if (i === ts.length - 1) el.user.generation_ = 1;
-        unit.is(el, notifier.joinLog[i], { description: "Expected log entries to match" })
+        unit.is(el, notifier.joinSuccessLog[i], { description: "Expected log entries to match" })
       })
       txns.forEach((t) => {
         unit.not(undefined, t.Processed, { neverUndefined: false, description: "Expected all transactions to have been processed" })
@@ -188,7 +188,7 @@ function test_(sdk, skip = true) {
       uut.processTransactions(txns)
       unit.is(1, f.directory.members.length, { description: "Expect directory to have 1 member" })
       unit.is(true, f.directory.isKnownMember(goodMember), { description: "Expect goodMember to have become a member" })
-      unit.is([{ txn: f.txn2, user: goodMember }], f.notifier.joinLog, { description: "successful join notification is expected to be txn2" })
+      unit.is([{ txn: f.txn2, user: goodMember }], f.notifier.joinSuccessLog, { description: "successful join notification is expected to be txn2" })
       unit.is(1, f.notifier.joinFailureLog.length, { description: "one join failure expected" })
       f.notifier.joinFailureLog.forEach((l) => {
         unit.is(true, l.err instanceof Error)
@@ -230,7 +230,7 @@ function test_(sdk, skip = true) {
 
       unit.is([{ txn: renewalTxn, user: updatedRenewingUser }], notifier.renewalSuccessLog, { description: "notification of renewal expected" })
       unit.not(undefined, renewalTxn.Processed, { description: "renewalTxn has been processed" })
-      unit.is([{ txn: joinTxn, user: f.directory.makeMember(joinTxn) }], notifier.joinLog, { description: "notification of join expected" })
+      unit.is([{ txn: joinTxn, user: f.directory.makeMember(joinTxn) }], notifier.joinSuccessLog, { description: "notification of join expected" })
       unit.not(undefined, joinTxn.Processed, { description: "joinTxn has been processed" })
 
     }, {
