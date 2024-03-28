@@ -38,9 +38,7 @@ class Templates {
 
 class EmailNotifier extends Notifier {
     templates: Templates;
-    test: boolean;
-    mailer: MailAppType;
-    domain: string;
+    options: MailerOptions;
     /**
      * 
      * @param {Templates} templates 
@@ -48,11 +46,8 @@ class EmailNotifier extends Notifier {
      */
     constructor(templates: Templates, options: MailerOptions) {
         super()
-        const localOptions = { test: true, domain: "santacruzcountycycling.club", ...options }
+        this.options = { test: true, domain: "santacruzcountycycling.club", ...options }
         this.templates = templates
-        this.test = localOptions.test
-        this.mailer = localOptions.mailer
-        this.domain = localOptions.domain
     }
 
     joinSuccess(txn: Transaction, member: Member) {
@@ -71,19 +66,19 @@ class EmailNotifier extends Notifier {
         super.renewalFailure(txn, member, error)
         this.notifySuccess_(this.templates.renewalFailure, txn, member)
     }
-    ambiguous(txn, member) {
+    partial(txn, member) {
         super.partial(txn, member)
-        this.notifySuccess_(this.templates.ambiguous, txn, member)
+        this.notifyFailure_(this.templates.ambiguous, txn, member)
     }
     notifySuccess_(template, txn, member, error?) {
         const binding = this.makeBinding_(txn, member, error)
         const message = this.makeMessageObject_(template, binding)
-        this.sendMail_(this.getRecipient_(txn), message, { cc: "membership@santacruzcountycycling.club"})
+        this.sendMail_(this.getRecipient_(txn), message, { bcc: this.options.bccOnSuccess})
     }
     notifyFailure_(template, txn, member, error?) {
         const binding = this.makeBinding_(txn, member, error)
         const message = this.makeMessageObject_(template, binding)
-        this.sendMail_("membership@santacruzcountycycling.club", message)
+        this.sendMail_(this.options.toOnFailure, message, { bcc: this.options.bccOnFailure})
     }
     makeBinding_(txn, member, error) {
         const binding = {
@@ -102,7 +97,7 @@ class EmailNotifier extends Notifier {
         return bindMessage_(template.message, binding)
     }
     getRecipient_(txn) {
-        return this.test ? `membershiptest@${this.domain}` : txn["Email Address"]
+        return this.options.test ? `membershiptest@${this.options.domain}` : txn["Email Address"]
     }
 
     sendMail_(recipient, message, options?:SendEmailOptions) {
@@ -110,7 +105,7 @@ class EmailNotifier extends Notifier {
             htmlBody: message.html,
             // bcc: 'a.bcc@email.com',
             // cc: 'a.cc@email.com',
-            from: `membership@${this.domain}`,
+            from: `membership@${this.options.domain}`,
             // name: 'name of the sender',
             // replyTo: 'a.reply@email.com',
             noReply: true, // if the email should be sent from a generic no-reply email address (not available to gmail.com users)
@@ -118,7 +113,7 @@ class EmailNotifier extends Notifier {
             inlineImages: message.inlineImages
         }
         const finalOptions = {...defaultOptions, ...options}
-        this.mailer.sendEmail(recipient, message.subject, message.text, finalOptions)
+        this.options.mailer.sendEmail(recipient, message.subject, message.text, finalOptions)
     }
 
 

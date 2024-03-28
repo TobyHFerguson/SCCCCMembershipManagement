@@ -20,7 +20,7 @@ class MyLocalMailer implements MailAppType {
     constructor(log: object[]) {
         this.log = log
     }
-    sendEmail(recipient, subject, text, options:SendEmailOptions) {
+    sendEmail(recipient, subject, text, options: SendEmailOptions) {
         const o = {
             To: recipient,
             From: options.from,
@@ -28,7 +28,7 @@ class MyLocalMailer implements MailAppType {
             subject: subject,
             html: options.htmlBody,
             text: text,
-            ...(options.cc ? { cc: options.cc } : {}),
+            ...(options.bcc ? { bcc: options.bcc } : {}),
         }
         this.log.push(o)
         return this
@@ -65,11 +65,11 @@ const testFixtures = (() => {
     }
 })()
 describe("Email Notifier tests", () => {
-    it("should send an email to the member on success", () => {
+    it("should send an email to the member on success, and a copy to the bcc list", () => {
         const emailsSent = new Array();
         const mailer = new MyLocalMailer(emailsSent)
         const templates = new Templates(mailer.getDrafts(), testFixtures.subject_lines)
-        const notifier = new EmailNotifier(templates, {mailer})
+        const notifier = new EmailNotifier(templates, { mailer, bccOnSuccess: "a@b.com,c@d.com", bccOnFailure: "FAILURE (COPIED)", toOnFailure: "FAILURE" })
         notifier.joinSuccess(testFixtures.txn1, testFixtures.member1)
         const expected = {
             From: "membership@santacruzcountycycling.club",
@@ -78,27 +78,46 @@ describe("Email Notifier tests", () => {
             html: "",
             subject: "Thanks for joining SCCCC",
             text: "",
-            cc: "membership@santacruzcountycycling.club"
+            bcc: "a@b.com,c@d.com"
         }
         const actual = emailsSent[0]
-        expect(expected).to.deep.equal(actual)
+        expect(1).to.deep.equal(emailsSent.length)
+        expect(expected).to.deep.equal(actual);
     })
-    it("should send an email to membership on failure", () => {
+    it("should send an email to toOnFailure on failure, and to the bccOnfailure on failure", () => {
         const emailsSent = new Array();
         const mailer = new MyLocalMailer(emailsSent)
         const templates = new Templates(mailer.getDrafts(), testFixtures.subject_lines)
-        const notifier = new EmailNotifier(templates, {mailer})
+        const notifier = new EmailNotifier(templates, { mailer ,bccOnSuccess: "a@b.com,c@d.com", bccOnFailure: "FAILURE (COPIED)", toOnFailure: "FAILURE"})
         notifier.joinFailure(testFixtures.txn1, testFixtures.member1, "failure")
         const expected = {
             From: "membership@santacruzcountycycling.club",
             noReply: true,
-            To: "membership@santacruzcountycycling.club",
+            To: "FAILURE",
             html: "",
             subject: "Join Problem",
+            text: "",
+            bcc: "FAILURE (COPIED)"
+        }
+        const actual = emailsSent[0]
+        expect(actual).to.deep.equal(expected)
+    })
+    it("should send an email to toOnFailure on partial", () => {
+        const emailsSent = new Array();
+        const mailer = new MyLocalMailer(emailsSent)
+        const templates = new Templates(mailer.getDrafts(), testFixtures.subject_lines)
+        const notifier = new EmailNotifier(templates, { mailer, bccOnSuccess: "a@b.com,c@d.com", bccOnFailure: "", toOnFailure: "FAILURE" })
+        notifier.partial(testFixtures.txn1, testFixtures.member1)
+        const expected = {
+            From: "membership@santacruzcountycycling.club",
+            noReply: true,
+            To: "FAILURE",
+            html: "",
+            subject: "Ambiguous transaction",
             text: ""
         }
         const actual = emailsSent[0]
         expect(actual).to.deep.equal(expected)
     })
-    
+
 })
