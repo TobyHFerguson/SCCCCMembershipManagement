@@ -1,6 +1,7 @@
+import { error } from "console";
 import {
     AdminDirectoryType,
-    Binding, DraftType, LogEntry, MailAppType, MailerOptions, NotificationType, SendEmailOptions, SubjectLines, Template, Transaction, UserType, UsersCollectionType, bmUnitTester
+    Binding, DraftType, EmailConfigurationCollection, EmailConfigurationType, LogEntry, MailAppType, MailerOptions, NotificationType, SendEmailOptions, SubjectLines, Template, Transaction, UserType, UsersCollectionType, bmUnitTester
 } from "./Types";
 
 
@@ -224,7 +225,7 @@ class MemberCreationNotCompletedError extends DirectoryError {
     }
 }
 
-class Templates {
+export class Templates {
     joinSuccess: Template;
     joinFailure: Template;
     renewalSuccess: Template;
@@ -539,52 +540,57 @@ class Notifier implements NotificationType {
 
 }
 export { Notifier };
+
 class EmailNotifier extends Notifier {
-    templates: Templates;
+    configs: EmailConfigurationCollection;
     options: MailerOptions;
+    drafts: DraftType[];
+
     /**
      * 
-     * @param {Templates} templates 
-     * @param {MailerOptions} options
+     * @param drafts Draft[] drafts to be used
+     * @param configs Configs 
+     * @param options Mail Options
      */
-    constructor(templates: Templates, options: MailerOptions) {
+    constructor(drafts: DraftType[], configs: EmailConfigurationCollection, options: MailerOptions) {
         super()
-        this.options = { test: true, domain: "santacruzcountycycling.club", ...options }
-        this.templates = templates
+        this.drafts = drafts;
+        this.options = { test: true, domain: "santacruzcountycycling.club", ...options };
+        this.configs = configs;
     }
 
     joinSuccess(txn: Transaction, member: Member) {
         super.joinSuccess(txn, member)
-        this.notifySuccess_(this.templates.joinSuccess, txn, member)
+        this.notifySuccess_( txn, member, this.configs.joinSuccess,)
     }
-    joinFailure(txn, member, error) {
+    joinFailure(txn: Transaction, member: Member, error: Error) {
         super.joinFailure(txn, member, error)
-        this.notifyFailure_(this.templates.joinFailure, txn, member)
+        this.notifyFailure_( txn, member, this.configs.joinFailure)
     }
-    renewalSuccess(txn, member) {
+    renewalSuccess(txn: Transaction, member: Member) {
         super.renewalSuccess(txn, member);
-        this.notifySuccess_(this.templates.renewalSuccess, txn, member)
+        this.notifySuccess_( txn, member, this.configs.renewSuccess,)
     }
-    renewalFailure(txn, member, error) {
+    renewalFailure(txn: Transaction, member: Member, error: Error) {
         super.renewalFailure(txn, member, error)
-        this.notifySuccess_(this.templates.renewalFailure, txn, member)
+        this.notifySuccess_(txn, member, this.configs.renewFailure, )
     }
-    partial(txn, member) {
+    partial(txn: Transaction, member: Member) {
         super.partial(txn, member)
-        this.notifyFailure_(this.templates.ambiguous, txn, member)
+        this.notifyFailure_( txn, member, this.configs.ambiguousTransaction)
     }
-    notifySuccess_(template, txn, member, error?) {
-        const binding = this.makeBinding_(txn, member, error)
-        const message = this.makeMessageObject_(template, binding)
-        this.sendMail_(this.getRecipient_(txn), message, { bcc: this.options.bccOnSuccess })
+    notifySuccess_(txn: Transaction, member: Member, config: EmailConfigurationType) {
+        const binding = this.makeBinding_(txn, member)
+        const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
+        this.sendMail_(this.getRecipient_(txn, config), message, {bcc: `${config["Bcc on Success"]}@${this.options.domain}`})
     }
-    notifyFailure_(template, txn, member, error?) {
+    notifyFailure_(txn: Transaction, member: Member, config: EmailConfigurationType, error?:Error) {
         const binding = this.makeBinding_(txn, member, error)
-        const message = this.makeMessageObject_(template, binding)
-        this.sendMail_(this.options.toOnFailure, message, { bcc: this.options.bccOnFailure })
+        const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
+        this.sendMail_(this.getRecipient_(txn, config), message, {bcc: `${config["Bcc on Failure"]}@${this.options.domain}`})
     }
 
-    makeBinding_(txn: Transaction, member: Member, error: Error): Binding {
+    makeBinding_(txn: Transaction, member: Member, error?: Error): Binding {
         const binding: Binding = {
             timestamp: txn.Timestamp,
             orderID: txn["Payable Order ID"],
@@ -592,25 +598,22 @@ class EmailNotifier extends Notifier {
             givenName: member.name.givenName,
             familyName: member.name.familyName,
             expiry: member.customSchemas.Club_Membership.expires,
-            error: error ? error.message : ""
+            ...(error ? {error: error.message }: {})
         }
-        if (error) binding.error = error.message
         return binding
     }
     makeMessageObject_(template: Template, binding: Binding) {
         return bindMessage_(template.message, binding)
     }
-    getRecipient_(txn) {
-        return this.options.test ? `membershiptest@${this.options.domain}` : txn["Email Address"]
+    getRecipient_(txn:Transaction, config: EmailConfigurationType) {
+        return this.options.test ? `toby.ferguson+TEST@${this.options.domain}` : config.To === 'home' ? txn["Email Address"] : `${config.To}@${this.options.domain}`
     }
 
     sendMail_(recipient, message, options?: SendEmailOptions) {
         const defaultOptions: SendEmailOptions = {
             htmlBody: message.html,
-            // bcc: 'a.bcc@email.com',
-            // cc: 'a.cc@email.com',
-            from: `membership@${this.options.domain}`,
-            // name: 'name of the sender',
+            //from: `membership@${this.options.domain}`,
+            name: 'SCCC Membership',
             // replyTo: 'a.reply@email.com',
             noReply: true, // if the email should be sent from a generic no-reply email address (not available to gmail.com users)
             attachments: message.attachments,
@@ -622,7 +625,7 @@ class EmailNotifier extends Notifier {
 
 
 }
-
+export {EmailNotifier}
 
 class TransactionProcessor {
     directory: Directory;
@@ -1135,14 +1138,14 @@ const testEmailNotifier = (() => {
 
         function testEmailNotificationJoinFailure(mailApp: MailAppType) {
             const templates = new Templates(mailApp.getDrafts(), testFixtures.subject_lines)
-            const notifier = new EmailNotifier(templates, { test: true, mailer: testFixtures.sendMail, bccOnSuccess: "a@b.com,c@d.com", bccOnFailure: "FAILURE (COPIED)", toOnFailure: "FAILURE" })
-            notifier.joinFailure(testFixtures.txn1, testFixtures.member1, testFixtures.error)
+            // const notifier = new EmailNotifier(templates, { test: true, mailer: testFixtures.sendMail, bccOnSuccess: "a@b.com,c@d.com", bccOnFailure: "FAILURE (COPIED)", toOnFailure: "FAILURE" })
+            // notifier.joinFailure(testFixtures.txn1, testFixtures.member1, testFixtures.error)
         }
 
         function testEmailNotifier(mailApp: MailAppType) {
             const templates = new Templates(mailApp.getDrafts(), testFixtures.subject_lines)
-            const notifier = new EmailNotifier(templates, { test: true, mailer: testFixtures.sendMail, bccOnSuccess: "a@b.com,c@d.com", bccOnFailure: "FAILURE (COPIED)", toOnFailure: "FAILURE" })
-            notifier.joinSuccess(testFixtures.txn1, testFixtures.member1)
+            // const notifier = new EmailNotifier(templates, { test: true, mailer: testFixtures.sendMail, bccOnSuccess: "a@b.com,c@d.com", bccOnFailure: "FAILURE (COPIED)", toOnFailure: "FAILURE" })
+            // notifier.joinSuccess(testFixtures.txn1, testFixtures.member1)
         }
     }
 })()

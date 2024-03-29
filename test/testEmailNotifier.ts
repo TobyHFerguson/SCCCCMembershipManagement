@@ -1,9 +1,7 @@
 import chai = require('chai');
+import { Member, Templates, EmailNotifier } from '../src/Code';
+import { MailAppType, SendEmailOptions, Transaction } from '../src/Types';
 const expect = chai.expect;
-import { MailAppType, SendEmailOptions } from '../src/Types';
-import { Member } from '../src/Member';
-import { Transaction } from '../src/TransactionProcessor';
-import { Templates, EmailNotifier } from '../src/EmailNotifier';
 
 const subject_lines = {
     joinSuccessSubject: "Thanks for joining SCCCC",
@@ -20,7 +18,7 @@ class MyLocalMailer implements MailAppType {
     constructor(log: object[]) {
         this.log = log
     }
-    sendEmail(recipient, subject, text, options: SendEmailOptions) {
+    sendEmail(recipient: string, subject: string, text: string, options: SendEmailOptions) {
         const o = {
             To: recipient,
             From: options.from,
@@ -55,7 +53,15 @@ const testFixtures = (() => {
 
 
 
-    const txn1 = new Transaction("J", "K", "j.k@icloud.com", "+14083869343", "paid", "CC-TF-RNB6")
+    const txn1: Transaction = <Transaction>{
+        "First Name": "J",
+        "Last Name": "K",
+        "Email Address": "j.k@icloud.com",
+        "Phone Number": "+14083869343",
+        "Payable Status": "paid",
+        "Payable Order ID": "CC-TF-RNB6",
+        "Timestamp": "timestamp"
+    }
     return {
 
         txn1,
@@ -69,7 +75,7 @@ describe("Email Notifier tests", () => {
         const emailsSent = new Array();
         const mailer = new MyLocalMailer(emailsSent)
         const templates = new Templates(mailer.getDrafts(), testFixtures.subject_lines)
-        const notifier = new EmailNotifier(templates, { mailer, bccOnSuccess: "a@b.com,c@d.com", bccOnFailure: "FAILURE (COPIED)", toOnFailure: "FAILURE" })
+        const notifier = new EmailNotifier(testFixtures.drafts, mailer, )
         notifier.joinSuccess(testFixtures.txn1, testFixtures.member1)
         const expected = {
             From: "membership@santacruzcountycycling.club",
@@ -88,7 +94,7 @@ describe("Email Notifier tests", () => {
         const emailsSent = new Array();
         const mailer = new MyLocalMailer(emailsSent)
         const templates = new Templates(mailer.getDrafts(), testFixtures.subject_lines)
-        const notifier = new EmailNotifier(templates, { mailer ,bccOnSuccess: "a@b.com,c@d.com", bccOnFailure: "FAILURE (COPIED)", toOnFailure: "FAILURE"})
+        const notifier = new EmailNotifier(templates, { mailer, bccOnSuccess: "a@b.com,c@d.com", bccOnFailure: "FAILURE (COPIED)", toOnFailure: "FAILURE" })
         notifier.joinFailure(testFixtures.txn1, testFixtures.member1, "failure")
         const expected = {
             From: "membership@santacruzcountycycling.club",
