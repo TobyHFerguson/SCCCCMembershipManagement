@@ -1,0 +1,1132 @@
+import { UsersCollectionType, UserType, AdminDirectoryType, Template, DraftType, SubjectLines, MailerOptions, SendEmailOptions, bmUnitTester, NotificationType, MailAppType, LogEntry } from "./Types";
+
+class Users implements UsersCollectionType {
+    #users: UserType[] = [];
+    constructor(users?: Member[]) {
+        if (users) users.forEach(u => this.#users.push(u))
+    }
+
+    get(primaryEmail: string) {
+        const found = this.#users.find((u) => u.primaryEmail === primaryEmail)
+        return found ? found : {}
+    }
+    insert(user: UserType) {
+        if (!user.primaryEmail) throw new Error("No primary key")
+        if (this.get(user.primaryEmail)) { throw new Error("API call to directory.users.insert failed with error: Entity already exists.") }
+        const newUser = JSON.parse(JSON.stringify(user))
+        this.#users.push(newUser)
+        return newUser
+    }
+    list(optionaArgs: object) {
+        const users: UserType[] = JSON.parse(JSON.stringify(this.#users))
+        const result = { users }
+        return result
+    }
+    remove(primaryEmail: string) {
+        let i = this.#users?.findIndex((u) => u.primaryEmail === primaryEmail);
+        if (i === -1) throw new Error("Resource Not Found: userKey");
+        this.#users?.splice(i, 1)
+    }
+    update(patch, primaryEmail) {
+        let i = this.#users.findIndex((u) => u.primaryEmail === primaryEmail);
+        if (i === -1) throw new Error("Resource Not Found: userKey");
+        const oldUser = this.#users[i]
+        const newUser = { ...oldUser, ...JSON.parse(patch) }
+        this.#users.splice(i, 1, newUser)
+        return JSON.parse(JSON.stringify(newUser))
+    }
+}
+
+class Admin implements AdminDirectoryType {
+    Users?: UsersCollectionType;
+    constructor(users = new Users()) {
+        this.Users = users
+    }
+}
+
+class Directory {
+    adminDirectory: AdminDirectoryType;
+    orgUnitPath: string;
+    domain: string;
+    users: UsersCollectionType;
+
+    constructor(adminDirectory: AdminDirectoryType = AdminDirectory, orgUnitPath = "/test", domain = "santacruzcountycycling.club",) {
+        this.adminDirectory = adminDirectory
+        this.orgUnitPath = orgUnitPath.trim(),
+            this.domain = domain.trim()
+        if (!adminDirectory.Users) throw new Error("Internal Error - adminDirectory.Users is undefined")
+        this.users = adminDirectory.Users;
+    }
+
+    /**
+     * Identify whether member exists
+     * @param {Member} member 
+     * @returns true iff member is known
+     */
+    isKnownMember(member: Member) {
+        return this.members.some((m) => m.primaryEmail === member.primaryEmail)
+    }
+    /**
+     * 
+     * @param {Member | Transaction} obj Object to be converted to Member
+     * @returns new Member object
+     */
+    makeMember(obj: UserType | Transaction) {
+        return new Member(obj, this.orgUnitPath, this.domain)
+    }
+
+    /**
+     * Get all the members of the organization
+     * @returns {Member[]} An array of members
+     */
+    get members(): Member[] {
+        let users = [];
+        let pageToken;
+        let page;
+        do {
+            const listSpec = {
+                customer: 'my_customer',
+                orderBy: 'givenName',
+                viewType: "admin_view",
+                query: `orgUnitPath:${this.orgUnitPath}`,
+                maxResults: 500,
+                pageToken: pageToken,
+                projection: "full"
+            }
+            page = this.users?.list(listSpec);
+            if (!page.users) {
+                return [];
+            }
+            users = users.concat(page.users)
+            pageToken = page.nextPageToken;
+        } while (pageToken);
+        return users
+    }
+
+    /**
+     * Update the stored copy of the member's expiration date
+     * @param {Member} member The member whose expiration date is to be updated
+     * @returns a copy of the updated member
+     */
+    updateMember(member: Member) {
+        let { customSchemas } = member
+        return Utils.retryOnError(() => this.makeMember(this.updateMember_(member, { customSchemas })), MemberCreationNotCompletedError)
+    }
+
+    updateMember_(member, patch: UserType) {
+        const key = member.primaryEmail;
+        try {
+            const newMember: UserType = this.users?.update(patch, key);
+            console.log(`newMember ${key} updated`, newMember);
+            return newMember;
+        } catch (err: any) {
+            if (err.message && err.message.includes("userKey")) {
+                err.message = err.message.replace("userKey", key)
+                throw (new MemberNotFoundError(err))
+            } else if (err.message.includes("User creation is not complete.")) {
+                throw new MemberCreationNotCompletedError(err)
+            }
+            throw new DirectoryError(err)
+        }
+    }
+
+    /**
+     * Return a copy of the given member, or throw if not found
+     * @param {Member} member The member to be returned
+     * @returns A copy of the member
+     * @throws MemberNotFoundError if the user cannot be found
+     */
+    getMember(member: Member) {
+        try {
+            return this.makeMember(this.users.get(member.primaryEmail, { projection: "full", viewType: "admin_view" }))
+        } catch (err: any) {
+            if (err.message.endsWith("Resource Not Found: userKey")) throw new MemberNotFoundError(member.primaryEmail)
+            throw new DirectoryError(err)
+        }
+    }
+    /**
+     * 
+     * @param {Member} member The transaction to be used to add a member
+     * @param {boolean} [wait = true] whether to wait for the transaction to complete
+     * @returns 
+     */
+    addMember(member: Member, wait: boolean = true) {
+        member.password = Math.random().toString(36);
+        member.changePasswordAtNextLogin = true;
+        try {
+            let newUser = this.makeMember(this.users.insert(member));
+            if (wait) {
+                Utils.waitNTimesOnCondition(4000, () => this.isKnownMember(newUser))
+            }
+            console.log(`user ${member.primaryEmail} created`)
+            return newUser
+        } catch (err: any) {
+            if (err.message.includes("API call to directory.users.insert failed with error: Entity already exists.")) {
+                throw new MemberAlreadyExistsError(err)
+            } else {
+                throw new DirectoryError(err)
+            }
+        }
+
+    }
+    /**
+     * Delete the given member
+     * @param {Member} member
+     * @param {boolean} [wait = true] wait for deletion to finish before returning
+     */
+    deleteMember(member: Member, wait: boolean = true) {
+        try {
+            Utils.retryOnError(() => { this.users.remove(member.primaryEmail.toLowerCase()); console.log(`Member ${member.primaryEmail} deleted`); return true }, MemberCreationNotCompletedError)
+            Utils.waitNTimesOnCondition(wait ? 400 : 1, () => !this.isKnownMember(member))
+        }
+        catch (err: any) {
+            // Only throw the error if the user might still exist, otherwise ignore it since the user not existing is what we want!
+            if (!err.message.endsWith("Resource Not Found: userKey")) throw new MemberNotFoundError(err)
+        }
+    }
+}
+export { Directory }
+class LocalDirectory extends Directory {
+    constructor() {
+        super(new Admin())
+    }
+}
+export { LocalDirectory }
+class DirectoryError extends Error {
+    constructor(message) {
+        super(message)
+        this.name = "DirectoryError"
+    }
+}
+
+class MemberAlreadyExistsError extends DirectoryError {
+    constructor(message) {
+        super(message)
+        this.name = "MemberAlreadyExistsError"
+    }
+}
+
+class MemberNotFoundError extends DirectoryError {
+    constructor(message) {
+        super(message);
+        this.name = "MemberNotFoundError"
+    }
+}
+
+class MemberCreationNotCompletedError extends DirectoryError {
+    constructor(message) {
+        super(message);
+        this.name = "UserConstructionNotCompletedError"
+    }
+}
+
+class Templates {
+    joinSuccess: Template;
+    joinFailure: Template;
+    renewalSuccess: Template;
+    renewalFailure: Template;
+    ambiguous: Template;
+    expiryNotification?: Template;
+    expiration?: Template;
+    /**
+     * 
+     * @param {GmailDraft[]} drafts draft emails with {{}} templatized bodies
+     * @param {SubjectLines} subjectLines lines
+     */
+    constructor(drafts: DraftType[], subjectLines: SubjectLines) {
+        this.joinSuccess = getGmailTemplateFromDrafts_(drafts, subjectLines.joinSuccessSubject)
+        this.joinFailure = getGmailTemplateFromDrafts_(drafts, subjectLines.joinFailureSubject)
+        this.renewalSuccess = getGmailTemplateFromDrafts_(drafts, subjectLines.renewalSuccessSubject)
+        this.renewalFailure = getGmailTemplateFromDrafts_(drafts, subjectLines.renewalFailureSubject)
+        this.ambiguous = getGmailTemplateFromDrafts_(drafts, subjectLines.ambiguousSubject)
+        if (subjectLines.expiryNotificationSubject) {
+            this.expiryNotification = getGmailTemplateFromDrafts_(drafts, subjectLines.expiryNotificationSubject)
+        }
+        if (subjectLines.expirationSubject) {
+            this.expiration = getGmailTemplateFromDrafts_(drafts, subjectLines.expirationSubject)
+        }
+    }
+}
+
+/**
+  * Get a Gmail draft message by matching the subject line.
+  * @param {GMailDraft[]} drafts
+  * @param {string} subject_line to search for draft message
+  * @return {Template} containing the draft message
+  */
+function getGmailTemplateFromDrafts_(drafts: DraftType[], subject_line: string): Template {
+    // get drafts
+    const draft = drafts.find(draft => draft.getMessage().getSubject() === subject_line);
+    if (!draft) {
+        throw new Error(`No drafts found that match subject line: "${subject_line}"`)
+    }
+
+
+    // get the message object
+    const msg = draft.getMessage();
+
+    // Handles inline images and attachments so they can be included in the merge
+    // Based on https://stackoverflow.com/a/65813881/1027723
+    // Gets all attachments and inline image attachments
+    const allInlineImages = draft.getMessage().getAttachments({ includeInlineImages: true, includeAttachments: false });
+    const attachments = draft.getMessage().getAttachments({ includeInlineImages: false });
+    const htmlBody = msg.getBody();
+
+    // Creates an inline image object with the image name as key 
+    // (can't rely on image index as array based on insert order)
+    const img_obj = allInlineImages.reduce((obj, i) => (obj[i.getName()] = i, obj), {});
+
+    //Regexp searches for all img string positions with cid
+    const imgexp = RegExp('<img.*?src="cid:(.*?)".*?alt="(.*?)"[^\>]+>', 'g');
+    const matches = [...htmlBody.matchAll(imgexp)];
+
+    //Initiates the allInlineImages object
+    const inlineImagesObj = {};
+    // built an inlineImagesObj from inline image matches
+    matches.forEach(match => inlineImagesObj[match[1]] = img_obj[match[2]]);
+
+    return {
+        message: {
+            subject: subject_line,
+            text: msg.getPlainBody(),
+            html: htmlBody
+        },
+        attachments: attachments,
+        inlineImages: inlineImagesObj
+    }
+}
+
+
+/**
+ * Bind the message with the given token bindings
+ * @see https://stackoverflow.com/a/378000/1027723
+ * @param {Message} message All strings that form the message will have the {{}} tokens replaced
+ * @param {object} binding object used to replace {{}} tokens
+ * @return {Message} bound message
+*/
+function bindMessage_(message, binding) {
+    // We have two templates one for plain text and the html body
+    // Stringifing the object means we can do a global replace
+    // across all the textual part of the object and then restore it.
+    let template_string = JSON.stringify(message);
+
+    // Token replacement
+    template_string = template_string.replace(/{{[^{}]+}}/g, key => {
+        return escapeData_(binding[key.replace(/[{}]+/g, "")] || "");
+    });
+    return JSON.parse(template_string);
+}
+
+/**
+ * Escape cell data to make JSON safe
+ * @see https://stackoverflow.com/a/9204218/1027723
+ * @param {string} str to escape JSON special characters from
+ * @return {string} escaped string
+*/
+function escapeData_(str) {
+    return str
+        .replace(/[\\]/g, '\\\\')
+        .replace(/[\"]/g, '\\\"')
+        .replace(/[\/]/g, '\\/')
+        .replace(/[\b]/g, '\\b')
+        .replace(/[\f]/g, '\\f')
+        .replace(/[\n]/g, '\\n')
+        .replace(/[\r]/g, '\\r')
+        .replace(/[\t]/g, '\\t');
+};
+
+class Fixture1 {
+    txn1: Transaction;
+    txn2: Transaction;
+    badTxn: Transaction;
+    directory: Directory;
+    notifier?: Notifier;
+
+    constructor(directory, notifier?) {
+        if (!directory) throw new Error("directory must be provided")
+        this.txn1 = {
+            "First Name": "J",
+            "Last Name": "K",
+            "Email Address": "j.k@icloud.com",
+            "Phone Number": "+14083869343",
+            "Payable Status": "paid",
+            "Payable Order ID": "1234"
+        }
+        this.txn2 = {
+            "First Name": "A",
+            "Last Name": "B",
+            "Email Address": "a.b@icloud.com",
+            "Phone Number": "+14083869000",
+            "Payable Status": "paid",
+            "Payable Order ID": "2345"
+        }
+        this.badTxn = {
+            "First Name": "C",
+            "Last Name": "D",
+            "Email Address": "c.d@icloud.com",
+            "Phone Number": "+14083869340",
+            "Payable Status": "paid",
+            "Payable Order ID": "923"
+        }
+        this.directory = directory;
+        this.notifier = notifier;
+    }
+}
+
+export class Member implements UserType {
+    domain: string;
+    generation: number = 0;
+    primaryEmail: string;
+    name: { givenName: string, familyName: string, fullName: string }
+    emails: { address: string, type?: string, primary?: boolean }[];
+    phones: { value: string, type: string }[];
+    customSchemas: { Club_Membership: { expires: string, Join_Date: string } };
+    orgUnitPath: string;
+    recoveryEmail: string;
+    recoveryPhone: string;
+    password?: string;
+    changePasswordAtNextLogin?: boolean;
+
+    constructor(obj: Transaction | UserType | Member, orgUnitPath: string = '/test', domain: string = 'santacruzcountycyling.club') {
+        this.domain = domain
+        if (obj instanceof Transaction) {
+            const txn: Transaction = obj
+            let givenName = txn['First Name'];
+            let familyName = txn['Last Name'];
+            let fullName = `${givenName} ${familyName}`
+            let email = txn['Email Address'];
+            let phone = "" + txn['Phone Number'];
+            const name = { givenName, familyName, fullName }
+            const primaryEmail = `${givenName}.${familyName}@${this.domain}`.toLowerCase()
+            const Join_Date = new Date();
+            phone = phone.startsWith('+1') ? phone : '+1' + phone
+            const expiryDate = new Date()
+            expiryDate.setFullYear(expiryDate.getFullYear() + 1)
+            this.primaryEmail = primaryEmail
+            this.name = name
+            this.emails = [
+                {
+                    address: email,
+                    type: "home"
+                },
+                {
+                    address: primaryEmail,
+                    primary: true
+                }
+            ],
+                this.phones = [
+                    {
+                        value: phone,
+                        type: "mobile"
+                    }
+                ],
+                this.customSchemas = {
+                    Club_Membership: {
+                        expires: this.convertToYYYYMMDDFormat_(expiryDate),
+                        Join_Date: this.convertToYYYYMMDDFormat_(Join_Date)
+                    }
+                },
+                this.orgUnitPath = orgUnitPath,
+                this.recoveryEmail = email,
+                this.recoveryPhone = phone
+        } else {// Simply copy the values, deeply
+            function deepCopy(v) { return v ? JSON.parse(JSON.stringify(v)) : "" }
+            this.primaryEmail = deepCopy(obj.primaryEmail).toLowerCase()
+            this.name = deepCopy(obj.name)
+            this.emails = deepCopy(obj.emails)
+            this.phones = deepCopy(obj.phones)
+            this.customSchemas = deepCopy(obj.customSchemas)
+            this.orgUnitPath = deepCopy(obj.orgUnitPath)
+            this.recoveryEmail = deepCopy(obj.recoveryEmail)
+            this.recoveryPhone = deepCopy(obj.recoveryPhone)
+            if (obj instanceof Member) this.generation = obj.generation
+        }
+    }
+    makePrimaryEmail_(given, family, generation, domain) {
+        return `${given}.${family}${generation}@${domain}`.toLowerCase()
+    }
+    incrementGeneration() {
+        this.generation += 1
+        let pm = this.makePrimaryEmail_(this.name.givenName, this.name.familyName, "" + this.generation, this.domain)
+        this.primaryEmail = pm
+        this.emails.filter((e) => e.primary).forEach((e) => e.address = pm)
+        return this
+    }
+    incrementExpirationDate() {
+        let ed = new Date(this.customSchemas.Club_Membership.expires)
+        ed.setFullYear(ed.getFullYear() + 1)
+        this.customSchemas.Club_Membership.expires = this.convertToYYYYMMDDFormat_(ed)
+        return this
+    }
+    convertToYYYYMMDDFormat_(date) {
+        return new Date(date).toISOString().split('T')[0];
+    }
+}
+
+class Notifier implements NotificationType {
+    joinSuccessLog = Array<LogEntry>();
+    joinFailureLog = Array<LogEntry>();
+    renewalSuccessLog = Array<LogEntry>();
+    renewalFailureLog = Array<LogEntry>();
+    partialsLog = Array<LogEntry>();
+
+
+    /**
+     * Notify anyone interested that a user has been added as a consequence of the transaction
+     * @param {Transaction} txn The transaction that caused the join
+     * @param {User} member The user that was joined
+     */
+    joinSuccess(txn: Transaction, member: Member) {
+        this.joinSuccessLog.push({ txn, member })
+    }
+    joinFailure(txn: Transaction, member: Member, error:Error) {
+        this.joinFailureLog.push({ txn, member, error })
+    }
+    renewalSuccess(txn: Transaction, member: Member) {
+        this.renewalSuccessLog.push({ txn, member })
+    }
+    renewalFailure(txn: Transaction, member: Member, error:Error) {
+        console.error(`Notifier.renewalFailure()`)
+        console.error(error.message)
+        this.renewalFailureLog.push({ txn, member, error })
+    }
+    partial(txn, member) {
+        this.partialsLog.push({ txn, member })
+    }
+    log() {
+        function reportSuccess(l: LogEntry[], kind: string) {
+            l.forEach((e: LogEntry) => console.log(`${e.member.primaryEmail} ${kind}`))
+        }
+        function reportFailure(l: LogEntry[], kind: string) {
+            l.forEach((e) => console.error(`Txn ${e.txn["Payable Order ID"]} had ${kind} error: ${e.error}`))
+        }
+        reportSuccess(this.joinSuccessLog, "joined")
+        reportFailure(this.joinFailureLog, "join")
+        reportSuccess(this.renewalSuccessLog, "renewed")
+        reportFailure(this.renewalFailureLog, "renewal")
+        this.partialsLog.forEach((p) => console.log(`Txn ${p.txn["Payable Order ID"]} matched only one of phone or email against this member: ${p.user.primaryEmail}`))
+    }
+
+}
+export { Notifier }
+class EmailNotifier extends Notifier {
+    templates: Templates;
+    options: MailerOptions;
+    /**
+     * 
+     * @param {Templates} templates 
+     * @param {MailerOptions} options
+     */
+    constructor(templates: Templates, options: MailerOptions) {
+        super()
+        this.options = { test: true, domain: "santacruzcountycycling.club", ...options }
+        this.templates = templates
+    }
+
+    joinSuccess(txn: Transaction, member: Member) {
+        super.joinSuccess(txn, member)
+        this.notifySuccess_(this.templates.joinSuccess, txn, member)
+    }
+    joinFailure(txn, member, error) {
+        super.joinFailure(txn, member, error)
+        this.notifyFailure_(this.templates.joinFailure, txn, member)
+    }
+    renewalSuccess(txn, member) {
+        super.renewalSuccess(txn, member);
+        this.notifySuccess_(this.templates.renewalSuccess, txn, member)
+    }
+    renewalFailure(txn, member, error) {
+        super.renewalFailure(txn, member, error)
+        this.notifySuccess_(this.templates.renewalFailure, txn, member)
+    }
+    partial(txn, member) {
+        super.partial(txn, member)
+        this.notifyFailure_(this.templates.ambiguous, txn, member)
+    }
+    notifySuccess_(template, txn, member, error?) {
+        const binding = this.makeBinding_(txn, member, error)
+        const message = this.makeMessageObject_(template, binding)
+        this.sendMail_(this.getRecipient_(txn), message, { bcc: this.options.bccOnSuccess })
+    }
+    notifyFailure_(template, txn, member, error?) {
+        const binding = this.makeBinding_(txn, member, error)
+        const message = this.makeMessageObject_(template, binding)
+        this.sendMail_(this.options.toOnFailure, message, { bcc: this.options.bccOnFailure })
+    }
+    makeBinding_(txn, member, error) {
+        const binding = {
+            timestamp: txn.Timestamp,
+            orderID: txn["Payable Order ID"],
+            primaryEmail: member.primaryEmail,
+            givenName: member.name.givenName,
+            familyName: member.name.familyName,
+            expiry: member.customSchemas.Club_Membership.expires,
+            error: error ? error.msg : ""
+        }
+        if (error) binding.error = error.msg
+        return binding
+    }
+    makeMessageObject_(template, binding) {
+        return bindMessage_(template.message, binding)
+    }
+    getRecipient_(txn) {
+        return this.options.test ? `membershiptest@${this.options.domain}` : txn["Email Address"]
+    }
+
+    sendMail_(recipient, message, options?: SendEmailOptions) {
+        const defaultOptions: SendEmailOptions = {
+            htmlBody: message.html,
+            // bcc: 'a.bcc@email.com',
+            // cc: 'a.cc@email.com',
+            from: `membership@${this.options.domain}`,
+            // name: 'name of the sender',
+            // replyTo: 'a.reply@email.com',
+            noReply: true, // if the email should be sent from a generic no-reply email address (not available to gmail.com users)
+            attachments: message.attachments,
+            inlineImages: message.inlineImages
+        }
+        const finalOptions = { ...defaultOptions, ...options }
+        this.options.mailer.sendEmail(recipient, message.subject, message.text, finalOptions)
+    }
+
+
+}
+class Transaction {
+    "First Name": string;
+    "Last Name": string;
+    "Email Address": string;
+    "Phone Number": string;
+    "Payable Order ID": string;
+    "Payable Status": string;
+    "Processed"?: string;
+    constructor(firstName, lastName, emailAddress, phoneNumber, payableStatus, payableOrderId, processed) {
+        this["First Name"] = firstName;
+        this["Last Name"] = lastName
+        this["Email Address"] = emailAddress;
+        this["Phone Number"] = phoneNumber;
+        this["Payable Status"] = payableStatus;
+        this["Payable Order ID"] = payableOrderId;
+        if (processed) this["Processed"] = processed;
+
+    }
+}
+export { Transaction }
+class TransactionProcessor {
+    directory: Directory;
+    notifier: Notifier;
+
+    /**
+     * 
+     * @param {Directory} directory 
+     * @param {Notifier} notifier 
+     */
+    constructor(directory: Directory, notifier: Notifier = new Notifier()) {
+        this.directory = directory;
+        this.notifier = notifier;
+    }
+    processTransactions(transactions: Transaction[], matcher = this.matchTransactionToMember_) {
+        const txns = transactions.filter((txn) => txn['Payable Status'] !== undefined && txn['Payable Status'].startsWith('paid') && !txn.Processed)
+        txns.forEach((txn) => {
+            let matching = this.directory.members.filter((m) => matcher(txn, m))
+            if (matching.length === 0) { // Join
+                Logger.log("TP.pt - join_");
+                this.join_(txn);
+            } else {
+                if (matching.length > 1) {
+                    matching.forEach(m => {
+                        Logger.log("TP.pt - partial_")
+                        this.partial_(txn, m)
+                    })
+                } else {
+                    const member = matching[0]
+                    const matched = matcher(txn, member)
+                    if (typeof matched === "boolean") throw new Error("Matching failure")
+                    if (matched.full) {
+                        Logger.log("TP.pt - renew_")
+                        this.renew_(txn, member)
+                    } else {
+                        Logger.log("TP.pt - partial_")
+                        this.partial_(txn, member)
+                    }
+                }
+            }
+        });
+    }
+    /**
+     * @function matchTransactionToMember - return a value depending on whether the transaction matches a member
+     * @param {Transaction} transaction
+     * @param {Member} member
+     * @return {int} - -1 if partial match, 0 if no match, +1 if full match
+     */
+    matchTransactionToMember_(txn, member) {
+        let homeEmails = member.emails.filter((e) => e.type === "home")
+        let homeEmail = homeEmails[0].address
+        let mobilePhone = (member.phones === undefined ? [{ value: null }] : member.phones).filter((p) => p.type === "mobile")[0].value
+        let emailsMatch = homeEmail == txn["Email Address"]
+        let phonesMatch = mobilePhone == txn["Phone Number"]
+        let result = (emailsMatch && phonesMatch) ? { full: true } : (emailsMatch || phonesMatch) ? { full: false } : false
+        return result
+    }
+    join_(txn:Transaction) {
+        const member = this.directory.makeMember(txn)
+        while (true) {
+            try {
+                this.directory.addMember(member)
+                txn.Processed = new Date().toISOString().split("T")[0]
+                this.notifier.joinSuccess(txn, member)
+                return
+            } catch (err) {
+                if (err instanceof MemberAlreadyExistsError) {
+                    console.log('TP - join retry')
+                    member.incrementGeneration()
+                    continue
+                } else {
+                    console.log(`TP - join_ err`)
+                    this.notifier.joinFailure(txn, member, err)
+                    return
+                }
+            }
+        }
+    }
+    /**
+     * Process a membership renewal. 
+     * @param (Transaction) txn the transaction causing the renewal
+     * @param (User) member the member that is renewing their membership
+     */
+    renew_(txn, member) {
+        let updatedMember = this.directory.makeMember(member).incrementExpirationDate()
+        try {
+            this.directory.updateMember(updatedMember)
+            txn.Processed = new Date()
+            this.notifier.renewalSuccess(txn, updatedMember)
+        } catch (err) {
+            this.notifier.renewalFailure(txn, member, err)
+        }
+    }
+    partial_(txn, member) {
+        this.notifier.partial(txn, member)
+    }
+}
+export { TransactionProcessor }
+const Utils = (() => {
+    return {
+        retryOnError: (f, error, t = 250) => {
+            while (true) {
+                try {
+                    return f()
+                } catch (err) {
+                    if (err instanceof error) {
+                        Utilities.sleep(t)
+                    }
+                    throw err
+                }
+            }
+        },
+        waitNTimesOnCondition: (n, c, t = 250) => {
+            for (let i = 0; i < n; i++) {
+                if (c()) {
+                    return true
+                }
+                Utilities.sleep(t)
+            }
+            return false
+        }
+    }
+})()
+
+const test1 = (() => {
+    const SKIP = false
+    return {
+        test() {
+            return this.unitTest(true) && this.integrationTest(false)
+        },
+        unitTest(skip = false) {
+            return this.test_(new Admin, skip)
+        },
+        integrationTest(skip = true) {
+            return this.test_(AdminDirectory, skip)
+        },
+        test_(sdk, skip = true) {
+            const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
+            testDirectory(new Directory(sdk), skip)
+            testCreateDeleteTests(new Directory(sdk), skip)
+            testUser(new Directory(sdk), skip)
+            testTPJoinSuccess(new Directory(sdk), new Notifier(), skip)
+            testPartialSuccess(new Directory(sdk), new Notifier(), skip)
+            testRenewalSuccess(new Directory(sdk), new Notifier(), skip)
+            TestTPJoinFailures(new Directory(sdk), new Notifier(), skip)
+            testRenewalFailure(new Directory(sdk), new Notifier(), skip)
+            return unit.isGood()
+
+
+            function testCreateDeleteTests(directory, skip = false) {
+                cleanUp_(testCreateDeleteTests_, directory, "user create/delete tests", skip)
+            }
+
+            function testCreateDeleteTests_(directory, description, skip = false) {
+                const f = new Fixture1(directory, new Notifier())
+                unit.section(() => {
+                    const txns = [f.txn1];
+                    const directory = f.directory
+                    const notifier = f.notifier
+                    const uut = new TransactionProcessor(directory, notifier)
+                    uut.processTransactions(txns)
+                    const expected = directory.makeMember(f.txn1)
+                    unit.is(true, directory.isKnownMember(expected), { description: "Expecting txn1 member to have joined the Directory" })
+                    directory.deleteMember(expected)
+                    unit.is(false, directory.isKnownMember(expected), { description: "Expected member to have been deleted from the directory" })
+                },
+                    {
+                        description,
+                        skip
+                    })
+            }
+            function testDirectory(directory, skip = false) {
+                cleanUp_(testDirectory_, directory, "Google Directory test", skip)
+            }
+
+            function testDirectory_(directory, description, skip = false) {
+                const fixture = new Fixture1(directory)
+                unit.section(() => {
+                    const directory = fixture.directory
+                    let user = directory.makeMember(fixture.txn1)
+                    directory.addMember(user)
+                    const expected = directory.makeMember(fixture.txn1)
+                    unit.is(true, directory.isKnownMember(expected), { description: "Expected user to be in members" })
+                    const old = user.customSchemas.Club_Membership.expires
+                    const updatedUser = directory.getMember(user).incrementExpirationDate()
+                    directory.updateMember(updatedUser)
+                    unit.not(old, updatedUser.incrementExpirationDate().customSchemas.Club_Membership.expires, { description: "Expected old and new dates to differ" })
+                    expected.incrementExpirationDate()
+                    unit.is(true, directory.isKnownMember(expected), { description: "Expected updated user to be in members" })
+                    function unf() {
+                        try {
+                            directory.updateMember(directory.makeMember(fixture.txn2))
+                        } catch (err) {
+                            return err
+                        }
+                        return new Error("Expecting an error")
+                    }
+                    unit.is(true, unf() instanceof MemberNotFoundError, { description: "Expecting update of uknown user to throw UserNotFoundException" })
+                    directory.deleteMember(user)
+                    directory.deleteMember(user, false)
+                    unit.is(true, !directory.isKnownMember(expected), { description: "Expected deletion to be idempotent" })
+                },
+                    {
+                        description,
+                        skip
+                    })
+            }
+
+
+
+            function cleanUp_(f, directory, ...args) {
+                try {
+                    f(directory, ...args)
+                } finally {
+                    directory.members.forEach((m, i, em) => directory.deleteMember(m, (i === em.length - 1)))
+                }
+            }
+
+
+
+
+
+            function testUser(directory, skip = false) {
+                const f = new Fixture1(directory)
+                unit.section(() => {
+                    const uut = f.directory.makeMember(f.txn1)
+                    unit.is(uut.orgUnitPath, f.directory.orgUnitPath, { description: "Expecting orgUnitPath to be setup correctly" })
+                    unit.is(uut.primaryEmail.split('@')[1], f.directory.domain, { description: "Expecting domain to be setup correctly" })
+                },
+                    {
+                        description: "User tests",
+                        skip
+                    })
+            }
+
+
+
+            function testTPJoinSuccess(directory: Directory, notifier: Notifier, skip = false) {
+                cleanUp_(testTPJoinSuccess_, directory, notifier, "TransactionProcessor join tests", skip)
+            }
+            function testTPJoinSuccess_(directory: Directory, notifier: Notifier, description: string, skip = false) {
+                const f = new Fixture1(directory, notifier)
+                unit.section(() => {
+                    const txn3 = { ...f.txn1 }
+                    txn3["Phone Number"] = "+14083869399"
+                    txn3["Email Address"] = "foo@bar.com"
+                    const txns = [f.txn1, f.txn2, txn3]
+                    const directory = f.directory
+                    const notifier = f.notifier
+                    const uut = new TransactionProcessor(directory, notifier)
+                    uut.processTransactions(txns)
+                    let actualMembers = directory.members
+                    let expectedMembers = txns.map((t, i, ts) => {
+                        const nu = directory.makeMember(t); if (i < ts.length - 1) { return nu } else {
+                            nu.primaryEmail = `${t["First Name"]}.${t["Last Name"]}1@${directory.domain}`.toLowerCase();
+                            nu.emails.filter((e) => e.primary).forEach((e) => e.address = nu.primaryEmail)
+                            return nu
+                        }
+                    })
+                    unit.is(3, actualMembers.length, { description: "Expected to have 3 new members" })
+                    expectedMembers.forEach((m) => {
+                        let am = actualMembers.find((a) => a.primaryEmail === m.primaryEmail)
+                        unit.is(m.name, am?.name, { description: "Expected names to match" })
+                        unit.is(m.emails, am?.emails, { description: "Expected home emails to match" })
+                        unit.is(m.phones, am?.phones, { description: "Expected phones to match" })
+                        unit.is(m.customSchemas, am?.customSchemas, { description: "Expected custom schemas to match" })
+                    })
+                    txns.forEach((t, i, ts) => {
+                        const el = { txn: t, user: expectedMembers[i] }
+                        if (i === ts.length - 1) el.user.generation = 1;
+                        unit.is(el, notifier?.joinSuccessLog[i], { description: "Expected log entries to match" })
+                    })
+                    txns.forEach((t) => {
+                        unit.not(undefined, t.Processed, { neverUndefined: false, description: "Expected all transactions to have been processed" })
+                    })
+                },
+                    {
+                        description,
+                        skip
+                    })
+            }
+
+
+            function TestTPJoinFailures(directory, notifier, skip = false) {
+                cleanUp_(TestTPJoinFailures_, directory, "TransactionProcessor join failure tests", notifier, skip)
+            }
+            function TestTPJoinFailures_(directory, description, notifier, skip = false) {
+                class BadUsers extends Users {
+                    badUserEmail: string;
+                    constructor(badUserEmail) {
+                        super()
+                        this.badUserEmail = badUserEmail
+                    }
+                    insert(user) {
+                        if (user.primaryEmail === this.badUserEmail) {
+                            const message = `bad user: ${user.primaryEmail} === ${this.badUserEmail}`
+                            console.error(message)
+                            throw new DirectoryError(message)
+                        }
+                        return super.insert(user)
+                    }
+                }
+                let f = new Fixture1(directory, notifier)
+                const admin = new Admin(new BadUsers(directory.makeMember(f.badTxn).primaryEmail))
+                f.directory = new Directory(admin)
+                unit.section(() => {
+                    const txns = [f.badTxn, f.txn2]
+                    const goodMember = directory.makeMember(f.txn2)
+                    const badMember = directory.makeMember(f.badTxn)
+                    const uut = new TransactionProcessor(f.directory, f.notifier)
+                    uut.processTransactions(txns)
+                    unit.is(1, f.directory.members.length, { description: "Expect directory to have 1 member" })
+                    unit.is(true, f.directory.isKnownMember(goodMember), { description: "Expect goodMember to have become a member" })
+                    unit.is([{ txn: f.txn2, user: goodMember }], f.notifier?.joinSuccessLog, { description: "successful join notification is expected to be txn2" })
+                    unit.is(1, f.notifier?.joinFailureLog.length, { description: "one join failure expected" })
+                    f?.notifier?.joinFailureLog.forEach((l) => {
+                        unit.is(true, l.err instanceof Error)
+                        delete l.err
+                    })
+                    unit.is([{ txn: f.badTxn, user: badMember }], notifier.joinFailureLog, { description: "Join failure is expected to be badTxn" })
+                    unit.is(undefined, f.badTxn.Processed, { neverUndefined: false, description: "badTxn should not have been processed" })
+                    unit.is(true, new Date(f.txn2.Processed ? f.txn2.Processed : "") instanceof Date, { description: "myTxn2 should have a processing date" })
+                    unit.not(undefined, f.txn2.Processed, { neverUndefined: false, description: "txn2 should  have been processed" })
+                }, {
+                    description,
+                    skip
+                })
+            }
+
+            function testRenewalSuccess(directory, notifier, skip = false) {
+                cleanUp_(testRenewalSuccess_, directory, "Renewal Success Test", notifier, skip)
+            }
+            function testRenewalSuccess_(directory, description, notifier, skip) {
+                const f = new Fixture1(directory, notifier)
+                unit.section(() => {
+                    // Copied from Test Directory
+                    const directory = f.directory
+                    let user = directory.makeMember(f.txn1)
+                    directory.addMember(user)
+                    //
+                    const notifier = f.notifier
+                    const txns = [f.txn1, f.txn2]
+                    const renewalTxn = txns[0]
+                    const renewingUser = f.directory.makeMember(renewalTxn)
+                    const joinTxn = txns[1]
+                    const joiningUser = f.directory.makeMember(joinTxn)
+                    const uut = new TransactionProcessor(directory, notifier)
+                    uut.processTransactions(txns)
+                    const updatedRenewingUser = f.directory.makeMember(renewalTxn)
+                    updatedRenewingUser.incrementExpirationDate()
+                    unit.is(true, directory.members.some((m) => m.primaryEmail = updatedRenewingUser.primaryEmail), { description: "The renewed user is expected to be a member of the Directory" })
+                    unit.is(true, directory.members.some((m) => m.primaryEmail = joiningUser.primaryEmail), { description: "The joining user is expected to be a member of the Directory" })
+
+                    unit.is([{ txn: renewalTxn, user: updatedRenewingUser }], notifier?.renewalSuccessLog, { description: "notification of renewal expected" })
+                    unit.not(undefined, renewalTxn.Processed, { description: "renewalTxn has been processed" })
+                    unit.is([{ txn: joinTxn, user: f.directory.makeMember(joinTxn) }], notifier?.joinSuccessLog, { description: "notification of join expected" })
+                    unit.not(undefined, joinTxn.Processed, { description: "joinTxn has been processed" })
+
+                }, {
+                    description,
+                    skip
+                })
+            }
+
+            function testRenewalFailure(directory, notifier, skip = false) {
+                cleanUp_(testRenewalFailure_, directory, "Renewal Failure Test", notifier, skip)
+            }
+            function testRenewalFailure_(directory, description, notifier, skip) {
+                class BadUsers extends Users {
+                    #badUser;
+                    constructor(badUser) {
+                        super()
+                        this.#badUser = badUser
+                    }
+                    update(patch, primaryEmail) {
+                        if (primaryEmail === this.#badUser.primaryEmail) {
+                            throw new DirectoryError(`Bad User: ${this.#badUser.primaryEmail}`)
+                        }
+                        return super.update(patch, primaryEmail)
+                    }
+                }
+                let f = new Fixture1(directory, notifier)
+                const badUser = f.directory.makeMember(f.badTxn);
+                const admin = new Admin(new BadUsers(badUser))
+                f.directory = new Directory(admin)
+                unit.section(() => {
+                    const renewalTxn = f.badTxn;
+                    const expectedMember = f.directory.makeMember(badUser)
+                    unit.is(badUser, expectedMember, { description: "users should be the same" })
+                    const txns = [renewalTxn];
+                    const uut = new TransactionProcessor(f.directory, f.notifier)
+                    uut.processTransactions(txns)
+                    unit.is(true, f.directory.isKnownMember(expectedMember), { description: "Expecting member to be untouched" })
+                    unit.is(undefined, renewalTxn.Processed, { description: "Expecting renewalTxn to not have been processed", neverUndefined: false })
+                    let rfl = notifier.renewalFailureLog
+                    if (rfl[0]) delete rfl[0].err
+                    unit.is(renewalTxn, rfl[0].txn, { description: "Expecting renewalTxn to be in the renewalFailureLog" })
+                    unit.is(expectedMember, rfl[0].user, { description: "Expecting expectedMember to be in the renewalFailureLog" })
+
+                },
+                    {
+                        description,
+                        skip
+                    })
+            }
+
+            function testPartialSuccess(directory, notifier, skip = false) {
+                cleanUp_(testPartialSuccess_, directory, "Partials", notifier, skip)
+            }
+            function testPartialSuccess_(directory, description, notifier, skip) {
+                const f = new Fixture1(directory, notifier)
+                unit.section(() => {
+                    const joiningTxn = f.txn1
+                    let joiningMember = directory.makeMember(joiningTxn)
+                    const renewingTxn = JSON.parse(JSON.stringify(joiningTxn))
+                    renewingTxn["Phone Number"] = "+1234"
+                    const renewingMember = f.directory.makeMember(renewingTxn);
+                    const uut = new TransactionProcessor(f.directory, f.notifier)
+                    uut.processTransactions([joiningTxn]);
+                    unit.is(1, f.directory.members.length, { description: "something was added as a member" })
+                    unit.is(true, f.directory.isKnownMember(joiningMember), { description: "member added from joiningTxn" })
+                    uut.processTransactions([renewingTxn]);
+                    f.directory.members.forEach((m) => {
+                        m.phones.forEach((p) => unit.not(p.value, renewingMember.phones[0].value, { description: "Expecting directory member's phones not to include those from the renewing member" }))
+
+                    })
+                    unit.is(renewingTxn, f.notifier?.partialsLog[0].txn, { description: "Expecting renewalTxn to be in the partials log" })
+                    const loggedUser = directory.makeMember(f.notifier?.partialsLog[0].user)
+                    unit.is(joiningMember, loggedUser, { description: "Expecting joining member to be in the partials log" })
+
+                },
+                    {
+                        description,
+                        skip
+                    })
+            }
+
+        },
+        testAdmin(skip = false) {
+            const unit = new bmUnitTester.Unit({ showErrorsOnly: true })
+            const admin = new Admin(new Users)
+            const directory = new Directory(admin)
+            const f = new Fixture1(directory)
+            try {
+                const member = directory.makeMember(f.txn1)
+                const newMember = admin.Users?.insert(member)
+                unit.section(() => {
+                    unit.is(newMember, member, { description: "New member should. be copy of old" })
+                },
+                    { description: "test Admin", skip })
+            } finally {
+                directory.members.forEach((m, i, mbrs) => directory.deleteMember(m, (i + 1 === mbrs.length)))
+            }
+        }
+    }
+})()
+
+const testEmailNotifier = (() => {
+    {
+        const testFixtures = (() => {
+            const sendMail: MailAppType = {
+                sendEmail(recipient, subject, text, options) {
+                    console.log(`To: ${recipient}`)
+                    console.log(`From: ${options.from}`)
+                    console.log(`Reply-to: ${options.noReply}`)
+                    console.log(`subject: ${subject}`)
+                    console.log(`html: ${options.htmlBody}`),
+                        console.log(`text: ${text}`)
+                    return this
+                },
+                getDrafts() { return new Array<DraftType>() }
+            }
+            const txn1 = {
+                "First Name": "J",
+                "Last Name": "K",
+                "Email Address": "j.k@icloud.com",
+                "Phone Number": "+14083869343",
+                "Payable Status": "paid",
+                "Payable Order ID": "CC-TF-RNB6"
+            }
+            return {
+                unit: new bmUnitTester.Unit({ showErrorsOnly: true }),
+                subject_lines: {
+                    joinSuccessSubject: "Thanks for joining SCCCC",
+                    joinFailureSubject: "Join Problem",
+                    renewalSuccessSubject: "Thanks for renewing your SCCCC membership",
+                    renewalFailureSubject: "Renew problem",
+                    ambiguousSubject: "Ambiguous transaction",
+                    expiryNotificationSubject: "Your membership will expire in {{N}} days",
+                    expirationSubject: "Your membership has expired"
+                },
+                txn1,
+                member1: new Member(txn1, "/test", "@a.com"),
+                error: new Error("this is the error message"),
+                sendMail: sendMail
+            }
+        })()
+
+        function testTemplates() {
+            const templates = new Templates(GmailApp.getDrafts(), testFixtures.subject_lines)
+            testFixtures.unit.section(() => testFixtures.unit.is(templates.ambiguous.message.subject, testFixtures.subject_lines.ambiguousSubject, { description: "Expected a template created from the ambiguous subject line" }))
+            try {
+                const templates = new Templates(GmailApp.getDrafts(), { ...testFixtures.subject_lines, joinSuccessSubject: "NO SUCH DRAFT" })
+                console.error("Expected to see an error saying that the draft couldn't be found")
+            } catch { }
+        }
+
+        function testEmailNotificationJoinFailure(mailApp: MailAppType) {
+            const templates = new Templates(mailApp.getDrafts(), testFixtures.subject_lines)
+            const notifier = new EmailNotifier(templates, { test: true, mailer: testFixtures.sendMail, bccOnSuccess: "a@b.com,c@d.com", bccOnFailure: "FAILURE (COPIED)", toOnFailure: "FAILURE" })
+            notifier.joinFailure(testFixtures.txn1, testFixtures.member1, testFixtures.error)
+        }
+
+        function testEmailNotifier(mailApp: MailAppType) {
+            const templates = new Templates(mailApp.getDrafts(), testFixtures.subject_lines)
+            const notifier = new EmailNotifier(templates, { test: true, mailer: testFixtures.sendMail, bccOnSuccess: "a@b.com,c@d.com", bccOnFailure: "FAILURE (COPIED)", toOnFailure: "FAILURE" })
+            notifier.joinSuccess(testFixtures.txn1, testFixtures.member1)
+        }
+    }
+})()
