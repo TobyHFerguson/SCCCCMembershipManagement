@@ -1,4 +1,5 @@
-import { Transaction, Member } from "./Code";
+import { Member } from "./Code";
+
 
 declare namespace bmPreFiddler {
     interface pf {
@@ -17,11 +18,11 @@ declare namespace bmPreFiddler {
 }
 
 interface NotificationType {
-    joinSuccess(Transaction, Member)
-    joinFailure(Transaction, Member, Error)
-    renewalSuccess(Transaction, Member)
-    joinFailure(Transaction, Member, Error)
-    partial(Transaction, Member)
+    joinSuccess(txn:Transaction, member:Member): void;
+    joinFailure(txn:Transaction, member:Member, error: Error): void;
+    renewalSuccess(txn:Transaction, member:Member): void;
+    joinFailure(txn:Transaction, member:Member, error: Error): void;
+    partial(txn:Transaction, member:Member): void;
 }
 
 interface LogEntry {
@@ -31,7 +32,26 @@ interface LogEntry {
 }
 
 
+interface Binding {
+    timestamp: string;
+        orderID: string;
+        primaryEmail: string;
+        givenName: string;
+        familyName: string;
+        expiry: string;
+        error: string;
+}
 
+interface Transaction {
+    "First Name": string;
+    "Last Name": string;
+    "Email Address": string;
+    "Phone Number": string;
+    "Payable Order ID": string;
+    "Payable Status": string;
+    "Timestamp": string;
+    "Processed"?: string;
+}
 
 declare namespace bmUnitTester {
     type UnitResult = any;
@@ -156,7 +176,9 @@ interface Template {
     inlineImages: object;
 }
 
+
 export {
+    Binding ,
     AdminDirectoryType,
     bmUnitTester,
     bmPreFiddler,
@@ -168,6 +190,7 @@ export {
     SendEmailOptions,
     SubjectLines,
     Template,
+    Transaction,
     UserType,
     UsersType,
     UsersCollectionType
