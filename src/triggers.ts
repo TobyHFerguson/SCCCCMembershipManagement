@@ -1,7 +1,6 @@
-import {Directory, LocalDirectory} from './Directory'
+import { Notifier, TransactionProcessor, Transaction, Directory, LocalDirectory } from './Code';
 import { bmPreFiddler } from './Types';
-import { Notifier } from './Notifier';
-import { Transaction, TransactionProcessor } from './TransactionProcessor';
+
 
 
 function updatedRow(e) {
@@ -60,7 +59,7 @@ function processPaidTransactions() {
     createIfMissing: false
   })
   const tp = new TransactionProcessor(directory, notifier)
-  const txns = transactionsFiddler.getData().map(o => new Transaction(o["First Name"], o["Last Name"], o["Email Address"], o["Phone Number"], o["Payable Status"], o["Processed"]))
+  const txns = transactionsFiddler.getData().map(o => new Transaction(o["First Name"], o["Last Name"], o["Email Address"], o["Phone Number"], o["Payable Status"],  o["Payable Order ID"], o["Processed"]))
   tp.processTransactions(txns)
   transactionsFiddler.dumpValues()
   notifier.log()
@@ -75,7 +74,7 @@ function processPaidTransactionsTest() {
     createIfMissing: false
   })
   const tp = new TransactionProcessor(directory, notifier)
-  const txns = transactionsFiddler.getData().map(o => new Transaction(o["First Name"], o["Last Name"], o["Email Address"], o["Phone Number"], o["Payable Status"], o["Processed"]))
+  const txns = transactionsFiddler.getData().map(o => new Transaction(o["First Name"], o["Last Name"], o["Email Address"], o["Phone Number"], o["Payable Status"],  o["Payable Order ID"], o["Processed"]))
   tp.processTransactions(txns)
   transactionsFiddler.dumpValues()
   notifier.log()

@@ -1,4 +1,4 @@
-import { Transaction } from "./TransactionProcessor"
+import { Transaction, Member } from "./Code";
 
 declare namespace bmPreFiddler {
     interface pf {
@@ -16,7 +16,7 @@ declare namespace bmPreFiddler {
     }
 }
 
-interface Logger {
+interface NotificationType {
     joinSuccess(Transaction, Member)
     joinFailure(Transaction, Member, Error)
     renewalSuccess(Transaction, Member)
@@ -25,9 +25,9 @@ interface Logger {
 }
 
 interface LogEntry {
-    txn: string
-    member: string
-    error?: string
+    txn: Transaction;
+    member: Member;
+    error?: Error;
 }
 
 
@@ -161,10 +161,10 @@ export {
     bmUnitTester,
     bmPreFiddler,
     DraftType,
-    Logger,
     LogEntry,
     MailAppType,
     MailerOptions,
+    NotificationType,
     SendEmailOptions,
     SubjectLines,
     Template,
