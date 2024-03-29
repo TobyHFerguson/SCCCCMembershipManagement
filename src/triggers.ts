@@ -1,5 +1,5 @@
-import { Notifier, TransactionProcessor, Directory, LocalDirectory } from './Code';
-import { Transaction, bmPreFiddler } from './Types';
+import { Notifier, TransactionProcessor, Directory, LocalDirectory, Templates, EmailNotifier } from './Code'
+import { EmailConfigurationCollection, Transaction, bmPreFiddler } from './Types';
 
 
 
@@ -52,7 +52,18 @@ function createMembershipReport() {
 
 function processPaidTransactions() {
   const directory = new Directory()
-  const notifier = new Notifier()
+  const subjectLineFiddler = bmPreFiddler.PreFiddler().getFiddler({
+    id: null,
+    sheetName: 'Email Configuration',
+    createIfMissing: false
+  })
+  const emailConfig = <EmailConfigurationCollection>subjectLineFiddler.getData().reduce((p, c) => {
+    const t = c["Email Type"]
+    p[t] = c;
+    return p;
+  }, {}
+  )
+  const notifier = new EmailNotifier(GmailApp.getDrafts(), emailConfig, {mailer: GmailApp})
   const transactionsFiddler = bmPreFiddler.PreFiddler().getFiddler({
     id: "1Tm-lXtjaK2080u1dkoC902-TX0dtU5N2TVoQZG9JGdE",
     sheetName: 'Transactions',

@@ -1,4 +1,4 @@
-import { Member } from "./Code";
+import { Member } from './Code'
 
 
 declare namespace bmPreFiddler {
@@ -18,11 +18,11 @@ declare namespace bmPreFiddler {
 }
 
 interface NotificationType {
-    joinSuccess(txn:Transaction, member:Member): void;
-    joinFailure(txn:Transaction, member:Member, error: Error): void;
-    renewalSuccess(txn:Transaction, member:Member): void;
-    joinFailure(txn:Transaction, member:Member, error: Error): void;
-    partial(txn:Transaction, member:Member): void;
+    joinSuccess(txn: Transaction, member: Member): void;
+    joinFailure(txn: Transaction, member: Member, error: Error): void;
+    renewalSuccess(txn: Transaction, member: Member): void;
+    joinFailure(txn: Transaction, member: Member, error: Error): void;
+    partial(txn: Transaction, member: Member): void;
 }
 
 interface LogEntry {
@@ -34,12 +34,12 @@ interface LogEntry {
 
 interface Binding {
     timestamp: string;
-        orderID: string;
-        primaryEmail: string;
-        givenName: string;
-        familyName: string;
-        expiry: string;
-        error: string;
+    orderID: string;
+    primaryEmail: string;
+    givenName: string;
+    familyName: string;
+    expiry: string;
+    error?: string;
 }
 
 interface Transaction {
@@ -153,11 +153,7 @@ interface MailerOptions {
     mailer: MailAppType;
     domain?: string;
     html?: boolean;
-    bccOnSuccess: string;
-    toOnFailure: string;
-    bccOnFailure: string;
 }
-
 
 
 interface SubjectLines {
@@ -175,14 +171,31 @@ interface Template {
     attachments: object[];
     inlineImages: object;
 }
+interface EmailConfigurationType {
+    "To": string;
+    "Bcc on Success": string;
+    "Bcc on Failure": string;
+    "Subject Line": string;
+}
 
-
+interface EmailConfigurationCollection {
+    joinSuccess: EmailConfigurationType;
+    joinFailure: EmailConfigurationType;
+    renewSuccess: EmailConfigurationType;
+    renewFailure: EmailConfigurationType;
+    ambiguousTransaction: EmailConfigurationType;
+    expiryNotification: EmailConfigurationType;
+    expired: EmailConfigurationType;
+    deleted: EmailConfigurationType;
+}
 export {
-    Binding ,
+    Binding,
     AdminDirectoryType,
     bmUnitTester,
     bmPreFiddler,
     DraftType,
+    EmailConfigurationType,
+    EmailConfigurationCollection,
     LogEntry,
     MailAppType,
     MailerOptions,
