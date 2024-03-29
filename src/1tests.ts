@@ -6,12 +6,11 @@ import {Fixture1} from './Fixtures'
 import {Admin} from './Admin'
 import {Directory, DirectoryError, MemberNotFoundError} from './Directory'
 import {Users} from './Admin'
-import {Member} from './Member'
 import {TransactionProcessor} from './TransactionProcessor'
 const SKIP = false
 
 function test() {
-  return unitTest(SKIP) && integrationTest(true)
+  return unitTest(true) && integrationTest(false)
 }
 function unitTest(skip = false) {
   return test_(new Admin, skip)
@@ -252,15 +251,14 @@ function test_(sdk, skip = true) {
   }
   function testRenewalFailure_(directory, description, notifier, skip) {
     class BadUsers extends Users {
-      badUser: Member;
+      #badUser;
       constructor(badUser) {
         super()
-        this.#users.push(badUser)
-        this.badUser = badUser
+        this.#badUser = badUser
       }
       update(patch, primaryEmail) {
-        if (primaryEmail === this.badUser.primaryEmail) {
-          throw new DirectoryError(`Bad User: ${this.badUser.primaryEmail}`)
+        if (primaryEmail === this.#badUser.primaryEmail) {
+          throw new DirectoryError(`Bad User: ${this.#badUser.primaryEmail}`)
         }
         return super.update(patch, primaryEmail)
       }

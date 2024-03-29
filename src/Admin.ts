@@ -4,6 +4,9 @@ import {Member} from './Member'
 /** Based on Admin SDK:  Directory API: https://developers.google.com/admin-sdk/directory/reference/rest */
 class Users implements UsersCollectionType {
   #users: UserType[] = [];
+  constructor(users?: Member[]) {
+    if (users) users.forEach(u => this.#users.push(u))
+  }
  
   get(primaryEmail:string) {
     const found = this.#users.find((u) => u.primaryEmail === primaryEmail)

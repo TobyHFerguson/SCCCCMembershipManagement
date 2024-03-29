@@ -1,5 +1,21 @@
 import { Transaction } from "./TransactionProcessor"
 
+declare namespace bmPreFiddler {
+    interface pf {
+        getFiddler(options: {
+            id: any;
+            sheetName: string;
+            createIfMissing: boolean;
+        }): Fiddler;
+    }
+    function PreFiddler(): pf;
+    interface Fiddler {
+        getData(): object[];
+        setData(obs: object[]): void;
+        dumpValues(): {};
+    }
+}
+
 interface Logger {
     joinSuccess(Transaction, Member)
     joinFailure(Transaction, Member, Error)
@@ -143,6 +159,7 @@ interface Template {
 export {
     AdminDirectoryType,
     bmUnitTester,
+    bmPreFiddler,
     DraftType,
     Logger,
     LogEntry,

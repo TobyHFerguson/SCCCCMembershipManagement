@@ -1,6 +1,12 @@
+import {Directory, LocalDirectory} from './Directory'
+import { bmPreFiddler } from './Types';
+import { Notifier } from './Notifier';
+import { Transaction, TransactionProcessor } from './TransactionProcessor';
+
+
 function updatedRow(e) {
   console.log(`Column: ${e.range.getColumn()} Row ${e.range.getRow()}`)
-  printRow(e.range.getRow())
+  // printRow(e.range.getRow())
 }
 
 /** 
@@ -19,7 +25,7 @@ function onOpen() {
 
 function createMembershipReport() {
   const directory = new Directory()
-  directory.map((m) => {
+  const reportMembers = directory.members.map((m) => {
     try {
       // console.log(m)
       return {
@@ -29,18 +35,19 @@ function createMembershipReport() {
         "Joined": m.customSchemas.Club_Membership.Join_Date,
         "Expires": m.customSchemas.Club_Membership.expires
       }
-    } catch (err) {
+    } catch (err:any) {
       console.error(err.message)
       console.error(`error for member ${m}`)
+      return {}
     }
-  })
-  reportMembers.forEach((m) => console.log(m.primary))
+  }).filter(m => m.primary)
+  reportMembers.forEach((m) => console.log(m?.primary))
   const membersFiddler = bmPreFiddler.PreFiddler().getFiddler({
     id: null,
     sheetName: 'MembershipReport',
     createIfMissing: true
   })
-  membersFiddler.setData(reportMembers);
+  if (reportMembers !== undefined ) membersFiddler.setData(reportMembers);
   membersFiddler.dumpValues()
 }
 
@@ -53,7 +60,7 @@ function processPaidTransactions() {
     createIfMissing: false
   })
   const tp = new TransactionProcessor(directory, notifier)
-  const txns = transactionsFiddler.getData()
+  const txns = transactionsFiddler.getData().map(o => new Transaction(o["First Name"], o["Last Name"], o["Email Address"], o["Phone Number"], o["Payable Status"], o["Processed"]))
   tp.processTransactions(txns)
   transactionsFiddler.dumpValues()
   notifier.log()
@@ -68,7 +75,7 @@ function processPaidTransactionsTest() {
     createIfMissing: false
   })
   const tp = new TransactionProcessor(directory, notifier)
-  const txns = transactionsFiddler.getData()
+  const txns = transactionsFiddler.getData().map(o => new Transaction(o["First Name"], o["Last Name"], o["Email Address"], o["Phone Number"], o["Payable Status"], o["Processed"]))
   tp.processTransactions(txns)
   transactionsFiddler.dumpValues()
   notifier.log()
