@@ -1,4 +1,8 @@
-import { UsersCollectionType, UserType, AdminDirectoryType, Template, DraftType, SubjectLines, MailerOptions, SendEmailOptions, bmUnitTester, NotificationType, MailAppType, LogEntry } from "./Types";
+import {
+    AdminDirectoryType,
+    Binding, DraftType, LogEntry, MailAppType, MailerOptions, NotificationType, SendEmailOptions, SubjectLines, Template, Transaction, UserType, UsersCollectionType, bmUnitTester
+} from "./Types";
+
 
 class Users implements UsersCollectionType {
     #users: UserType[] = [];
@@ -27,11 +31,11 @@ class Users implements UsersCollectionType {
         if (i === -1) throw new Error("Resource Not Found: userKey");
         this.#users?.splice(i, 1)
     }
-    update(patch, primaryEmail) {
+    update(patch: UserType, primaryEmail: string) {
         let i = this.#users.findIndex((u) => u.primaryEmail === primaryEmail);
         if (i === -1) throw new Error("Resource Not Found: userKey");
         const oldUser = this.#users[i]
-        const newUser = { ...oldUser, ...JSON.parse(patch) }
+        const newUser = { ...oldUser, ...patch }
         this.#users.splice(i, 1, newUser)
         return JSON.parse(JSON.stringify(newUser))
     }
@@ -71,7 +75,7 @@ class Directory {
      * @param {Member | Transaction} obj Object to be converted to Member
      * @returns new Member object
      */
-    makeMember(obj: UserType | Transaction) {
+    makeMember(obj: Member | Transaction | UserType) {
         return new Member(obj, this.orgUnitPath, this.domain)
     }
 
@@ -113,7 +117,7 @@ class Directory {
         return Utils.retryOnError(() => this.makeMember(this.updateMember_(member, { customSchemas })), MemberCreationNotCompletedError)
     }
 
-    updateMember_(member, patch: UserType) {
+    updateMember_(member: Member, patch: UserType) {
         const key = member.primaryEmail;
         try {
             const newMember: UserType = this.users?.update(patch, key);
@@ -185,36 +189,36 @@ class Directory {
         }
     }
 }
-export { Directory }
+export { Directory };
 class LocalDirectory extends Directory {
     constructor() {
         super(new Admin())
     }
 }
-export { LocalDirectory }
+export { LocalDirectory };
 class DirectoryError extends Error {
-    constructor(message) {
+    constructor(message: string) {
         super(message)
         this.name = "DirectoryError"
     }
 }
 
 class MemberAlreadyExistsError extends DirectoryError {
-    constructor(message) {
+    constructor(message: string) {
         super(message)
         this.name = "MemberAlreadyExistsError"
     }
 }
 
 class MemberNotFoundError extends DirectoryError {
-    constructor(message) {
+    constructor(message: string) {
         super(message);
         this.name = "MemberNotFoundError"
     }
 }
 
 class MemberCreationNotCompletedError extends DirectoryError {
-    constructor(message) {
+    constructor(message: string) {
         super(message);
         this.name = "UserConstructionNotCompletedError"
     }
@@ -304,7 +308,7 @@ function getGmailTemplateFromDrafts_(drafts: DraftType[], subject_line: string):
  * @param {object} binding object used to replace {{}} tokens
  * @return {Message} bound message
 */
-function bindMessage_(message, binding) {
+function bindMessage_(message: object, binding:Binding) {
     // We have two templates one for plain text and the html body
     // Stringifing the object means we can do a global replace
     // across all the textual part of the object and then restore it.
@@ -350,7 +354,8 @@ class Fixture1 {
             "Email Address": "j.k@icloud.com",
             "Phone Number": "+14083869343",
             "Payable Status": "paid",
-            "Payable Order ID": "1234"
+            "Payable Order ID": "1234",
+            "Timestamp": "now"
         }
         this.txn2 = {
             "First Name": "A",
@@ -358,7 +363,8 @@ class Fixture1 {
             "Email Address": "a.b@icloud.com",
             "Phone Number": "+14083869000",
             "Payable Status": "paid",
-            "Payable Order ID": "2345"
+            "Payable Order ID": "2345",
+            "Timestamp": "now"
         }
         this.badTxn = {
             "First Name": "C",
@@ -366,11 +372,26 @@ class Fixture1 {
             "Email Address": "c.d@icloud.com",
             "Phone Number": "+14083869340",
             "Payable Status": "paid",
-            "Payable Order ID": "923"
+            "Payable Order ID": "923",
+            "Timestamp": "now"
         }
         this.directory = directory;
         this.notifier = notifier;
     }
+}
+
+function isMember(member: Transaction | Member | UserType): member is Member {
+    return (member as Transaction)["First Name"] === undefined &&
+        (member as Member).generation !== undefined
+}
+
+function isUserType(member: Transaction | Member | UserType): member is UserType {
+    return (member as Transaction)["First Name"] === undefined &&
+        (member as Member).generation === undefined
+}
+
+function isTransaction(txn: Transaction | Member | UserType): txn is Transaction {
+    return (txn as Transaction)["First Name"] !== undefined
 }
 
 export class Member implements UserType {
@@ -387,15 +408,14 @@ export class Member implements UserType {
     password?: string;
     changePasswordAtNextLogin?: boolean;
 
-    constructor(obj: Transaction | UserType | Member, orgUnitPath: string = '/test', domain: string = 'santacruzcountycyling.club') {
+    constructor(m: (Transaction | Member) | UserType, orgUnitPath: string = '/test', domain: string = 'santacruzcountycyling.club') {
         this.domain = domain
-        if (obj instanceof Transaction) {
-            const txn: Transaction = obj
-            let givenName = txn['First Name'];
-            let familyName = txn['Last Name'];
+        if (isTransaction(m)) {
+            let givenName = m['First Name'];
+            let familyName = m['Last Name'];
             let fullName = `${givenName} ${familyName}`
-            let email = txn['Email Address'];
-            let phone = "" + txn['Phone Number'];
+            let email = m['Email Address'];
+            let phone = "" + m['Phone Number'];
             const name = { givenName, familyName, fullName }
             const primaryEmail = `${givenName}.${familyName}@${this.domain}`.toLowerCase()
             const Join_Date = new Date();
@@ -431,15 +451,25 @@ export class Member implements UserType {
                 this.recoveryPhone = phone
         } else {// Simply copy the values, deeply
             function deepCopy(v) { return v ? JSON.parse(JSON.stringify(v)) : "" }
-            this.primaryEmail = deepCopy(obj.primaryEmail).toLowerCase()
-            this.name = deepCopy(obj.name)
-            this.emails = deepCopy(obj.emails)
-            this.phones = deepCopy(obj.phones)
-            this.customSchemas = deepCopy(obj.customSchemas)
-            this.orgUnitPath = deepCopy(obj.orgUnitPath)
-            this.recoveryEmail = deepCopy(obj.recoveryEmail)
-            this.recoveryPhone = deepCopy(obj.recoveryPhone)
-            if (obj instanceof Member) this.generation = obj.generation
+            this.primaryEmail = deepCopy(m.primaryEmail).toLowerCase()
+            this.name = deepCopy(m.name)
+            this.emails = deepCopy(m.emails)
+            this.phones = deepCopy(m.phones)
+            this.customSchemas = deepCopy(m.customSchemas)
+            this.orgUnitPath = deepCopy(m.orgUnitPath)
+            this.recoveryEmail = deepCopy(m.recoveryEmail)
+            this.recoveryPhone = deepCopy(m.recoveryPhone)
+            if (isMember(m)) {
+                this.primaryEmail = deepCopy(m.primaryEmail).toLowerCase()
+                this.name = deepCopy(m.name)
+                this.emails = deepCopy(m.emails)
+                this.phones = deepCopy(m.phones)
+                this.customSchemas = deepCopy(m.customSchemas)
+                this.orgUnitPath = deepCopy(m.orgUnitPath)
+                this.recoveryEmail = deepCopy(m.recoveryEmail)
+                this.recoveryPhone = deepCopy(m.recoveryPhone)
+                this.generation = m.generation;
+            }
         }
     }
     makePrimaryEmail_(given, family, generation, domain) {
@@ -479,13 +509,13 @@ class Notifier implements NotificationType {
     joinSuccess(txn: Transaction, member: Member) {
         this.joinSuccessLog.push({ txn, member })
     }
-    joinFailure(txn: Transaction, member: Member, error:Error) {
+    joinFailure(txn: Transaction, member: Member, error: Error) {
         this.joinFailureLog.push({ txn, member, error })
     }
     renewalSuccess(txn: Transaction, member: Member) {
         this.renewalSuccessLog.push({ txn, member })
     }
-    renewalFailure(txn: Transaction, member: Member, error:Error) {
+    renewalFailure(txn: Transaction, member: Member, error: Error) {
         console.error(`Notifier.renewalFailure()`)
         console.error(error.message)
         this.renewalFailureLog.push({ txn, member, error })
@@ -504,11 +534,11 @@ class Notifier implements NotificationType {
         reportFailure(this.joinFailureLog, "join")
         reportSuccess(this.renewalSuccessLog, "renewed")
         reportFailure(this.renewalFailureLog, "renewal")
-        this.partialsLog.forEach((p) => console.log(`Txn ${p.txn["Payable Order ID"]} matched only one of phone or email against this member: ${p.user.primaryEmail}`))
+        this.partialsLog.forEach((p) => console.log(`Txn ${p.txn["Payable Order ID"]} matched only one of phone or email against this member: ${p.member.primaryEmail}`))
     }
 
 }
-export { Notifier }
+export { Notifier };
 class EmailNotifier extends Notifier {
     templates: Templates;
     options: MailerOptions;
@@ -553,20 +583,21 @@ class EmailNotifier extends Notifier {
         const message = this.makeMessageObject_(template, binding)
         this.sendMail_(this.options.toOnFailure, message, { bcc: this.options.bccOnFailure })
     }
-    makeBinding_(txn, member, error) {
-        const binding = {
+
+    makeBinding_(txn: Transaction, member: Member, error: Error): Binding {
+        const binding: Binding = {
             timestamp: txn.Timestamp,
             orderID: txn["Payable Order ID"],
             primaryEmail: member.primaryEmail,
             givenName: member.name.givenName,
             familyName: member.name.familyName,
             expiry: member.customSchemas.Club_Membership.expires,
-            error: error ? error.msg : ""
+            error: error ? error.message : ""
         }
-        if (error) binding.error = error.msg
+        if (error) binding.error = error.message
         return binding
     }
-    makeMessageObject_(template, binding) {
+    makeMessageObject_(template: Template, binding: Binding) {
         return bindMessage_(template.message, binding)
     }
     getRecipient_(txn) {
@@ -591,26 +622,8 @@ class EmailNotifier extends Notifier {
 
 
 }
-class Transaction {
-    "First Name": string;
-    "Last Name": string;
-    "Email Address": string;
-    "Phone Number": string;
-    "Payable Order ID": string;
-    "Payable Status": string;
-    "Processed"?: string;
-    constructor(firstName, lastName, emailAddress, phoneNumber, payableStatus, payableOrderId, processed) {
-        this["First Name"] = firstName;
-        this["Last Name"] = lastName
-        this["Email Address"] = emailAddress;
-        this["Phone Number"] = phoneNumber;
-        this["Payable Status"] = payableStatus;
-        this["Payable Order ID"] = payableOrderId;
-        if (processed) this["Processed"] = processed;
 
-    }
-}
-export { Transaction }
+
 class TransactionProcessor {
     directory: Directory;
     notifier: Notifier;
@@ -667,7 +680,7 @@ class TransactionProcessor {
         let result = (emailsMatch && phonesMatch) ? { full: true } : (emailsMatch || phonesMatch) ? { full: false } : false
         return result
     }
-    join_(txn:Transaction) {
+    join_(txn: Transaction) {
         const member = this.directory.makeMember(txn)
         while (true) {
             try {
@@ -675,7 +688,7 @@ class TransactionProcessor {
                 txn.Processed = new Date().toISOString().split("T")[0]
                 this.notifier.joinSuccess(txn, member)
                 return
-            } catch (err) {
+            } catch (err: any) {
                 if (err instanceof MemberAlreadyExistsError) {
                     console.log('TP - join retry')
                     member.incrementGeneration()
@@ -699,7 +712,7 @@ class TransactionProcessor {
             this.directory.updateMember(updatedMember)
             txn.Processed = new Date()
             this.notifier.renewalSuccess(txn, updatedMember)
-        } catch (err) {
+        } catch (err: any) {
             this.notifier.renewalFailure(txn, member, err)
         }
     }
@@ -707,7 +720,7 @@ class TransactionProcessor {
         this.notifier.partial(txn, member)
     }
 }
-export { TransactionProcessor }
+export { TransactionProcessor };
 const Utils = (() => {
     return {
         retryOnError: (f, error, t = 250) => {
@@ -926,8 +939,8 @@ const test1 = (() => {
                     unit.is([{ txn: f.txn2, user: goodMember }], f.notifier?.joinSuccessLog, { description: "successful join notification is expected to be txn2" })
                     unit.is(1, f.notifier?.joinFailureLog.length, { description: "one join failure expected" })
                     f?.notifier?.joinFailureLog.forEach((l) => {
-                        unit.is(true, l.err instanceof Error)
-                        delete l.err
+                        unit.is(true, l.error instanceof Error)
+                        delete l.error
                     })
                     unit.is([{ txn: f.badTxn, user: badMember }], notifier.joinFailureLog, { description: "Join failure is expected to be badTxn" })
                     unit.is(undefined, f.badTxn.Processed, { neverUndefined: false, description: "badTxn should not have been processed" })
@@ -939,10 +952,10 @@ const test1 = (() => {
                 })
             }
 
-            function testRenewalSuccess(directory, notifier, skip = false) {
+            function testRenewalSuccess(directory: Directory, notifier: Notifier, skip = false) {
                 cleanUp_(testRenewalSuccess_, directory, "Renewal Success Test", notifier, skip)
             }
-            function testRenewalSuccess_(directory, description, notifier, skip) {
+            function testRenewalSuccess_(directory: Directory, description: string, notifier: Notifier, skip: boolean) {
                 const f = new Fixture1(directory, notifier)
                 unit.section(() => {
                     // Copied from Test Directory
@@ -974,10 +987,10 @@ const test1 = (() => {
                 })
             }
 
-            function testRenewalFailure(directory, notifier, skip = false) {
+            function testRenewalFailure(directory: Directory, notifier: Notifier, skip = false) {
                 cleanUp_(testRenewalFailure_, directory, "Renewal Failure Test", notifier, skip)
             }
-            function testRenewalFailure_(directory, description, notifier, skip) {
+            function testRenewalFailure_(directory: Directory, description: string, notifier: Notifier, skip: boolean) {
                 class BadUsers extends Users {
                     #badUser;
                     constructor(badUser) {
@@ -1005,9 +1018,9 @@ const test1 = (() => {
                     unit.is(true, f.directory.isKnownMember(expectedMember), { description: "Expecting member to be untouched" })
                     unit.is(undefined, renewalTxn.Processed, { description: "Expecting renewalTxn to not have been processed", neverUndefined: false })
                     let rfl = notifier.renewalFailureLog
-                    if (rfl[0]) delete rfl[0].err
+                    if (rfl[0]) delete rfl[0].error
                     unit.is(renewalTxn, rfl[0].txn, { description: "Expecting renewalTxn to be in the renewalFailureLog" })
-                    unit.is(expectedMember, rfl[0].user, { description: "Expecting expectedMember to be in the renewalFailureLog" })
+                    unit.is(expectedMember, rfl[0].member, { description: "Expecting expectedMember to be in the renewalFailureLog" })
 
                 },
                     {
@@ -1019,7 +1032,7 @@ const test1 = (() => {
             function testPartialSuccess(directory, notifier, skip = false) {
                 cleanUp_(testPartialSuccess_, directory, "Partials", notifier, skip)
             }
-            function testPartialSuccess_(directory, description, notifier, skip) {
+            function testPartialSuccess_(directory: Directory, description: string, notifier: Notifier, skip: boolean) {
                 const f = new Fixture1(directory, notifier)
                 unit.section(() => {
                     const joiningTxn = f.txn1
@@ -1037,8 +1050,10 @@ const test1 = (() => {
 
                     })
                     unit.is(renewingTxn, f.notifier?.partialsLog[0].txn, { description: "Expecting renewalTxn to be in the partials log" })
-                    const loggedUser = directory.makeMember(f.notifier?.partialsLog[0].user)
-                    unit.is(joiningMember, loggedUser, { description: "Expecting joining member to be in the partials log" })
+                    if (f.notifier) {
+                        const loggedUser = directory.makeMember(f.notifier.partialsLog[0].member)
+                        unit.is(joiningMember, loggedUser, { description: "Expecting joining member to be in the partials log" })
+                    }
 
                 },
                     {
@@ -1082,13 +1097,14 @@ const testEmailNotifier = (() => {
                 },
                 getDrafts() { return new Array<DraftType>() }
             }
-            const txn1 = {
+            const txn1: Transaction = {
                 "First Name": "J",
                 "Last Name": "K",
                 "Email Address": "j.k@icloud.com",
                 "Phone Number": "+14083869343",
                 "Payable Status": "paid",
-                "Payable Order ID": "CC-TF-RNB6"
+                "Payable Order ID": "CC-TF-RNB6",
+                "Timestamp": "timestamp"
             }
             return {
                 unit: new bmUnitTester.Unit({ showErrorsOnly: true }),
