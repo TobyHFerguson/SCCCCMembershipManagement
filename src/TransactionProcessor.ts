@@ -8,13 +8,13 @@ class Transaction {
   "Phone Number": string;
   "Payable Status": string;
   "Processed"?: string;
-  constructor(fn, ln, ea, pn, ps, p){
-    this["First Name"] = fn;
-    this["Last Name"] = ln
-    this["Email Addres"] = ea;
-    this["Phone Number" ]= pn;
-    this["Payable Status"] = ps;
-    if (p) this["Processed"] = p;
+  constructor(firstName, lastName, emailAddress, phoneNumber, payableStatus, processed){
+    this["First Name"] = firstName;
+    this["Last Name"] = lastName
+    this["Email Addres"] = emailAddress;
+    this["Phone Number" ]= phoneNumber;
+    this["Payable Status"] = payableStatus;
+    if (processed) this["Processed"] = processed;
   }
 }
 class TransactionProcessor {

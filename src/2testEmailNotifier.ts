@@ -52,13 +52,13 @@ function testTemplates() {
 
 function testEmailNotificationJoinFailure(mailApp: MailAppType) {
   const templates = new Templates(mailApp.getDrafts(), testFixtures.subject_lines)
-  const notifier = new EmailNotifier(templates, { test: true, mailer: testFixtures.sendMail })
+  const notifier = new EmailNotifier(templates, { test: true, mailer: testFixtures.sendMail, bccOnSuccess: "a@b.com,c@d.com", bccOnFailure: "FAILURE (COPIED)", toOnFailure: "FAILURE"})
   notifier.joinFailure(testFixtures.txn1, testFixtures.member1, testFixtures.error)
 }
 
 function testEmailNotifier(mailApp: MailAppType) {
   const templates = new Templates(mailApp.getDrafts(), testFixtures.subject_lines)
-  const notifier = new EmailNotifier(templates, { test: true, mailer: testFixtures.sendMail })
+  const notifier = new EmailNotifier(templates, { test: true, mailer: testFixtures.sendMail, bccOnSuccess: "a@b.com,c@d.com", bccOnFailure: "FAILURE (COPIED)", toOnFailure: "FAILURE" })
   notifier.joinSuccess(testFixtures.txn1, testFixtures.member1)
 }
 

@@ -1,6 +1,6 @@
 import chai = require('chai');
 const expect = chai.expect;
-import { MailAppType, DraftType, bmUnitTester, SendEmailOptions } from '../src/Types';
+import { MailAppType, SendEmailOptions } from '../src/Types';
 import { Member } from '../src/Member';
 import { Transaction } from '../src/TransactionProcessor';
 import { Templates, EmailNotifier } from '../src/EmailNotifier';
