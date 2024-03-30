@@ -461,14 +461,6 @@ export class Member implements UserType {
             this.recoveryEmail = deepCopy(m.recoveryEmail)
             this.recoveryPhone = deepCopy(m.recoveryPhone)
             if (isMember(m)) {
-                this.primaryEmail = deepCopy(m.primaryEmail).toLowerCase()
-                this.name = deepCopy(m.name)
-                this.emails = deepCopy(m.emails)
-                this.phones = deepCopy(m.phones)
-                this.customSchemas = deepCopy(m.customSchemas)
-                this.orgUnitPath = deepCopy(m.orgUnitPath)
-                this.recoveryEmail = deepCopy(m.recoveryEmail)
-                this.recoveryPhone = deepCopy(m.recoveryPhone)
                 this.generation = m.generation;
             }
         }
