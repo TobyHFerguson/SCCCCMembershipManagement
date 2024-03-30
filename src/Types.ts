@@ -199,6 +199,11 @@ interface EmailConfigurationCollection {
     expired: EmailConfigurationType;
     deleted: EmailConfigurationType;
 }
+
+interface SystemConfiguration {
+    orgUnitPath: string;
+    domain: string
+}
 export {
     Binding,
     AdminDirectoryType,
@@ -214,6 +219,7 @@ export {
     Message,
     NotificationType,
     SendEmailOptions,
+    SystemConfiguration,
     SubjectLines,
     Template,
     Transaction,

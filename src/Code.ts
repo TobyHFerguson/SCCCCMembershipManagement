@@ -1,7 +1,7 @@
 import { error } from "console";
 import {
     AdminDirectoryType,
-    Binding, DraftType, EmailConfigurationCollection, EmailConfigurationType, LogEntry, MailAppType, MailerOptions, MemberReport, Message, NotificationType, SendEmailOptions, SubjectLines, Template, Transaction, UserType, UsersCollectionType, bmUnitTester
+    Binding, DraftType, EmailConfigurationCollection, EmailConfigurationType, LogEntry, MailAppType, MailerOptions, MemberReport, Message, NotificationType, SendEmailOptions, SubjectLines, SystemConfiguration, Template, Transaction, UserType, UsersCollectionType, bmUnitTester
 } from "./Types";
 
 
@@ -55,10 +55,10 @@ class Directory {
     domain: string;
     users: UsersCollectionType;
 
-    constructor(adminDirectory: AdminDirectoryType = AdminDirectory, orgUnitPath = "/test", domain = "santacruzcountycycling.club",) {
+    constructor(systemConfig: SystemConfiguration, adminDirectory: AdminDirectoryType = AdminDirectory) {
         this.adminDirectory = adminDirectory
-        this.orgUnitPath = orgUnitPath.trim(),
-            this.domain = domain.trim()
+        this.orgUnitPath = systemConfig.orgUnitPath.trim(),
+            this.domain = systemConfig.domain.trim()
         if (!adminDirectory.Users) throw new Error("Internal Error - adminDirectory.Users is undefined")
         this.users = adminDirectory.Users;
     }
@@ -98,14 +98,21 @@ class Directory {
                 pageToken: pageToken,
                 projection: "full"
             }
-            page = this.users?.list(listSpec);
+            try {
+                page = this.users?.list(listSpec);
+            } catch (err: any) {
+                if (err.message.endsWith('Invalid Input: INVALID_OU_ID')) {
+                    err.message += `: "${this.orgUnitPath}"`
+                    throw err
+                }
+            }
             if (!page.users) {
                 return [];
             }
             users = users.concat(page.users)
             pageToken = page.nextPageToken;
         } while (pageToken);
-        return users.map(m => new Member(m));
+        return users.map(m => new Member(m, this.orgUnitPath, this.domain));
     }
 
     /**
@@ -153,22 +160,25 @@ class Directory {
      * 
      * @param {Member} member The transaction to be used to add a member
      * @param {boolean} [wait = true] whether to wait for the transaction to complete
-     * @returns 
+     * @returns {Member} the newly inserted member
      */
     addMember(member: Member, wait: boolean = true) {
         member.password = Math.random().toString(36);
         member.changePasswordAtNextLogin = true;
         try {
-            let newUser = this.makeMember(this.users.insert(member));
+            const newMember = this.makeMember(this.users.insert(member));
             if (wait) {
-                Utils.waitNTimesOnCondition(4000, () => this.isKnownMember(newUser))
+                Utils.waitNTimesOnCondition(4000, () => this.isKnownMember(newMember))
             }
             console.log(`user ${member.primaryEmail} created`)
-            return newUser
+            return newMember;
         } catch (err: any) {
             if (err.message.includes("API call to directory.users.insert failed with error: Entity already exists.")) {
                 throw new MemberAlreadyExistsError(err)
             } else {
+                if (err.message.endsWith('Invalid Input: primary_user_email')) {
+                    err.message += `: ${member.primaryEmail}`;
+                }
                 throw new DirectoryError(err)
             }
         }
@@ -192,8 +202,8 @@ class Directory {
 }
 export { Directory };
 class LocalDirectory extends Directory {
-    constructor() {
-        super(new Admin())
+    constructor(systemConfig: SystemConfiguration) {
+        super(systemConfig, new Admin())
     }
 }
 export { LocalDirectory };
@@ -409,7 +419,7 @@ export class Member implements UserType {
     password?: string;
     changePasswordAtNextLogin?: boolean;
 
-    constructor(m: (Transaction | Member) | UserType, orgUnitPath: string = '/test', domain: string = 'santacruzcountycyling.club') {
+    constructor(m: (Transaction | Member | UserType), orgUnitPath: string, domain: string) {
         this.domain = domain
         if (isTransaction(m)) {
             let givenName = m['First Name'];
@@ -466,7 +476,7 @@ export class Member implements UserType {
         }
     }
     get report(): MemberReport {
-        return  {
+        return {
             primary: this.primaryEmail,
             email: this.homeEmail,
             phone: this.phone,
@@ -474,7 +484,7 @@ export class Member implements UserType {
             Last: this.name.familyName,
             Joined: this.customSchemas.Club_Membership.Join_Date,
             Expires: this.customSchemas.Club_Membership.expires
-          }
+        }
     }
     get homeEmail() {
         const email = this.emails.find(e => e.type === "home")
@@ -686,13 +696,13 @@ class TransactionProcessor {
      */
 
 
-    matchTransactionToMember_(txn:Transaction, member: Member): {full:boolean} | boolean {
-        const left = {email: member.homeEmail, phone: member.phone};
-        const right = {email:txn["Email Address"], phone:txn["Phone Number"]}
+    matchTransactionToMember_(txn: Transaction, member: Member): { full: boolean } | boolean {
+        const left = { email: member.homeEmail, phone: member.phone };
+        const right = { email: txn["Email Address"], phone: txn["Phone Number"] }
         const result = TransactionProcessor.match(left, right)
         return result
     }
-    static match(left: {email: string, phone: string}, right: {email:string, phone:string}): {full:boolean} | boolean  {
+    static match(left: { email: string, phone: string }, right: { email: string, phone: string }): { full: boolean } | boolean {
         const emailsMatch = left.email === right.email;
         const phonesMatch = left.phone === right.phone;
         const result = (emailsMatch && phonesMatch) ? { full: true } : (emailsMatch || phonesMatch) ? { full: false } : false
