@@ -1,7 +1,7 @@
 import { error } from "console";
 import {
     AdminDirectoryType,
-    Binding, DraftType, EmailConfigurationCollection, EmailConfigurationType, LogEntry, MailAppType, MailerOptions, NotificationType, SendEmailOptions, SubjectLines, Template, Transaction, UserType, UsersCollectionType, bmUnitTester
+    Binding, DraftType, EmailConfigurationCollection, EmailConfigurationType, LogEntry, MailAppType, MailerOptions, MemberReport, Message, NotificationType, SendEmailOptions, SubjectLines, Template, Transaction, UserType, UsersCollectionType, bmUnitTester
 } from "./Types";
 
 
@@ -309,7 +309,7 @@ function getGmailTemplateFromDrafts_(drafts: DraftType[], subject_line: string):
  * @param {object} binding object used to replace {{}} tokens
  * @return {Message} bound message
 */
-function bindMessage_(message: object, binding:Binding) {
+function bindMessage_(message: object, binding: Binding): Message {
     // We have two templates one for plain text and the html body
     // Stringifing the object means we can do a global replace
     // across all the textual part of the object and then restore it.
@@ -328,7 +328,7 @@ function bindMessage_(message: object, binding:Binding) {
  * @param {string} str to escape JSON special characters from
  * @return {string} escaped string
 */
-function escapeData_(str) {
+function escapeData_(str: string): string {
     return str
         .replace(/[\\]/g, '\\\\')
         .replace(/[\"]/g, '\\\"')
@@ -473,6 +473,25 @@ export class Member implements UserType {
             }
         }
     }
+    get report(): MemberReport {
+        return  {
+            primary: this.primaryEmail,
+            email: this.homeEmail,
+            phone: this.phone,
+            First: this.name.givenName,
+            Last: this.name.familyName,
+            Joined: this.customSchemas.Club_Membership.Join_Date,
+            Expires: this.customSchemas.Club_Membership.expires
+          }
+    }
+    get homeEmail() {
+        const email = this.emails.find(e => e.type === "home")
+        return email ? email.address : "EMAIL ADDRESS UNKNOWN"
+    }
+    get phone() {
+        const phone = this.phones.find(e => e.type === "mobile");
+        return phone ? phone.value : "PHONE UNKNOWN"
+    }
     makePrimaryEmail_(given, family, generation, domain) {
         return `${given}.${family}${generation}@${domain}`.toLowerCase()
     }
@@ -561,51 +580,50 @@ class EmailNotifier extends Notifier {
 
     joinSuccess(txn: Transaction, member: Member) {
         super.joinSuccess(txn, member)
-        this.notifySuccess_( txn, member, this.configs.joinSuccess,)
+        this.notifySuccess_(txn, member, this.configs.joinSuccess,)
     }
     joinFailure(txn: Transaction, member: Member, error: Error) {
         super.joinFailure(txn, member, error)
-        this.notifyFailure_( txn, member, this.configs.joinFailure)
+        this.notifyFailure_(txn, member, this.configs.joinFailure)
     }
     renewalSuccess(txn: Transaction, member: Member) {
         super.renewalSuccess(txn, member);
-        this.notifySuccess_( txn, member, this.configs.renewSuccess,)
+        this.notifySuccess_(txn, member, this.configs.renewSuccess)
     }
     renewalFailure(txn: Transaction, member: Member, error: Error) {
         super.renewalFailure(txn, member, error)
-        this.notifySuccess_(txn, member, this.configs.renewFailure, )
+        this.notifySuccess_(txn, member, this.configs.renewFailure)
     }
     partial(txn: Transaction, member: Member) {
         super.partial(txn, member)
-        this.notifyFailure_( txn, member, this.configs.ambiguousTransaction)
+        this.notifyFailure_(txn, member, this.configs.ambiguousTransaction)
     }
     notifySuccess_(txn: Transaction, member: Member, config: EmailConfigurationType) {
         const binding = this.makeBinding_(txn, member)
         const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
-        this.sendMail_(this.getRecipient_(txn, config), message, {bcc: `${config["Bcc on Success"]}@${this.options.domain}`})
+        this.sendMail_(this.getRecipient_(txn, config), message, { bcc: `${config["Bcc on Success"]}@${this.options.domain}` })
     }
-    notifyFailure_(txn: Transaction, member: Member, config: EmailConfigurationType, error?:Error) {
+    notifyFailure_(txn: Transaction, member: Member, config: EmailConfigurationType, error?: Error) {
         const binding = this.makeBinding_(txn, member, error)
         const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
-        this.sendMail_(this.getRecipient_(txn, config), message, {bcc: `${config["Bcc on Failure"]}@${this.options.domain}`})
+        this.sendMail_(this.getRecipient_(txn, config), message, { bcc: `${config["Bcc on Failure"]}@${this.options.domain}` })
     }
 
     makeBinding_(txn: Transaction, member: Member, error?: Error): Binding {
         const binding: Binding = {
-            timestamp: txn.Timestamp,
-            orderID: txn["Payable Order ID"],
-            primaryEmail: member.primaryEmail,
-            givenName: member.name.givenName,
-            familyName: member.name.familyName,
-            expiry: member.customSchemas.Club_Membership.expires,
-            ...(error ? {error: error.message }: {})
+            ...txn,
+            ...member.report,
+            ...(error ? { error: error.message } : {})
         }
+        // The above code is transpiled into code that converts date strings into date objects - not what we want at all!
+
+        Object.keys(binding).forEach(k => binding[k] += '')
         return binding
     }
     makeMessageObject_(template: Template, binding: Binding) {
         return bindMessage_(template.message, binding)
     }
-    getRecipient_(txn:Transaction, config: EmailConfigurationType) {
+    getRecipient_(txn: Transaction, config: EmailConfigurationType) {
         return this.options.test ? `toby.ferguson+TEST@${this.options.domain}` : config.To === 'home' ? txn["Email Address"] : `${config.To}@${this.options.domain}`
     }
 
@@ -625,7 +643,7 @@ class EmailNotifier extends Notifier {
 
 
 }
-export {EmailNotifier}
+export { EmailNotifier }
 
 class TransactionProcessor {
     directory: Directory;
@@ -672,15 +690,14 @@ class TransactionProcessor {
      * @function matchTransactionToMember - return a value depending on whether the transaction matches a member
      * @param {Transaction} transaction
      * @param {Member} member
-     * @return {int} - -1 if partial match, 0 if no match, +1 if full match
+     * @return {{full: boolean} | boolean} - IF there's a match returns the object, with the full field indicating whether it was a full match or not; otherwise it returns false.
      */
-    matchTransactionToMember_(txn, member) {
-        let homeEmails = member.emails.filter((e) => e.type === "home")
-        let homeEmail = homeEmails[0].address
-        let mobilePhone = (member.phones === undefined ? [{ value: null }] : member.phones).filter((p) => p.type === "mobile")[0].value
-        let emailsMatch = homeEmail == txn["Email Address"]
-        let phonesMatch = mobilePhone == txn["Phone Number"]
-        let result = (emailsMatch && phonesMatch) ? { full: true } : (emailsMatch || phonesMatch) ? { full: false } : false
+
+
+    matchTransactionToMember_(txn, member: Member): {full:boolean} | boolean {
+        const emailsMatch = member.homeEmail == txn["Email Address"]
+        const phonesMatch = member.phone == txn["Phone Number"]
+        const result = (emailsMatch && phonesMatch) ? { full: true } : (emailsMatch || phonesMatch) ? { full: false } : false
         return result
     }
     join_(txn: Transaction) {

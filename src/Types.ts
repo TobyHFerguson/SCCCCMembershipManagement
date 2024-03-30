@@ -14,6 +14,7 @@ declare namespace bmPreFiddler {
         getData(): object[];
         setData(obs: object[]): void;
         dumpValues(): {};
+        mapRows(func: (row: object, properties: any) => object): void;
     }
 }
 
@@ -32,15 +33,6 @@ interface LogEntry {
 }
 
 
-interface Binding {
-    timestamp: string;
-    orderID: string;
-    primaryEmail: string;
-    givenName: string;
-    familyName: string;
-    expiry: string;
-    error?: string;
-}
 
 interface Transaction {
     "First Name": string;
@@ -51,6 +43,20 @@ interface Transaction {
     "Payable Status": string;
     "Timestamp": string;
     "Processed"?: string;
+}
+
+interface MemberReport {
+    primary: string;
+    email: string;
+    phone: string;
+    First: string;
+    Last: string;
+    Joined: string;
+    Expires: string;
+}
+
+interface Binding extends Transaction, MemberReport {
+
 }
 
 declare namespace bmUnitTester {
@@ -166,8 +172,13 @@ interface SubjectLines {
     expirationSubject?: string;
 }
 
+interface Message {
+    subject: string,
+    text: string,
+    html: string
+}
 interface Template {
-    message: { subject: string, text: string, html: string };
+    message: Message;
     attachments: object[];
     inlineImages: object;
 }
@@ -199,6 +210,8 @@ export {
     LogEntry,
     MailAppType,
     MailerOptions,
+    MemberReport,
+    Message,
     NotificationType,
     SendEmailOptions,
     SubjectLines,
