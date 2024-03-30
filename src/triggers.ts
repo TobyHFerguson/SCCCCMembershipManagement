@@ -1,4 +1,4 @@
-import { Notifier, TransactionProcessor, Directory, LocalDirectory, Templates, EmailNotifier } from './Code'
+import { Notifier, TransactionProcessor, Directory, LocalDirectory, Templates, EmailNotifier, Member } from './Code'
 import { EmailConfigurationCollection, Transaction, bmPreFiddler } from './Types';
 
 
@@ -24,23 +24,7 @@ function onOpen() {
 
 function createMembershipReport() {
   const directory = new Directory()
-  const reportMembers = directory.members.map((m) => {
-    try {
-      // console.log(m)
-      return {
-        "primary": m.primaryEmail,
-        "First": m.name.givenName,
-        "Last": m.name.familyName,
-        "Joined": m.customSchemas.Club_Membership.Join_Date,
-        "Expires": m.customSchemas.Club_Membership.expires
-      }
-    } catch (err:any) {
-      console.error(err.message)
-      console.error(`error for member ${m}`)
-      return {}
-    }
-  }).filter(m => m.primary)
-  reportMembers.forEach((m) => console.log(m?.primary))
+  const reportMembers = directory.members.map((m) => m.report)
   const membersFiddler = bmPreFiddler.PreFiddler().getFiddler({
     id: null,
     sheetName: 'MembershipReport',
