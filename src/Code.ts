@@ -129,7 +129,6 @@ class Directory {
     const key = member.primaryEmail;
     try {
       const newMember: UserType = this.users?.update(patch, key);
-      console.log(`newMember ${key} updated`, newMember);
       return newMember;
     } catch (err: any) {
       if (err.message && err.message.includes("userKey")) {
