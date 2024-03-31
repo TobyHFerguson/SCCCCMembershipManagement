@@ -12,9 +12,11 @@ declare namespace bmPreFiddler {
     function PreFiddler(): pf;
     interface Fiddler {
         getData(): object[];
-        setData(obs: object[]): void;
+        setData(obs: object[]): Fiddler;
         dumpValues(): {};
-        mapRows(func: (row: object, properties: any) => object): void;
+        mapRows(func: (row: object, properties: {rowFormulas: object}) => object): Fiddler;
+        getColumnsWithFormulas(): string[];
+        needFormulas(): Fiddler;
     }
 }
 
@@ -43,6 +45,7 @@ interface Transaction {
     "Payable Status": string;
     "Timestamp": string;
     "Processed"?: string;
+    "Payable Transaction ID": string;
 }
 
 interface MemberReport {

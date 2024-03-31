@@ -1,6 +1,9 @@
 import { Notifier, TransactionProcessor, Directory, LocalDirectory, Templates, EmailNotifier, Member } from './Code'
 import { EmailConfigurationCollection, SystemConfiguration, Transaction, bmPreFiddler } from './Types';
 
+/**
+ * @OnlyCurrentDoc - only edit this spreadsheet, and no other
+ */
 function processPaidTransactions() {
   const directory = getDirectory_()
   const subjectLineFiddler = bmPreFiddler.PreFiddler().getFiddler({
@@ -14,15 +17,20 @@ function processPaidTransactions() {
     return p;
   }, {}
   )
-  const notifier = new EmailNotifier(GmailApp.getDrafts(), emailConfig, {mailer: GmailApp})
+  const notifier = new EmailNotifier(GmailApp.getDrafts(), emailConfig, { mailer: GmailApp })
+  convertLinks('Transactions');
   const transactionsFiddler = bmPreFiddler.PreFiddler().getFiddler({
-    id: "1Tm-lXtjaK2080u1dkoC902-TX0dtU5N2TVoQZG9JGdE",
+    id: null,
     sheetName: 'Transactions',
     createIfMissing: false
-  })
+  }).needFormulas();
+  const keepFormulas = transactionsFiddler.getColumnsWithFormulas();
   const tp = new TransactionProcessor(directory, notifier)
-  const txns = <Transaction[]>transactionsFiddler.getData()
-  tp.processTransactions(txns)
+  transactionsFiddler.mapRows((row, { rowFormulas }) => {
+    tp.processTransaction(<Transaction>row);
+    keepFormulas.forEach(f => row[f] = rowFormulas[f]);
+    return row;
+  })
   transactionsFiddler.dumpValues()
   notifier.log()
 }
@@ -35,7 +43,7 @@ function createMembershipReport() {
     sheetName: 'MembershipReport',
     createIfMissing: true
   })
-  if (reportMembers !== undefined ) membersFiddler.setData(reportMembers);
+  if (reportMembers !== undefined) membersFiddler.setData(reportMembers);
   membersFiddler.dumpValues()
 }
 
@@ -58,6 +66,24 @@ function onOpen() {
     .addToUi()
 }
 
+function convertLinks(sheetName: string) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) return;
+
+  const range = sheet.getDataRange();
+  const rtvs = range.getRichTextValues();
+
+  // vals = [['one', 'two']]
+  const values = rtvs.map(row => {
+    return row.map(column => {
+      if (!column) return null;
+      return (column.getLinkUrl()) ? `=hyperlink("${column.getLinkUrl()}", "${column.getText()}")` : column.getText()
+    })
+  })
+  range.setValues(values);
+  SpreadsheetApp.flush()
+}
+
 function getDirectory_() {
   const systemConfigFiddler = bmPreFiddler.PreFiddler().getFiddler({
     id: null,
@@ -70,7 +96,7 @@ function getDirectory_() {
 }
 
 function processPaidTransactionsTest() {
-  const directory = new LocalDirectory({orgUnitPath: "/test", domain: "santacruzcountycycling.club"})
+  const directory = new LocalDirectory({ orgUnitPath: "/test", domain: "santacruzcountycycling.club" })
   const notifier = new Notifier()
   const transactionsFiddler = bmPreFiddler.PreFiddler().getFiddler({
     id: "1Tm-lXtjaK2080u1dkoC902-TX0dtU5N2TVoQZG9JGdE",
@@ -78,8 +104,8 @@ function processPaidTransactionsTest() {
     createIfMissing: false
   })
   const tp = new TransactionProcessor(directory, notifier)
-  const txns = <Transaction[]>transactionsFiddler.getData()
-  tp.processTransactions(txns)
+  transactionsFiddler.mapRows(txn =>
+    tp.processTransaction(<Transaction>txn))
   transactionsFiddler.dumpValues()
   notifier.log()
 }
