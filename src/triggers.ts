@@ -69,19 +69,18 @@ function onOpen() {
 function convertLinks(sheetName: string) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   if (!sheet) return;
-
   const range = sheet.getDataRange();
   const rtvs = range.getRichTextValues();
-
-  // vals = [['one', 'two']]
-  const values = rtvs.map(row => {
-    return row.map(column => {
+  const values = range.getValues();
+  const newValues = rtvs.map((row , r)=> {
+    return row.map((column, c) => {
       if (!column) return null;
-      return (column.getLinkUrl()) ? `=hyperlink("${column.getLinkUrl()}", "${column.getText()}")` : column.getText()
-    })
-  })
-  range.setValues(values);
-  SpreadsheetApp.flush()
+      const v = column.getText() ? column.getText() : values[r][c]
+      return (column.getLinkUrl()) ? `=hyperlink("${column.getLinkUrl()}", "${v}")` : v;
+    });
+  });
+  range.setValues(newValues);
+  SpreadsheetApp.flush();
 }
 
 function getDirectory_() {
