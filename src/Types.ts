@@ -59,7 +59,7 @@ interface MemberReport {
 }
 
 interface Binding extends Transaction, MemberReport {
-
+    error?: Error;
 }
 
 declare namespace bmUnitTester {

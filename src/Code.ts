@@ -540,11 +540,9 @@ class Notifier implements NotificationType {
     this.renewalSuccessLog.push({ txn, member })
   }
   renewalFailure(txn: Transaction, member: Member, error: Error) {
-    console.error(`Notifier.renewalFailure()`)
-    console.error(error.message)
     this.renewalFailureLog.push({ txn, member, error })
   }
-  partial(txn, member) {
+  partial(txn:Transaction, member:Member) {
     this.partialsLog.push({ txn, member })
   }
   log() {
@@ -552,8 +550,14 @@ class Notifier implements NotificationType {
       l.forEach((e: LogEntry) => console.log(`${e.member.primaryEmail} ${kind}`))
     }
     function reportFailure(l: LogEntry[], kind: string) {
+      function addInfoToError(logEntry: LogEntry) {
+        if (!logEntry.error) return;
+        if (logEntry.error.message.endsWith('Invalid recovery phone.')) {
+          logEntry.error.message += `: "${logEntry.txn["Phone Number"]}"`
+        }
+      }
       l.forEach((l) => {
-        this.addInfoToError(l)
+        addInfoToError(l)
         console.error(`Txn ${l.txn["Payable Transaction ID"]} had ${kind} error: ${l.error}`)
       })
     }
@@ -561,14 +565,10 @@ class Notifier implements NotificationType {
     reportFailure(this.joinFailureLog, "join")
     reportSuccess(this.renewalSuccessLog, "renewed")
     reportFailure(this.renewalFailureLog, "renewal")
-    this.partialsLog.forEach((p) => console.log(`Txn ${p.txn["Payable Transaction ID"]} matched only one of phone or email against this member: ${p.member.primaryEmail}`))
+    this.partialsLog.forEach((p) => console.error(`ambiguous match: Txn[Email Address]: ${p.txn["Email Address"]} member.homeEmail: ${p.member.homeEmail} Txn[Phone Number]: ${p.txn["Phone Number"]} member.phone: ${p.member.phone}`)
+    )
   }
-  addInfoToError(logEntry: LogEntry) {
-    if (!logEntry.error) return;
-    if (logEntry.error.message.endsWith('Invalid recovery phone.')) {
-      logEntry.error.message += `: "${logEntry.txn["Phone Number"]}"`
-    }
-  }
+  
 
 }
 export { Notifier };
@@ -597,7 +597,7 @@ class EmailNotifier extends Notifier {
   }
   joinFailure(txn: Transaction, member: Member, error: Error) {
     super.joinFailure(txn, member, error)
-    this.notifyFailure_(txn, member, this.configs.joinFailure)
+    this.notifyFailure_(txn, member, this.configs.joinFailure, error)
   }
   renewalSuccess(txn: Transaction, member: Member) {
     super.renewalSuccess(txn, member);
@@ -616,7 +616,7 @@ class EmailNotifier extends Notifier {
     const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
     this.sendMail_(this.getRecipient_(txn, config), message, { bcc: `${config["Bcc on Success"]}@${this.options.domain}` })
   }
-  notifyFailure_(txn: Transaction, member: Member, config: EmailConfigurationType, error?: Error) {
+  notifyFailure_(txn: Transaction, member: Member, config: EmailConfigurationType, error?:Error) {
     const binding = this.makeBinding_(txn, member, error)
     const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
     this.sendMail_(this.getRecipient_(txn, config), message, { bcc: `${config["Bcc on Failure"]}@${this.options.domain}` })
@@ -626,7 +626,7 @@ class EmailNotifier extends Notifier {
     const binding: Binding = {
       ...txn,
       ...member.report,
-      ...(error ? { error: error.message } : {})
+      ...(error ? { error: error } : {})
     }
     // The above code is transpiled into code that converts date strings into date objects - not what we want at all!
 
@@ -698,8 +698,6 @@ class TransactionProcessor {
           }
         }
       }
-    } catch (err: any) {
-      console.error(err)
     } finally {
       return txn
     }
@@ -738,7 +736,6 @@ class TransactionProcessor {
           member.incrementGeneration()
           continue
         } else {
-          console.log(`TP - join_ err`)
           this.notifier.joinFailure(txn, member, err)
           return
         }
