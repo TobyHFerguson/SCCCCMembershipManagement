@@ -95,7 +95,7 @@ function getDirectory_() {
 }
 
 function processPaidTransactionsTest() {
-  const directory = new LocalDirectory({ orgUnitPath: "/test", domain: "santacruzcountycycling.club" })
+  const directory = new LocalDirectory({ orgUnitPath: "/test", domain: "santacruzcountycycling.club", groups: '' })
   const notifier = new Notifier()
   const transactionsFiddler = bmPreFiddler.PreFiddler().getFiddler({
     id: "1Tm-lXtjaK2080u1dkoC902-TX0dtU5N2TVoQZG9JGdE",

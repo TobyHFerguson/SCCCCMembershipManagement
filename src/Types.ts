@@ -117,6 +117,7 @@ interface UsersCollectionType {
 }
 interface AdminDirectoryType {
     Users?: UsersCollectionType;
+    Members?: GoogleAppsScript.AdminDirectory.Collection.MembersCollection;
 }
 
 // Types to cover our use of GmailApp, GMailDraft, GmailMessage and GmailAttachment
@@ -205,7 +206,8 @@ interface EmailConfigurationCollection {
 
 interface SystemConfiguration {
     orgUnitPath: string;
-    domain: string
+    domain: string,
+    groups: string
 }
 export {
     Binding,
