@@ -168,7 +168,7 @@ class Directory {
       if (wait) {
         Utils.waitNTimesOnCondition(4000, () => this.isKnownMember(newMember))
       }
-      console.log(`user ${member.primaryEmail} created`)
+      console.info(`member ${member.name.fullName} was allocated this account name: ${member.primaryEmail}`)
       this.systemConfig.groups.split(',').forEach(group => this.addMemberToGroup(member, group))
       return newMember;
     } catch (err: any) {
@@ -189,7 +189,12 @@ class Directory {
       role: "MEMBER",
       type: "EXTERNAL"
     }
+    try {
     this.#Members.insert(groupMember, groupKey.trim())
+    } catch (err:any) {
+      if (!err.message.endsWith('Member already exists.')) throw err
+    }
+    console.info(`member ${member.name.fullName}'s home email (${member.homeEmail}) is in group ${groupKey}`)
   }
   /**
    * Delete the given member
