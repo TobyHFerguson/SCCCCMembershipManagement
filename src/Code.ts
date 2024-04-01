@@ -50,17 +50,16 @@ class Admin implements AdminDirectoryType {
 }
 
 class Directory {
-  adminDirectory: AdminDirectoryType;
-  orgUnitPath: string;
-  domain: string;
-  users: UsersCollectionType;
+  systemConfig: SystemConfiguration;
+  #Users: UsersCollectionType;
+  #Members: GoogleAppsScript.AdminDirectory.Collection.MembersCollection;
 
   constructor(systemConfig: SystemConfiguration, adminDirectory: AdminDirectoryType = AdminDirectory) {
-    this.adminDirectory = adminDirectory
-    this.orgUnitPath = systemConfig.orgUnitPath.trim(),
-      this.domain = systemConfig.domain.trim()
+    this.systemConfig = systemConfig;
     if (!adminDirectory.Users) throw new Error("Internal Error - adminDirectory.Users is undefined")
-    this.users = adminDirectory.Users;
+    this.#Users = adminDirectory.Users;
+    if (!adminDirectory.Members) throw new Error("Internal Error - adminDirectory.Members is undefined")
+    this.#Members = adminDirectory.Members;
   }
 
   /**
@@ -73,11 +72,11 @@ class Directory {
   }
   /**
    * 
-   * @param {Member | Transaction} obj Object to be converted to Member
+   * @param {Member | Transaction | UserType} obj Object to be converted to Member
    * @returns new Member object
    */
   makeMember(obj: Member | Transaction | UserType) {
-    return new Member(obj, this.orgUnitPath, this.domain)
+    return new Member(obj, this.systemConfig)
   }
 
   /**
@@ -93,16 +92,16 @@ class Directory {
         customer: 'my_customer',
         orderBy: 'givenName',
         viewType: "admin_view",
-        query: `orgUnitPath:${this.orgUnitPath}`,
+        query: `orgUnitPath:${this.systemConfig.orgUnitPath}`,
         maxResults: 500,
         pageToken: pageToken,
         projection: "full"
       }
       try {
-        page = this.users?.list(listSpec);
+        page = this.#Users?.list(listSpec);
       } catch (err: any) {
         if (err.message.endsWith('Invalid Input: INVALID_OU_ID')) {
-          err.message += `: "${this.orgUnitPath}"`
+          err.message += `: "${this.systemConfig.orgUnitPath}"`
           throw err
         }
       }
@@ -112,7 +111,7 @@ class Directory {
       users = users.concat(page.users)
       pageToken = page.nextPageToken;
     } while (pageToken);
-    return users.map(m => new Member(m, this.orgUnitPath, this.domain));
+    return users.map(m => new Member(m, this.systemConfig));
   }
 
   /**
@@ -128,7 +127,7 @@ class Directory {
   updateMember_(member: Member, patch: UserType) {
     const key = member.primaryEmail;
     try {
-      const newMember: UserType = this.users?.update(patch, key);
+      const newMember: UserType = this.#Users?.update(patch, key);
       return newMember;
     } catch (err: any) {
       if (err.message && err.message.includes("userKey")) {
@@ -149,7 +148,7 @@ class Directory {
    */
   getMember(member: Member) {
     try {
-      return this.makeMember(this.users.get(member.primaryEmail, { projection: "full", viewType: "admin_view" }))
+      return this.makeMember(this.#Users.get(member.primaryEmail, { projection: "full", viewType: "admin_view" }))
     } catch (err: any) {
       if (err.message.endsWith("Resource Not Found: userKey")) throw new MemberNotFoundError(member.primaryEmail)
       throw new DirectoryError(err)
@@ -165,11 +164,12 @@ class Directory {
     member.password = Math.random().toString(36);
     member.changePasswordAtNextLogin = true;
     try {
-      const newMember = this.makeMember(this.users.insert(member));
+      const newMember = this.makeMember(this.#Users.insert(member));
       if (wait) {
         Utils.waitNTimesOnCondition(4000, () => this.isKnownMember(newMember))
       }
       console.log(`user ${member.primaryEmail} created`)
+      this.systemConfig.groups.split(',').forEach(group => this.addMemberToGroup(member, group))
       return newMember;
     } catch (err: any) {
       if (err.message.includes("API call to directory.users.insert failed with error: Entity already exists.")) {
@@ -181,7 +181,15 @@ class Directory {
         throw new DirectoryError(err)
       }
     }
-
+  }
+  addMemberToGroup(member: Member, groupKey: string) {
+    const groupMember: GoogleAppsScript.AdminDirectory.Schema.Member = {
+      kind: "admin#directory#member",
+      email: member.homeEmail,
+      role: "MEMBER",
+      type: "EXTERNAL"
+    }
+    this.#Members.insert(groupMember, groupKey.trim())
   }
   /**
    * Delete the given member
@@ -190,7 +198,7 @@ class Directory {
    */
   deleteMember(member: Member, wait: boolean = true) {
     try {
-      Utils.retryOnError(() => { this.users.remove(member.primaryEmail.toLowerCase()); console.log(`Member ${member.primaryEmail} deleted`); return true }, MemberCreationNotCompletedError)
+      Utils.retryOnError(() => { this.#Users.remove(member.primaryEmail.toLowerCase()); console.log(`Member ${member.primaryEmail} deleted`); return true }, MemberCreationNotCompletedError)
       Utils.waitNTimesOnCondition(wait ? 400 : 1, () => !this.isKnownMember(member))
     }
     catch (err: any) {
@@ -421,8 +429,8 @@ export class Member implements UserType {
   password?: string;
   changePasswordAtNextLogin?: boolean;
 
-  constructor(m: (Transaction | Member | UserType), orgUnitPath: string, domain: string) {
-    this.domain = domain
+  constructor(m: (Transaction | Member | UserType), systemConfig: SystemConfiguration) {
+    this.domain = systemConfig.domain
     if (isTransaction(m)) {
       let givenName = m['First Name'];
       let familyName = m['Last Name'];
@@ -459,7 +467,7 @@ export class Member implements UserType {
             Join_Date: this.convertToYYYYMMDDFormat_(Join_Date)
           }
         },
-        this.orgUnitPath = orgUnitPath,
+        this.orgUnitPath = systemConfig.orgUnitPath,
         this.recoveryEmail = email,
         this.recoveryPhone = phone
     } else {// Simply copy the values, deeply
@@ -542,7 +550,7 @@ class Notifier implements NotificationType {
   renewalFailure(txn: Transaction, member: Member, error: Error) {
     this.renewalFailureLog.push({ txn, member, error })
   }
-  partial(txn:Transaction, member:Member) {
+  partial(txn: Transaction, member: Member) {
     this.partialsLog.push({ txn, member })
   }
   log() {
@@ -568,7 +576,7 @@ class Notifier implements NotificationType {
     this.partialsLog.forEach((p) => console.error(`ambiguous match: Txn[Email Address]: ${p.txn["Email Address"]} member.homeEmail: ${p.member.homeEmail} Txn[Phone Number]: ${p.txn["Phone Number"]} member.phone: ${p.member.phone}`)
     )
   }
-  
+
 
 }
 export { Notifier };
@@ -616,7 +624,7 @@ class EmailNotifier extends Notifier {
     const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
     this.sendMail_(this.getRecipient_(txn, config), message, { bcc: `${config["Bcc on Success"]}@${this.options.domain}` })
   }
-  notifyFailure_(txn: Transaction, member: Member, config: EmailConfigurationType, error?:Error) {
+  notifyFailure_(txn: Transaction, member: Member, config: EmailConfigurationType, error?: Error) {
     const binding = this.makeBinding_(txn, member, error)
     const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
     this.sendMail_(this.getRecipient_(txn, config), message, { bcc: `${config["Bcc on Failure"]}@${this.options.domain}` })
