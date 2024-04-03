@@ -43,4 +43,8 @@ describe('Member tests', () => {
         const actual = new Member(member, sysConfig)
         expect(actual).to.deep.equal({ ...expected, ...{ generation: 0, domain: sysConfig.domain } });
     })
+    it('should be able to be constructed from a UserType', () => {
+        const actual = new Member(expected, sysConfig);
+        expect(actual).to.deep.equal({ ...expected, ...{ generation: 0, domain: sysConfig.domain } });
+    })
 })
