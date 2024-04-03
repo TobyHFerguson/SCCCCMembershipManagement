@@ -190,8 +190,8 @@ class Directory {
       type: "EXTERNAL"
     }
     try {
-    this.#Members.insert(groupMember, groupKey.trim())
-    } catch (err:any) {
+      this.#Members.insert(groupMember, groupKey.trim())
+    } catch (err: any) {
       if (!err.message.endsWith('Member already exists.')) throw err
     }
     console.info(`member ${member.name.fullName}'s home email (${member.homeEmail}) is in group ${groupKey}`)
@@ -379,7 +379,8 @@ class Fixture1 {
       "Payable Status": "paid",
       "Payable Order ID": "1234",
       "Timestamp": "now",
-      "Payable Transaction ID": "1"
+      "Payable Transaction ID": "1",
+      "In Directory": true
     }
     this.txn2 = {
       "First Name": "A",
@@ -389,7 +390,8 @@ class Fixture1 {
       "Payable Status": "paid",
       "Payable Order ID": "2345",
       "Timestamp": "now",
-      "Payable Transaction ID": "2"
+      "Payable Transaction ID": "2",
+      "In Directory": false
     }
     this.badTxn = {
       "First Name": "C",
@@ -399,7 +401,8 @@ class Fixture1 {
       "Payable Status": "paid",
       "Payable Order ID": "923",
       "Timestamp": "now",
-      "Payable Transaction ID": "2"
+      "Payable Transaction ID": "2",
+      "In Directory": true
     }
     this.directory = directory;
     this.notifier = notifier;
@@ -431,6 +434,7 @@ export class Member implements UserType {
   orgUnitPath: string;
   recoveryEmail: string;
   recoveryPhone: string;
+  includeInGlobalAddressList: boolean;
   password?: string;
   changePasswordAtNextLogin?: boolean;
 
@@ -475,6 +479,7 @@ export class Member implements UserType {
         this.orgUnitPath = systemConfig.orgUnitPath,
         this.recoveryEmail = email,
         this.recoveryPhone = phone
+      this.includeInGlobalAddressList = m["In Directory"]
     } else {// Simply copy the values, deeply
       function deepCopy(v) { return v ? JSON.parse(JSON.stringify(v)) : "" }
       this.primaryEmail = deepCopy(m.primaryEmail).toLowerCase()
@@ -485,6 +490,7 @@ export class Member implements UserType {
       this.orgUnitPath = deepCopy(m.orgUnitPath)
       this.recoveryEmail = deepCopy(m.recoveryEmail)
       this.recoveryPhone = deepCopy(m.recoveryPhone)
+      this.includeInGlobalAddressList = m.includeInGlobalAddressList !== undefined ? m.includeInGlobalAddressList : true;
       if (isMember(m)) {
         this.generation = m.generation;
       }
@@ -625,7 +631,7 @@ class EmailNotifier extends Notifier {
     this.notifyFailure_(txn, member, this.configs.ambiguousTransaction)
   }
   makeBccList(bcc: string) {
-    return bcc.split(',').map(a => a.trim()+'@'+this.options.domain).join(',')
+    return bcc.split(',').map(a => a.trim() + '@' + this.options.domain).join(',')
   }
   notifySuccess_(txn: Transaction, member: Member, config: EmailConfigurationType) {
     const binding = this.makeBinding_(txn, member)

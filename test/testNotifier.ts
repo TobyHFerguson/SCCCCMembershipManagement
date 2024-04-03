@@ -24,6 +24,7 @@ const testFixtures = (() => {
     "Payable Transaction ID": "CC-TF-RNB6",
     "Payable Order ID": "1234",
     "Timestamp": "2024-03-29",
+    "In Directory": true
   }
   const sysConfig: SystemConfiguration = {
     orgUnitPath: "/test",

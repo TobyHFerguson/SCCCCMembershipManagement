@@ -46,6 +46,7 @@ interface Transaction {
     "Timestamp": string;
     "Processed"?: string;
     "Payable Transaction ID": string;
+    "In Directory": boolean;
 }
 
 interface MemberReport {
@@ -102,7 +103,7 @@ interface UserType {
     primaryEmail?: string | undefined;
     recoveryEmail?: string | undefined;
     recoveryPhone?: string | undefined;
-
+    includeInGlobalAddressList?: boolean | undefined;
 }
 interface UsersType {
     users?: UserType[];
