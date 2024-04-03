@@ -472,8 +472,8 @@ export class Member implements UserType {
         ],
         this.customSchemas = {
           Club_Membership: {
-            expires: this.convertToYYYYMMDDFormat_(expiryDate),
-            Join_Date: this.convertToYYYYMMDDFormat_(Join_Date)
+            expires: Member.convertToYYYYMMDDFormat_(expiryDate),
+            Join_Date: Member.convertToYYYYMMDDFormat_(Join_Date)
           }
         },
         this.orgUnitPath = systemConfig.orgUnitPath,
@@ -526,12 +526,16 @@ export class Member implements UserType {
     return this
   }
   incrementExpirationDate() {
-    let ed = new Date(this.customSchemas.Club_Membership.expires)
-    ed.setFullYear(ed.getFullYear() + 1)
-    this.customSchemas.Club_Membership.expires = this.convertToYYYYMMDDFormat_(ed)
+    let ed = Member.incrementDateByOneYear(this.customSchemas.Club_Membership.expires);
+    this.customSchemas.Club_Membership.expires = Member.convertToYYYYMMDDFormat_(ed);
     return this
   }
-  convertToYYYYMMDDFormat_(date) {
+  static incrementDateByOneYear(date:string | number | Date) {
+    let d = new Date(date)
+    d.setFullYear(d.getFullYear() + 1)
+    return d
+  }
+  static convertToYYYYMMDDFormat_(date: Date) {
     return new Date(date).toISOString().split('T')[0];
   }
 }
