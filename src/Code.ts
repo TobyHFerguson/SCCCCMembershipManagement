@@ -1,7 +1,7 @@
 import { error } from "console";
 import {
   AdminDirectoryType,
-  Binding, DraftType, EmailConfigurationCollection, EmailConfigurationType, LogEntry, MailAppType, MailerOptions, MemberReport, Message, NotificationType, SendEmailOptions, SubjectLines, SystemConfiguration, Template, Transaction, UserType, UsersCollectionType, bmUnitTester
+  Binding, CurrentMember, DraftType, EmailConfigurationCollection, EmailConfigurationType, LogEntry, MailAppType, MailerOptions, MemberReport, Message, NotificationType, SendEmailOptions, SubjectLines, SystemConfiguration, Template, Transaction, UserType, UsersCollectionType, bmUnitTester
 } from "./Types";
 
 
@@ -409,18 +409,24 @@ class Fixture1 {
   }
 }
 
-function isMember(member: Transaction | Member | UserType): member is Member {
+function isMember(member: Transaction | Member | UserType | CurrentMember): member is Member {
   return (member as Transaction)["First Name"] === undefined &&
     (member as Member).generation !== undefined
 }
 
-function isUserType(member: Transaction | Member | UserType): member is UserType {
+function isUserType(member: Transaction | Member | UserType | CurrentMember): member is UserType {
   return (member as Transaction)["First Name"] === undefined &&
     (member as Member).generation === undefined
 }
 
-function isTransaction(txn: Transaction | Member | UserType): txn is Transaction {
-  return (txn as Transaction)["First Name"] !== undefined
+function isTransaction(txn: Transaction | Member | UserType | CurrentMember): txn is Transaction {
+  let t = (txn as Transaction);
+  return t["First Name"] !== undefined && t["Payable Order ID"] !== undefined;
+}
+
+function isCurrentMember(cm: Transaction | Member | UserType | CurrentMember): cm is CurrentMember {
+  let c = (cm as CurrentMember);
+  return c["First Name"] !== undefined && c["Payable Order ID"] === undefined;
 }
 
 export class Member implements UserType {
@@ -430,7 +436,7 @@ export class Member implements UserType {
   name: { givenName: string, familyName: string, fullName: string }
   emails: { address: string, type?: string, primary?: boolean }[];
   phones: { value: string, type: string }[];
-  customSchemas: { Club_Membership: { expires: string, Join_Date: string } };
+  customSchemas: { Club_Membership: { expires: string, Join_Date: string, membershipType: string } };
   orgUnitPath: string;
   recoveryEmail: string;
   recoveryPhone: string;
@@ -438,9 +444,9 @@ export class Member implements UserType {
   password?: string;
   changePasswordAtNextLogin?: boolean;
 
-  constructor(m: (Transaction | Member | UserType), systemConfig: SystemConfiguration) {
+  constructor(m: (Transaction | Member | UserType | CurrentMember), systemConfig: SystemConfiguration) {
     this.domain = systemConfig.domain
-    if (isTransaction(m)) {
+    if (isTransaction(m) || isCurrentMember(m)) {
       let givenName = m['First Name'];
       let familyName = m['Last Name'];
       let fullName = `${givenName} ${familyName}`
@@ -448,10 +454,7 @@ export class Member implements UserType {
       let phone = "" + m['Phone Number'];
       const name = { givenName, familyName, fullName }
       const primaryEmail = `${givenName}.${familyName}@${this.domain}`.toLowerCase()
-      const Join_Date = new Date();
       phone = phone.startsWith('+1') ? phone : '+1' + phone
-      const expiryDate = new Date()
-      expiryDate.setFullYear(expiryDate.getFullYear() + 1)
       this.primaryEmail = primaryEmail
       this.name = name
       this.emails = [
@@ -463,22 +466,25 @@ export class Member implements UserType {
           address: primaryEmail,
           primary: true
         }
-      ],
-        this.phones = [
-          {
-            value: phone,
-            type: "mobile"
-          }
-        ],
-        this.customSchemas = {
-          Club_Membership: {
-            expires: Member.convertToYYYYMMDDFormat_(expiryDate),
-            Join_Date: Member.convertToYYYYMMDDFormat_(Join_Date)
-          }
-        },
-        this.orgUnitPath = systemConfig.orgUnitPath,
-        this.recoveryEmail = email,
-        this.recoveryPhone = phone
+      ]
+      this.phones = [
+        {
+          value: phone,
+          type: "mobile"
+        }
+      ]
+      const Join_Date = isCurrentMember(m)? m.Joined : new Date();
+      const expiryDate = isCurrentMember(m)? m.Expires: Member.incrementDateByOneYear(new Date())
+      this.customSchemas = {
+        Club_Membership: {
+          expires: Member.convertToYYYYMMDDFormat_(expiryDate),
+          Join_Date: Member.convertToYYYYMMDDFormat_(Join_Date),
+          membershipType: isCurrentMember(m) ? m["Membership Type"] : 'Individual'
+        }
+      }
+      this.orgUnitPath = systemConfig.orgUnitPath
+      this.recoveryEmail = email
+      this.recoveryPhone = phone
       this.includeInGlobalAddressList = m["In Directory"]
     } else {// Simply copy the values, deeply
       function deepCopy(v) { return v ? JSON.parse(JSON.stringify(v)) : "" }
@@ -530,7 +536,7 @@ export class Member implements UserType {
     this.customSchemas.Club_Membership.expires = Member.convertToYYYYMMDDFormat_(ed);
     return this
   }
-  static incrementDateByOneYear(date:string | number | Date) {
+  static incrementDateByOneYear(date: string | number | Date) {
     let d = new Date(date)
     d.setFullYear(d.getFullYear() + 1)
     return d

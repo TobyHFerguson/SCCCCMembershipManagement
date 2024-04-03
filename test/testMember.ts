@@ -1,6 +1,6 @@
 import chai = require('chai');
 import { Member } from '../src/Code';
-import { UserType, Transaction, SystemConfiguration } from '../src/Types';
+import { UserType, Transaction, SystemConfiguration, CurrentMember } from '../src/Types';
 import exp = require('constants');
 const expect = chai.expect;
 
@@ -12,7 +12,7 @@ describe('Member tests', () => {
         name: { familyName: 'family', givenName: 'given', fullName: 'given family' },
         emails: [{ type: 'home', address: 'a@b.com' }, { address: 'given.family@santacruzcountycycling.club', primary: true }],
         phones: [{ type: 'mobile', value: '+1234' }],
-        customSchemas: { Club_Membership: { expires: expires, Join_Date: join } },
+        customSchemas: { Club_Membership: { expires: expires, Join_Date: join, membershipType: 'Individual' } },
         orgUnitPath: '/test',
         recoveryEmail: 'a@b.com',
         recoveryPhone: '+1234',
@@ -46,5 +46,20 @@ describe('Member tests', () => {
     it('should be able to be constructed from a UserType', () => {
         const actual = new Member(expected, sysConfig);
         expect(actual).to.deep.equal({ ...expected, ...{ generation: 0, domain: sysConfig.domain } });
+    })
+    it('should be able to be constructed from a CurrentMember', () => {
+        const currentMember: CurrentMember = {
+            'First Name': 'given',
+            'Last Name': 'family',
+            'Email Address': 'a@b.com',
+            'Phone Number': '+1234',
+            'In Directory': true,
+            'Joined': new Date('2024-05-23'),
+            'Expires': new Date('2025-05-23'),
+            'Membership Type': 'Family'
+        }
+        const expectedClubMembership = {Club_Membership: { expires: '2025-05-23', Join_Date:'2024-05-23', membershipType: 'Family'}}
+        const actual = new Member(currentMember, sysConfig);
+        expect(actual).to.deep.equal({ ...expected, ...{ generation: 0, domain: sysConfig.domain, customSchemas: {...expectedClubMembership} } })
     })
 })

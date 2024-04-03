@@ -48,6 +48,16 @@ interface Transaction {
     "Payable Transaction ID": string;
     "In Directory": boolean;
 }
+interface CurrentMember {
+    "First Name": string;
+    "Last Name": string;
+    "Email Address": string;
+    "Phone Number": string;
+    "In Directory": boolean;
+    "Membership Type": string;
+    "Joined": Date;
+    "Expires": Date;
+}
 
 interface MemberReport {
     primary: string;
@@ -215,6 +225,7 @@ export {
     AdminDirectoryType,
     bmUnitTester,
     bmPreFiddler,
+    CurrentMember,
     DraftType,
     EmailConfigurationType,
     EmailConfigurationCollection,
