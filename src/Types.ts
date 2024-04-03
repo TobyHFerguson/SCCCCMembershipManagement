@@ -29,7 +29,7 @@ interface NotificationType {
 }
 
 interface LogEntry {
-    txn: Transaction;
+    input: Transaction | CurrentMember;
     member: Member;
     error?: Error;
 }
@@ -57,6 +57,8 @@ interface CurrentMember {
     "Membership Type": string;
     "Joined": Date;
     "Expires": Date;
+    "Family"?: string; // Membership Type is Family and empty defaults to Last Name.
+    Imported?: Date;
 }
 
 interface MemberReport {

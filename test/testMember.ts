@@ -56,9 +56,10 @@ describe('Member tests', () => {
             'In Directory': true,
             'Joined': new Date('2024-05-23'),
             'Expires': new Date('2025-05-23'),
-            'Membership Type': 'Family'
+            'Membership Type': 'Family',
+            'Family': ''
         }
-        const expectedClubMembership = {Club_Membership: { expires: '2025-05-23', Join_Date:'2024-05-23', membershipType: 'Family'}}
+        const expectedClubMembership = {Club_Membership: { expires: '2025-05-23', Join_Date:'2024-05-23', membershipType: 'Family', family: 'family'}}
         const actual = new Member(currentMember, sysConfig);
         expect(actual).to.deep.equal({ ...expected, ...{ generation: 0, domain: sysConfig.domain, customSchemas: {...expectedClubMembership} } })
     })

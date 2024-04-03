@@ -1,5 +1,5 @@
 import { Notifier, TransactionProcessor, Directory, LocalDirectory, Templates, EmailNotifier, Member } from './Code'
-import { EmailConfigurationCollection, SystemConfiguration, Transaction, bmPreFiddler } from './Types';
+import { CurrentMember, EmailConfigurationCollection, SystemConfiguration, Transaction, bmPreFiddler } from './Types';
 
 /**
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
@@ -72,7 +72,7 @@ function convertLinks(sheetName: string) {
   const range = sheet.getDataRange();
   const rtvs = range.getRichTextValues();
   const values = range.getValues();
-  const newValues = rtvs.map((row , r)=> {
+  const newValues = rtvs.map((row, r) => {
     return row.map((column, c) => {
       if (!column) return null;
       const v = column.getText() ? column.getText() : values[r][c]
@@ -84,14 +84,18 @@ function convertLinks(sheetName: string) {
 }
 
 function getDirectory_() {
+  const directory = new Directory(getSystemConfig_())
+  return directory;
+}
+
+function getSystemConfig_() {
   const systemConfigFiddler = bmPreFiddler.PreFiddler().getFiddler({
     id: null,
     sheetName: 'System Configuration',
     createIfMissing: false
   })
   const systemConfiguration = <SystemConfiguration>systemConfigFiddler.getData()[0];
-  const directory = new Directory(systemConfiguration)
-  return directory;
+  return systemConfiguration;
 }
 
 function processPaidTransactionsTest() {
@@ -107,5 +111,59 @@ function processPaidTransactionsTest() {
     tp.processTransaction(<Transaction>txn))
   transactionsFiddler.dumpValues()
   notifier.log()
+}
+
+function migrateCEMembers(): void {
+  const notifier = new Notifier();
+  const directory = getDirectory_();
+  const ceFiddler = bmPreFiddler.PreFiddler().getFiddler({
+    id: null,
+    sheetName: 'CE Members',
+    createIfMissing: false
+  });
+  ceFiddler.mapRows((row) => {
+    const cm: CurrentMember = <CurrentMember>row;
+    if (!cm.Imported) {
+      let newMember = directory.makeMember(cm)
+      try {
+        newMember = migrateMember_(cm);
+        cm.Imported = new Date();
+        notifier.importSuccess(cm, newMember)
+      } catch (err: any) {
+        notifier.importFailure(cm, newMember, err)
+      }
+    }
+    return row;
+  }).dumpValues();
+  notifier.log();
+}
+
+function migrateMember_(currentMember: CurrentMember): Member {
+  const directory = getDirectory_();
+  const nm = new Member(currentMember, getSystemConfig_());
+  try {
+    return directory.addMember(nm);
+  } catch (err: any) {
+    if (err.message.endsWith('Entity already exists.')) {
+      return directory.updateMember(nm)
+    } else {
+      throw err
+    }
+  }
+
+}
+
+function testMigrateMember() {
+  const currentMember: CurrentMember = {
+    'First Name': 'given',
+    'Last Name': 'family',
+    'Email Address': 'a@b.com',
+    'Phone Number': '+14083869343',
+    'In Directory': true,
+    'Joined': new Date('2024-05-23'),
+    'Expires': new Date('2025-05-23'),
+    'Membership Type': 'Family'
+  }
+  migrateMember_(currentMember);
 }
 
