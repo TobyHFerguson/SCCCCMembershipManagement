@@ -111,7 +111,7 @@ class Directory {
       users = users.concat(page.users)
       pageToken = page.nextPageToken;
     } while (pageToken);
-    return users.map(m => new Member(m, this.systemConfig));
+    return users.map(m => this.makeMember(m));
   }
 
   /**

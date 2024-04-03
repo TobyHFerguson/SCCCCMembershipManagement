@@ -140,7 +140,7 @@ function migrateCEMembers(): void {
 
 function migrateMember_(currentMember: CurrentMember): Member {
   const directory = getDirectory_();
-  const nm = new Member(currentMember, getSystemConfig_());
+  const nm = directory.makeMember(currentMember);
   try {
     return directory.addMember(nm);
   } catch (err: any) {
