@@ -1,6 +1,6 @@
 import chai = require('chai');
 const expect = chai.expect;
-import { MailAppType, DraftType, Transaction, SystemConfiguration } from '../src/Types';
+import { MailAppType, DraftType, Transaction, SystemConfiguration, CurrentMember } from '../src/Types';
 import { Member, Notifier } from '../src/Code';
 const testFixtures = (() => {
   const sendMail: MailAppType = {
@@ -44,7 +44,8 @@ const testFixtures = (() => {
     txn1,
     member1: new Member(txn1, sysConfig),
     error: new Error("this is the error message"),
-    sendMail: sendMail
+    sendMail: sendMail,
+    sysConfig
   }
 })()
 describe('Notifier tests', () => {
@@ -52,18 +53,31 @@ describe('Notifier tests', () => {
     const notifier = new Notifier()
     notifier.joinSuccess(testFixtures.txn1, testFixtures.member1)
     const actual = notifier.joinSuccessLog
-    expect(actual).to.deep.equal([{ txn: testFixtures.txn1, member: testFixtures.member1 }])
+    expect(actual).to.deep.equal([{ input: testFixtures.txn1, member: testFixtures.member1 }])
   })
   it('should log a failure', () => {
     const notifier = new Notifier()
     notifier.joinFailure(testFixtures.txn1, testFixtures.member1, testFixtures.error)
     const actual = notifier.joinFailureLog
-    expect(actual).to.deep.equal([{ txn: testFixtures.txn1, member: testFixtures.member1, error: testFixtures.error }])
+    expect(actual).to.deep.equal([{ input: testFixtures.txn1, member: testFixtures.member1, error: testFixtures.error }])
   })
   it('should log a partial', () => {
     const notifier = new Notifier()
     notifier.partial(testFixtures.txn1, testFixtures.member1)
     const actual = notifier.partialsLog
-    expect(actual).to.deep.equal([{ txn: testFixtures.txn1, member: testFixtures.member1 }])
+    expect(actual).to.deep.equal([{ input: testFixtures.txn1, member: testFixtures.member1 }])
+  })
+  it('should log an import', () => {
+    const cm1: CurrentMember = {
+      ...testFixtures.txn1,
+      Joined: new Date(),
+      Expires: new Date(),
+      "In Directory": true,
+      "Membership Type": "Family"
+  
+    }
+    const myMember = new Member(cm1, testFixtures.sysConfig);
+    const notifier = new Notifier()
+    notifier.importSuccess(cm1, myMember)
   })
 })

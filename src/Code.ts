@@ -1,7 +1,7 @@
-import { error } from "console";
 import {
   AdminDirectoryType,
-  Binding, CurrentMember, DraftType, EmailConfigurationCollection, EmailConfigurationType, LogEntry, MailAppType, MailerOptions, MemberReport, Message, NotificationType, SendEmailOptions, SubjectLines, SystemConfiguration, Template, Transaction, UserType, UsersCollectionType, bmUnitTester
+  Binding, CurrentMember, DraftType, EmailConfigurationCollection, EmailConfigurationType, LogEntry,
+  MailerOptions, MemberReport, Message, NotificationType, SendEmailOptions, SubjectLines, SystemConfiguration, Template, Transaction, UserType, UsersCollectionType
 } from "./Types";
 
 
@@ -22,7 +22,7 @@ class Users implements UsersCollectionType {
     this.#users.push(newUser)
     return newUser
   }
-  list(optionaArgs: object) {
+  list(_optionaArgs: object) {
     const users: UserType[] = JSON.parse(JSON.stringify(this.#users))
     const result = { users }
     return result
@@ -75,7 +75,7 @@ class Directory {
    * @param {Member | Transaction | UserType} obj Object to be converted to Member
    * @returns new Member object
    */
-  makeMember(obj: Member | Transaction | UserType) {
+  makeMember(obj: Member | Transaction | UserType | CurrentMember) {
     return new Member(obj, this.systemConfig)
   }
 
@@ -160,7 +160,8 @@ class Directory {
    * @param {boolean} [wait = true] whether to wait for the transaction to complete
    * @returns {Member} the newly inserted member
    */
-  addMember(member: Member, wait: boolean = true) {
+  addMember(m: Member | CurrentMember, wait: boolean = true) {
+    const member =  (isCurrentMember(m)) ? this.makeMember(m) : m;
     member.password = Math.random().toString(36);
     member.changePasswordAtNextLogin = true;
     try {
@@ -436,7 +437,7 @@ export class Member implements UserType {
   name: { givenName: string, familyName: string, fullName: string }
   emails: { address: string, type?: string, primary?: boolean }[];
   phones: { value: string, type: string }[];
-  customSchemas: { Club_Membership: { expires: string, Join_Date: string, membershipType: string } };
+  customSchemas: { Club_Membership: { expires: string, Join_Date: string, membershipType: string, family?: string } };
   orgUnitPath: string;
   recoveryEmail: string;
   recoveryPhone: string;
@@ -479,7 +480,8 @@ export class Member implements UserType {
         Club_Membership: {
           expires: Member.convertToYYYYMMDDFormat_(expiryDate),
           Join_Date: Member.convertToYYYYMMDDFormat_(Join_Date),
-          membershipType: isCurrentMember(m) ? m["Membership Type"] : 'Individual'
+          membershipType: isCurrentMember(m) ? m["Membership Type"] : 'Individual',
+          ...(isCurrentMember(m) && m["Membership Type"] === "Family" ? {family: m["family"] ? m.Family : m["Last Name"]} : {})
         }
       }
       this.orgUnitPath = systemConfig.orgUnitPath
@@ -547,11 +549,13 @@ export class Member implements UserType {
 }
 
 class Notifier implements NotificationType {
-  joinSuccessLog = Array<LogEntry>();
-  joinFailureLog = Array<LogEntry>();
-  renewalSuccessLog = Array<LogEntry>();
-  renewalFailureLog = Array<LogEntry>();
-  partialsLog = Array<LogEntry>();
+  joinSuccessLog = new Array<LogEntry>();
+  joinFailureLog = new Array<LogEntry>();
+  renewalSuccessLog = new Array<LogEntry>();
+  renewalFailureLog = new Array<LogEntry>();
+  partialsLog = new Array<LogEntry>();
+  importSuccessLog = new Array<LogEntry>();
+  importFailureLog = new Array<LogEntry>();
 
 
   /**
@@ -560,19 +564,25 @@ class Notifier implements NotificationType {
    * @param {User} member The user that was joined
    */
   joinSuccess(txn: Transaction, member: Member) {
-    this.joinSuccessLog.push({ txn, member })
+    this.joinSuccessLog.push({ input: txn, member })
   }
   joinFailure(txn: Transaction, member: Member, error: Error) {
-    this.joinFailureLog.push({ txn, member, error })
+    this.joinFailureLog.push({ input: txn, member, error })
   }
   renewalSuccess(txn: Transaction, member: Member) {
-    this.renewalSuccessLog.push({ txn, member })
+    this.renewalSuccessLog.push({ input: txn, member })
   }
   renewalFailure(txn: Transaction, member: Member, error: Error) {
-    this.renewalFailureLog.push({ txn, member, error })
+    this.renewalFailureLog.push({ input: txn, member, error })
   }
   partial(txn: Transaction, member: Member) {
-    this.partialsLog.push({ txn, member })
+    this.partialsLog.push({ input: txn, member })
+  }
+  importSuccess(cm: CurrentMember, member:Member) {
+    this.importSuccessLog.push({input: cm, member})
+  }
+  importFailure(cm: CurrentMember, member: Member, error:Error) {
+    this.importFailureLog.push({input: cm, member, error: error})
   }
   log() {
     function reportSuccess(l: LogEntry[], kind: string) {
@@ -582,20 +592,26 @@ class Notifier implements NotificationType {
       function addInfoToError(logEntry: LogEntry) {
         if (!logEntry.error) return;
         if (logEntry.error.message.endsWith('Invalid recovery phone.')) {
-          logEntry.error.message += `: "${logEntry.txn["Phone Number"]}"`
+          logEntry.error.message += `: "${logEntry.input["Phone Number"]}"`
         }
       }
       l.forEach((l) => {
         addInfoToError(l)
-        console.error(`Txn ${l.txn["Payable Transaction ID"]} had ${kind} error: ${l.error}`)
+        if (isTransaction(l.input)) {
+          console.error(`Txn ${l.input["Payable Transaction ID"]} had ${kind} error: ${l.error}`)
+        } else {
+          console.error(`Current Member ${l.input["First Name"]} ${l.input["Last Name"]} (${l.input["Email Address"]}) had '${kind} error: ${l.error}`)
+        }
       })
     }
     reportSuccess(this.joinSuccessLog, "joined")
     reportFailure(this.joinFailureLog, "join")
     reportSuccess(this.renewalSuccessLog, "renewed")
     reportFailure(this.renewalFailureLog, "renewal")
-    this.partialsLog.forEach((p) => console.error(`ambiguous match: Txn[Email Address]: ${p.txn["Email Address"]} member.homeEmail: ${p.member.homeEmail} Txn[Phone Number]: ${p.txn["Phone Number"]} member.phone: ${p.member.phone}`)
+    this.partialsLog.forEach((p) => console.error(`ambiguous match: Txn[Email Address]: ${p.input["Email Address"]} member.homeEmail: ${p.member.homeEmail} Txn[Phone Number]: ${p.input["Phone Number"]} member.phone: ${p.member.phone}`)
     )
+    reportSuccess(this.importSuccessLog, "import")
+    reportFailure(this.importFailureLog, "import")
   }
 
 
@@ -688,7 +704,7 @@ class EmailNotifier extends Notifier {
 
 
 }
-export { EmailNotifier }
+export { EmailNotifier };
 
 class TransactionProcessor {
   directory: Directory;
