@@ -624,15 +624,18 @@ class EmailNotifier extends Notifier {
     super.partial(txn, member)
     this.notifyFailure_(txn, member, this.configs.ambiguousTransaction)
   }
+  makeBccList(bcc: string) {
+    return bcc.split(',').map(a => a.trim()+'@'+this.options.domain).join(',')
+  }
   notifySuccess_(txn: Transaction, member: Member, config: EmailConfigurationType) {
     const binding = this.makeBinding_(txn, member)
     const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
-    this.sendMail_(this.getRecipient_(txn, config), message, { bcc: `${config["Bcc on Success"]}@${this.options.domain}` })
+    this.sendMail_(this.getRecipient_(txn, config), message, { bcc: this.makeBccList(config["Bcc on Success"]) })
   }
   notifyFailure_(txn: Transaction, member: Member, config: EmailConfigurationType, error?: Error) {
     const binding = this.makeBinding_(txn, member, error)
     const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
-    this.sendMail_(this.getRecipient_(txn, config), message, { bcc: `${config["Bcc on Failure"]}@${this.options.domain}` })
+    this.sendMail_(this.getRecipient_(txn, config), message, { bcc: this.makeBccList(config["Bcc on Failure"]) })
   }
 
   makeBinding_(txn: Transaction, member: Member, error?: Error): Binding {

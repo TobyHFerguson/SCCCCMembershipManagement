@@ -1,9 +1,7 @@
 import chai = require('chai');
 const expect = chai.expect;
-import { Notifier } from '../src/Notifier'
-import { MailAppType, DraftType, bmUnitTester } from '../src/Types';
-import { Member } from '../src/Member';
-import { Transaction } from '../src/TransactionProcessor';
+import { MailAppType, DraftType, Transaction, SystemConfiguration } from '../src/Types';
+import { Member, Notifier } from '../src/Code';
 const testFixtures = (() => {
   const sendMail: MailAppType = {
     sendEmail(recipient, subject, text, options) {
@@ -17,7 +15,21 @@ const testFixtures = (() => {
     },
     getDrafts() { return new Array<DraftType>() }
   }
-  const txn1 = new Transaction("J", "K", "j.k@icloud.com", "+14083869343", "paid", "CC-TF-RNB6")
+  const txn1: Transaction = {
+    "First Name": "J",
+    "Last Name": "K",
+    "Email Address": "j.k@icloud.com",
+    "Phone Number": "+14083869343",
+    "Payable Status": "paid",
+    "Payable Transaction ID": "CC-TF-RNB6",
+    "Payable Order ID": "1234",
+    "Timestamp": "2024-03-29",
+  }
+  const sysConfig: SystemConfiguration = {
+    orgUnitPath: "/test",
+    domain: "santacruzcountycycling.club",
+    groups: "email@a.com"
+  }
   return {
     subject_lines: {
       joinSuccessSubject: "Thanks for joining SCCCC",
@@ -29,7 +41,7 @@ const testFixtures = (() => {
       expirationSubject: "Your membership has expired"
     },
     txn1,
-    member1: new Member(txn1, "/test", "@a.com"),
+    member1: new Member(txn1, sysConfig),
     error: new Error("this is the error message"),
     sendMail: sendMail
   }
@@ -39,18 +51,18 @@ describe('Notifier tests', () => {
     const notifier = new Notifier()
     notifier.joinSuccess(testFixtures.txn1, testFixtures.member1)
     const actual = notifier.joinSuccessLog
-    expect(actual).to.deep.equal([{ txn: testFixtures.txn1, user: testFixtures.member1 }])
+    expect(actual).to.deep.equal([{ txn: testFixtures.txn1, member: testFixtures.member1 }])
   })
   it('should log a failure', () => {
     const notifier = new Notifier()
     notifier.joinFailure(testFixtures.txn1, testFixtures.member1, testFixtures.error)
     const actual = notifier.joinFailureLog
-    expect(actual).to.deep.equal([{ txn: testFixtures.txn1, user: testFixtures.member1, error: testFixtures.error }])
+    expect(actual).to.deep.equal([{ txn: testFixtures.txn1, member: testFixtures.member1, error: testFixtures.error }])
   })
   it('should log a partial', () => {
     const notifier = new Notifier()
     notifier.partial(testFixtures.txn1, testFixtures.member1)
     const actual = notifier.partialsLog
-    expect(actual).to.deep.equal([{ txn: testFixtures.txn1, user: testFixtures.member1 }])
+    expect(actual).to.deep.equal([{ txn: testFixtures.txn1, member: testFixtures.member1 }])
   })
 })
