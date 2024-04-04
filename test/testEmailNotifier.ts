@@ -3,7 +3,7 @@ import sinonChai = require("sinon-chai");
 const expect = chai.expect;
 chai.use(sinonChai);
 import { EmailNotifier, Member } from '../src/Code';
-import { DraftType, EmailConfigurationCollection, EmailConfigurationType, MailAppType, SendEmailOptions, SystemConfiguration, Transaction } from '../src/Types';
+import { CurrentMember, DraftType, EmailConfigurationCollection, EmailConfigurationType, MailAppType, SendEmailOptions, SystemConfiguration, Transaction } from '../src/Types';
 import Sinon = require('sinon');
 
 
@@ -14,7 +14,8 @@ const subject_lines = {
     renewalFailureSubject: "Renew problem",
     ambiguousSubject: "Ambiguous transaction",
     expiryNotificationSubject: "Your membership will expire in {{N}} days",
-    expirationSubject: "Your membership has expired"
+    expirationSubject: "Your membership has expired",
+    importSuccessSubject: 'Your new SCCCC account has been created'
 }
 
 const drafts = Object.keys(subject_lines).map(k => {
@@ -55,9 +56,16 @@ const testFixtures = (() => {
         "Payable Order ID": "CC-TF-RNB6",
         "Timestamp": "timestamp"
     }
+    const ce1: CurrentMember = {
+        ...txn1,
+        "Membership Type": "Family",
+        "Expires": new Date(),
+        "Joined": new Date(),
+    }
     return {
 
         txn1,
+        ce1,
         member1: new Member(txn1, sysConfig),
         error: new Error("this is the error message"),
         subject_lines,
@@ -81,6 +89,7 @@ describe("Email Notifier tests", () => {
         expiryNotification: config,
         expired: config,
         deleted: config,
+        importSuccess: config,
     }
     const options = {
         test: false,
@@ -157,5 +166,19 @@ describe("Email Notifier tests", () => {
             bcc: `ambiguousBCC@${testFixtures.sysConfig.domain}`
         })
     })
-
+    it('should send an email to the member and the bcc on importSuccess', () => {
+        const stub = Sinon.stub(mailer);
+        stub.getDrafts.returns(drafts);
+        configs.importSuccess = { ...config, ...{ To: 'home', "Bcc on Success": "membership", "Subject Line": "Your new SCCCC account has been created" } }
+        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer:stub });
+        notifier.importSuccess(testFixtures.ce1, testFixtures.member1)
+        expect(stub.sendEmail).to.be.calledOnceWithExactly(testFixtures.ce1['Email Address'], "Your new SCCCC account has been created", "importSuccessSubject: PLAIN", {
+            htmlBody: 'importSuccessSubject: HTML',
+            name: 'SCCC Membership',
+            noReply: true,
+            attachments: undefined,
+            inlineImages: undefined,
+            bcc: `membership@${testFixtures.sysConfig.domain}`
+        })
+    })
 })
