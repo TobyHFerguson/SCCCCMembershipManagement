@@ -3,7 +3,7 @@ import sinonChai = require("sinon-chai");
 const expect = chai.expect;
 chai.use(sinonChai);
 import { EmailNotifier, Member } from '../src/Code';
-import { CurrentMember, DraftType, EmailConfigurationCollection, EmailConfigurationType, MailAppType, SendEmailOptions, SystemConfiguration, Transaction } from '../src/Types';
+import { CurrentMember, EmailConfigurationCollection, EmailConfigurationType, MailApp, SystemConfiguration, Transaction } from '../src/Types';
 import Sinon = require('sinon');
 
 
@@ -32,8 +32,8 @@ const drafts = Object.keys(subject_lines).map(k => {
     }
 })
 
-class MyLocalMailer implements MailAppType {
-    sendEmail(recipient: string, subject: string, text: string, options: SendEmailOptions) {
+class MyLocalMailer implements  MailApp {
+    sendEmail(recipient: string, subject: string, body: string, options: GoogleAppsScript.Gmail.GmailAdvancedOptions): MailApp {
         return this
     }
     getDrafts() {
@@ -104,7 +104,7 @@ describe("Email Notifier tests", () => {
         html: false
     }
     it("should send an email to the member on success, and a copy to the bcc list", () => {
-        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer: stub });
+        const notifier = new EmailNotifier(stub, configs, { ...options });
         notifier.joinSuccess(testFixtures.txn1, testFixtures.member1)
         expect(stub.getDrafts).to.be.calledOnce
         expect(stub.sendEmail).to.be.calledOnceWithExactly(testFixtures.txn1['Email Address'], subject_lines.joinSuccessSubject, "joinSuccessSubject: PLAIN", {
@@ -117,7 +117,7 @@ describe("Email Notifier tests", () => {
         });
     })
     it("when set to test it should send the email to the test address without any bcc", () => {
-        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, test: true, mailer: stub });
+        const notifier = new EmailNotifier(stub, configs, { ...options, test: true });
         notifier.joinSuccess(testFixtures.txn1, testFixtures.member1)
         expect(stub.getDrafts).to.be.calledOnce
         expect(stub.sendEmail).to.be.calledOnceWithExactly('toby.ferguson+TEST@santacruzcountycycling.club', subject_lines.joinSuccessSubject, "joinSuccessSubject: PLAIN", {
@@ -130,7 +130,7 @@ describe("Email Notifier tests", () => {
     })
     it("should send an email to OnFailure on failure, and to the bccOnfailure on failure", () => {
         configs.joinFailure = { ...config, ...{ "To": "onFailure", "Bcc on Failure": "bccOnFailure", "Subject Line": "Join Problem" } };
-        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer: stub });
+        const notifier = new EmailNotifier(stub, configs, { ...options });
         notifier.joinFailure(testFixtures.txn1, testFixtures.member1, new Error("failure"))
         expect(stub.sendEmail).to.be.calledOnceWithExactly(`onFailure@${testFixtures.sysConfig.domain}`, "Join Problem", "joinFailureSubject: PLAIN", {
             htmlBody: 'joinFailureSubject: HTML',
@@ -144,7 +144,7 @@ describe("Email Notifier tests", () => {
     })
     it("should send an email to onFailure and bcc ambiguousBCC on partial", () => {
         configs.ambiguousTransaction = { ...config, ...{ To: "onFailure", "Bcc on Failure": "ambiguousBCC", "Subject Line": "Ambiguous transaction" } }
-        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer: stub });
+        const notifier = new EmailNotifier(stub, configs, { ...options });
         notifier.partial(testFixtures.txn1, testFixtures.member1)
         expect(stub.sendEmail).to.be.calledOnceWithExactly(`onFailure@${testFixtures.sysConfig.domain}`, "Ambiguous transaction", "ambiguousSubject: PLAIN", {
             htmlBody: 'ambiguousSubject: HTML',
@@ -157,7 +157,7 @@ describe("Email Notifier tests", () => {
     })
     it('should send an email to the member and the bcc on importSuccess', () => {
         configs.importSuccess = { ...config, ...{ To: 'home', "Bcc on Success": "membership", "Subject Line": "Your new SCCCC account has been created" } }
-        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer: stub });
+        const notifier = new EmailNotifier(stub, configs, { ...options });
         notifier.importSuccess(testFixtures.ce1, testFixtures.member1)
         expect(stub.sendEmail).to.be.calledOnceWithExactly(testFixtures.ce1['Email Address'], "Your new SCCCC account has been created", "importSuccessSubject: PLAIN", {
             htmlBody: 'importSuccessSubject: HTML',
@@ -170,7 +170,7 @@ describe("Email Notifier tests", () => {
     })
     it('should send an email to the failure address and the bcc on importFailure', () => {
         configs.importFailure = { ...config, ...{ To: 'home', "Bcc on Success": "membership", "Subject Line": "Import Problem" } }
-        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer: stub });
+        const notifier = new EmailNotifier(stub, configs, { ...options });
         notifier.importFailure(testFixtures.ce1, testFixtures.member1, new Error("Import Failure"))
         expect(stub.sendEmail).to.be.calledOnceWithExactly(testFixtures.ce1['Email Address'], "Import Problem", "importFailureSubject: PLAIN", {
             htmlBody: 'importFailureSubject: HTML',

@@ -1,9 +1,9 @@
 import chai = require('chai');
 const expect = chai.expect;
-import { MailAppType, DraftType, Transaction, SystemConfiguration, CurrentMember } from '../src/Types';
+import { MailApp,  Transaction, SystemConfiguration, CurrentMember } from '../src/Types';
 import { Member, Notifier } from '../src/Code';
 const testFixtures = (() => {
-  const sendMail: MailAppType = {
+  const sendMail: MailApp = {
     sendEmail(recipient, subject, text, options) {
       console.log(`To: ${recipient}`)
       console.log(`From: ${options.from}`)
@@ -13,7 +13,7 @@ const testFixtures = (() => {
         console.log(`text: ${text}`)
       return this
     },
-    getDrafts() { return new Array<DraftType>() }
+    getDrafts() { return new Array<GoogleAppsScript.Gmail.GmailDraft>() }
   }
   const txn1: Transaction = {
     "First Name": "J",
