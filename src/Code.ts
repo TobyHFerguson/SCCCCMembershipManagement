@@ -673,16 +673,17 @@ class EmailNotifier extends Notifier {
     return this.options.test ? {} : { bcc }
   }
   notifySuccess_(txn: Transaction | CurrentMember, member: Member, config: EmailConfigurationType) {
-    const binding = this.makeBinding_(txn, member)
-    const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
-    this.sendMail_(this.getRecipient_(txn, config), message, this.getBcc(this.makeBccList(config["Bcc on Success"])))
+    this.notify(txn, member, config.To, config["Subject Line"], config["Bcc on Success"])
   }
   notifyFailure_(txn: Transaction | CurrentMember, member: Member, config: EmailConfigurationType, error?: Error) {
-    const binding = this.makeBinding_(txn, member, error)
-    const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
-    this.sendMail_(this.getRecipient_(txn, config), message, this.getBcc(this.makeBccList(config["Bcc on Failure"])))
+    this.notify(txn, member, config.To, config["Subject Line"], config["Bcc on Failure"], error)
   }
 
+  private notify(txn: Transaction | CurrentMember, member: Member, to: string, subject: string, bcc: string, error?: Error) {
+    const binding = this.makeBinding_(txn, member, error)
+    const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, subject), binding)
+    this.sendMail_(this.getRecipient_(txn, to), message, this.getBcc(this.makeBccList(bcc)))
+  }
   makeBinding_(txn: Transaction | CurrentMember, member: Member, error?: Error): Binding {
     const binding: Binding = {
       ...txn,
@@ -697,8 +698,8 @@ class EmailNotifier extends Notifier {
   makeMessageObject_(template: Template, binding: Binding) {
     return bindMessage_(template.message, binding)
   }
-  getRecipient_(txn: Transaction | CurrentMember, config: EmailConfigurationType) {
-    return this.options.test ? `toby.ferguson+TEST@${this.options.domain}` : config.To === 'home' ? txn["Email Address"] : `${config.To}@${this.options.domain}`
+  getRecipient_(txn: Transaction | CurrentMember, to:string) {
+    return this.options.test ? `toby.ferguson+TEST@${this.options.domain}` : to === 'home' ? txn["Email Address"] : `${to}@${this.options.domain}`
   }
 
   sendMail_(recipient, message, options?: SendEmailOptions) {
