@@ -512,7 +512,9 @@ export class Member implements UserType {
       First: this.name.givenName,
       Last: this.name.familyName,
       Joined: this.customSchemas.Club_Membership.Join_Date,
-      Expires: this.customSchemas.Club_Membership.expires
+      Expires: this.customSchemas.Club_Membership.expires,
+      'Membership Type': this.customSchemas.Club_Membership.membershipType,
+      Family: this.customSchemas.Club_Membership.family
     }
   }
   get homeEmail() {
