@@ -6,19 +6,8 @@ import { CurrentMember, EmailConfigurationCollection, SystemConfiguration, Trans
  */
 function processPaidTransactions() {
   const directory = getDirectory_()
-  const subjectLineFiddler = bmPreFiddler.PreFiddler().getFiddler({
-    id: null,
-    sheetName: 'Email Configuration',
-    createIfMissing: false
-  })
-  const emailConfig = <EmailConfigurationCollection>subjectLineFiddler.getData().reduce((p, c) => {
-    const t = c["Email Type"]
-    p[t] = c;
-    return p;
-  }, {}
-  )
-  const notifier = new EmailNotifier(GmailApp.getDrafts(), emailConfig, { mailer: GmailApp })
-  convertLinks('Transactions');
+  const notifier = getEmailNotifier_();
+  convertLinks_('Transactions');
   const transactionsFiddler = bmPreFiddler.PreFiddler().getFiddler({
     id: null,
     sheetName: 'Transactions',
@@ -35,6 +24,46 @@ function processPaidTransactions() {
   notifier.log()
 }
 
+function migrateCEMembers(): void {
+  const notifier = getEmailNotifier_();
+  const directory = getDirectory_();
+  const ceFiddler = bmPreFiddler.PreFiddler().getFiddler({
+    id: null,
+    sheetName: 'CE Members',
+    createIfMissing: false
+  });
+  ceFiddler.mapRows((row) => {
+    const cm: CurrentMember = <CurrentMember>row;
+    if (!cm.Imported) {
+      let newMember = directory.makeMember(cm)
+      try {
+        newMember = migrateMember_(cm);
+        cm.Imported = new Date();
+        notifier.importSuccess(cm, newMember)
+      } catch (err: any) {
+        notifier.importFailure(cm, newMember, err)
+      }
+    }
+    return row;
+  }).dumpValues();
+  notifier.log();
+}
+
+function getEmailNotifier_() {
+  const emailConfig = <EmailConfigurationCollection>bmPreFiddler.PreFiddler().getFiddler({
+    id: null,
+    sheetName: 'Email Configuration',
+    createIfMissing: false
+  }).getData().reduce((p, c) => {
+    const t = c["Email Type"];
+    p[t] = c;
+    return p;
+  }, {}
+  );
+  const notifier = new EmailNotifier(GmailApp.getDrafts(), emailConfig, { test: true, mailer: GmailApp });
+  return notifier;
+}
+
 function createMembershipReport() {
   const directory = getDirectory_();
   const reportMembers = directory.members.map((m) => m.report)
@@ -47,7 +76,7 @@ function createMembershipReport() {
   membersFiddler.dumpValues()
 }
 
-function updatedRow(e) {
+function updatedRow_(e) {
   console.log(`Column: ${e.range.getColumn()} Row ${e.range.getRow()}`)
   // printRow(e.range.getRow())
 }
@@ -66,7 +95,7 @@ function onOpen() {
     .addToUi()
 }
 
-function convertLinks(sheetName: string) {
+function convertLinks_(sheetName: string) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   if (!sheet) return;
   const range = sheet.getDataRange();
@@ -113,30 +142,7 @@ function processPaidTransactionsTest() {
   notifier.log()
 }
 
-function migrateCEMembers(): void {
-  const notifier = new Notifier();
-  const directory = getDirectory_();
-  const ceFiddler = bmPreFiddler.PreFiddler().getFiddler({
-    id: null,
-    sheetName: 'CE Members',
-    createIfMissing: false
-  });
-  ceFiddler.mapRows((row) => {
-    const cm: CurrentMember = <CurrentMember>row;
-    if (!cm.Imported) {
-      let newMember = directory.makeMember(cm)
-      try {
-        newMember = migrateMember_(cm);
-        cm.Imported = new Date();
-        notifier.importSuccess(cm, newMember)
-      } catch (err: any) {
-        notifier.importFailure(cm, newMember, err)
-      }
-    }
-    return row;
-  }).dumpValues();
-  notifier.log();
-}
+
 
 function migrateMember_(currentMember: CurrentMember): Member {
   const directory = getDirectory_();
