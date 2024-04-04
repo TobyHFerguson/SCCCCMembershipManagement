@@ -14,7 +14,7 @@ declare namespace bmPreFiddler {
         getData(): object[];
         setData(obs: object[]): Fiddler;
         dumpValues(): {};
-        mapRows(func: (row: object, properties: {rowFormulas: object}) => object): Fiddler;
+        mapRows(func: (row: object, properties: { rowFormulas: object }) => object): Fiddler;
         getColumnsWithFormulas(): string[];
         needFormulas(): Fiddler;
     }
@@ -42,7 +42,7 @@ interface PersonalInformation {
     "In Directory": boolean;
 }
 
-interface Transaction extends PersonalInformation{
+interface Transaction extends PersonalInformation {
     "Payable Order ID": string;
     "Payable Status": string;
     "Timestamp": string;
@@ -57,7 +57,7 @@ interface MembershipInfo {
     "Expires": Date;
     "Family"?: string;
 }
-interface CurrentMember extends PersonalInformation, MembershipInfo{
+interface CurrentMember extends PersonalInformation, MembershipInfo {
     Imported?: Date;
 }
 
@@ -70,13 +70,13 @@ interface MemberReport extends MembershipInfo {
 }
 
 interface Binding {
-    "Payable Order ID"?:string;
-    "Payable Status"?:string;
-    "Timestamp"?:string;
+    "Payable Order ID"?: string;
+    "Payable Status"?: string;
+    "Timestamp"?: string;
     "Processed"?: string;
-    "Payable Transaction ID"?:string;
-    "In Directory"?:boolean;
-    "Membership Type"?:string;
+    "Payable Transaction ID"?: string;
+    "In Directory"?: boolean;
+    "Membership Type"?: string;
     "Family"?: string;
     Joined?: Date,
     Expires?: Date,
@@ -148,45 +148,15 @@ interface AdminDirectoryType {
 
 // Types to cover our use of GmailApp, GMailDraft, GmailMessage and GmailAttachment
 
-// GmailApp
-interface MailAppType {
-    sendEmail(recipient: string, subject: string, body: string, options: SendEmailOptions): MailAppType;
-    getDrafts(): DraftType[];
-}
-interface SendEmailOptions {
-    attachments?: any[] | undefined;
-    bcc?: string | undefined;
-    cc?: string | undefined;
-    from?: string | undefined;
-    htmlBody?: string | undefined;
-    inlineImages?: string | undefined;
-    name?: string | undefined;
-    noReply?: boolean | undefined;
-    replyTo?: string | undefined;
-
-}
-
 //GmailDraft
-interface DraftType {
-    getMessage(): MailMessage;
-}
 
-//GmailMessage
-interface MailMessage {
-    getSubject(): string;
-    getAttachments(options: { includeInlineImages?: boolean, includeAttachments?: boolean }): MailAttachment[];
-    getBody(): string;
-    getPlainBody(): string;
-}
 
-//GmailAttachment
-interface MailAttachment { getName(): string }
+
 
 
 //
 interface MailerOptions {
     test?: boolean;
-    mailer: MailAppType;
     domain?: string;
     html?: boolean;
 }
@@ -237,22 +207,24 @@ interface SystemConfiguration {
     domain: string,
     groups: string
 }
+
+export interface MailApp {
+    sendEmail(recipient: string, subject: string, body: string, options: GoogleAppsScript.Gmail.GmailAdvancedOptions): MailApp;
+    getDrafts():GoogleAppsScript.Gmail.GmailDraft[];
+}
 export {
     Binding,
     AdminDirectoryType,
     bmUnitTester,
     bmPreFiddler,
     CurrentMember,
-    DraftType,
     EmailConfigurationType,
     EmailConfigurationCollection,
     LogEntry,
-    MailAppType,
     MailerOptions,
     MemberReport,
     Message,
     NotificationType,
-    SendEmailOptions,
     SystemConfiguration,
     SubjectLines,
     Template,

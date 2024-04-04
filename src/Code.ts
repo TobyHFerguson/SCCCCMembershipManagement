@@ -1,7 +1,7 @@
 import {
   AdminDirectoryType,
-  Binding, CurrentMember, DraftType, EmailConfigurationCollection, EmailConfigurationType, LogEntry,
-  MailerOptions, MemberReport, Message, NotificationType, SendEmailOptions, SubjectLines, SystemConfiguration, Template, Transaction, UserType, UsersCollectionType
+  Binding, CurrentMember, EmailConfigurationCollection, EmailConfigurationType, LogEntry,
+  MailerOptions, MemberReport, Message, MailApp, NotificationType, SubjectLines, SystemConfiguration, Template, Transaction, UserType, UsersCollectionType
 } from "./Types";
 
 
@@ -261,7 +261,7 @@ export class Templates {
    * @param {GmailDraft[]} drafts draft emails with {{}} templatized bodies
    * @param {SubjectLines} subjectLines lines
    */
-  constructor(drafts: DraftType[], subjectLines: SubjectLines) {
+  constructor(drafts: GoogleAppsScript.Gmail.GmailDraft[], subjectLines: SubjectLines) {
     this.joinSuccess = getGmailTemplateFromDrafts_(drafts, subjectLines.joinSuccessSubject)
     this.joinFailure = getGmailTemplateFromDrafts_(drafts, subjectLines.joinFailureSubject)
     this.renewalSuccess = getGmailTemplateFromDrafts_(drafts, subjectLines.renewalSuccessSubject)
@@ -282,7 +282,7 @@ export class Templates {
   * @param {string} subject_line to search for draft message
   * @return {Template} containing the draft message
   */
-function getGmailTemplateFromDrafts_(drafts: DraftType[], subject_line: string): Template {
+function getGmailTemplateFromDrafts_(drafts: GoogleAppsScript.Gmail.GmailDraft[], subject_line: string): Template {
   // get drafts
   const draft = drafts.find(draft => draft.getMessage().getSubject() === subject_line);
   if (!draft) {
@@ -623,7 +623,8 @@ export { Notifier };
 class EmailNotifier extends Notifier {
   #configs: EmailConfigurationCollection;
   #options: MailerOptions;
-  #drafts: DraftType[];
+  #drafts: GoogleAppsScript.Gmail.GmailDraft[];
+  #mailer: MailApp;
 
   /**
    * 
@@ -631,9 +632,10 @@ class EmailNotifier extends Notifier {
    * @param configs Configs 
    * @param options Mail Options
    */
-  constructor(drafts: DraftType[], configs: EmailConfigurationCollection, options: MailerOptions) {
+  constructor(mailer: MailApp, configs: EmailConfigurationCollection, options: MailerOptions) {
     super()
-    this.#drafts = drafts;
+    this.#mailer = mailer;
+    this.#drafts = mailer.getDrafts();
     this.#options = { test: true, domain: "santacruzcountycycling.club", ...options };
     this.#configs = configs;
   }
@@ -669,7 +671,7 @@ class EmailNotifier extends Notifier {
   private makeBccList(bcc: string) {
     return bcc.split(',').map(a => a.trim() + '@' + this.#options.domain).join(',')
   }
-  private getBcc(bcc: string): SendEmailOptions {
+  private getBcc(bcc: string): GoogleAppsScript.Gmail.GmailAdvancedOptions {
     return this.#options.test ? {} : { bcc }
   }
   private notifySuccess_(txn: Transaction | CurrentMember, member: Member, config: EmailConfigurationType) {
@@ -702,8 +704,8 @@ class EmailNotifier extends Notifier {
     return this.#options.test ? `toby.ferguson+TEST@${this.#options.domain}` : to === 'home' ? txn["Email Address"] : `${to}@${this.#options.domain}`
   }
 
-  private sendMail_(recipient, message, options?: SendEmailOptions) {
-    const defaultOptions: SendEmailOptions = {
+  private sendMail_(recipient, message, options?: GoogleAppsScript.Gmail.GmailAdvancedOptions) {
+    const defaultOptions: GoogleAppsScript.Gmail.GmailAdvancedOptions = {
       htmlBody: message.html,
       //from: `membership@${this.options.domain}`,
       name: 'SCCC Membership',
@@ -713,7 +715,7 @@ class EmailNotifier extends Notifier {
       inlineImages: message.inlineImages
     }
     const finalOptions = { ...defaultOptions, ...options }
-    this.#options.mailer.sendEmail(recipient, message.subject, message.text, finalOptions)
+    this.#mailer.sendEmail(recipient, message.subject, message.text, finalOptions)
   }
 
 

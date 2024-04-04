@@ -60,7 +60,7 @@ function getEmailNotifier_() {
     return p;
   }, {}
   );
-  const notifier = new EmailNotifier(GmailApp.getDrafts(), emailConfig, { test: true, mailer: GmailApp });
+  const notifier = new EmailNotifier(GmailApp, emailConfig, { test: true });
   return notifier;
 }
 
