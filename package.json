@@ -8,7 +8,7 @@
     "push:watch": "npx clasp-env --folder . --scriptId 1m11ZhZl2TxlXkNKwvSfhqkO57ZBgu_KdfLUYIV1Lzksa64kiqQ32x5xA && clasp push -w",
     "push": "npx clasp-env --folder . --scriptId 1m11ZhZl2TxlXkNKwvSfhqkO57ZBgu_KdfLUYIV1Lzksa64kiqQ32x5xA && clasp push",
     "pull": "npx clasp-env --folder . --scriptId 1m11ZhZl2TxlXkNKwvSfhqkO57ZBgu_KdfLUYIV1Lzksa64kiqQ32x5xA && clasp pull",
-    "mocha": "npx mocha --require ts-node/register test/*.ts",
+    "mocha": "npx mocha --require ts-node/register --require test/hooks.ts test/*.ts",
     "tme": "npx mocha --require ts-node/register --require test/hooks.ts test/testMockingEmail.ts",
     "ten": "npx mocha --require ts-node/register --require test/hooks.ts test/testEmailNotifier.ts",
     "coverage": "npx nyc npm run mocha"

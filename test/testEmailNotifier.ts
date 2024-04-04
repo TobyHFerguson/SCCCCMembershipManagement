@@ -31,13 +31,13 @@ const drafts = Object.keys(subject_lines).map(k => {
 })
 
 class MyLocalMailer implements MailAppType {
-        sendEmail(recipient: string, subject: string, text: string, options: SendEmailOptions) {
-            return this
-        }
-        getDrafts() {
-            return new Array()
-        }
+    sendEmail(recipient: string, subject: string, text: string, options: SendEmailOptions) {
+        return this
     }
+    getDrafts() {
+        return new Array()
+    }
+}
 const testFixtures = (() => {
 
     const sysConfig: SystemConfiguration = {
@@ -72,22 +72,15 @@ describe("Email Notifier tests", () => {
         "Subject Line": "Thanks for joining SCCCC"
     }
 
-    const config2: EmailConfigurationType = {
-        To: "",
-        "Bcc on Failure": "",
-        "Bcc on Success": "",
-        "Subject Line": ""
-    }
-
     const configs: EmailConfigurationCollection = {
         joinSuccess: config,
-        joinFailure: config2,
-        renewSuccess: config2,
-        renewFailure: config2,
-        ambiguousTransaction: config2,
-        expiryNotification: config2,
-        expired: config2,
-        deleted: config2,
+        joinFailure: config,
+        renewSuccess: config,
+        renewFailure: config,
+        ambiguousTransaction: config,
+        expiryNotification: config,
+        expired: config,
+        deleted: config,
     }
     const options = {
         test: false,
@@ -95,10 +88,10 @@ describe("Email Notifier tests", () => {
         html: false
     }
     const mailer = new MyLocalMailer()
-    const stub = Sinon.stub(mailer);
-    stub.getDrafts.returns(drafts)
     it("should send an email to the member on success, and a copy to the bcc list", () => {
-        const notifier = new EmailNotifier(mailer.getDrafts(), configs, { ...options, mailer });
+        const stub = Sinon.stub(mailer);
+        stub.getDrafts.returns(drafts)
+        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer: stub });
         notifier.joinSuccess(testFixtures.txn1, testFixtures.member1)
         expect(stub.getDrafts).to.be.calledOnce
         expect(stub.sendEmail).to.be.calledOnceWithExactly(`membershiptest@${testFixtures.sysConfig.domain}`, "Thanks for joining SCCCC", "joinSuccessSubject: PLAIN", {
@@ -110,9 +103,11 @@ describe("Email Notifier tests", () => {
             bcc: `a@${testFixtures.sysConfig.domain},b@${testFixtures.sysConfig.domain}`
         });
     })
-    it.skip("should send an email to toOnFailure on failure, and to the bccOnfailure on failure", () => {
-        configs.joinFailure = { ...config, ...{ "To": "FAILURE", "Bcc on Failure": "BCC", "Subject Line": "Join Problem" } };
-        const notifier = new EmailNotifier(mailer.getDrafts(), configs, { ...options, mailer });
+    it("should send an email to OnFailure on failure, and to the bccOnfailure on failure", () => {
+        const stub = Sinon.stub(mailer);
+        stub.getDrafts.returns(drafts);
+        configs.joinFailure = { ...config, ...{ "To": "onFailure", "Bcc on Failure": "bccOnFailure", "Subject Line": "Join Problem" } };
+        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer:stub });
         notifier.joinFailure(testFixtures.txn1, testFixtures.member1, new Error("failure"))
         const expected = {
             From: undefined,
@@ -123,25 +118,30 @@ describe("Email Notifier tests", () => {
             text: "",
             bcc: `BCC@${options.domain}`
         }
+        expect(stub.sendEmail).to.be.calledOnceWithExactly(`onFailure@${testFixtures.sysConfig.domain}`, "Join Problem", "joinFailureSubject: PLAIN", {
+            htmlBody: 'joinFailureSubject: HTML',
+            name: 'SCCC Membership',
+            noReply: true,
+            attachments: undefined,
+            inlineImages: undefined,
+            bcc: `bccOnFailure@${testFixtures.sysConfig.domain}`
+        })
         // expect(actual).to.deep.equal(expected)
     })
-    it.skip("should send an email to toOnFailure on partial", () => {
-        const emailsSent = new Array();
-        const mailer = new MyLocalMailer()
-        configs.ambiguousTransaction = { ...config, ...{ To: "membership", "Bcc on Failure": "BCC", "Subject Line": "Ambiguous transaction" } }
-        const notifier = new EmailNotifier(mailer.getDrafts(), configs, { ...options, mailer });
+    it("should send an email to onFailure and bcc ambiguousBCC on partial", () => {
+        const stub = Sinon.stub(mailer);
+        stub.getDrafts.returns(drafts);
+        configs.ambiguousTransaction = { ...config, ...{ To: "onFailure", "Bcc on Failure": "ambiguousBCC", "Subject Line": "Ambiguous transaction" } }
+        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer:stub });
         notifier.partial(testFixtures.txn1, testFixtures.member1)
-        const expected = {
-            From: undefined,
+        expect(stub.sendEmail).to.be.calledOnceWithExactly(`onFailure@${testFixtures.sysConfig.domain}`, "Ambiguous transaction", "ambiguousSubject: PLAIN", {
+            htmlBody: 'ambiguousSubject: HTML',
+            name: 'SCCC Membership',
             noReply: true,
-            To: `membership@${options.domain}`,
-            html: "",
-            subject: "Ambiguous transaction",
-            text: "",
-            bcc: `BCC@${options.domain}`
-        }
-        const actual = emailsSent[0]
-        expect(actual).to.deep.equal(expected)
+            attachments: undefined,
+            inlineImages: undefined,
+            bcc: `ambiguousBCC@${testFixtures.sysConfig.domain}`
+        })
     })
 
 })
