@@ -59,8 +59,25 @@ describe('Member tests', () => {
             'Membership Type': 'Family',
             'Family': ''
         }
-        const expectedClubMembership = {Club_Membership: { expires: '2025-05-23', Join_Date:'2024-05-23', membershipType: 'Family', family: 'family'}}
+        const expectedClubMembership = { Club_Membership: { expires: '2025-05-23', Join_Date: '2024-05-23', membershipType: 'Family', family: 'family' } }
         const actual = new Member(currentMember, sysConfig);
-        expect(actual).to.deep.equal({ ...expected, ...{ generation: 0, domain: sysConfig.domain, customSchemas: {...expectedClubMembership} } })
+        expect(actual).to.deep.equal({ ...expected, ...{ generation: 0, domain: sysConfig.domain, customSchemas: { ...expectedClubMembership } } })
+    })
+    it('should make a report containing membershp type and family data', () => {
+        const currentMember: CurrentMember = {
+            'First Name': 'given',
+            'Last Name': 'family',
+            'Email Address': 'a@b.com',
+            'Phone Number': '+1234',
+            'In Directory': true,
+            'Joined': new Date('2024-05-23'),
+            'Expires': new Date('2025-05-23'),
+            'Membership Type': 'Family',
+            'Family': ''
+        }
+        const member = new Member(currentMember, sysConfig);
+        const actual = member.report;
+        expect(actual["Membership Type"]).to.equal('Family')
+        expect(actual.Family).to.equal('family')
     })
 })

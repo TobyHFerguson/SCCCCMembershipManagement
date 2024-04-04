@@ -69,6 +69,8 @@ interface MemberReport {
     Last: string;
     Joined: string;
     Expires: string;
+    'Membership Type': string;
+    Family: string | undefined;
 }
 
 interface Binding extends Transaction, MemberReport {
