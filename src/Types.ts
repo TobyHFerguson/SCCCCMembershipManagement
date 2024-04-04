@@ -229,6 +229,7 @@ interface EmailConfigurationCollection {
     expired: EmailConfigurationType;
     deleted: EmailConfigurationType;
     importSuccess: EmailConfigurationType;
+    importFailure: EmailConfigurationType;
 }
 
 interface SystemConfiguration {

@@ -662,6 +662,10 @@ class EmailNotifier extends Notifier {
     super.importSuccess(cm, member)
     this.notifySuccess_(cm, member, this.configs.importSuccess)
   }
+  importFailure(cm:CurrentMember, member:Member, error:Error) {
+    super.importFailure(cm, member, error);
+    this.notifyFailure_(cm, member, this.configs.importFailure, error)
+  }
   makeBccList(bcc: string) {
     return bcc.split(',').map(a => a.trim() + '@' + this.options.domain).join(',')
   }
@@ -673,7 +677,7 @@ class EmailNotifier extends Notifier {
     const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
     this.sendMail_(this.getRecipient_(txn, config), message, this.getBcc(this.makeBccList(config["Bcc on Success"])))
   }
-  notifyFailure_(txn: Transaction, member: Member, config: EmailConfigurationType, error?: Error) {
+  notifyFailure_(txn: Transaction | CurrentMember, member: Member, config: EmailConfigurationType, error?: Error) {
     const binding = this.makeBinding_(txn, member, error)
     const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
     this.sendMail_(this.getRecipient_(txn, config), message, this.getBcc(this.makeBccList(config["Bcc on Failure"])))

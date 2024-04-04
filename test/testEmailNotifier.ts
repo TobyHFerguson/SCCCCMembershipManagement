@@ -15,7 +15,8 @@ const subject_lines = {
     ambiguousSubject: "Ambiguous transaction",
     expiryNotificationSubject: "Your membership will expire in {{N}} days",
     expirationSubject: "Your membership has expired",
-    importSuccessSubject: 'Your new SCCCC account has been created'
+    importSuccessSubject: 'Your new SCCCC account has been created',
+    importFailureSubject: 'Import Problem'
 }
 
 const drafts = Object.keys(subject_lines).map(k => {
@@ -90,6 +91,7 @@ describe("Email Notifier tests", () => {
         expired: config,
         deleted: config,
         importSuccess: config,
+        importFailure: config
     }
     const options = {
         test: false,
@@ -130,17 +132,8 @@ describe("Email Notifier tests", () => {
         const stub = Sinon.stub(mailer);
         stub.getDrafts.returns(drafts);
         configs.joinFailure = { ...config, ...{ "To": "onFailure", "Bcc on Failure": "bccOnFailure", "Subject Line": "Join Problem" } };
-        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer:stub });
+        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer: stub });
         notifier.joinFailure(testFixtures.txn1, testFixtures.member1, new Error("failure"))
-        const expected = {
-            From: undefined,
-            noReply: true,
-            To: `FAILURE@${options.domain}`,
-            html: "",
-            subject: "Join Problem",
-            text: "",
-            bcc: `BCC@${options.domain}`
-        }
         expect(stub.sendEmail).to.be.calledOnceWithExactly(`onFailure@${testFixtures.sysConfig.domain}`, "Join Problem", "joinFailureSubject: PLAIN", {
             htmlBody: 'joinFailureSubject: HTML',
             name: 'SCCC Membership',
@@ -155,7 +148,7 @@ describe("Email Notifier tests", () => {
         const stub = Sinon.stub(mailer);
         stub.getDrafts.returns(drafts);
         configs.ambiguousTransaction = { ...config, ...{ To: "onFailure", "Bcc on Failure": "ambiguousBCC", "Subject Line": "Ambiguous transaction" } }
-        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer:stub });
+        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer: stub });
         notifier.partial(testFixtures.txn1, testFixtures.member1)
         expect(stub.sendEmail).to.be.calledOnceWithExactly(`onFailure@${testFixtures.sysConfig.domain}`, "Ambiguous transaction", "ambiguousSubject: PLAIN", {
             htmlBody: 'ambiguousSubject: HTML',
@@ -170,7 +163,7 @@ describe("Email Notifier tests", () => {
         const stub = Sinon.stub(mailer);
         stub.getDrafts.returns(drafts);
         configs.importSuccess = { ...config, ...{ To: 'home', "Bcc on Success": "membership", "Subject Line": "Your new SCCCC account has been created" } }
-        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer:stub });
+        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer: stub });
         notifier.importSuccess(testFixtures.ce1, testFixtures.member1)
         expect(stub.sendEmail).to.be.calledOnceWithExactly(testFixtures.ce1['Email Address'], "Your new SCCCC account has been created", "importSuccessSubject: PLAIN", {
             htmlBody: 'importSuccessSubject: HTML',
@@ -179,6 +172,21 @@ describe("Email Notifier tests", () => {
             attachments: undefined,
             inlineImages: undefined,
             bcc: `membership@${testFixtures.sysConfig.domain}`
+        })
+    })
+    it('should send an email to the failure address and the bcc on importFailure', () => {
+        const stub = Sinon.stub(mailer);
+        stub.getDrafts.returns(drafts);
+        configs.importFailure = { ...config, ...{ To: 'home', "Bcc on Success": "membership", "Subject Line": "Import Problem" } }
+        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer: stub });
+        notifier.importFailure(testFixtures.ce1, testFixtures.member1, new Error("Import Failure"))
+        expect(stub.sendEmail).to.be.calledOnceWithExactly(testFixtures.ce1['Email Address'], "Import Problem", "importFailureSubject: PLAIN", {
+            htmlBody: 'importFailureSubject: HTML',
+            name: 'SCCC Membership',
+            noReply: true,
+            attachments: undefined,
+            inlineImages: undefined,
+            bcc: `failure@${testFixtures.sysConfig.domain}`
         })
     })
 })
