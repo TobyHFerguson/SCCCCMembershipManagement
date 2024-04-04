@@ -621,9 +621,9 @@ class Notifier implements NotificationType {
 export { Notifier };
 
 class EmailNotifier extends Notifier {
-  configs: EmailConfigurationCollection;
-  options: MailerOptions;
-  drafts: DraftType[];
+  #configs: EmailConfigurationCollection;
+  #options: MailerOptions;
+  #drafts: DraftType[];
 
   /**
    * 
@@ -633,58 +633,58 @@ class EmailNotifier extends Notifier {
    */
   constructor(drafts: DraftType[], configs: EmailConfigurationCollection, options: MailerOptions) {
     super()
-    this.drafts = drafts;
-    this.options = { test: true, domain: "santacruzcountycycling.club", ...options };
-    this.configs = configs;
+    this.#drafts = drafts;
+    this.#options = { test: true, domain: "santacruzcountycycling.club", ...options };
+    this.#configs = configs;
   }
 
   joinSuccess(txn: Transaction, member: Member) {
     super.joinSuccess(txn, member)
-    this.notifySuccess_(txn, member, this.configs.joinSuccess,)
+    this.notifySuccess_(txn, member, this.#configs.joinSuccess,)
   }
   joinFailure(txn: Transaction, member: Member, error: Error) {
     super.joinFailure(txn, member, error)
-    this.notifyFailure_(txn, member, this.configs.joinFailure, error)
+    this.notifyFailure_(txn, member, this.#configs.joinFailure, error)
   }
   renewalSuccess(txn: Transaction, member: Member) {
     super.renewalSuccess(txn, member);
-    this.notifySuccess_(txn, member, this.configs.renewSuccess)
+    this.notifySuccess_(txn, member, this.#configs.renewSuccess)
   }
   renewalFailure(txn: Transaction, member: Member, error: Error) {
     super.renewalFailure(txn, member, error)
-    this.notifySuccess_(txn, member, this.configs.renewFailure)
+    this.notifySuccess_(txn, member, this.#configs.renewFailure)
   }
   partial(txn: Transaction, member: Member) {
     super.partial(txn, member)
-    this.notifyFailure_(txn, member, this.configs.ambiguousTransaction)
+    this.notifyFailure_(txn, member, this.#configs.ambiguousTransaction)
   }
   importSuccess(cm: CurrentMember, member:Member){
     super.importSuccess(cm, member)
-    this.notifySuccess_(cm, member, this.configs.importSuccess)
+    this.notifySuccess_(cm, member, this.#configs.importSuccess)
   }
   importFailure(cm:CurrentMember, member:Member, error:Error) {
     super.importFailure(cm, member, error);
-    this.notifyFailure_(cm, member, this.configs.importFailure, error)
+    this.notifyFailure_(cm, member, this.#configs.importFailure, error)
   }
-  makeBccList(bcc: string) {
-    return bcc.split(',').map(a => a.trim() + '@' + this.options.domain).join(',')
+  private makeBccList(bcc: string) {
+    return bcc.split(',').map(a => a.trim() + '@' + this.#options.domain).join(',')
   }
-  getBcc(bcc: string): SendEmailOptions {
-    return this.options.test ? {} : { bcc }
+  private getBcc(bcc: string): SendEmailOptions {
+    return this.#options.test ? {} : { bcc }
   }
-  notifySuccess_(txn: Transaction | CurrentMember, member: Member, config: EmailConfigurationType) {
+  private notifySuccess_(txn: Transaction | CurrentMember, member: Member, config: EmailConfigurationType) {
     this.notify(txn, member, config.To, config["Subject Line"], config["Bcc on Success"])
   }
-  notifyFailure_(txn: Transaction | CurrentMember, member: Member, config: EmailConfigurationType, error?: Error) {
+  private notifyFailure_(txn: Transaction | CurrentMember, member: Member, config: EmailConfigurationType, error?: Error) {
     this.notify(txn, member, config.To, config["Subject Line"], config["Bcc on Failure"], error)
   }
 
   private notify(txn: Transaction | CurrentMember, member: Member, to: string, subject: string, bcc: string, error?: Error) {
     const binding = this.makeBinding_(txn, member, error)
-    const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, subject), binding)
+    const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.#drafts, subject), binding)
     this.sendMail_(this.getRecipient_(txn, to), message, this.getBcc(this.makeBccList(bcc)))
   }
-  makeBinding_(txn: Transaction | CurrentMember, member: Member, error?: Error): Binding {
+  private makeBinding_(txn: Transaction | CurrentMember, member: Member, error?: Error): Binding {
     const binding: Binding = {
       ...txn,
       ...member.report,
@@ -695,14 +695,14 @@ class EmailNotifier extends Notifier {
     Object.keys(binding).forEach(k => binding[k] += '')
     return binding
   }
-  makeMessageObject_(template: Template, binding: Binding) {
+  private makeMessageObject_(template: Template, binding: Binding) {
     return bindMessage_(template.message, binding)
   }
-  getRecipient_(txn: Transaction | CurrentMember, to:string) {
-    return this.options.test ? `toby.ferguson+TEST@${this.options.domain}` : to === 'home' ? txn["Email Address"] : `${to}@${this.options.domain}`
+  private getRecipient_(txn: Transaction | CurrentMember, to:string) {
+    return this.#options.test ? `toby.ferguson+TEST@${this.#options.domain}` : to === 'home' ? txn["Email Address"] : `${to}@${this.#options.domain}`
   }
 
-  sendMail_(recipient, message, options?: SendEmailOptions) {
+  private sendMail_(recipient, message, options?: SendEmailOptions) {
     const defaultOptions: SendEmailOptions = {
       htmlBody: message.html,
       //from: `membership@${this.options.domain}`,
@@ -713,7 +713,7 @@ class EmailNotifier extends Notifier {
       inlineImages: message.inlineImages
     }
     const finalOptions = { ...defaultOptions, ...options }
-    this.options.mailer.sendEmail(recipient, message.subject, message.text, finalOptions)
+    this.#options.mailer.sendEmail(recipient, message.subject, message.text, finalOptions)
   }
 
 
