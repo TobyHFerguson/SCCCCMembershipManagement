@@ -161,7 +161,7 @@ class Directory {
    * @returns {Member} the newly inserted member
    */
   addMember(m: Member | CurrentMember, wait: boolean = true) {
-    const member =  (isCurrentMember(m)) ? this.makeMember(m) : m;
+    const member = (isCurrentMember(m)) ? this.makeMember(m) : m;
     member.password = Math.random().toString(36);
     member.changePasswordAtNextLogin = true;
     try {
@@ -474,14 +474,14 @@ export class Member implements UserType {
           type: "mobile"
         }
       ]
-      const Join_Date = isCurrentMember(m)? m.Joined : new Date();
-      const expiryDate = isCurrentMember(m)? m.Expires: Member.incrementDateByOneYear(new Date())
+      const Join_Date = isCurrentMember(m) ? m.Joined : new Date();
+      const expiryDate = isCurrentMember(m) ? m.Expires : Member.incrementDateByOneYear(new Date())
       this.customSchemas = {
         Club_Membership: {
           expires: Member.convertToYYYYMMDDFormat_(expiryDate),
           Join_Date: Member.convertToYYYYMMDDFormat_(Join_Date),
           membershipType: isCurrentMember(m) ? m["Membership Type"] : 'Individual',
-          ...(isCurrentMember(m) && m["Membership Type"] === "Family" ? {family: m["family"] ? m.Family : m["Last Name"]} : {})
+          ...(isCurrentMember(m) && m["Membership Type"] === "Family" ? { family: m["family"] ? m.Family : m["Last Name"] } : {})
         }
       }
       this.orgUnitPath = systemConfig.orgUnitPath
@@ -580,11 +580,11 @@ class Notifier implements NotificationType {
   partial(txn: Transaction, member: Member) {
     this.partialsLog.push({ input: txn, member })
   }
-  importSuccess(cm: CurrentMember, member:Member) {
-    this.importSuccessLog.push({input: cm, member})
+  importSuccess(cm: CurrentMember, member: Member) {
+    this.importSuccessLog.push({ input: cm, member })
   }
-  importFailure(cm: CurrentMember, member: Member, error:Error) {
-    this.importFailureLog.push({input: cm, member, error: error})
+  importFailure(cm: CurrentMember, member: Member, error: Error) {
+    this.importFailureLog.push({ input: cm, member, error: error })
   }
   log() {
     function reportSuccess(l: LogEntry[], kind: string) {
@@ -661,15 +661,18 @@ class EmailNotifier extends Notifier {
   makeBccList(bcc: string) {
     return bcc.split(',').map(a => a.trim() + '@' + this.options.domain).join(',')
   }
+  getBcc(bcc: string): SendEmailOptions {
+    return this.options.test ? {} : { bcc }
+  }
   notifySuccess_(txn: Transaction, member: Member, config: EmailConfigurationType) {
     const binding = this.makeBinding_(txn, member)
     const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
-    this.sendMail_(this.getRecipient_(txn, config), message, { bcc: this.makeBccList(config["Bcc on Success"]) })
+    this.sendMail_(this.getRecipient_(txn, config), message, this.getBcc(this.makeBccList(config["Bcc on Success"])))
   }
   notifyFailure_(txn: Transaction, member: Member, config: EmailConfigurationType, error?: Error) {
     const binding = this.makeBinding_(txn, member, error)
     const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
-    this.sendMail_(this.getRecipient_(txn, config), message, { bcc: this.makeBccList(config["Bcc on Failure"]) })
+    this.sendMail_(this.getRecipient_(txn, config), message, this.getBcc(this.makeBccList(config["Bcc on Failure"])))
   }
 
   makeBinding_(txn: Transaction, member: Member, error?: Error): Binding {

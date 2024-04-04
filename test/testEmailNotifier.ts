@@ -66,7 +66,7 @@ const testFixtures = (() => {
 })()
 describe("Email Notifier tests", () => {
     const config: EmailConfigurationType = {
-        "To": "membershiptest",
+        "To": "home",
         "Bcc on Success": "a,b",
         "Bcc on Failure": "failure",
         "Subject Line": "Thanks for joining SCCCC"
@@ -94,13 +94,27 @@ describe("Email Notifier tests", () => {
         const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, mailer: stub });
         notifier.joinSuccess(testFixtures.txn1, testFixtures.member1)
         expect(stub.getDrafts).to.be.calledOnce
-        expect(stub.sendEmail).to.be.calledOnceWithExactly(`membershiptest@${testFixtures.sysConfig.domain}`, "Thanks for joining SCCCC", "joinSuccessSubject: PLAIN", {
+        expect(stub.sendEmail).to.be.calledOnceWithExactly(testFixtures.txn1['Email Address'], subject_lines.joinSuccessSubject, "joinSuccessSubject: PLAIN", {
             htmlBody: 'joinSuccessSubject: HTML',
             name: 'SCCC Membership',
             noReply: true,
             attachments: undefined,
             inlineImages: undefined,
             bcc: `a@${testFixtures.sysConfig.domain},b@${testFixtures.sysConfig.domain}`
+        });
+    })
+    it("when set to test it should send the email to the test address without any bcc", () => {
+        const stub = Sinon.stub(mailer);
+        stub.getDrafts.returns(drafts)
+        const notifier = new EmailNotifier(stub.getDrafts(), configs, { ...options, test: true, mailer: stub });
+        notifier.joinSuccess(testFixtures.txn1, testFixtures.member1)
+        expect(stub.getDrafts).to.be.calledOnce
+        expect(stub.sendEmail).to.be.calledOnceWithExactly('toby.ferguson+TEST@santacruzcountycycling.club', subject_lines.joinSuccessSubject, "joinSuccessSubject: PLAIN", {
+            htmlBody: 'joinSuccessSubject: HTML',
+            name: 'SCCC Membership',
+            noReply: true,
+            attachments: undefined,
+            inlineImages: undefined
         });
     })
     it("should send an email to OnFailure on failure, and to the bccOnfailure on failure", () => {
