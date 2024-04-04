@@ -511,8 +511,8 @@ export class Member implements UserType {
       phone: this.phone,
       First: this.name.givenName,
       Last: this.name.familyName,
-      Joined: this.customSchemas.Club_Membership.Join_Date,
-      Expires: this.customSchemas.Club_Membership.expires,
+      Joined: new Date(this.customSchemas.Club_Membership.Join_Date),
+      Expires: new Date(this.customSchemas.Club_Membership.expires),
       'Membership Type': this.customSchemas.Club_Membership.membershipType,
       Family: this.customSchemas.Club_Membership.family
     }
@@ -658,13 +658,17 @@ class EmailNotifier extends Notifier {
     super.partial(txn, member)
     this.notifyFailure_(txn, member, this.configs.ambiguousTransaction)
   }
+  importSuccess(cm: CurrentMember, member:Member){
+    super.importSuccess(cm, member)
+    this.notifySuccess_(cm, member, this.configs.importSuccess)
+  }
   makeBccList(bcc: string) {
     return bcc.split(',').map(a => a.trim() + '@' + this.options.domain).join(',')
   }
   getBcc(bcc: string): SendEmailOptions {
     return this.options.test ? {} : { bcc }
   }
-  notifySuccess_(txn: Transaction, member: Member, config: EmailConfigurationType) {
+  notifySuccess_(txn: Transaction | CurrentMember, member: Member, config: EmailConfigurationType) {
     const binding = this.makeBinding_(txn, member)
     const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.drafts, config["Subject Line"]), binding)
     this.sendMail_(this.getRecipient_(txn, config), message, this.getBcc(this.makeBccList(config["Bcc on Success"])))
@@ -675,7 +679,7 @@ class EmailNotifier extends Notifier {
     this.sendMail_(this.getRecipient_(txn, config), message, this.getBcc(this.makeBccList(config["Bcc on Failure"])))
   }
 
-  makeBinding_(txn: Transaction, member: Member, error?: Error): Binding {
+  makeBinding_(txn: Transaction | CurrentMember, member: Member, error?: Error): Binding {
     const binding: Binding = {
       ...txn,
       ...member.report,
@@ -689,7 +693,7 @@ class EmailNotifier extends Notifier {
   makeMessageObject_(template: Template, binding: Binding) {
     return bindMessage_(template.message, binding)
   }
-  getRecipient_(txn: Transaction, config: EmailConfigurationType) {
+  getRecipient_(txn: Transaction | CurrentMember, config: EmailConfigurationType) {
     return this.options.test ? `toby.ferguson+TEST@${this.options.domain}` : config.To === 'home' ? txn["Email Address"] : `${config.To}@${this.options.domain}`
   }
 

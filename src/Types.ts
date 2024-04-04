@@ -34,13 +34,15 @@ interface LogEntry {
     error?: Error;
 }
 
-
-
-interface Transaction {
+interface PersonalInformation {
     "First Name": string;
     "Last Name": string;
     "Email Address": string;
     "Phone Number": string;
+    "In Directory": boolean;
+}
+
+interface Transaction extends PersonalInformation{
     "Payable Order ID": string;
     "Payable Status": string;
     "Timestamp": string;
@@ -48,32 +50,41 @@ interface Transaction {
     "Payable Transaction ID": string;
     "In Directory": boolean;
 }
-interface CurrentMember {
-    "First Name": string;
-    "Last Name": string;
-    "Email Address": string;
-    "Phone Number": string;
-    "In Directory": boolean;
+
+interface MembershipInfo {
     "Membership Type": string;
     "Joined": Date;
     "Expires": Date;
-    "Family"?: string; // Membership Type is Family and empty defaults to Last Name.
+    "Family"?: string;
+}
+interface CurrentMember extends PersonalInformation, MembershipInfo{
     Imported?: Date;
 }
 
-interface MemberReport {
+interface MemberReport extends MembershipInfo {
     primary: string;
     email: string;
     phone: string;
     First: string;
     Last: string;
-    Joined: string;
-    Expires: string;
-    'Membership Type': string;
-    Family: string | undefined;
 }
 
-interface Binding extends Transaction, MemberReport {
+interface Binding {
+    "Payable Order ID"?:string;
+    "Payable Status"?:string;
+    "Timestamp"?:string;
+    "Processed"?: string;
+    "Payable Transaction ID"?:string;
+    "In Directory"?:boolean;
+    "Membership Type"?:string;
+    "Family"?: string;
+    Joined?: Date,
+    Expires?: Date,
+    primary?: string;
+    email?: string;
+    phone?: string;
+    First?: string;
+    Last?: string;
     error?: Error;
 }
 
@@ -217,6 +228,7 @@ interface EmailConfigurationCollection {
     expiryNotification: EmailConfigurationType;
     expired: EmailConfigurationType;
     deleted: EmailConfigurationType;
+    importSuccess: EmailConfigurationType;
 }
 
 interface SystemConfiguration {
