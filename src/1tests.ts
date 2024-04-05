@@ -1,5 +1,1 @@
-
-
-import {bmUnitTester} from './Types'
-
-
+import {bmUnitTester} from './Types';
