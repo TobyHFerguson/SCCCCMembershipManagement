@@ -131,7 +131,14 @@ interface UserType {
     includeInGlobalAddressList?: boolean | undefined;
 }
 interface UsersType {
-    users?: UserType[];
+    users?: GoogleAppsScript.AdminDirectory.Schema.User[];
+}
+export interface MembersType {
+    members?: GoogleAppsScript.AdminDirectory.Schema.Member[];
+}
+export interface MembersCollectionType {
+    update(resource: GoogleAppsScript.AdminDirectory.Schema.Member, groupKey: string, memberKey: string): GoogleAppsScript.AdminDirectory.Schema.Member;
+    insert(resource: GoogleAppsScript.AdminDirectory.Schema.Member, groupKey: string): GoogleAppsScript.AdminDirectory.Schema.Member;
 }
 interface UsersCollectionType {
     get(userKey: string): UserType;
@@ -143,7 +150,7 @@ interface UsersCollectionType {
 }
 interface AdminDirectoryType {
     Users?: UsersCollectionType;
-    Members?: GoogleAppsScript.AdminDirectory.Collection.MembersCollection;
+    Members?: MembersCollectionType;
 }
 
 // Types to cover our use of GmailApp, GMailDraft, GmailMessage and GmailAttachment
