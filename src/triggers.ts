@@ -1,27 +1,47 @@
-import { Notifier, TransactionProcessor, Directory, LocalDirectory, Templates, EmailNotifier, Member } from './Code'
-import { CurrentMember, EmailConfigurationCollection, SystemConfiguration, Transaction, bmPreFiddler } from './Types';
+import {
+  Directory,
+  EmailNotifier,
+  Member,
+  Notifier,
+  TransactionProcessor,
+} from './Code';
+import {
+  CurrentMember,
+  EmailConfigurationCollection,
+  SystemConfiguration,
+  Transaction,
+  bmPreFiddler,
+} from './Types';
 
 /**
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
 function processPaidTransactions() {
-  const directory = getDirectory_()
+  const directory = getDirectory_();
   const notifier = getEmailNotifier_();
   convertLinks_('Transactions');
-  const transactionsFiddler = bmPreFiddler.PreFiddler().getFiddler({
-    id: null,
-    sheetName: 'Transactions',
-    createIfMissing: false
-  }).needFormulas();
+  const transactionsFiddler = bmPreFiddler
+    .PreFiddler()
+    .getFiddler({
+      id: null,
+      sheetName: 'Transactions',
+      createIfMissing: false,
+    })
+    .needFormulas();
   const keepFormulas = transactionsFiddler.getColumnsWithFormulas();
-  const tp = new TransactionProcessor(directory, notifier)
-  transactionsFiddler.mapRows((row, { rowFormulas }) => {
+  const tp = new TransactionProcessor(directory, notifier);
+  transactionsFiddler.mapRows((row: object, {rowFormulas}) => {
     tp.processTransaction(<Transaction>row);
-    keepFormulas.forEach(f => row[f] = rowFormulas[f]);
+    keepFormulas.forEach(
+      f =>
+        ((<{[key: string]: object}>row)[f] = (<{[key: string]: object}>(
+          rowFormulas
+        ))[f])
+    );
     return row;
-  })
-  transactionsFiddler.dumpValues()
-  notifier.log()
+  });
+  transactionsFiddler.dumpValues();
+  notifier.log();
 }
 
 function migrateCEMembers(): void {
@@ -30,58 +50,63 @@ function migrateCEMembers(): void {
   const ceFiddler = bmPreFiddler.PreFiddler().getFiddler({
     id: null,
     sheetName: 'CE Members',
-    createIfMissing: false
+    createIfMissing: false,
   });
-  ceFiddler.mapRows((row) => {
-    const cm: CurrentMember = <CurrentMember>row;
-    if (!cm.Imported) {
-      let newMember = directory.makeMember(cm)
-      try {
-        newMember = migrateMember_(cm);
-        cm.Imported = new Date();
-        notifier.importSuccess(cm, newMember)
-      } catch (err: any) {
-        notifier.importFailure(cm, newMember, err)
+  ceFiddler
+    .mapRows(row => {
+      const cm: CurrentMember = <CurrentMember>row;
+      if (!cm.Imported) {
+        let newMember = directory.makeMember(cm);
+        try {
+          newMember = migrateMember_(cm);
+          cm.Imported = new Date();
+          notifier.importSuccess(cm, newMember);
+        } catch (err: any) {
+          notifier.importFailure(cm, newMember, err);
+        }
       }
-    }
-    return row;
-  }).dumpValues();
+      return row;
+    })
+    .dumpValues();
   notifier.log();
 }
 
 function getEmailNotifier_() {
-  const emailConfig = <EmailConfigurationCollection>bmPreFiddler.PreFiddler().getFiddler({
-    id: null,
-    sheetName: 'Email Configuration',
-    createIfMissing: false
-  }).getData().reduce((p, c) => {
-    const t = c["Email Type"];
-    p[t] = c;
-    return p;
-  }, {}
-  );
-  const notifier = new EmailNotifier(GmailApp, emailConfig, { test: true });
+  const emailConfig = <EmailConfigurationCollection>bmPreFiddler
+    .PreFiddler()
+    .getFiddler({
+      id: null,
+      sheetName: 'Email Configuration',
+      createIfMissing: false,
+    })
+    .getData()
+    .reduce((p, c) => {
+      const t: string = (<{[key: string]: string}>c)['Email Type'];
+      (<{[key: string]: object}>p)[t] = c;
+      return p;
+    }, {});
+  const notifier = new EmailNotifier(GmailApp, emailConfig, {test: true});
   return notifier;
 }
 
 function createMembershipReport() {
   const directory = getDirectory_();
-  const reportMembers = directory.members.map((m) => m.report)
+  const reportMembers = directory.members.map(m => m.report);
   const membersFiddler = bmPreFiddler.PreFiddler().getFiddler({
     id: null,
     sheetName: 'MembershipReport',
-    createIfMissing: true
-  })
+    createIfMissing: true,
+  });
   if (reportMembers !== undefined) membersFiddler.setData(reportMembers);
-  membersFiddler.dumpValues()
+  membersFiddler.dumpValues();
 }
 
-function updatedRow_(e) {
-  console.log(`Column: ${e.range.getColumn()} Row ${e.range.getRow()}`)
+function updatedRow_(e: {range: GoogleAppsScript.Spreadsheet.Range}) {
+  console.log(`Column: ${e.range} Row ${e.range.getRow()}`);
   // printRow(e.range.getRow())
 }
 
-/** 
+/**
  * Creates the menu item "Mail Merge" for user to run scripts on drop-down.
  */
 function onOpen() {
@@ -92,7 +117,7 @@ function onOpen() {
   ui.createMenu('Membership Management')
     .addItem('Create Membership Report', 'createMembershipReport')
     .addItem('Process Transactions', 'processPaidTransactions')
-    .addToUi()
+    .addToUi();
 }
 
 function convertLinks_(sheetName: string) {
@@ -104,8 +129,10 @@ function convertLinks_(sheetName: string) {
   const newValues = rtvs.map((row, r) => {
     return row.map((column, c) => {
       if (!column) return null;
-      const v = column.getText() ? column.getText() : values[r][c]
-      return (column.getLinkUrl()) ? `=hyperlink("${column.getLinkUrl()}", "${v}")` : v;
+      const v = column.getText() ? column.getText() : values[r][c];
+      return column.getLinkUrl()
+        ? `=hyperlink("${column.getLinkUrl()}", "${v}")`
+        : v;
     });
   });
   range.setValues(newValues);
@@ -113,7 +140,7 @@ function convertLinks_(sheetName: string) {
 }
 
 function getDirectory_() {
-  const directory = new Directory(getSystemConfig_())
+  const directory = new Directory(getSystemConfig_());
   return directory;
 }
 
@@ -121,28 +148,13 @@ function getSystemConfig_() {
   const systemConfigFiddler = bmPreFiddler.PreFiddler().getFiddler({
     id: null,
     sheetName: 'System Configuration',
-    createIfMissing: false
-  })
-  const systemConfiguration = <SystemConfiguration>systemConfigFiddler.getData()[0];
+    createIfMissing: false,
+  });
+  const systemConfiguration = <SystemConfiguration>(
+    systemConfigFiddler.getData()[0]
+  );
   return systemConfiguration;
 }
-
-function processPaidTransactionsTest() {
-  const directory = new LocalDirectory({ orgUnitPath: "/test", domain: "santacruzcountycycling.club", groups: '' })
-  const notifier = new Notifier()
-  const transactionsFiddler = bmPreFiddler.PreFiddler().getFiddler({
-    id: "1Tm-lXtjaK2080u1dkoC902-TX0dtU5N2TVoQZG9JGdE",
-    sheetName: 'Transactions',
-    createIfMissing: false
-  })
-  const tp = new TransactionProcessor(directory, notifier)
-  transactionsFiddler.mapRows(txn =>
-    tp.processTransaction(<Transaction>txn))
-  transactionsFiddler.dumpValues()
-  notifier.log()
-}
-
-
 
 function migrateMember_(currentMember: CurrentMember): Member {
   const directory = getDirectory_();
@@ -151,12 +163,11 @@ function migrateMember_(currentMember: CurrentMember): Member {
     return directory.addMember(nm);
   } catch (err: any) {
     if (err.message.endsWith('Entity already exists.')) {
-      return directory.updateMember(nm)
+      return directory.updateMember(nm);
     } else {
-      throw err
+      throw err;
     }
   }
-
 }
 
 function testMigrateMember() {
@@ -166,10 +177,9 @@ function testMigrateMember() {
     'Email Address': 'a@b.com',
     'Phone Number': '+14083869343',
     'In Directory': true,
-    'Joined': new Date('2024-05-23'),
-    'Expires': new Date('2025-05-23'),
-    'Membership Type': 'Family'
-  }
+    Joined: new Date('2024-05-23'),
+    Expires: new Date('2025-05-23'),
+    'Membership Type': 'Family',
+  };
   migrateMember_(currentMember);
 }
-

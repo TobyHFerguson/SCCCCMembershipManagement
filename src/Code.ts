@@ -1,82 +1,104 @@
 import {
   AdminDirectoryType,
-  Binding, CurrentMember, EmailConfigurationCollection, EmailConfigurationType, LogEntry,
-  MailerOptions, MemberReport, Message, MailApp, NotificationType, SubjectLines, SystemConfiguration, Template, Transaction, UserType, UsersCollectionType, MembersCollectionType
-} from "./Types";
+  Binding,
+  CurrentMember,
+  EmailConfigurationCollection,
+  EmailConfigurationType,
+  LogEntry,
+  MailerOptions,
+  MemberReport,
+  NotificationType,
+  SystemConfiguration,
+  Template,
+  Transaction,
+  UserType,
+  UsersCollectionType,
+  MembersCollectionType,
+  Draft,
+  MyMailApp,
+  Message,
+} from './Types';
 
+// class Users implements UsersCollectionType {
+//   #users: UserType[] = [];
+//   constructor(users?: Member[]) {
+//     if (users) users.forEach(u => this.#users.push(u));
+//   }
 
-class Users implements UsersCollectionType {
-  #users: UserType[] = [];
-  constructor(users?: Member[]) {
-    if (users) users.forEach(u => this.#users.push(u))
-  }
+//   get(primaryEmail: string) {
+//     const found = this.#users.find(u => u.primaryEmail === primaryEmail);
+//     return found ? found : {};
+//   }
+//   insert(user: UserType) {
+//     if (!user.primaryEmail) throw new Error('No primary key');
+//     if (this.get(user.primaryEmail)) {
+//       throw new Error(
+//         'API call to directory.users.insert failed with error: Entity already exists.'
+//       );
+//     }
+//     const newUser = JSON.parse(JSON.stringify(user));
+//     this.#users.push(newUser);
+//     return newUser;
+//   }
+//   list(_optionalArgs: object) {
+//     const users: Users = JSON.parse(JSON.stringify(this.#users));
+//     return users;
+//   }
+//   remove(primaryEmail: string) {
+//     const i = this.#users?.findIndex(u => u.primaryEmail === primaryEmail);
+//     if (i === -1) throw new Error('Resource Not Found: userKey');
+//     this.#users?.splice(i, 1);
+//   }
+//   update(patch: UserType, primaryEmail: string) {
+//     const i = this.#users.findIndex(u => u.primaryEmail === primaryEmail);
+//     if (i === -1) throw new Error('Resource Not Found: userKey');
+//     const oldUser = this.#users[i];
+//     const newUser = {...oldUser, ...patch};
+//     this.#users.splice(i, 1, newUser);
+//     return JSON.parse(JSON.stringify(newUser));
+//   }
+// }
 
-  get(primaryEmail: string) {
-    const found = this.#users.find((u) => u.primaryEmail === primaryEmail)
-    return found ? found : {}
-  }
-  insert(user: UserType) {
-    if (!user.primaryEmail) throw new Error("No primary key")
-    if (this.get(user.primaryEmail)) { throw new Error("API call to directory.users.insert failed with error: Entity already exists.") }
-    const newUser = JSON.parse(JSON.stringify(user))
-    this.#users.push(newUser)
-    return newUser
-  }
-  list(_optionaArgs: object) {
-    const users: UserType[] = JSON.parse(JSON.stringify(this.#users))
-    const result = { users }
-    return result
-  }
-  remove(primaryEmail: string) {
-    let i = this.#users?.findIndex((u) => u.primaryEmail === primaryEmail);
-    if (i === -1) throw new Error("Resource Not Found: userKey");
-    this.#users?.splice(i, 1)
-  }
-  update(patch: UserType, primaryEmail: string) {
-    let i = this.#users.findIndex((u) => u.primaryEmail === primaryEmail);
-    if (i === -1) throw new Error("Resource Not Found: userKey");
-    const oldUser = this.#users[i]
-    const newUser = { ...oldUser, ...patch }
-    this.#users.splice(i, 1, newUser)
-    return JSON.parse(JSON.stringify(newUser))
-  }
-}
-
-export class Admin implements AdminDirectoryType {
-  Users?: UsersCollectionType;
-  constructor(users = new Users()) {
-    this.Users = users
-  }
-}
+// export class Admin implements AdminDirectoryType {
+//   Users?: UsersCollectionType;
+//   constructor(users = new Users()) {
+//     this.Users = users;
+//   }
+// }
 
 class Directory {
   systemConfig: SystemConfiguration;
   #Users: UsersCollectionType;
   #Members: MembersCollectionType;
 
-  constructor(systemConfig: SystemConfiguration, adminDirectory: AdminDirectoryType = AdminDirectory) {
+  constructor(
+    systemConfig: SystemConfiguration,
+    adminDirectory: AdminDirectoryType = AdminDirectory
+  ) {
     this.systemConfig = systemConfig;
-    if (!adminDirectory.Users) throw new Error("Internal Error - adminDirectory.Users is undefined")
+    if (!adminDirectory.Users)
+      throw new Error('Internal Error - adminDirectory.Users is undefined');
     this.#Users = adminDirectory.Users;
-    if (!adminDirectory.Members) throw new Error("Internal Error - adminDirectory.Members is undefined")
+    if (!adminDirectory.Members)
+      throw new Error('Internal Error - adminDirectory.Members is undefined');
     this.#Members = adminDirectory.Members;
   }
 
   /**
    * Identify whether member exists
-   * @param {Member} member 
+   * @param {Member} member
    * @returns true iff member is known
    */
   isKnownMember(member: Member) {
-    return this.members.some((m) => m.primaryEmail === member.primaryEmail)
+    return this.members.some(m => m.primaryEmail === member.primaryEmail);
   }
   /**
-   * 
+   *
    * @param {Member | Transaction | UserType} obj Object to be converted to Member
    * @returns new Member object
    */
   makeMember(obj: Member | Transaction | UserType | CurrentMember) {
-    return new Member(obj, this.systemConfig)
+    return new Member(obj, this.systemConfig);
   }
 
   /**
@@ -84,31 +106,31 @@ class Directory {
    * @returns {Member[]} An array of members
    */
   get members(): Member[] {
-    let users = [];
+    let users: any[] = [];
     let pageToken;
     let page;
     do {
       const listSpec = {
         customer: 'my_customer',
         orderBy: 'givenName',
-        viewType: "admin_view",
+        viewType: 'admin_view',
         query: `orgUnitPath:${this.systemConfig.orgUnitPath}`,
         maxResults: 500,
         pageToken: pageToken,
-        projection: "full"
-      }
+        projection: 'full',
+      };
       try {
         page = this.#Users?.list(listSpec);
       } catch (err: any) {
         if (err.message.endsWith('Invalid Input: INVALID_OU_ID')) {
-          err.message += `: "${this.systemConfig.orgUnitPath}"`
-          throw err
+          err.message += `: "${this.systemConfig.orgUnitPath}"`;
+          throw err;
         }
       }
-      if (!page.users) {
+      if (!page || !page.users) {
         return [];
       }
-      users = users.concat(page.users)
+      users = users.concat(page.users);
       pageToken = page.nextPageToken;
     } while (pageToken);
     return users.map(m => this.makeMember(m));
@@ -120,8 +142,10 @@ class Directory {
    * @returns a copy of the updated member
    */
   updateMember(member: Member) {
-    let { customSchemas } = member
-    return Utils.retryOnError(() => this.makeMember(this.updateMember_(member, member)), MemberCreationNotCompletedError)
+    return Utils.retryOnError(
+      () => this.makeMember(this.updateMember_(member, member)),
+      MemberCreationNotCompletedError
+    );
   }
 
   updateMember_(member: Member, patch: UserType) {
@@ -130,13 +154,13 @@ class Directory {
       const newMember: UserType = this.#Users?.update(patch, key);
       return newMember;
     } catch (err: any) {
-      if (err.message && err.message.includes("userKey")) {
-        err.message = err.message.replace("userKey", key)
-        throw (new MemberNotFoundError(err))
-      } else if (err.message.includes("User creation is not complete.")) {
-        throw new MemberCreationNotCompletedError(err)
+      if (err.message && err.message.includes('userKey')) {
+        err.message = err.message.replace('userKey', key);
+        throw new MemberNotFoundError(err);
+      } else if (err.message.includes('User creation is not complete.')) {
+        throw new MemberCreationNotCompletedError(err);
       }
-      throw new DirectoryError(err)
+      throw new DirectoryError(err);
     }
   }
 
@@ -148,220 +172,122 @@ class Directory {
    */
   getMember(member: Member) {
     try {
-      return this.makeMember(this.#Users.get(member.primaryEmail, { projection: "full", viewType: "admin_view" }))
+      return this.makeMember(
+        this.#Users.get(member.primaryEmail, {
+          projection: 'full',
+          viewType: 'admin_view',
+        })
+      );
     } catch (err: any) {
-      if (err.message.endsWith("Resource Not Found: userKey")) throw new MemberNotFoundError(member.primaryEmail)
-      throw new DirectoryError(err)
+      if (err.message.endsWith('Resource Not Found: userKey'))
+        throw new MemberNotFoundError(member.primaryEmail);
+      throw new DirectoryError(err);
     }
   }
   /**
-   * 
+   *
    * @param {Member} member The transaction to be used to add a member
    * @param {boolean} [wait = true] whether to wait for the transaction to complete
    * @returns {Member} the newly inserted member
    */
-  addMember(m: Member | CurrentMember, wait: boolean = true) {
-    const member = (isCurrentMember(m)) ? this.makeMember(m) : m;
+  addMember(m: Member | CurrentMember, wait = true) {
+    const member = isCurrentMember(m) ? this.makeMember(m) : m;
     member.password = Math.random().toString(36);
     member.changePasswordAtNextLogin = true;
     try {
       const newMember = this.makeMember(this.#Users.insert(member));
       if (wait) {
-        Utils.waitNTimesOnCondition(4000, () => this.isKnownMember(newMember))
+        Utils.waitNTimesOnCondition(4000, () => this.isKnownMember(newMember));
       }
-      console.info(`member ${member.name.fullName} was allocated this account name: ${member.primaryEmail}`)
-      this.systemConfig.groups.split(',').forEach(group => this.addMemberToGroup(member, group))
+      console.info(
+        `member ${member.name.fullName} was allocated this account name: ${member.primaryEmail}`
+      );
+      this.systemConfig.groups
+        .split(',')
+        .forEach(group => this.addMemberToGroup(member, group));
       return newMember;
     } catch (err: any) {
-      if (err.message.includes("API call to directory.users.insert failed with error: Entity already exists.")) {
-        throw new MemberAlreadyExistsError(err)
+      if (
+        err.message.includes(
+          'API call to directory.users.insert failed with error: Entity already exists.'
+        )
+      ) {
+        throw new MemberAlreadyExistsError(err);
       } else {
         if (err.message.endsWith('Invalid Input: primary_user_email')) {
           err.message += `: ${member.primaryEmail}`;
         }
-        throw new DirectoryError(err)
+        throw new DirectoryError(err);
       }
     }
   }
   addMemberToGroup(member: Member, groupKey: string) {
     const groupMember: GoogleAppsScript.AdminDirectory.Schema.Member = {
-      kind: "admin#directory#member",
+      kind: 'admin#directory#member',
       email: member.homeEmail,
-      role: "MEMBER",
-      type: "EXTERNAL"
-    }
+      role: 'MEMBER',
+      type: 'EXTERNAL',
+    };
     try {
-      this.#Members.insert(groupMember, groupKey.trim())
+      this.#Members.insert(groupMember, groupKey.trim());
     } catch (err: any) {
-      if (!err.message.endsWith('Member already exists.')) throw err
+      if (!err.message.endsWith('Member already exists.')) throw err;
     }
-    console.info(`member ${member.name.fullName}'s home email (${member.homeEmail}) is in group ${groupKey}`)
+    console.info(
+      `member ${member.name.fullName}'s home email (${member.homeEmail}) is in group ${groupKey}`
+    );
   }
   /**
    * Delete the given member
    * @param {Member} member
    * @param {boolean} [wait = true] wait for deletion to finish before returning
    */
-  deleteMember(member: Member, wait: boolean = true) {
+  deleteMember(member: Member, wait = true) {
     try {
-      Utils.retryOnError(() => { this.#Users.remove(member.primaryEmail.toLowerCase()); console.log(`Member ${member.primaryEmail} deleted`); return true }, MemberCreationNotCompletedError)
-      Utils.waitNTimesOnCondition(wait ? 400 : 1, () => !this.isKnownMember(member))
-    }
-    catch (err: any) {
+      Utils.retryOnError(() => {
+        this.#Users.remove(member.primaryEmail.toLowerCase());
+        console.log(`Member ${member.primaryEmail} deleted`);
+        return true;
+      }, MemberCreationNotCompletedError);
+      Utils.waitNTimesOnCondition(
+        wait ? 400 : 1,
+        () => !this.isKnownMember(member)
+      );
+    } catch (err: any) {
       // Only throw the error if the user might still exist, otherwise ignore it since the user not existing is what we want!
-      if (!err.message.endsWith("Resource Not Found: userKey")) throw new MemberNotFoundError(err)
+      if (!err.message.endsWith('Resource Not Found: userKey'))
+        throw new MemberNotFoundError(err);
     }
   }
 }
-export { Directory };
-class LocalDirectory extends Directory {
-  constructor(systemConfig: SystemConfiguration) {
-    super(systemConfig, new Admin())
-  }
-}
-export { LocalDirectory };
+export {Directory};
 class DirectoryError extends Error {
   constructor(message: string) {
-    super(message)
-    this.name = "DirectoryError"
+    super(message);
+    this.name = 'DirectoryError';
   }
 }
 
 class MemberAlreadyExistsError extends DirectoryError {
   constructor(message: string) {
-    super(message)
-    this.name = "MemberAlreadyExistsError"
+    super(message);
+    this.name = 'MemberAlreadyExistsError';
   }
 }
 
 class MemberNotFoundError extends DirectoryError {
   constructor(message: string) {
     super(message);
-    this.name = "MemberNotFoundError"
+    this.name = 'MemberNotFoundError';
   }
 }
 
 class MemberCreationNotCompletedError extends DirectoryError {
   constructor(message: string) {
     super(message);
-    this.name = "UserConstructionNotCompletedError"
+    this.name = 'UserConstructionNotCompletedError';
   }
 }
-
-export class Templates {
-  joinSuccess: Template;
-  joinFailure: Template;
-  renewalSuccess: Template;
-  renewalFailure: Template;
-  ambiguous: Template;
-  expiryNotification?: Template;
-  expiration?: Template;
-  /**
-   * 
-   * @param {GmailDraft[]} drafts draft emails with {{}} templatized bodies
-   * @param {SubjectLines} subjectLines lines
-   */
-  constructor(drafts: GoogleAppsScript.Gmail.GmailDraft[], subjectLines: SubjectLines) {
-    this.joinSuccess = getGmailTemplateFromDrafts_(drafts, subjectLines.joinSuccessSubject)
-    this.joinFailure = getGmailTemplateFromDrafts_(drafts, subjectLines.joinFailureSubject)
-    this.renewalSuccess = getGmailTemplateFromDrafts_(drafts, subjectLines.renewalSuccessSubject)
-    this.renewalFailure = getGmailTemplateFromDrafts_(drafts, subjectLines.renewalFailureSubject)
-    this.ambiguous = getGmailTemplateFromDrafts_(drafts, subjectLines.ambiguousSubject)
-    if (subjectLines.expiryNotificationSubject) {
-      this.expiryNotification = getGmailTemplateFromDrafts_(drafts, subjectLines.expiryNotificationSubject)
-    }
-    if (subjectLines.expirationSubject) {
-      this.expiration = getGmailTemplateFromDrafts_(drafts, subjectLines.expirationSubject)
-    }
-  }
-}
-
-/**
-  * Get a Gmail draft message by matching the subject line.
-  * @param {GMailDraft[]} drafts
-  * @param {string} subject_line to search for draft message
-  * @return {Template} containing the draft message
-  */
-function getGmailTemplateFromDrafts_(drafts: GoogleAppsScript.Gmail.GmailDraft[], subject_line: string): Template {
-  // get drafts
-  const draft = drafts.find(draft => draft.getMessage().getSubject() === subject_line);
-  if (!draft) {
-    throw new Error(`No drafts found that match subject line: "${subject_line}"`)
-  }
-
-
-  // get the message object
-  const msg = draft.getMessage();
-
-  // Handles inline images and attachments so they can be included in the merge
-  // Based on https://stackoverflow.com/a/65813881/1027723
-  // Gets all attachments and inline image attachments
-  const allInlineImages = draft.getMessage().getAttachments({ includeInlineImages: true, includeAttachments: false });
-  const attachments = draft.getMessage().getAttachments({ includeInlineImages: false });
-  const htmlBody = msg.getBody();
-
-  // Creates an inline image object with the image name as key 
-  // (can't rely on image index as array based on insert order)
-  const img_obj = allInlineImages.reduce((obj, i) => (obj[i.getName()] = i, obj), {});
-
-  //Regexp searches for all img string positions with cid
-  const imgexp = RegExp('<img.*?src="cid:(.*?)".*?alt="(.*?)"[^\>]+>', 'g');
-  const matches = [...htmlBody.matchAll(imgexp)];
-
-  //Initiates the allInlineImages object
-  const inlineImagesObj = {};
-  // built an inlineImagesObj from inline image matches
-  matches.forEach(match => inlineImagesObj[match[1]] = img_obj[match[2]]);
-
-  return {
-    message: {
-      subject: subject_line,
-      text: msg.getPlainBody(),
-      html: htmlBody
-    },
-    attachments: attachments,
-    inlineImages: inlineImagesObj
-  }
-}
-
-
-/**
- * Bind the message with the given token bindings
- * @see https://stackoverflow.com/a/378000/1027723
- * @param {Message} message All strings that form the message will have the {{}} tokens replaced
- * @param {object} binding object used to replace {{}} tokens
- * @return {Message} bound message
-*/
-function bindMessage_(message: object, binding: Binding): Message {
-  // We have two templates one for plain text and the html body
-  // Stringifing the object means we can do a global replace
-  // across all the textual part of the object and then restore it.
-  let template_string = JSON.stringify(message);
-
-  // Token replacement
-  template_string = template_string.replace(/{{[^{}]+}}/g, key => {
-    return escapeData_(binding[key.replace(/[{}]+/g, "")] || "");
-  });
-  return JSON.parse(template_string);
-}
-
-/**
- * Escape cell data to make JSON safe
- * @see https://stackoverflow.com/a/9204218/1027723
- * @param {string} str to escape JSON special characters from
- * @return {string} escaped string
-*/
-function escapeData_(str: string): string {
-  return str
-    .replace(/[\\]/g, '\\\\')
-    .replace(/[\"]/g, '\\\"')
-    .replace(/[\/]/g, '\\/')
-    .replace(/[\b]/g, '\\b')
-    .replace(/[\f]/g, '\\f')
-    .replace(/[\n]/g, '\\n')
-    .replace(/[\r]/g, '\\r')
-    .replace(/[\t]/g, '\\t');
-};
 
 class Fixture1 {
   txn1: Transaction;
@@ -370,74 +296,93 @@ class Fixture1 {
   directory: Directory;
   notifier?: Notifier;
 
-  constructor(directory, notifier?) {
-    if (!directory) throw new Error("directory must be provided")
+  constructor(directory: Directory, notifier?: Notifier) {
+    if (!directory) throw new Error('directory must be provided');
     this.txn1 = {
-      "First Name": "J",
-      "Last Name": "K",
-      "Email Address": "j.k@icloud.com",
-      "Phone Number": "+14083869343",
-      "Payable Status": "paid",
-      "Payable Order ID": "1234",
-      "Timestamp": new Date(),
-      "Payable Transaction ID": "1",
-      "In Directory": true
-    }
+      'First Name': 'J',
+      'Last Name': 'K',
+      'Email Address': 'j.k@icloud.com',
+      'Phone Number': '+14083869343',
+      'Payable Status': 'paid',
+      'Payable Order ID': '1234',
+      Timestamp: new Date(),
+      'Payable Transaction ID': '1',
+      'In Directory': true,
+    };
     this.txn2 = {
-      "First Name": "A",
-      "Last Name": "B",
-      "Email Address": "a.b@icloud.com",
-      "Phone Number": "+14083869000",
-      "Payable Status": "paid",
-      "Payable Order ID": "2345",
-      "Timestamp": new Date(),
-      "Payable Transaction ID": "2",
-      "In Directory": false
-    }
+      'First Name': 'A',
+      'Last Name': 'B',
+      'Email Address': 'a.b@icloud.com',
+      'Phone Number': '+14083869000',
+      'Payable Status': 'paid',
+      'Payable Order ID': '2345',
+      Timestamp: new Date(),
+      'Payable Transaction ID': '2',
+      'In Directory': false,
+    };
     this.badTxn = {
-      "First Name": "C",
-      "Last Name": "D",
-      "Email Address": "c.d@icloud.com",
-      "Phone Number": "+14083869340",
-      "Payable Status": "paid",
-      "Payable Order ID": "923",
-      "Timestamp": new Date(),
-      "Payable Transaction ID": "2",
-      "In Directory": true
-    }
+      'First Name': 'C',
+      'Last Name': 'D',
+      'Email Address': 'c.d@icloud.com',
+      'Phone Number': '+14083869340',
+      'Payable Status': 'paid',
+      'Payable Order ID': '923',
+      Timestamp: new Date(),
+      'Payable Transaction ID': '2',
+      'In Directory': true,
+    };
     this.directory = directory;
     this.notifier = notifier;
   }
 }
 
-function isMember(member: Transaction | Member | UserType | CurrentMember): member is Member {
-  return (member as Transaction)["First Name"] === undefined &&
+function isMember(
+  member: Transaction | Member | UserType | CurrentMember
+): member is Member {
+  return (
+    (member as Transaction)['First Name'] === undefined &&
     (member as Member).generation !== undefined
+  );
 }
 
-function isUserType(member: Transaction | Member | UserType | CurrentMember): member is UserType {
-  return (member as Transaction)["First Name"] === undefined &&
+function isUserType(
+  member: Transaction | Member | UserType | CurrentMember
+): member is UserType {
+  return (
+    (member as Transaction)['First Name'] === undefined &&
     (member as Member).generation === undefined
+  );
 }
 
-function isTransaction(txn: Transaction | Member | UserType | CurrentMember): txn is Transaction {
-  let t = (txn as Transaction);
-  return t["First Name"] !== undefined && t["Payable Order ID"] !== undefined;
+function isTransaction(
+  txn: Transaction | Member | UserType | CurrentMember
+): txn is Transaction {
+  const t = txn as Transaction;
+  return t['First Name'] !== undefined && t['Payable Order ID'] !== undefined;
 }
 
-function isCurrentMember(cm: Transaction | Member | UserType | CurrentMember): cm is CurrentMember {
-  let c = (cm as CurrentMember);
-  return c["First Name"] !== undefined && c["Payable Order ID"] === undefined;
+function isCurrentMember(
+  cm: Transaction | Member | UserType | CurrentMember
+): cm is CurrentMember {
+  const c = cm as CurrentMember;
+  return c['First Name'] !== undefined && c.Expires !== undefined;
 }
 
 export class Member implements UserType {
   domain: string;
-  generation: number = 0;
+  generation = 0;
   primaryEmail: string;
-  name: { givenName: string, familyName: string, fullName: string }
-  emails: { address: string, type?: string, primary?: boolean }[];
-  phones: { value: string, type: string }[];
-  customSchemas: { Club_Membership: { expires: string, Join_Date: string, membershipType: string, family?: string } };
+  name: {givenName: string; familyName: string; fullName: string};
+  emails: {address: string; type?: string; primary?: boolean}[];
+  phones: {value: string; type: string}[];
+  customSchemas: {
+    Club_Membership: {
+      expires: Date;
+      Join_Date: Date;
+      membershipType: string;
+      family?: string;
+    };
+  };
   orgUnitPath: string;
   recoveryEmail: string;
   recoveryPhone: string;
@@ -445,60 +390,84 @@ export class Member implements UserType {
   password?: string;
   changePasswordAtNextLogin?: boolean;
 
-  constructor(m: (Transaction | Member | UserType | CurrentMember), systemConfig: SystemConfiguration) {
-    this.domain = systemConfig.domain
+  constructor(
+    m: Transaction | Member | UserType | CurrentMember,
+    systemConfig: SystemConfiguration
+  ) {
+    function deepCopy(v: any) {
+      return v ? JSON.parse(JSON.stringify(v)) : '';
+    }
+    this.domain = systemConfig.domain;
     if (isTransaction(m) || isCurrentMember(m)) {
-      let givenName = m['First Name'];
-      let familyName = m['Last Name'];
-      let fullName = `${givenName} ${familyName}`
-      let email = m['Email Address'];
-      let phone = "" + m['Phone Number'];
-      const name = { givenName, familyName, fullName }
-      const primaryEmail = `${givenName}.${familyName}@${this.domain}`.toLowerCase()
-      phone = phone.startsWith('+1') ? phone : '+1' + phone
-      this.primaryEmail = primaryEmail
-      this.name = name
+      const givenName = m['First Name'];
+      const familyName = m['Last Name'];
+      const fullName = `${givenName} ${familyName}`;
+      const email = m['Email Address'];
+      let phone = '' + m['Phone Number'];
+      const name = {givenName, familyName, fullName};
+      const primaryEmail =
+        `${givenName}.${familyName}@${this.domain}`.toLowerCase();
+      phone = phone.startsWith('+1') ? phone : '+1' + phone;
+      this.primaryEmail = primaryEmail;
+      this.name = name;
       this.emails = [
         {
           address: email,
-          type: "home"
+          type: 'home',
         },
         {
           address: primaryEmail,
-          primary: true
-        }
-      ]
+          primary: true,
+        },
+      ];
       this.phones = [
         {
           value: phone,
-          type: "mobile"
-        }
-      ]
-      const Join_Date = isCurrentMember(m) ? m.Joined : new Date();
-      const expiryDate = isCurrentMember(m) ? m.Expires : Member.incrementDateByOneYear(new Date())
+          type: 'mobile',
+        },
+      ];
+      const Join_Date = isCurrentMember(m)
+        ? m.Joined
+        : new Date(Member.convertToYYYYMMDDFormat_(new Date()));
+      const expiryDate = isCurrentMember(m)
+        ? m.Expires
+        : Member.incrementDateByOneYear(Join_Date);
       this.customSchemas = {
         Club_Membership: {
-          expires: Member.convertToYYYYMMDDFormat_(expiryDate),
-          Join_Date: Member.convertToYYYYMMDDFormat_(Join_Date),
-          membershipType: isCurrentMember(m) ? m["Membership Type"] : 'Individual',
-          ...(isCurrentMember(m) && m["Membership Type"] === "Family" ? { family: m["family"] ? m.Family : m["Last Name"] } : {})
-        }
-      }
-      this.orgUnitPath = systemConfig.orgUnitPath
-      this.recoveryEmail = email
-      this.recoveryPhone = phone
-      this.includeInGlobalAddressList = m["In Directory"]
-    } else {// Simply copy the values, deeply
-      function deepCopy(v) { return v ? JSON.parse(JSON.stringify(v)) : "" }
-      this.primaryEmail = deepCopy(m.primaryEmail).toLowerCase()
-      this.name = deepCopy(m.name)
-      this.emails = deepCopy(m.emails)
-      this.phones = deepCopy(m.phones)
-      this.customSchemas = deepCopy(m.customSchemas)
-      this.orgUnitPath = deepCopy(m.orgUnitPath)
-      this.recoveryEmail = deepCopy(m.recoveryEmail)
-      this.recoveryPhone = deepCopy(m.recoveryPhone)
-      this.includeInGlobalAddressList = m.includeInGlobalAddressList !== undefined ? m.includeInGlobalAddressList : true;
+          expires: expiryDate,
+          Join_Date: Join_Date,
+          membershipType: isCurrentMember(m)
+            ? m['Membership Type']
+            : 'Individual',
+          ...(isCurrentMember(m) && m['Membership Type'] === 'Family'
+            ? {family: m.Family ? m.Family : m['Last Name']}
+            : {}),
+        },
+      };
+      this.orgUnitPath = systemConfig.orgUnitPath;
+      this.recoveryEmail = email;
+      this.recoveryPhone = phone;
+      this.includeInGlobalAddressList = m['In Directory'];
+    } else {
+      // Simply copy the values, deeply
+      this.primaryEmail = deepCopy(m.primaryEmail).toLowerCase();
+      this.name = deepCopy(m.name);
+      this.emails = deepCopy(m.emails);
+      this.phones = deepCopy(m.phones);
+      this.customSchemas = deepCopy(m.customSchemas);
+      this.customSchemas.Club_Membership.Join_Date = new Date(
+        this.customSchemas.Club_Membership.Join_Date
+      ); // just to make testing easier!
+      this.customSchemas.Club_Membership.expires = new Date(
+        this.customSchemas.Club_Membership.expires
+      ); // just to make testing easier!
+      this.orgUnitPath = deepCopy(m.orgUnitPath);
+      this.recoveryEmail = deepCopy(m.recoveryEmail);
+      this.recoveryPhone = deepCopy(m.recoveryPhone);
+      this.includeInGlobalAddressList =
+        m.includeInGlobalAddressList !== undefined
+          ? m.includeInGlobalAddressList
+          : true;
       if (isMember(m)) {
         this.generation = m.generation;
       }
@@ -514,36 +483,48 @@ export class Member implements UserType {
       Joined: new Date(this.customSchemas.Club_Membership.Join_Date),
       Expires: new Date(this.customSchemas.Club_Membership.expires),
       'Membership Type': this.customSchemas.Club_Membership.membershipType,
-      Family: this.customSchemas.Club_Membership.family
-    }
+      Family: this.customSchemas.Club_Membership.family,
+    };
   }
   get homeEmail() {
-    const email = this.emails.find(e => e.type === "home")
-    return email ? email.address : "EMAIL ADDRESS UNKNOWN"
+    const email = this.emails.find(e => e.type === 'home');
+    return email ? email.address : 'EMAIL ADDRESS UNKNOWN';
   }
   get phone() {
-    const phone = this.phones.find(e => e.type === "mobile");
-    return phone ? phone.value : "PHONE UNKNOWN"
+    const phone = this.phones.find(e => e.type === 'mobile');
+    return phone ? phone.value : 'PHONE UNKNOWN';
   }
-  makePrimaryEmail_(given, family, generation, domain) {
-    return `${given}.${family}${generation}@${domain}`.toLowerCase()
+  makePrimaryEmail_(
+    given: string,
+    family: string,
+    generation: number,
+    domain: string
+  ) {
+    return `${given}.${family}${generation}@${domain}`.toLowerCase();
   }
   incrementGeneration() {
-    this.generation += 1
-    let pm = this.makePrimaryEmail_(this.name.givenName, this.name.familyName, "" + this.generation, this.domain)
-    this.primaryEmail = pm
-    this.emails.filter((e) => e.primary).forEach((e) => e.address = pm)
-    return this
+    this.generation += 1;
+    const pm = this.makePrimaryEmail_(
+      this.name.givenName,
+      this.name.familyName,
+      this.generation,
+      this.domain
+    );
+    this.primaryEmail = pm;
+    this.emails.filter(e => e.primary).forEach(e => (e.address = pm));
+    return this;
   }
   incrementExpirationDate() {
-    let ed = Member.incrementDateByOneYear(this.customSchemas.Club_Membership.expires);
-    this.customSchemas.Club_Membership.expires = Member.convertToYYYYMMDDFormat_(ed);
-    return this
+    const ed = Member.incrementDateByOneYear(
+      this.customSchemas.Club_Membership.expires
+    );
+    this.customSchemas.Club_Membership.expires = ed;
+    return this;
   }
-  static incrementDateByOneYear(date: string | number | Date) {
-    let d = new Date(date)
-    d.setFullYear(d.getFullYear() + 1)
-    return d
+  static incrementDateByOneYear(date: Date) {
+    const d = new Date(date);
+    d.setFullYear(d.getFullYear() + 1);
+    return d;
   }
   static convertToYYYYMMDDFormat_(date: Date) {
     return new Date(date).toISOString().split('T')[0];
@@ -559,212 +540,376 @@ class Notifier implements NotificationType {
   importSuccessLog = new Array<LogEntry>();
   importFailureLog = new Array<LogEntry>();
 
-
   /**
    * Notify anyone interested that a user has been added as a consequence of the transaction
    * @param {Transaction} txn The transaction that caused the join
    * @param {User} member The user that was joined
    */
   joinSuccess(txn: Transaction, member: Member) {
-    this.joinSuccessLog.push({ input: txn, member })
+    this.joinSuccessLog.push({input: txn, member});
   }
   joinFailure(txn: Transaction, member: Member, error: Error) {
-    this.joinFailureLog.push({ input: txn, member, error })
+    this.joinFailureLog.push({input: txn, member, error});
   }
   renewalSuccess(txn: Transaction, member: Member) {
-    this.renewalSuccessLog.push({ input: txn, member })
+    this.renewalSuccessLog.push({input: txn, member});
   }
   renewalFailure(txn: Transaction, member: Member, error: Error) {
-    this.renewalFailureLog.push({ input: txn, member, error })
+    this.renewalFailureLog.push({input: txn, member, error});
   }
   partial(txn: Transaction, member: Member) {
-    this.partialsLog.push({ input: txn, member })
+    this.partialsLog.push({input: txn, member});
   }
   importSuccess(cm: CurrentMember, member: Member) {
-    this.importSuccessLog.push({ input: cm, member })
+    this.importSuccessLog.push({input: cm, member});
   }
   importFailure(cm: CurrentMember, member: Member, error: Error) {
-    this.importFailureLog.push({ input: cm, member, error: error })
+    this.importFailureLog.push({input: cm, member, error: error});
   }
   log() {
     function reportSuccess(l: LogEntry[], kind: string) {
-      l.forEach((e: LogEntry) => console.log(`${e.member.primaryEmail} ${kind}`))
+      l.forEach((e: LogEntry) =>
+        console.log(`${e.member.primaryEmail} ${kind}`)
+      );
     }
     function reportFailure(l: LogEntry[], kind: string) {
       function addInfoToError(logEntry: LogEntry) {
         if (!logEntry.error) return;
         if (logEntry.error.message.endsWith('Invalid recovery phone.')) {
-          logEntry.error.message += `: "${logEntry.input["Phone Number"]}"`
+          logEntry.error.message += `: "${logEntry.input['Phone Number']}"`;
         }
       }
-      l.forEach((l) => {
-        addInfoToError(l)
+      l.forEach(l => {
+        addInfoToError(l);
         if (isTransaction(l.input)) {
-          console.error(`Txn ${l.input["Payable Transaction ID"]} had ${kind} error: ${l.error}`)
+          console.error(
+            `Txn ${l.input['Payable Transaction ID']} had ${kind} error: ${l.error}`
+          );
         } else {
-          console.error(`Current Member ${l.input["First Name"]} ${l.input["Last Name"]} (${l.input["Email Address"]}) had '${kind} error: ${l.error}`)
+          console.error(
+            `Current Member ${l.input['First Name']} ${l.input['Last Name']} (${l.input['Email Address']}) had '${kind} error: ${l.error}`
+          );
         }
-      })
+      });
     }
-    reportSuccess(this.joinSuccessLog, "joined")
-    reportFailure(this.joinFailureLog, "join")
-    reportSuccess(this.renewalSuccessLog, "renewed")
-    reportFailure(this.renewalFailureLog, "renewal")
-    this.partialsLog.forEach((p) => console.error(`ambiguous match: Txn[Email Address]: ${p.input["Email Address"]} member.homeEmail: ${p.member.homeEmail} Txn[Phone Number]: ${p.input["Phone Number"]} member.phone: ${p.member.phone}`)
-    )
-    reportSuccess(this.importSuccessLog, "import")
-    reportFailure(this.importFailureLog, "import")
+    reportSuccess(this.joinSuccessLog, 'joined');
+    reportFailure(this.joinFailureLog, 'join');
+    reportSuccess(this.renewalSuccessLog, 'renewed');
+    reportFailure(this.renewalFailureLog, 'renewal');
+    this.partialsLog.forEach(p =>
+      console.error(
+        `ambiguous match: Txn[Email Address]: ${p.input['Email Address']} member.homeEmail: ${p.member.homeEmail} Txn[Phone Number]: ${p.input['Phone Number']} member.phone: ${p.member.phone}`
+      )
+    );
+    reportSuccess(this.importSuccessLog, 'import');
+    reportFailure(this.importFailureLog, 'import');
   }
-
-
 }
-export { Notifier };
+export {Notifier};
 
 class EmailNotifier extends Notifier {
   #configs: EmailConfigurationCollection;
   #options: MailerOptions;
-  #drafts: GoogleAppsScript.Gmail.GmailDraft[];
-  #mailer: MailApp;
+  #drafts: Draft[];
+  #mailer: MyMailApp;
 
   /**
-   * 
+   *
    * @param drafts Draft[] drafts to be used
-   * @param configs Configs 
+   * @param configs Configs
    * @param options Mail Options
    */
-  constructor(mailer: MailApp, configs: EmailConfigurationCollection, options: MailerOptions) {
-    super()
+  constructor(
+    mailer: MyMailApp,
+    configs: EmailConfigurationCollection,
+    options: MailerOptions
+  ) {
+    super();
     this.#mailer = mailer;
     this.#drafts = mailer.getDrafts();
-    this.#options = { test: true, domain: "santacruzcountycycling.club", ...options };
+    this.#options = {
+      test: true,
+      domain: 'santacruzcountycycling.club',
+      ...options,
+    };
     this.#configs = configs;
   }
 
   joinSuccess(txn: Transaction, member: Member) {
-    super.joinSuccess(txn, member)
-    this.notifySuccess_(txn, member, this.#configs.joinSuccess,)
+    super.joinSuccess(txn, member);
+    this.notifySuccess_(txn, member, this.#configs.joinSuccess);
   }
   joinFailure(txn: Transaction, member: Member, error: Error) {
-    super.joinFailure(txn, member, error)
-    this.notifyFailure_(txn, member, this.#configs.joinFailure, error)
+    super.joinFailure(txn, member, error);
+    this.notifyFailure_(txn, member, this.#configs.joinFailure, error);
   }
   renewalSuccess(txn: Transaction, member: Member) {
     super.renewalSuccess(txn, member);
-    this.notifySuccess_(txn, member, this.#configs.renewSuccess)
+    this.notifySuccess_(txn, member, this.#configs.renewSuccess);
   }
   renewalFailure(txn: Transaction, member: Member, error: Error) {
-    super.renewalFailure(txn, member, error)
-    this.notifySuccess_(txn, member, this.#configs.renewFailure)
+    super.renewalFailure(txn, member, error);
+    this.notifySuccess_(txn, member, this.#configs.renewFailure);
   }
   partial(txn: Transaction, member: Member) {
-    super.partial(txn, member)
-    this.notifyFailure_(txn, member, this.#configs.ambiguousTransaction)
+    super.partial(txn, member);
+    this.notifyFailure_(txn, member, this.#configs.ambiguousTransaction);
   }
-  importSuccess(cm: CurrentMember, member:Member){
-    super.importSuccess(cm, member)
-    this.notifySuccess_(cm, member, this.#configs.importSuccess)
+  importSuccess(cm: CurrentMember, member: Member) {
+    super.importSuccess(cm, member);
+    this.notifySuccess_(cm, member, this.#configs.importSuccess);
   }
-  importFailure(cm:CurrentMember, member:Member, error:Error) {
+  importFailure(cm: CurrentMember, member: Member, error: Error) {
     super.importFailure(cm, member, error);
-    this.notifyFailure_(cm, member, this.#configs.importFailure, error)
+    this.notifyFailure_(cm, member, this.#configs.importFailure, error);
   }
   private makeBccList(bcc: string) {
-    return bcc.split(',').map(a => a.trim() + '@' + this.#options.domain).join(',')
+    return bcc
+      .split(',')
+      .map(a => a.trim() + '@' + this.#options.domain)
+      .join(',');
   }
   private getBcc(bcc: string): GoogleAppsScript.Gmail.GmailAdvancedOptions {
-    return this.#options.test ? {} : { bcc }
+    return this.#options.test ? {} : {bcc};
   }
-  private notifySuccess_(txn: Transaction | CurrentMember, member: Member, config: EmailConfigurationType) {
-    this.notify(txn, member, config.To, config["Subject Line"], config["Bcc on Success"])
+  private notifySuccess_(
+    txn: Transaction | CurrentMember,
+    member: Member,
+    config: EmailConfigurationType
+  ) {
+    this.notify(
+      txn,
+      member,
+      config.To,
+      config['Subject Line'],
+      config['Bcc on Success']
+    );
   }
-  private notifyFailure_(txn: Transaction | CurrentMember, member: Member, config: EmailConfigurationType, error?: Error) {
-    this.notify(txn, member, config.To, config["Subject Line"], config["Bcc on Failure"], error)
+  private notifyFailure_(
+    txn: Transaction | CurrentMember,
+    member: Member,
+    config: EmailConfigurationType,
+    error?: Error
+  ) {
+    this.notify(
+      txn,
+      member,
+      config.To,
+      config['Subject Line'],
+      config['Bcc on Failure'],
+      error
+    );
   }
 
-  private notify(txn: Transaction | CurrentMember, member: Member, to: string, subject: string, bcc: string, error?: Error) {
-    const binding = this.makeBinding_(txn, member, error)
-    const message = this.makeMessageObject_(getGmailTemplateFromDrafts_(this.#drafts, subject), binding)
-    this.sendMail_(this.getRecipient_(txn, to), message, this.getBcc(this.makeBccList(bcc)))
+  private notify(
+    txn: Transaction | CurrentMember,
+    member: Member,
+    to: string,
+    subject: string,
+    bcc: string,
+    error?: Error
+  ) {
+    const binding = this.makeBinding_(txn, member, error);
+    const draft = this.makeMessageObject_(this.#drafts, subject, binding);
+    draft.update(
+      this.getRecipient_(txn, to),
+      subject,
+      draft.getMessage().getPlainBody(),
+      {htmlBody: draft.getMessage().getBody()}
+    );
+    const htmlb = draft.getMessage().getBody();
+    this.sendMail_(draft.getMessage(), this.getBcc(this.makeBccList(bcc)));
   }
-  private makeBinding_(txn: Transaction | CurrentMember, member: Member, error?: Error): Binding {
+  private makeBinding_(
+    txn: Transaction | CurrentMember,
+    member: Member,
+    error?: Error
+  ): Binding {
     const binding: Binding = {
       ...txn,
       ...member.report,
-      ...(error ? { error: error } : {})
-    }
+      ...(error ? {error: error} : {}),
+    };
     // The above code is transpiled into code that converts date strings into date objects - not what we want at all!
 
-    Object.keys(binding).forEach(k => binding[k] += '')
-    return binding
+    Object.keys(binding).forEach(
+      k => ((<{[key: string]: string}>binding)[k] += '')
+    );
+    return binding;
   }
-  private makeMessageObject_(template: Template, binding: Binding) {
-    return bindMessage_(template.message, binding)
+  private makeMessageObject_(
+    drafts: Draft[],
+    subject: string,
+    binding: Binding
+  ) {
+    const draft = drafts.find(
+      draft => draft.getMessage().getSubject() === subject
+    );
+    if (!draft) {
+      throw new Error(`No drafts found that match subject line: "${subject}"`);
+    }
+    return EmailNotifier.bindMessage_(draft, binding);
   }
-  private getRecipient_(txn: Transaction | CurrentMember, to:string) {
-    return this.#options.test ? `toby.ferguson+TEST@${this.#options.domain}` : to === 'home' ? txn["Email Address"] : `${to}@${this.#options.domain}`
+  private getRecipient_(txn: Transaction | CurrentMember, to: string) {
+    return this.#options.test
+      ? `toby.ferguson+TEST@${this.#options.domain}`
+      : to === 'home'
+        ? txn['Email Address']
+        : `${to}@${this.#options.domain}`;
   }
 
-  private sendMail_(recipient, message, options?: GoogleAppsScript.Gmail.GmailAdvancedOptions) {
+  private sendMail_(
+    message: Message,
+    options?: GoogleAppsScript.Gmail.GmailAdvancedOptions
+  ) {
     const defaultOptions: GoogleAppsScript.Gmail.GmailAdvancedOptions = {
-      htmlBody: message.html,
       //from: `membership@${this.options.domain}`,
       name: 'SCCC Membership',
       // replyTo: 'a.reply@email.com',
       noReply: true, // if the email should be sent from a generic no-reply email address (not available to gmail.com users)
-      attachments: message.attachments,
-      inlineImages: message.inlineImages
+    };
+    const finalOptions = {
+      ...(message.getBody() && {htmlBody: message.getBody()}),
+      ...defaultOptions,
+      ...options,
+    };
+    this.#mailer.sendEmail(
+      message.getTo(),
+      message.getSubject(),
+      message.getPlainBody(),
+      finalOptions
+    );
+  }
+  /**
+   * Get a Gmail draft message by matching the subject line.
+   * @param {GMailDraft[]} drafts
+   * @param {string} subject_line to search for draft message
+   * @return {Template} containing the draft message
+   */
+  private static getGmailTemplateFromDrafts_(
+    drafts: GoogleAppsScript.Gmail.GmailDraft[],
+    subject_line: string
+  ): Template {
+    // get drafts
+    const draft = drafts.find(
+      draft => draft.getMessage().getSubject() === subject_line
+    );
+    if (!draft) {
+      throw new Error(
+        `No drafts found that match subject line: "${subject_line}"`
+      );
     }
-    const finalOptions = { ...defaultOptions, ...options }
-    this.#mailer.sendEmail(recipient, message.subject, message.text, finalOptions)
+
+    // get the message object
+    const msg = draft.getMessage();
+
+    // Handles inline images and attachments so they can be included in the merge
+    // Based on https://stackoverflow.com/a/65813881/1027723
+    // Gets all attachments and inline image attachments
+    const allInlineImages = draft
+      .getMessage()
+      .getAttachments({includeInlineImages: true, includeAttachments: false});
+    const attachments = draft
+      .getMessage()
+      .getAttachments({includeInlineImages: false});
+    const htmlBody = msg.getBody();
+
+    // Creates an inline image object with the image name as key
+    // (can't rely on image index as array based on insert order)
+    const img_obj = allInlineImages.reduce(
+      (obj: {[key: string]: object}, i) => ((obj[i.getName()] = i), obj),
+      {}
+    );
+
+    //Regexp searches for all img string positions with cid
+    const imgexp = RegExp('<img.*?src="cid:(.*?)".*?alt="(.*?)"[^>]+>', 'g');
+    const matches = [...htmlBody.matchAll(imgexp)];
+
+    //Initiates the allInlineImages object
+    const inlineImagesObj: {[key: string]: object} = {};
+    // built an inlineImagesObj from inline image matches
+    matches.forEach(match => (inlineImagesObj[match[1]] = img_obj[match[2]]));
+
+    return {
+      message: draft.getMessage(),
+      attachments: attachments,
+      inlineImages: inlineImagesObj,
+    };
   }
 
+  /**
+   * Bind the message with the given token bindings
+   * @see https://stackoverflow.com/a/378000/1027723
+   * @param {Message} draft All strings that form the message will have the {{}} tokens replaced
+   * @param {object} binding object used to replace {{}} tokens
+   * @return {Message} bound message
+   */
+  private static bindMessage_(draft: Draft, binding: Binding): Draft {
+    // We have two templates one for plain text and the html body
+    // Stringifing the object means we can do a global replace
+    // across all the textual part of the object and then restore it.
+    const message: Message = draft.getMessage();
+    const plain = EmailNotifier.replaceTokens(message.getPlainBody(), binding);
+    const htmlBody = EmailNotifier.replaceTokens(message.getBody(), binding);
+    const subject = EmailNotifier.replaceTokens(message.getSubject(), binding);
+    return draft.update(message.getTo(), subject, plain, {htmlBody});
+  }
 
+  static replaceTokens(str: string, tokens: {[key: string]: any}) {
+    return str.replace(/{{[^{}]+}}/g, key => tokens[key]);
+  }
 }
-export { EmailNotifier };
+export {EmailNotifier};
 
 class TransactionProcessor {
   directory: Directory;
   notifier: Notifier;
 
   /**
-   * 
-   * @param {Directory} directory 
-   * @param {Notifier} notifier 
+   *
+   * @param {Directory} directory
+   * @param {Notifier} notifier
    */
   constructor(directory: Directory, notifier: Notifier = new Notifier()) {
     this.directory = directory;
     this.notifier = notifier;
   }
-  processTransaction(txn: Transaction, matcher = this.matchTransactionToMember_) {
-    if (txn['Payable Status'] === undefined || !txn['Payable Status'].startsWith('paid') || txn.Processed) return txn;
+  processTransaction(
+    txn: Transaction,
+    matcher = this.matchTransactionToMember_
+  ) {
+    if (
+      txn['Payable Status'] === undefined ||
+      !txn['Payable Status'].startsWith('paid') ||
+      txn.Processed
+    )
+      return txn;
 
-    try {
-      let matching = this.directory.members.filter((m) => matcher(txn, m))
-      if (matching.length === 0) { // Join
-        Logger.log("TP.pt - join_");
-        this.join_(txn);
+    const matching = this.directory.members.filter(m => matcher(txn, m));
+    if (matching.length === 0) {
+      // Join
+      Logger.log('TP.pt - join_');
+      this.join_(txn);
+    } else {
+      if (matching.length > 1) {
+        matching.forEach(m => {
+          Logger.log('TP.pt - partial_');
+          this.partial_(txn, m);
+        });
       } else {
-        if (matching.length > 1) {
-          matching.forEach(m => {
-            Logger.log("TP.pt - partial_")
-            this.partial_(txn, m)
-          })
+        const member = matching[0];
+        const matched = matcher(txn, member);
+        if (typeof matched === 'boolean') throw new Error('Matching failure');
+        if (matched.full) {
+          Logger.log('TP.pt - renew_');
+          this.renew_(txn, member);
         } else {
-          const member = matching[0]
-          const matched = matcher(txn, member)
-          if (typeof matched === "boolean") throw new Error("Matching failure")
-          if (matched.full) {
-            Logger.log("TP.pt - renew_")
-            this.renew_(txn, member)
-          } else {
-            Logger.log("TP.pt - partial_")
-            this.partial_(txn, member)
-          }
+          Logger.log('TP.pt - partial_');
+          this.partial_(txn, member);
         }
       }
-    } finally {
-      return txn
     }
+    return txn;
   }
   /**
    * @function matchTransactionToMember - return a value depending on whether the transaction matches a member
@@ -773,85 +918,97 @@ class TransactionProcessor {
    * @return {{full: boolean} | boolean} - IF there's a match returns the object, with the full field indicating whether it was a full match or not; otherwise it returns false.
    */
 
-
-  matchTransactionToMember_(txn: Transaction, member: Member): { full: boolean } | boolean {
-    const left = { email: member.homeEmail, phone: member.phone };
-    const right = { email: txn["Email Address"], phone: txn["Phone Number"] }
-    const result = TransactionProcessor.match(left, right)
-    return result
+  matchTransactionToMember_(
+    txn: Transaction,
+    member: Member
+  ): {full: boolean} | boolean {
+    const left = {email: member.homeEmail, phone: member.phone};
+    const right = {email: txn['Email Address'], phone: txn['Phone Number']};
+    const result = TransactionProcessor.match(left, right);
+    return result;
   }
-  static match(left: { email: string, phone: string }, right: { email: string, phone: string }): { full: boolean } | boolean {
+  static match(
+    left: {email: string; phone: string},
+    right: {email: string; phone: string}
+  ): {full: boolean} | boolean {
     const emailsMatch = left.email === right.email;
     const phonesMatch = left.phone === right.phone;
-    const result = (emailsMatch && phonesMatch) ? { full: true } : (emailsMatch || phonesMatch) ? { full: false } : false
-    return result
+    const result =
+      emailsMatch && phonesMatch
+        ? {full: true}
+        : emailsMatch || phonesMatch
+          ? {full: false}
+          : false;
+    return result;
   }
   join_(txn: Transaction) {
-    const member = this.directory.makeMember(txn)
+    const member = this.directory.makeMember(txn);
     while (true) {
       try {
-        this.directory.addMember(member)
-        txn.Processed = new Date()
-        this.notifier.joinSuccess(txn, member)
-        return
+        this.directory.addMember(member);
+        txn.Processed = new Date();
+        this.notifier.joinSuccess(txn, member);
+        return;
       } catch (err: any) {
         if (err instanceof MemberAlreadyExistsError) {
-          console.log('TP - join retry')
-          member.incrementGeneration()
-          continue
+          console.log('TP - join retry');
+          member.incrementGeneration();
+          continue;
         } else {
-          this.notifier.joinFailure(txn, member, err)
-          return
+          this.notifier.joinFailure(txn, member, err);
+          return;
         }
       }
     }
   }
   /**
-   * Process a membership renewal. 
+   * Process a membership renewal.
    * @param (Transaction) txn the transaction causing the renewal
    * @param (User) member the member that is renewing their membership
    */
   renew_(txn: Transaction, member: Member) {
-    let updatedMember = this.directory.makeMember(member).incrementExpirationDate()
-    updatedMember.includeInGlobalAddressList = txn["In Directory"]
+    const updatedMember = this.directory
+      .makeMember(member)
+      .incrementExpirationDate();
+    updatedMember.includeInGlobalAddressList = txn['In Directory'];
     try {
-      this.directory.updateMember(updatedMember)
-      txn.Processed = new Date()
-      this.notifier.renewalSuccess(txn, updatedMember)
+      this.directory.updateMember(updatedMember);
+      txn.Processed = new Date();
+      this.notifier.renewalSuccess(txn, updatedMember);
     } catch (err: any) {
-      this.notifier.renewalFailure(txn, member, err)
+      this.notifier.renewalFailure(txn, member, err);
     }
   }
-  partial_(txn, member) {
-    this.notifier.partial(txn, member)
+  partial_(txn: Transaction, member: Member) {
+    this.notifier.partial(txn, member);
   }
 }
-export { TransactionProcessor };
+export {TransactionProcessor};
 const Utils = (() => {
   return {
-    retryOnError: (f, error, t = 250) => {
+    retryOnError: (f: any, error: any, t = 250) => {
       while (true) {
         try {
-          return f()
+          return f();
         } catch (err) {
           if (err instanceof error) {
-            Utilities.sleep(t)
+            Utilities.sleep(t);
           }
-          throw err
+          throw err;
         }
       }
     },
-    waitNTimesOnCondition: (n, c, t = 250) => {
+    waitNTimesOnCondition: (n: number, c: () => boolean, t = 250) => {
       for (let i = 0; i < n; i++) {
         if (c()) {
-          return true
+          return true;
         }
-        Utilities.sleep(t)
+        Utilities.sleep(t);
       }
-      return false
-    }
-  }
-})()
+      return false;
+    },
+  };
+})();
 
 // const test1 = (() => {
 //     const SKIP = false
@@ -876,7 +1033,6 @@ const Utils = (() => {
 //             TestTPJoinFailures(new Directory(sdk), new Notifier(), skip)
 //             testRenewalFailure(new Directory(sdk), new Notifier(), skip)
 //             return unit.isGood()
-
 
 //             function testCreateDeleteTests(directory, skip = false) {
 //                 cleanUp_(testCreateDeleteTests_, directory, "user create/delete tests", skip)
@@ -937,8 +1093,6 @@ const Utils = (() => {
 //                     })
 //             }
 
-
-
 //             function cleanUp_(f, directory, ...args) {
 //                 try {
 //                     f(directory, ...args)
@@ -946,10 +1100,6 @@ const Utils = (() => {
 //                     directory.members.forEach((m, i, em) => directory.deleteMember(m, (i === em.length - 1)))
 //                 }
 //             }
-
-
-
-
 
 //             function testUser(directory, skip = false) {
 //                 const f = new Fixture1(directory)
@@ -963,8 +1113,6 @@ const Utils = (() => {
 //                         skip
 //                     })
 //             }
-
-
 
 //             function testTPJoinSuccess(directory: Directory, notifier: Notifier, skip = false) {
 //                 cleanUp_(testTPJoinSuccess_, directory, notifier, "TransactionProcessor join tests", skip)
@@ -1010,7 +1158,6 @@ const Utils = (() => {
 //                         skip
 //                     })
 //             }
-
 
 //             function TestTPJoinFailures(directory, notifier, skip = false) {
 //                 cleanUp_(TestTPJoinFailures_, directory, "TransactionProcessor join failure tests", notifier, skip)

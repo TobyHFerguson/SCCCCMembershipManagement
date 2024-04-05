@@ -1,7 +1,7 @@
 // tests/hooks.js
-import sinon = require('sinon');// Restores the default sandbox after every test
+import sinon = require('sinon'); // Restores the default sandbox after every test
 exports.mochaHooks = {
-    afterEach() {
-      sinon.restore();
-    },
-  };
+  afterEach() {
+    sinon.restore();
+  },
+};
