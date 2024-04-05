@@ -1,7 +1,7 @@
 import {
   AdminDirectoryType,
   Binding, CurrentMember, EmailConfigurationCollection, EmailConfigurationType, LogEntry,
-  MailerOptions, MemberReport, Message, MailApp, NotificationType, SubjectLines, SystemConfiguration, Template, Transaction, UserType, UsersCollectionType
+  MailerOptions, MemberReport, Message, MailApp, NotificationType, SubjectLines, SystemConfiguration, Template, Transaction, UserType, UsersCollectionType, MembersCollectionType
 } from "./Types";
 
 
@@ -42,7 +42,7 @@ class Users implements UsersCollectionType {
   }
 }
 
-class Admin implements AdminDirectoryType {
+export class Admin implements AdminDirectoryType {
   Users?: UsersCollectionType;
   constructor(users = new Users()) {
     this.Users = users
@@ -52,7 +52,7 @@ class Admin implements AdminDirectoryType {
 class Directory {
   systemConfig: SystemConfiguration;
   #Users: UsersCollectionType;
-  #Members: GoogleAppsScript.AdminDirectory.Collection.MembersCollection;
+  #Members: MembersCollectionType;
 
   constructor(systemConfig: SystemConfiguration, adminDirectory: AdminDirectoryType = AdminDirectory) {
     this.systemConfig = systemConfig;

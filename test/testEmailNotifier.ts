@@ -1,10 +1,10 @@
 import chai = require('chai');
+import Sinon = require('sinon');
 import sinonChai = require("sinon-chai");
 const expect = chai.expect;
 chai.use(sinonChai);
 import { EmailNotifier, Member } from '../src/Code';
 import { CurrentMember, EmailConfigurationCollection, EmailConfigurationType, MailApp, SystemConfiguration, Transaction } from '../src/Types';
-import Sinon = require('sinon');
 
 
 const subject_lines = {
