@@ -23,7 +23,7 @@ const testFixtures = (() => {
     "Payable Status": "paid",
     "Payable Transaction ID": "CC-TF-RNB6",
     "Payable Order ID": "1234",
-    "Timestamp": "2024-03-29",
+    "Timestamp": new Date("2024-03-29"),
     "In Directory": true
   }
   const sysConfig: SystemConfiguration = {

@@ -55,7 +55,7 @@ const testFixtures = (() => {
         "Phone Number": "+14083869343",
         "Payable Status": "paid",
         "Payable Order ID": "CC-TF-RNB6",
-        "Timestamp": "timestamp"
+        "Timestamp": new Date(),
     }
     const ce1: CurrentMember = {
         ...txn1,
