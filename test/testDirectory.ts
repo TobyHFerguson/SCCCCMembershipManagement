@@ -58,7 +58,7 @@ describe('Directory Tests', () => {
             const updateStub = Sinon.stub(users, "update") 
             updateStub.returns(member);
             uut.updateMember(member)
-            expect(updateStub).to.have.been.calledOnceWithExactly({customSchemas: member.customSchemas}, member.primaryEmail)
+            expect(updateStub).to.have.been.calledOnceWithExactly(member, member.primaryEmail)
         })
     })
 })

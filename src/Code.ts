@@ -121,7 +121,7 @@ class Directory {
    */
   updateMember(member: Member) {
     let { customSchemas } = member
-    return Utils.retryOnError(() => this.makeMember(this.updateMember_(member, { customSchemas })), MemberCreationNotCompletedError)
+    return Utils.retryOnError(() => this.makeMember(this.updateMember_(member, member)), MemberCreationNotCompletedError)
   }
 
   updateMember_(member: Member, patch: UserType) {
@@ -379,7 +379,7 @@ class Fixture1 {
       "Phone Number": "+14083869343",
       "Payable Status": "paid",
       "Payable Order ID": "1234",
-      "Timestamp": "now",
+      "Timestamp": new Date(),
       "Payable Transaction ID": "1",
       "In Directory": true
     }
@@ -390,7 +390,7 @@ class Fixture1 {
       "Phone Number": "+14083869000",
       "Payable Status": "paid",
       "Payable Order ID": "2345",
-      "Timestamp": "now",
+      "Timestamp": new Date(),
       "Payable Transaction ID": "2",
       "In Directory": false
     }
@@ -401,7 +401,7 @@ class Fixture1 {
       "Phone Number": "+14083869340",
       "Payable Status": "paid",
       "Payable Order ID": "923",
-      "Timestamp": "now",
+      "Timestamp": new Date(),
       "Payable Transaction ID": "2",
       "In Directory": true
     }
@@ -791,7 +791,7 @@ class TransactionProcessor {
     while (true) {
       try {
         this.directory.addMember(member)
-        txn.Processed = new Date().toISOString().split("T")[0]
+        txn.Processed = new Date()
         this.notifier.joinSuccess(txn, member)
         return
       } catch (err: any) {
@@ -811,8 +811,9 @@ class TransactionProcessor {
    * @param (Transaction) txn the transaction causing the renewal
    * @param (User) member the member that is renewing their membership
    */
-  renew_(txn, member) {
+  renew_(txn: Transaction, member: Member) {
     let updatedMember = this.directory.makeMember(member).incrementExpirationDate()
+    updatedMember.includeInGlobalAddressList = txn["In Directory"]
     try {
       this.directory.updateMember(updatedMember)
       txn.Processed = new Date()

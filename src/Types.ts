@@ -45,8 +45,8 @@ interface PersonalInformation {
 interface Transaction extends PersonalInformation {
     "Payable Order ID": string;
     "Payable Status": string;
-    "Timestamp": string;
-    "Processed"?: string;
+    "Timestamp": Date;
+    "Processed"?: Date;
     "Payable Transaction ID": string;
     "In Directory": boolean;
 }
@@ -72,8 +72,8 @@ interface MemberReport extends MembershipInfo {
 interface Binding {
     "Payable Order ID"?: string;
     "Payable Status"?: string;
-    "Timestamp"?: string;
-    "Processed"?: string;
+    "Timestamp"?: Date;
+    "Processed"?: Date;
     "Payable Transaction ID"?: string;
     "In Directory"?: boolean;
     "Membership Type"?: string;

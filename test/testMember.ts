@@ -31,7 +31,7 @@ describe('Member tests', () => {
         "Payable Status": "paid",
         "Payable Transaction ID": "CC-TF-RNB6",
         "Payable Order ID": "1234",
-        "Timestamp": "2024-03-29",
+        "Timestamp": new Date("2024-03-29"),
         "In Directory": true
     }
     it('should be able to be constructed from a Transaction', () => {
