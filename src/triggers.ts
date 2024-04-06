@@ -91,7 +91,7 @@ function getEmailNotifier_() {
 
 function createMembershipReport() {
   const directory = getDirectory_();
-  const reportMembers = directory.members.map(m => m.report);
+  const reportMembers = directory.getMembers.map(m => m.report);
   const membersFiddler = bmPreFiddler.PreFiddler().getFiddler({
     id: null,
     sheetName: 'MembershipReport',

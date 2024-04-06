@@ -90,7 +90,7 @@ class Directory {
    * @returns true iff member is known
    */
   isKnownMember(member: Member) {
-    return this.members.some(m => m.primaryEmail === member.primaryEmail);
+    return this.getMembers().some(m => m.primaryEmail === member.primaryEmail);
   }
   /**
    *
@@ -105,7 +105,7 @@ class Directory {
    * Get all the members of the organization
    * @returns {Member[]} An array of members
    */
-  get members(): Member[] {
+  getMembers(): Member[] {
     let users: any[] = [];
     let pageToken;
     let page;
@@ -268,21 +268,21 @@ class DirectoryError extends Error {
   }
 }
 
-class MemberAlreadyExistsError extends DirectoryError {
+export class MemberAlreadyExistsError extends DirectoryError {
   constructor(message: string) {
     super(message);
     this.name = 'MemberAlreadyExistsError';
   }
 }
 
-class MemberNotFoundError extends DirectoryError {
+export class MemberNotFoundError extends DirectoryError {
   constructor(message: string) {
     super(message);
     this.name = 'MemberNotFoundError';
   }
 }
 
-class MemberCreationNotCompletedError extends DirectoryError {
+export class MemberCreationNotCompletedError extends DirectoryError {
   constructor(message: string) {
     super(message);
     this.name = 'UserConstructionNotCompletedError';
@@ -407,7 +407,7 @@ export class Member implements UserType {
       const name = {givenName, familyName, fullName};
       const primaryEmail =
         `${givenName}.${familyName}@${this.domain}`.toLowerCase();
-      phone = phone.startsWith('+1') ? phone : '+1' + phone;
+      phone = phone;
       this.primaryEmail = primaryEmail;
       this.name = name;
       this.emails = [
@@ -835,15 +835,15 @@ class TransactionProcessor {
     )
       return txn;
 
-    const matching = this.directory.members.filter(m => matcher(txn, m));
+    const matching = this.directory.getMembers().filter(m => matcher(txn, m));
     if (matching.length === 0) {
       // Join
-      Logger.log('TP.pt - join_');
+      console.log('TP.pt - join_');
       this.join_(txn);
     } else {
       if (matching.length > 1) {
         matching.forEach(m => {
-          Logger.log('TP.pt - partial_');
+          console.log('TP.pt - partial_');
           this.partial_(txn, m);
         });
       } else {
@@ -851,10 +851,10 @@ class TransactionProcessor {
         const matched = matcher(txn, member);
         if (typeof matched === 'boolean') throw new Error('Matching failure');
         if (matched.full) {
-          Logger.log('TP.pt - renew_');
+          console.log('TP.pt - renew_');
           this.renew_(txn, member);
         } else {
-          Logger.log('TP.pt - partial_');
+          console.log('TP.pt - partial_');
           this.partial_(txn, member);
         }
       }
@@ -900,7 +900,7 @@ class TransactionProcessor {
         this.notifier.joinSuccess(txn, member);
         return;
       } catch (err: any) {
-        if (err instanceof MemberAlreadyExistsError) {
+        if (err.name === "MemberAlreadyExistsError") {
           console.log('TP - join retry');
           member.incrementGeneration();
           continue;
@@ -936,12 +936,12 @@ class TransactionProcessor {
 export {TransactionProcessor};
 const Utils = (() => {
   return {
-    retryOnError: (f: any, error: any, t = 250) => {
+    retryOnError: (f: any, error: {name:string}, t = 250) => {
       while (true) {
         try {
           return f();
-        } catch (err) {
-          if (err instanceof error) {
+        } catch (err:any) {
+          if (err.name && err.name === error.name) {
             Utilities.sleep(t);
           }
           throw err;
