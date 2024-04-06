@@ -46,7 +46,7 @@ interface PersonalInformation {
 interface Transaction extends PersonalInformation {
   'Payable Order ID': string;
   'Payable Status': string;
-  Timestamp: Date | string ;
+  Timestamp: Date | string;
   Processed?: Date | string;
   'Payable Transaction ID': string;
   'In Directory': boolean;
@@ -178,13 +178,15 @@ export interface MyMailApp {
   getDrafts(): Draft[];
 }
 
-
 export interface Message {
   getTo(): string;
   getSubject(): string;
   getPlainBody(): string;
   getBody(): string;
-  getAttachments(opts: {includeInlineImages?: boolean, includeAttachments?:boolean}): GoogleAppsScript.Gmail.GmailAttachment[];
+  getAttachments(opts: {
+    includeInlineImages?: boolean;
+    includeAttachments?: boolean;
+  }): GoogleAppsScript.Gmail.GmailAttachment[];
   getBcc(): string;
   getCc(): string;
   getFrom(): string;

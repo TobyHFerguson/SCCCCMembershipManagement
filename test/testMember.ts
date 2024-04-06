@@ -10,7 +10,9 @@ const expect = chai.expect;
 
 describe('Member tests', () => {
   const join = Member.convertToYYYYMMDDFormat_(new Date());
-  const expires = Member.convertToYYYYMMDDFormat_(Member.incrementDateByOneYear(join));
+  const expires = Member.convertToYYYYMMDDFormat_(
+    Member.incrementDateByOneYear(join)
+  );
   const expected: UserType = {
     primaryEmail: 'given.family@santacruzcountycycling.club',
     name: {familyName: 'family', givenName: 'given', fullName: 'given family'},
@@ -71,7 +73,9 @@ describe('Member tests', () => {
   });
   it('should be able to be constructed from a CurrentMember', () => {
     const Joined = Member.convertToYYYYMMDDFormat_(new Date());
-    const Expires = Member.convertToYYYYMMDDFormat_(Member.incrementDateByOneYear(Joined));
+    const Expires = Member.convertToYYYYMMDDFormat_(
+      Member.incrementDateByOneYear(Joined)
+    );
 
     const currentMember: CurrentMember = {
       'First Name': 'given',
