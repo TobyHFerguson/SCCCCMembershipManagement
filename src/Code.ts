@@ -399,15 +399,17 @@ export class Member implements UserType {
     }
     this.domain = systemConfig.domain;
     if (isTransaction(m) || isCurrentMember(m)) {
-      const givenName = m['First Name'];
-      const familyName = m['Last Name'];
-      const fullName = `${givenName} ${familyName}`;
-      const email = m['Email Address'];
-      let phone = '' + m['Phone Number'];
+      const givenName = m['First Name'].trim();
+      const familyName = m['Last Name'].trim();
+      const fullName = `${givenName} ${familyName}`.trim();
+      const email = m['Email Address'].trim();
+      const phone = m['Phone Number'].startsWith('+')
+        ? m['Phone Number']
+        : '+1' + m['Phone Number'].trim();
       const name = {givenName, familyName, fullName};
-      const primaryEmail =
-        `${givenName}.${familyName}@${this.domain}`.toLowerCase();
-      phone = phone;
+      const primaryEmail = `${givenName}.${familyName}@${this.domain}`
+        .toLowerCase()
+        .trim();
       this.primaryEmail = primaryEmail;
       this.name = name;
       this.emails = [
@@ -433,8 +435,8 @@ export class Member implements UserType {
                 Join_Date: '' + m.Joined,
                 expires: '' + m.Expires,
                 membershipType: m['Membership Type'],
-                ...(m['Membership Type'] === 'Family'
-                  ? {family: m.Family ? m.Family : m['Last Name']}
+                ...(m['Membership Type'].trim() === 'Family'
+                  ? {family: m.Family ? m.Family : m['Last Name'].trim()}
                   : {}),
               }
             : {
@@ -446,7 +448,7 @@ export class Member implements UserType {
               }),
         },
       };
-      this.orgUnitPath = systemConfig.orgUnitPath;
+      this.orgUnitPath = systemConfig.orgUnitPath.trim();
       this.recoveryEmail = email;
       this.recoveryPhone = phone;
       this.includeInGlobalAddressList = m['In Directory'];
@@ -900,7 +902,7 @@ class TransactionProcessor {
         this.notifier.joinSuccess(txn, member);
         return;
       } catch (err: any) {
-        if (err.name === "MemberAlreadyExistsError") {
+        if (err.name === 'MemberAlreadyExistsError') {
           console.log('TP - join retry');
           member.incrementGeneration();
           continue;
@@ -936,11 +938,11 @@ class TransactionProcessor {
 export {TransactionProcessor};
 const Utils = (() => {
   return {
-    retryOnError: (f: any, error: {name:string}, t = 250) => {
+    retryOnError: (f: any, error: {name: string}, t = 250) => {
       while (true) {
         try {
           return f();
-        } catch (err:any) {
+        } catch (err: any) {
           if (err.name && err.name === error.name) {
             Utilities.sleep(t);
           }
