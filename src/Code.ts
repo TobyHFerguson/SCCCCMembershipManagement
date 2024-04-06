@@ -260,7 +260,7 @@ class Directory {
     }
   }
 }
-export {Directory};
+export { Directory };
 class DirectoryError extends Error {
   constructor(message: string) {
     super(message);
@@ -372,9 +372,9 @@ export class Member implements UserType {
   domain: string;
   generation = 0;
   primaryEmail: string;
-  name: {givenName: string; familyName: string; fullName: string};
-  emails: {address: string; type?: string; primary?: boolean}[];
-  phones: {value: string; type: string}[];
+  name: { givenName: string; familyName: string; fullName: string };
+  emails: { address: string; type?: string; primary?: boolean }[];
+  phones: { value: string; type: string }[];
   customSchemas: {
     Club_Membership: {
       expires: Date;
@@ -404,7 +404,7 @@ export class Member implements UserType {
       const fullName = `${givenName} ${familyName}`;
       const email = m['Email Address'];
       let phone = '' + m['Phone Number'];
-      const name = {givenName, familyName, fullName};
+      const name = { givenName, familyName, fullName };
       const primaryEmail =
         `${givenName}.${familyName}@${this.domain}`.toLowerCase();
       phone = phone.startsWith('+1') ? phone : '+1' + phone;
@@ -440,7 +440,7 @@ export class Member implements UserType {
             ? m['Membership Type']
             : 'Individual',
           ...(isCurrentMember(m) && m['Membership Type'] === 'Family'
-            ? {family: m.Family ? m.Family : m['Last Name']}
+            ? { family: m.Family ? m.Family : m['Last Name'] }
             : {}),
         },
       };
@@ -546,25 +546,25 @@ class Notifier implements NotificationType {
    * @param {User} member The user that was joined
    */
   joinSuccess(txn: Transaction, member: Member) {
-    this.joinSuccessLog.push({input: txn, member});
+    this.joinSuccessLog.push({ input: txn, member });
   }
   joinFailure(txn: Transaction, member: Member, error: Error) {
-    this.joinFailureLog.push({input: txn, member, error});
+    this.joinFailureLog.push({ input: txn, member, error });
   }
   renewalSuccess(txn: Transaction, member: Member) {
-    this.renewalSuccessLog.push({input: txn, member});
+    this.renewalSuccessLog.push({ input: txn, member });
   }
   renewalFailure(txn: Transaction, member: Member, error: Error) {
-    this.renewalFailureLog.push({input: txn, member, error});
+    this.renewalFailureLog.push({ input: txn, member, error });
   }
   partial(txn: Transaction, member: Member) {
-    this.partialsLog.push({input: txn, member});
+    this.partialsLog.push({ input: txn, member });
   }
   importSuccess(cm: CurrentMember, member: Member) {
-    this.importSuccessLog.push({input: cm, member});
+    this.importSuccessLog.push({ input: cm, member });
   }
   importFailure(cm: CurrentMember, member: Member, error: Error) {
-    this.importFailureLog.push({input: cm, member, error: error});
+    this.importFailureLog.push({ input: cm, member, error: error });
   }
   log() {
     function reportSuccess(l: LogEntry[], kind: string) {
@@ -605,7 +605,7 @@ class Notifier implements NotificationType {
     reportFailure(this.importFailureLog, 'import');
   }
 }
-export {Notifier};
+export { Notifier };
 
 class EmailNotifier extends Notifier {
   #configs: EmailConfigurationCollection;
@@ -670,7 +670,7 @@ class EmailNotifier extends Notifier {
       .join(',');
   }
   private getBcc(bcc: string): GoogleAppsScript.Gmail.GmailAdvancedOptions {
-    return this.#options.test ? {} : {bcc};
+    return this.#options.test ? {} : { bcc };
   }
   private notifySuccess_(
     txn: Transaction | CurrentMember,
@@ -701,165 +701,71 @@ class EmailNotifier extends Notifier {
     );
   }
 
-  private notify(
-    txn: Transaction | CurrentMember,
-    member: Member,
-    to: string,
-    subject: string,
-    bcc: string,
-    error?: Error
-  ) {
-    const binding = this.makeBinding_(txn, member, error);
-    const draft = this.makeMessageObject_(this.#drafts, subject, binding);
-    draft.update(
-      this.getRecipient_(txn, to),
-      subject,
-      draft.getMessage().getPlainBody(),
-      {htmlBody: draft.getMessage().getBody()}
-    );
-    const htmlb = draft.getMessage().getBody();
-    this.sendMail_(draft.getMessage(), this.getBcc(this.makeBccList(bcc)));
+  private notify(txn: Transaction | CurrentMember, member: Member, to: string, subject: string, bcc: string, error?: Error) {
+    const originalDraft = this.#drafts.find(d => d.getMessage().getSubject() === subject);
+    if (!originalDraft) throw new Error(`No draft email with subject line "${subject}"`)
+    const bind: (s: string) => string = EmailNotifier.makeBinder(txn, member, error)
+    const message: Message = originalDraft.getMessage();
+    const recipient = this.getRecipient_(txn, to);
+    subject = bind(subject);
+    const plainBody = bind(message.getPlainBody());
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - there seems to be a problem with the Blob and the GmailAttachment types :-()
+    const options: GoogleAppsScript.Gmail.GmailAdvancedOptions = {
+      ...(message.getAttachments({ includeInlineImages: false }).length > 0) ? { attachments: message.getAttachments({ includeInlineImages: false }) } : {},
+      ...message.getBcc() && { bcc: message.getBcc() },
+      ...message.getCc() && { cc: message.getCc() },
+      ...message.getFrom() && { from: message.getFrom() },
+      ...message.getBody() && { htmlBody: bind(message.getBody()) },
+      ...message.getAttachments({ includeAttachments: false }).length > 0 && { inlineImages: EmailNotifier.getInlineImages_(message) },
+      ...message.getReplyTo() && { replyTo: message.getReplyTo() },
+      ...this.getBcc(this.makeBccList(bcc)),
+      ...{ name: 'SCCCC Membership', noReply: true }
+    }
+    this.#mailer.sendEmail(recipient, subject, plainBody, options)
   }
-  private makeBinding_(
-    txn: Transaction | CurrentMember,
-    member: Member,
-    error?: Error
-  ): Binding {
+  static makeBinder(txn: Transaction | CurrentMember, member: Member, error?: Error): (s: string) => string {
     const binding: Binding = {
       ...txn,
       ...member.report,
-      ...(error ? {error: error} : {}),
-    };
+      ...(error ? { error: error } : {})
+    }
     // The above code is transpiled into code that converts date strings into date objects - not what we want at all!
 
-    Object.keys(binding).forEach(
-      k => ((<{[key: string]: string}>binding)[k] += '')
-    );
-    return binding;
+    Object.keys(binding).forEach(k => (<{ [key: string]: string }>binding)[k] += '')
+    const binder = (str:string) => {return EmailNotifier.replaceTokens(str, binding)}
+    return binder;
   }
-  private makeMessageObject_(
-    drafts: Draft[],
-    subject: string,
-    binding: Binding
-  ) {
-    const draft = drafts.find(
-      draft => draft.getMessage().getSubject() === subject
-    );
-    if (!draft) {
-      throw new Error(`No drafts found that match subject line: "${subject}"`);
-    }
-    return EmailNotifier.bindMessage_(draft, binding);
+  static replaceTokens(str: string, tokens = {}) {
+    return str.replace(/{{[^{}]+}}/g, match => { const key = match.replace(/[{}]+/g, ""); return (<{ [key: string]: string }>tokens)[key] || match })
   }
   private getRecipient_(txn: Transaction | CurrentMember, to: string) {
-    return this.#options.test
-      ? `toby.ferguson+TEST@${this.#options.domain}`
-      : to === 'home'
-        ? txn['Email Address']
-        : `${to}@${this.#options.domain}`;
+    return this.#options.test ? `toby.ferguson+TEST@${this.#options.domain}` : to === 'home' ? txn["Email Address"] : `${to}@${this.#options.domain}`
   }
 
-  private sendMail_(
-    message: Message,
-    options?: GoogleAppsScript.Gmail.GmailAdvancedOptions
-  ) {
-    const defaultOptions: GoogleAppsScript.Gmail.GmailAdvancedOptions = {
-      //from: `membership@${this.options.domain}`,
-      name: 'SCCC Membership',
-      // replyTo: 'a.reply@email.com',
-      noReply: true, // if the email should be sent from a generic no-reply email address (not available to gmail.com users)
-    };
-    const finalOptions = {
-      ...(message.getBody() && {htmlBody: message.getBody()}),
-      ...defaultOptions,
-      ...options,
-    };
-    this.#mailer.sendEmail(
-      message.getTo(),
-      message.getSubject(),
-      message.getPlainBody(),
-      finalOptions
-    );
-  }
-  /**
-   * Get a Gmail draft message by matching the subject line.
-   * @param {GMailDraft[]} drafts
-   * @param {string} subject_line to search for draft message
-   * @return {Template} containing the draft message
-   */
-  private static getGmailTemplateFromDrafts_(
-    drafts: GoogleAppsScript.Gmail.GmailDraft[],
-    subject_line: string
-  ): Template {
-    // get drafts
-    const draft = drafts.find(
-      draft => draft.getMessage().getSubject() === subject_line
-    );
-    if (!draft) {
-      throw new Error(
-        `No drafts found that match subject line: "${subject_line}"`
-      );
-    }
+  static getInlineImages_(message: Message) {
+    const allInlineImages = message.getAttachments({ includeInlineImages: true, includeAttachments: false });
+    const htmlBody = message.getBody();
 
-    // get the message object
-    const msg = draft.getMessage();
-
-    // Handles inline images and attachments so they can be included in the merge
-    // Based on https://stackoverflow.com/a/65813881/1027723
-    // Gets all attachments and inline image attachments
-    const allInlineImages = draft
-      .getMessage()
-      .getAttachments({includeInlineImages: true, includeAttachments: false});
-    const attachments = draft
-      .getMessage()
-      .getAttachments({includeInlineImages: false});
-    const htmlBody = msg.getBody();
-
-    // Creates an inline image object with the image name as key
+    // Creates an inline image object with the image name as key 
     // (can't rely on image index as array based on insert order)
-    const img_obj = allInlineImages.reduce(
-      (obj: {[key: string]: object}, i) => ((obj[i.getName()] = i), obj),
-      {}
-    );
+    const img_obj: { [key: string]: GoogleAppsScript.Gmail.GmailAttachment } = (<GoogleAppsScript.Gmail.GmailAttachment[]>allInlineImages).reduce((obj, i) => ((<{ [key: string]: GoogleAppsScript.Gmail.GmailAttachment }>obj)[i.getName()] = i, obj), {});
 
     //Regexp searches for all img string positions with cid
-    const imgexp = RegExp('<img.*?src="cid:(.*?)".*?alt="(.*?)"[^>]+>', 'g');
+    const imgexp = RegExp('<img.*?src="cid:(.*?)".*?alt="(.*?)"[^\>]+>', 'g');
     const matches = [...htmlBody.matchAll(imgexp)];
 
     //Initiates the allInlineImages object
-    const inlineImagesObj: {[key: string]: object} = {};
+    const inlineImagesObj: { [key: string]: GoogleAppsScript.Gmail.GmailAttachment } = {};
     // built an inlineImagesObj from inline image matches
-    matches.forEach(match => (inlineImagesObj[match[1]] = img_obj[match[2]]));
-
-    return {
-      message: draft.getMessage(),
-      attachments: attachments,
-      inlineImages: inlineImagesObj,
-    };
+    matches.forEach(match => inlineImagesObj[match[1]] = img_obj[match[2]]);
+    return inlineImagesObj;
   }
 
-  /**
-   * Bind the message with the given token bindings
-   * @see https://stackoverflow.com/a/378000/1027723
-   * @param {Message} draft All strings that form the message will have the {{}} tokens replaced
-   * @param {object} binding object used to replace {{}} tokens
-   * @return {Message} bound message
-   */
-  private static bindMessage_(draft: Draft, binding: Binding): Draft {
-    // We have two templates one for plain text and the html body
-    // Stringifing the object means we can do a global replace
-    // across all the textual part of the object and then restore it.
-    const message: Message = draft.getMessage();
-    const plain = EmailNotifier.replaceTokens(message.getPlainBody(), binding);
-    const htmlBody = EmailNotifier.replaceTokens(message.getBody(), binding);
-    const subject = EmailNotifier.replaceTokens(message.getSubject(), binding);
-    return draft.update(message.getTo(), subject, plain, {htmlBody});
-  }
 
-  static replaceTokens(str: string, tokens: {[key: string]: any}) {
-    return str.replace(/{{[^{}]+}}/g, key => tokens[key]);
-  }
+
 }
-export {EmailNotifier};
+export { EmailNotifier };
 
 class TransactionProcessor {
   directory: Directory;
@@ -921,23 +827,23 @@ class TransactionProcessor {
   matchTransactionToMember_(
     txn: Transaction,
     member: Member
-  ): {full: boolean} | boolean {
-    const left = {email: member.homeEmail, phone: member.phone};
-    const right = {email: txn['Email Address'], phone: txn['Phone Number']};
+  ): { full: boolean } | boolean {
+    const left = { email: member.homeEmail, phone: member.phone };
+    const right = { email: txn['Email Address'], phone: txn['Phone Number'] };
     const result = TransactionProcessor.match(left, right);
     return result;
   }
   static match(
-    left: {email: string; phone: string},
-    right: {email: string; phone: string}
-  ): {full: boolean} | boolean {
+    left: { email: string; phone: string },
+    right: { email: string; phone: string }
+  ): { full: boolean } | boolean {
     const emailsMatch = left.email === right.email;
     const phonesMatch = left.phone === right.phone;
     const result =
       emailsMatch && phonesMatch
-        ? {full: true}
+        ? { full: true }
         : emailsMatch || phonesMatch
-          ? {full: false}
+          ? { full: false }
           : false;
     return result;
   }
@@ -983,7 +889,7 @@ class TransactionProcessor {
     this.notifier.partial(txn, member);
   }
 }
-export {TransactionProcessor};
+export { TransactionProcessor };
 const Utils = (() => {
   return {
     retryOnError: (f: any, error: any, t = 250) => {
