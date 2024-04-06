@@ -11,6 +11,7 @@
     "mocha": "npx mocha --require ts-node/register --require test/hooks.ts test/*.ts",
     "tmem": "npx mocha --require ts-node/register --require test/hooks.ts test/testMember.ts",
     "ten": "npx mocha --require ts-node/register --require test/hooks.ts test/testEmailNotifier.ts",
+    "ttp": "npx mocha --require ts-node/register --require test/hooks.ts test/testTransactionProcessor.ts",
     "coverage": "npx nyc npm run mocha",
     "lint": "gts lint",
     "clean": "gts clean",
