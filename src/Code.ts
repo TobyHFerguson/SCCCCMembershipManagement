@@ -377,8 +377,8 @@ export class Member implements UserType {
   phones: { value: string; type: string }[];
   customSchemas: {
     Club_Membership: {
-      expires: Date;
-      Join_Date: Date;
+      expires: string;
+      Join_Date: string;
       membershipType: string;
       family?: string;
     };
@@ -426,22 +426,20 @@ export class Member implements UserType {
           type: 'mobile',
         },
       ];
-      const Join_Date = isCurrentMember(m)
-        ? m.Joined
-        : new Date(Member.convertToYYYYMMDDFormat_(new Date()));
-      const expiryDate = isCurrentMember(m)
-        ? m.Expires
-        : Member.incrementDateByOneYear(Join_Date);
       this.customSchemas = {
         Club_Membership: {
-          expires: expiryDate,
-          Join_Date: Join_Date,
-          membershipType: isCurrentMember(m)
-            ? m['Membership Type']
-            : 'Individual',
-          ...(isCurrentMember(m) && m['Membership Type'] === 'Family'
+          ...( isCurrentMember(m) ? {
+            Join_Date: ''+m.Joined,
+            expires: ''+m.Expires,
+            membershipType: m['Membership Type'],
+            ...( m['Membership Type'] === 'Family'
             ? { family: m.Family ? m.Family : m['Last Name'] }
             : {}),
+          } : {
+            Join_Date: Member.convertToYYYYMMDDFormat_(new Date()),
+            expires: Member.convertToYYYYMMDDFormat_(Member.incrementDateByOneYear(new Date())),
+            membershipType: 'Individual',
+          }),
         },
       };
       this.orgUnitPath = systemConfig.orgUnitPath;
@@ -455,12 +453,9 @@ export class Member implements UserType {
       this.emails = deepCopy(m.emails);
       this.phones = deepCopy(m.phones);
       this.customSchemas = deepCopy(m.customSchemas);
-      this.customSchemas.Club_Membership.Join_Date = new Date(
-        this.customSchemas.Club_Membership.Join_Date
-      ); // just to make testing easier!
-      this.customSchemas.Club_Membership.expires = new Date(
-        this.customSchemas.Club_Membership.expires
-      ); // just to make testing easier!
+      // JSON converts the YYYY-MM-DD strings to dates :-( )
+      // this.customSchemas.Club_Membership.expires = Member.convertToYYYYMMDDFormat_(this.customSchemas.Club_Membership.expires);
+      // this.customSchemas.Club_Membership.Join_Date = Member.convertToYYYYMMDDFormat_(this.customSchemas.Club_Membership.Join_Date);
       this.orgUnitPath = deepCopy(m.orgUnitPath);
       this.recoveryEmail = deepCopy(m.recoveryEmail);
       this.recoveryPhone = deepCopy(m.recoveryPhone);
@@ -515,19 +510,19 @@ export class Member implements UserType {
     return this;
   }
   incrementExpirationDate() {
-    const ed = Member.incrementDateByOneYear(
+   Member.convertToYYYYMMDDFormat_(Member.incrementDateByOneYear(
       this.customSchemas.Club_Membership.expires
-    );
-    this.customSchemas.Club_Membership.expires = ed;
+    ));
     return this;
   }
-  static incrementDateByOneYear(date: Date) {
+  static incrementDateByOneYear(date: Date |  string) {
     const d = new Date(date);
     d.setFullYear(d.getFullYear() + 1);
     return d;
   }
-  static convertToYYYYMMDDFormat_(date: Date) {
-    return new Date(date).toISOString().split('T')[0];
+  static convertToYYYYMMDDFormat_(date: Date | string) {
+    const d = new Date(date);
+    return new Date(d).toISOString().split('T')[0];
   }
 }
 

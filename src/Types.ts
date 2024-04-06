@@ -46,20 +46,20 @@ interface PersonalInformation {
 interface Transaction extends PersonalInformation {
   'Payable Order ID': string;
   'Payable Status': string;
-  Timestamp: Date;
-  Processed?: Date;
+  Timestamp: Date | string ;
+  Processed?: Date | string;
   'Payable Transaction ID': string;
   'In Directory': boolean;
 }
 
 interface MembershipInfo {
   'Membership Type': string;
-  Joined: Date;
-  Expires: Date;
+  Joined: Date | string;
+  Expires: Date | string;
   Family?: string;
 }
 interface CurrentMember extends PersonalInformation, MembershipInfo {
-  Imported?: Date;
+  Imported?: Date | string;
 }
 
 interface MemberReport extends MembershipInfo {
@@ -73,14 +73,14 @@ interface MemberReport extends MembershipInfo {
 interface Binding {
   'Payable Order ID'?: string;
   'Payable Status'?: string;
-  Timestamp?: Date;
-  Processed?: Date;
+  Timestamp?: Date | string;
+  Processed?: Date | string;
   'Payable Transaction ID'?: string;
   'In Directory'?: boolean;
   'Membership Type'?: string;
   Family?: string;
-  Joined?: Date;
-  Expires?: Date;
+  Joined?: Date | string;
+  Expires?: Date | string;
   primary?: string;
   email?: string;
   phone?: string;
