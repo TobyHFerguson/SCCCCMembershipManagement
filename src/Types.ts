@@ -178,11 +178,17 @@ export interface MyMailApp {
   getDrafts(): Draft[];
 }
 
+
 export interface Message {
   getTo(): string;
   getSubject(): string;
   getPlainBody(): string;
   getBody(): string;
+  getAttachments(opts: {includeInlineImages?: boolean, includeAttachments?:boolean}): GoogleAppsScript.Gmail.GmailAttachment[];
+  getBcc(): string;
+  getCc(): string;
+  getFrom(): string;
+  getReplyTo(): string;
 }
 export interface Draft {
   getMessage(): Message;
