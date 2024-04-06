@@ -9,8 +9,8 @@ import {
 const expect = chai.expect;
 
 describe('Member tests', () => {
-  const join = new Date(Member.convertToYYYYMMDDFormat_(new Date()));
-  const expires = Member.incrementDateByOneYear(join);
+  const join = Member.convertToYYYYMMDDFormat_(new Date());
+  const expires = Member.convertToYYYYMMDDFormat_(Member.incrementDateByOneYear(join));
   const expected: UserType = {
     primaryEmail: 'given.family@santacruzcountycycling.club',
     name: {familyName: 'family', givenName: 'given', fullName: 'given family'},
@@ -70,21 +70,24 @@ describe('Member tests', () => {
     });
   });
   it('should be able to be constructed from a CurrentMember', () => {
+    const Joined = Member.convertToYYYYMMDDFormat_(new Date());
+    const Expires = Member.convertToYYYYMMDDFormat_(Member.incrementDateByOneYear(Joined));
+
     const currentMember: CurrentMember = {
       'First Name': 'given',
       'Last Name': 'family',
       'Email Address': 'a@b.com',
       'Phone Number': '+1234',
       'In Directory': true,
-      Joined: new Date(Member.convertToYYYYMMDDFormat_(new Date())),
-      Expires: new Date(Member.convertToYYYYMMDDFormat_(new Date())),
+      Joined,
+      Expires,
       'Membership Type': 'Family',
       Family: '',
     };
     const expectedClubMembership = {
       Club_Membership: {
-        expires: new Date(Member.convertToYYYYMMDDFormat_(new Date())),
-        Join_Date: new Date(Member.convertToYYYYMMDDFormat_(new Date())),
+        expires: Expires,
+        Join_Date: Joined,
         membershipType: 'Family',
         family: 'family',
       },

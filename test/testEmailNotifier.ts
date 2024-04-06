@@ -132,8 +132,8 @@ const testFixtures = (() => {
     const ce1: CurrentMember = {
         ...txn1,
         'Membership Type': 'Family',
-        Expires: new Date(),
-        Joined: new Date(),
+        Expires: Member.convertToYYYYMMDDFormat_(new Date()),
+        Joined: Member.convertToYYYYMMDDFormat_(new Date()),
     };
     return {
         txn1,
