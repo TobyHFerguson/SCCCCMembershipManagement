@@ -90,8 +90,8 @@ describe('Notifier tests', () => {
   it('should log an import', () => {
     const cm1: CurrentMember = {
       ...testFixtures.txn1,
-      Joined: new Date(),
-      Expires: new Date(),
+      Joined: Member.convertToYYYYMMDDFormat_(new Date()),
+      Expires: Member.convertToYYYYMMDDFormat_(Member.incrementDateByOneYear(new Date())),
       'In Directory': true,
       'Membership Type': 'Family',
     };

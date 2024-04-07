@@ -74,8 +74,8 @@ describe('Directory Tests', () => {
         'Phone Number': '1234',
         'In Directory': false,
         'Membership Type': '',
-        Joined: new Date(),
-        Expires: new Date(),
+        Joined: new Date()+'',
+        Expires: new Date()+'',
       };
       const member = new Member(currentMember, systemConfig);
       const updateStub = Sinon.stub(users, 'update');

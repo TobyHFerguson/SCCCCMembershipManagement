@@ -97,7 +97,7 @@ const subject_lines = {
   renewalSuccessSubject: 'Thanks for renewing your SCCCC membership',
   renewalFailureSubject: 'Renew problem',
   ambiguousSubject: 'Ambiguous transaction',
-  expiryNotificationSubject: 'Your membership will expire in {{N}} days',
+  expirationNotificationSubject: 'Your membership will expire in {{N}} days',
   expirationSubject: 'Your membership has expired',
   importSuccessSubject: 'Your new SCCCC account has been created',
   importFailureSubject: 'Import Problem',
@@ -120,13 +120,15 @@ const testFixtures = (() => {
     groups: 'email@a.com',
   };
 
-  const txn1: Transaction = <Transaction>{
+  const txn1: Transaction = {
     'First Name': 'J',
     'Last Name': 'K',
     'Email Address': 'j.k@icloud.com',
     'Phone Number': '+14083869343',
     'Payable Status': 'paid',
     'Payable Order ID': 'CC-TF-RNB6',
+    "Payable Transaction ID": "1",
+    "In Directory": true,
     Timestamp: new Date(),
   };
   const ce1: CurrentMember = {
@@ -151,6 +153,9 @@ describe('Email Notifier tests', () => {
     stub.getDrafts.returns(<never[]>drafts);
   });
   const config: EmailConfigurationType = {
+    'Email Type': '',
+    'Days before Expiry': '',
+    Notes: '',
     To: 'home',
     'Bcc on Success': 'a,b',
     'Bcc on Failure': 'failure',
@@ -163,7 +168,7 @@ describe('Email Notifier tests', () => {
     renewSuccess: config,
     renewFailure: config,
     ambiguousTransaction: config,
-    expiryNotification: config,
+    expirationNotification: config,
     expired: config,
     deleted: config,
     importSuccess: config,
@@ -174,7 +179,7 @@ describe('Email Notifier tests', () => {
     domain: 'santacruzcountycycling.club',
     html: false,
   };
-  it('should send an email to the member on success, and a copy to the bcc list', () => {
+  it('should send an email to the member on joinSuccess, and a copy to the bcc list', () => {
     const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
     notifier.joinSuccess(testFixtures.txn1, testFixtures.member1);
     expect(stub.getDrafts).to.be.calledOnce;
@@ -213,7 +218,7 @@ describe('Email Notifier tests', () => {
       }
     );
   });
-  it('should send an email to OnFailure on failure, and to the bccOnfailure on failure', () => {
+  it('should send an email to OnFailure on joinFailure, and to the bccOnfailure on failure', () => {
     emailConfigs.joinFailure = {
       ...config,
       ...{
@@ -274,7 +279,7 @@ describe('Email Notifier tests', () => {
       ...{
         To: 'home',
         'Bcc on Success': 'membership',
-        'Subject Line': 'Your new SCCCC account has been created',
+        'Subject Line': subject_lines.importSuccessSubject,
       },
     };
     const notifier = new EmailNotifier(stub, emailConfigs, {...emailOptions});
@@ -322,6 +327,33 @@ describe('Email Notifier tests', () => {
       }
     );
   });
+  it('should send an email to the member when an expiration is due, and a copy to the bcc list', () => {
+    emailConfigs.expirationNotification = {
+      ...config,
+      ...{
+        To: 'home',
+        "Bcc on Success": 'expiration',
+        'Subject Line': subject_lines.expirationNotificationSubject
+      }
+    }
+    const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
+    notifier.expirationNotification(testFixtures.member1, 3);
+    expect(stub.getDrafts).to.be.calledOnce;
+    const options = {
+      htmlBody: 'expirationNotificationSubject: HTML',
+      bcc: `expiration@${testFixtures.sysConfig.domain}`,
+      attachments: undefined,
+      inlineImages: undefined,
+      name: 'SCCCC Membership',
+      noReply: true,
+    };
+    expect(stub.sendEmail).to.be.calledWithMatch(
+      testFixtures.txn1['Email Address'],
+      subject_lines.expirationNotificationSubject.replace('{{N}}', '3'),
+      'expirationNotificationSubject: PLAIN',
+      options
+    );
+  })
   describe('string replacement tests', () => {
     it('should replace {{tokens}} with the proper values', () => {
       const s = '{{here}} is a {{value}}';
