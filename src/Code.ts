@@ -1,6 +1,5 @@
 import {
   AdminDirectoryType,
-  Binding,
   CurrentMember,
   EmailConfigurationCollection,
   EmailConfigurationType,
@@ -9,7 +8,6 @@ import {
   MemberReport,
   NotificationType,
   SystemConfiguration,
-  Template,
   Transaction,
   UserType,
   UsersCollectionType,
@@ -260,7 +258,7 @@ class Directory {
     }
   }
 }
-export {Directory};
+export { Directory };
 class DirectoryError extends Error {
   constructor(message: string) {
     super(message);
@@ -289,6 +287,9 @@ export class MemberCreationNotCompletedError extends DirectoryError {
   }
 }
 
+export class ExpirationProcessor {
+  constructor(emailConfigCollection: Pick<EmailConfigurationCollection, 'expirationNotification' | 'expired' | 'deleted'>, notifier: Notifier) {}
+}
 class Fixture1 {
   txn1: Transaction;
   txn2: Transaction;
@@ -372,9 +373,9 @@ export class Member implements UserType {
   domain: string;
   generation = 0;
   primaryEmail: string;
-  name: {givenName: string; familyName: string; fullName: string};
-  emails: {address: string; type?: string; primary?: boolean}[];
-  phones: {value: string; type: string}[];
+  name: { givenName: string; familyName: string; fullName: string };
+  emails: { address: string; type?: string; primary?: boolean }[];
+  phones: { value: string; type: string }[];
   customSchemas: {
     Club_Membership: {
       expires: string;
@@ -406,7 +407,7 @@ export class Member implements UserType {
       const phone = m['Phone Number'].startsWith('+')
         ? m['Phone Number']
         : '+1' + m['Phone Number'].trim();
-      const name = {givenName, familyName, fullName};
+      const name = { givenName, familyName, fullName };
       const primaryEmail = `${givenName}.${familyName}@${this.domain}`
         .toLowerCase()
         .trim();
@@ -432,20 +433,20 @@ export class Member implements UserType {
         Club_Membership: {
           ...(isCurrentMember(m)
             ? {
-                Join_Date: '' + m.Joined,
-                expires: '' + m.Expires,
-                membershipType: m['Membership Type'],
-                ...(m['Membership Type'].trim() === 'Family'
-                  ? {family: m.Family ? m.Family : m['Last Name'].trim()}
-                  : {}),
-              }
+              Join_Date: '' + m.Joined,
+              expires: '' + m.Expires,
+              membershipType: m['Membership Type'],
+              ...(m['Membership Type'].trim() === 'Family'
+                ? { family: m.Family ? m.Family : m['Last Name'].trim() }
+                : {}),
+            }
             : {
-                Join_Date: Member.convertToYYYYMMDDFormat_(new Date()),
-                expires: Member.convertToYYYYMMDDFormat_(
-                  Member.incrementDateByOneYear(new Date())
-                ),
-                membershipType: 'Individual',
-              }),
+              Join_Date: Member.convertToYYYYMMDDFormat_(new Date()),
+              expires: Member.convertToYYYYMMDDFormat_(
+                Member.incrementDateByOneYear(new Date())
+              ),
+              membershipType: 'Individual',
+            }),
         },
       };
       this.orgUnitPath = systemConfig.orgUnitPath.trim();
@@ -481,8 +482,8 @@ export class Member implements UserType {
       phone: this.phone,
       First: this.name.givenName,
       Last: this.name.familyName,
-      Joined: new Date(this.customSchemas.Club_Membership.Join_Date),
-      Expires: new Date(this.customSchemas.Club_Membership.expires),
+      Joined: new Date(this.customSchemas.Club_Membership.Join_Date) + '',
+      Expires: new Date(this.customSchemas.Club_Membership.expires) + '',
       'Membership Type': this.customSchemas.Club_Membership.membershipType,
       Family: this.customSchemas.Club_Membership.family,
     };
@@ -540,6 +541,7 @@ class Notifier implements NotificationType {
   partialsLog = new Array<LogEntry>();
   importSuccessLog = new Array<LogEntry>();
   importFailureLog = new Array<LogEntry>();
+  expirationNotificationLog = new Array<LogEntry>();
 
   /**
    * Notify anyone interested that a user has been added as a consequence of the transaction
@@ -547,41 +549,46 @@ class Notifier implements NotificationType {
    * @param {User} member The user that was joined
    */
   joinSuccess(txn: Transaction, member: Member) {
-    this.joinSuccessLog.push({input: txn, member});
+    this.joinSuccessLog.push({ input: txn, member });
   }
   joinFailure(txn: Transaction, member: Member, error: Error) {
-    this.joinFailureLog.push({input: txn, member, error});
+    this.joinFailureLog.push({ input: txn, member, error });
   }
   renewalSuccess(txn: Transaction, member: Member) {
-    this.renewalSuccessLog.push({input: txn, member});
+    this.renewalSuccessLog.push({ input: txn, member });
   }
   renewalFailure(txn: Transaction, member: Member, error: Error) {
-    this.renewalFailureLog.push({input: txn, member, error});
+    this.renewalFailureLog.push({ input: txn, member, error });
   }
   partial(txn: Transaction, member: Member) {
-    this.partialsLog.push({input: txn, member});
+    this.partialsLog.push({ input: txn, member });
   }
   importSuccess(cm: CurrentMember, member: Member) {
-    this.importSuccessLog.push({input: cm, member});
+    this.importSuccessLog.push({ input: cm, member });
   }
   importFailure(cm: CurrentMember, member: Member, error: Error) {
-    this.importFailureLog.push({input: cm, member, error: error});
+    this.importFailureLog.push({ input: cm, member, error: error });
+  }
+  expirationNotification(member: Member, n: number) {
+    this.expirationNotificationLog.push({ member: member });
   }
   log() {
+    const self = this;
     function reportSuccess(l: LogEntry[], kind: string) {
       l.forEach((e: LogEntry) =>
-        console.log(`${e.member.primaryEmail} ${kind}`)
+        console.log(`${e.member?.primaryEmail} ${kind}`)
       );
     }
     function reportFailure(l: LogEntry[], kind: string) {
       function addInfoToError(logEntry: LogEntry) {
-        if (!logEntry.error) return;
+        if (!logEntry.error || !logEntry.input) return;
         if (logEntry.error.message.endsWith('Invalid recovery phone.')) {
           logEntry.error.message += `: "${logEntry.input['Phone Number']}"`;
         }
       }
       l.forEach(l => {
         addInfoToError(l);
+        if (!l.input) return;
         if (isTransaction(l.input)) {
           console.error(
             `Txn ${l.input['Payable Transaction ID']} had ${kind} error: ${l.error}`
@@ -593,20 +600,29 @@ class Notifier implements NotificationType {
         }
       });
     }
+    function reportExpirationNotification() {
+      self.expirationNotificationLog.forEach(l => {
+        if (!l.member) return;
+        console.error(`${l.member.name.fullName}'s membership expires on ${l.member.customSchemas.Club_Membership.expires}`)
+      })
+    }
     reportSuccess(this.joinSuccessLog, 'joined');
     reportFailure(this.joinFailureLog, 'join');
     reportSuccess(this.renewalSuccessLog, 'renewed');
     reportFailure(this.renewalFailureLog, 'renewal');
-    this.partialsLog.forEach(p =>
+    this.partialsLog.forEach(p => {
+      if (!(p.input && p.member)) return;
       console.error(
         `ambiguous match: Txn[Email Address]: ${p.input['Email Address']} member.homeEmail: ${p.member.homeEmail} Txn[Phone Number]: ${p.input['Phone Number']} member.phone: ${p.member.phone}`
       )
+    }
     );
     reportSuccess(this.importSuccessLog, 'import');
     reportFailure(this.importFailureLog, 'import');
+    reportExpirationNotification()
   }
 }
-export {Notifier};
+export { Notifier };
 
 class EmailNotifier extends Notifier {
   #configs: EmailConfigurationCollection;
@@ -664,6 +680,10 @@ class EmailNotifier extends Notifier {
     super.importFailure(cm, member, error);
     this.notifyFailure_(cm, member, this.#configs.importFailure, error);
   }
+  expirationNotification(member: Member, numDays: number) {
+    super.expirationNotification(member, numDays);
+    this.notifyExpirationNotification(member, numDays, this.#configs.expirationNotification)
+  }
   private makeBccList(bcc: string) {
     return bcc
       .split(',')
@@ -671,17 +691,21 @@ class EmailNotifier extends Notifier {
       .join(',');
   }
   private getBcc(bcc: string): GoogleAppsScript.Gmail.GmailAdvancedOptions {
-    return this.#options.test ? {} : {bcc};
+    return this.#options.test ? {} : { bcc };
   }
   private notifySuccess_(
     txn: Transaction | CurrentMember,
     member: Member,
     config: EmailConfigurationType
   ) {
-    this.notify(
+    const recipient = this.getRecipient_(txn, config.To);
+    const bind: (s: string) => string = EmailNotifier.makeBinder(
       txn,
-      member,
-      config.To,
+      member
+    );
+    this.notify(
+      bind,
+      recipient,
       config['Subject Line'],
       config['Bcc on Success']
     );
@@ -692,88 +716,88 @@ class EmailNotifier extends Notifier {
     config: EmailConfigurationType,
     error?: Error
   ) {
-    this.notify(
+    const recipient = this.getRecipient_(txn, config.To);
+    const bind: (s: string) => string = EmailNotifier.makeBinder(
       txn,
       member,
-      config.To,
+      error ? error : {}
+    )
+    this.notify(
+      bind,
+      recipient,
       config['Subject Line'],
-      config['Bcc on Failure'],
-      error
+      config['Bcc on Failure']
     );
   }
-
+  private notifyExpirationNotification(member: Member, numDays: number, config: EmailConfigurationType) {
+    const recipient = this.getRecipient_(member, config.To);
+    const bind: (s: string) => string = EmailNotifier.makeBinder(
+      { "N": '' + numDays }
+    );
+    this.notify(bind, recipient, config['Subject Line'], config['Bcc on Success'])
+  }
   private notify(
-    txn: Transaction | CurrentMember,
-    member: Member,
-    to: string,
+    bind: (s: string) => string,
+    recipient: string,
     subject: string,
-    bcc: string,
-    error?: Error
+    bcc: string
   ) {
     const originalDraft = this.#drafts.find(
       d => d.getMessage().getSubject() === subject
     );
     if (!originalDraft)
       throw new Error(`No draft email with subject line "${subject}"`);
-    const bind: (s: string) => string = EmailNotifier.makeBinder(
-      txn,
-      member,
-      error
-    );
+
     const message: Message = originalDraft.getMessage();
-    const recipient = this.getRecipient_(txn, to);
     subject = bind(subject);
     const plainBody = bind(message.getPlainBody());
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore - there seems to be a problem with the Blob and the GmailAttachment types :-()
     const options: GoogleAppsScript.Gmail.GmailAdvancedOptions = {
-      ...(message.getAttachments({includeInlineImages: false}).length > 0
-        ? {attachments: message.getAttachments({includeInlineImages: false})}
+      ...(message.getAttachments({ includeInlineImages: false }).length > 0
+        ? { attachments: message.getAttachments({ includeInlineImages: false }) }
         : {}),
-      ...(message.getBcc() && {bcc: message.getBcc()}),
-      ...(message.getCc() && {cc: message.getCc()}),
-      ...(message.getFrom() && {from: message.getFrom()}),
-      ...(message.getBody() && {htmlBody: bind(message.getBody())}),
-      ...(message.getAttachments({includeAttachments: false}).length > 0 && {
+      ...(message.getBcc() && { bcc: message.getBcc() }),
+      ...(message.getCc() && { cc: message.getCc() }),
+      ...(message.getFrom() && { from: message.getFrom() }),
+      ...(message.getBody() && { htmlBody: bind(message.getBody()) }),
+      ...(message.getAttachments({ includeAttachments: false }).length > 0 && {
         inlineImages: EmailNotifier.getInlineImages_(message),
       }),
-      ...(message.getReplyTo() && {replyTo: message.getReplyTo()}),
+      ...(message.getReplyTo() && { replyTo: message.getReplyTo() }),
       ...this.getBcc(this.makeBccList(bcc)),
-      ...{name: 'SCCCC Membership', noReply: true},
+      ...{ name: 'SCCCC Membership', noReply: true },
     };
     this.#mailer.sendEmail(recipient, subject, plainBody, options);
   }
-  static makeBinder(
-    txn: Transaction | CurrentMember,
-    member: Member,
-    error?: Error
-  ): (s: string) => string {
-    const binding: Binding = {
-      ...txn,
-      ...member.report,
-      ...(error ? {error: error} : {}),
-    };
+  static makeBinder(...args: any[]): (s: string) => string {
+    const binding = args.reduce((p, arg) => { return { ...p, ...EmailNotifier.convertToObjectType(arg) } }, {})
     // The above code is transpiled into code that converts date strings into date objects - not what we want at all!
 
+
     Object.keys(binding).forEach(
-      k => ((<{[key: string]: string}>binding)[k] += '')
+      k => ((<{ [key: string]: string }>binding)[k] += '')
     );
     const binder = (str: string) => {
       return EmailNotifier.replaceTokens(str, binding);
     };
     return binder;
   }
+
+  static convertToObjectType(arg: any): { [key: string]: string } {
+    return { ...arg }
+  }
   static replaceTokens(str: string, tokens = {}) {
     return str.replace(/{{[^{}]+}}/g, match => {
       const key = match.replace(/[{}]+/g, '');
-      return (<{[key: string]: string}>tokens)[key] || match;
+      return (<{ [key: string]: string }>tokens)[key] || match;
     });
   }
-  private getRecipient_(txn: Transaction | CurrentMember, to: string) {
+  private getRecipient_(txn: Transaction | CurrentMember | Member, to: string) {
     return this.#options.test
       ? `toby.ferguson+TEST@${this.#options.domain}`
       : to === 'home'
-        ? txn['Email Address']
+        ? ((isTransaction(txn) || isCurrentMember(txn)) ? txn['Email Address'] : txn.homeEmail)
         : `${to}@${this.#options.domain}`;
   }
 
@@ -786,17 +810,17 @@ class EmailNotifier extends Notifier {
 
     // Creates an inline image object with the image name as key
     // (can't rely on image index as array based on insert order)
-    const img_obj: {[key: string]: GoogleAppsScript.Gmail.GmailAttachment} = (<
+    const img_obj: { [key: string]: GoogleAppsScript.Gmail.GmailAttachment } = (<
       GoogleAppsScript.Gmail.GmailAttachment[]
-    >allInlineImages).reduce(
-      (obj, i) => (
-        ((<{[key: string]: GoogleAppsScript.Gmail.GmailAttachment}>obj)[
-          i.getName()
-        ] = i),
-        obj
-      ),
-      {}
-    );
+      >allInlineImages).reduce(
+        (obj, i) => (
+          ((<{ [key: string]: GoogleAppsScript.Gmail.GmailAttachment }>obj)[
+            i.getName()
+          ] = i),
+          obj
+        ),
+        {}
+      );
 
     //Regexp searches for all img string positions with cid
     const imgexp = RegExp('<img.*?src="cid:(.*?)".*?alt="(.*?)"[^>]+>', 'g');
@@ -811,7 +835,7 @@ class EmailNotifier extends Notifier {
     return inlineImagesObj;
   }
 }
-export {EmailNotifier};
+export { EmailNotifier };
 
 class TransactionProcessor {
   directory: Directory;
@@ -873,23 +897,23 @@ class TransactionProcessor {
   matchTransactionToMember_(
     txn: Transaction,
     member: Member
-  ): {full: boolean} | boolean {
-    const left = {email: member.homeEmail, phone: member.phone};
-    const right = {email: txn['Email Address'], phone: txn['Phone Number']};
+  ): { full: boolean } | boolean {
+    const left = { email: member.homeEmail, phone: member.phone };
+    const right = { email: txn['Email Address'], phone: txn['Phone Number'] };
     const result = TransactionProcessor.match(left, right);
     return result;
   }
   static match(
-    left: {email: string; phone: string},
-    right: {email: string; phone: string}
-  ): {full: boolean} | boolean {
+    left: { email: string; phone: string },
+    right: { email: string; phone: string }
+  ): { full: boolean } | boolean {
     const emailsMatch = left.email === right.email;
     const phonesMatch = left.phone === right.phone;
     const result =
       emailsMatch && phonesMatch
-        ? {full: true}
+        ? { full: true }
         : emailsMatch || phonesMatch
-          ? {full: false}
+          ? { full: false }
           : false;
     return result;
   }
@@ -898,7 +922,7 @@ class TransactionProcessor {
     while (true) {
       try {
         this.directory.addMember(member);
-        txn.Processed = new Date();
+        txn.Processed = new Date() + '';
         this.notifier.joinSuccess(txn, member);
         return;
       } catch (err: any) {
@@ -925,7 +949,7 @@ class TransactionProcessor {
     updatedMember.includeInGlobalAddressList = txn['In Directory'];
     try {
       this.directory.updateMember(updatedMember);
-      txn.Processed = new Date();
+      txn.Processed = new Date() + '';
       this.notifier.renewalSuccess(txn, updatedMember);
     } catch (err: any) {
       this.notifier.renewalFailure(txn, member, err);
@@ -935,10 +959,10 @@ class TransactionProcessor {
     this.notifier.partial(txn, member);
   }
 }
-export {TransactionProcessor};
+export { TransactionProcessor };
 const Utils = (() => {
   return {
-    retryOnError: (f: any, error: {name: string}, t = 250) => {
+    retryOnError: (f: any, error: { name: string }, t = 250) => {
       while (true) {
         try {
           return f();
