@@ -64,6 +64,7 @@ describe('Directory Tests', () => {
   });
   describe('Method tests', () => {
     const users = new Users();
+    const member = Sinon.createStubInstance(Member);
     const members = Sinon.createStubInstance(Members);
     const uut = new Directory(systemConfig, {Users: users, Members: members});
     it('should update the users includeInGlobalAddressList field ', () => {
@@ -86,5 +87,18 @@ describe('Directory Tests', () => {
         member.primaryEmail
       );
     });
+    it('should return the users', () => {
+      const users = Sinon.createStubInstance(Users)
+      const members = Sinon.createStubInstance(Members);
+      const member  = Sinon.createStubInstance(Member);
+      users.list.returns({users: [member]})
+      const uut = new Directory(systemConfig, {Users: users, Members: members});
+      const actual = uut.getMembers();
+      const expected = [new Member(member, systemConfig)]
+      expect(actual).to.deep.equal(expected)
+    })
+    it('should throw the underlying error', () => {
+      
+    })
   });
 });

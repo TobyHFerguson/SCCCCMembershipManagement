@@ -61,7 +61,7 @@ function migrateCEMembers(): void {
         let newMember = directory.makeMember(cm);
         try {
           newMember = migrateMember_(cm);
-          cm.Imported = new Date();
+          cm.Imported = Member.convertToYYYYMMDDFormat_(new Date());
           notifier.importSuccess(cm, newMember);
         } catch (err: any) {
           notifier.importFailure(cm, newMember, err);
