@@ -65,6 +65,9 @@ describe('ExpirationProcessor tests', () => {
             expect(ExpirationProcessor.isNDaysFrom('2024-03-03', -1, '2024-03-04')).is.false
             expect(ExpirationProcessor.isNDaysFrom('2024-03-04', -1, '2024-03-03')).is.true
         })
+        it('can correct for date-only being interpreted as UTC', () => {
+            expect(ExpirationProcessor.isNDaysFrom('2024-03-03', 0, new Date('2024-03-03T00:00:00-08:00'))).is.true
+        })
     })
     describe('checkExpiration tests', () => { 
         it('it calls the expiration notifier with the number of days to expiration for days in "Days to expiration"', () => {

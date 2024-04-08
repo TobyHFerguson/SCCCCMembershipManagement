@@ -295,11 +295,11 @@ export class ExpirationProcessor {
    * Check the expiration of the given member and send the appropriate notification 
    * @param member the member whose expiration date is to be checked
   */
- checkExpiration(member: Member) {
-   const days: number[] = this.emailConfigCollection.expirationNotification['Days before Expiry'].split(',').map(n => Number(n));
-   days.forEach(d => {
-     if (ExpirationProcessor.isNDaysFrom(new Date(), d, member.getExpires())) {
-       this.notifier.expirationNotification(member, d)
+  checkExpiration(member: Member) {
+    const days: number[] = this.emailConfigCollection.expirationNotification['Days before Expiry'].split(',').map(n => Number(n));
+    days.forEach(d => {
+      if (ExpirationProcessor.isNDaysFrom(new Date(), d, member.getExpires())) {
+        this.notifier.expirationNotification(member, d)
       }
     })
     if (ExpirationProcessor.isNDaysFrom(new Date(), 0, member.getExpires())) {
@@ -315,8 +315,13 @@ export class ExpirationProcessor {
    * @returns truee iff d1 is n days from d2
    */
   static isNDaysFrom(d1: string | number | Date, n: number, d2: string | number | Date,) {
-    d2 = new Date(d2);
-    d1 = new Date(d1);
+    function correctToLocal(d: number | string | Date): Date {
+    if (d instanceof Date) return d;
+    return new Date(d + ((typeof d === 'string' && d.match(/^\d{4}-\d{2}-\d{2}$/)) ? "T00:00:00-08:00" : ""))
+    }
+
+    d2 = correctToLocal(d2);
+    d1 = correctToLocal(d1);
     d1.setDate(d1.getDate() + n);
     return d1.getFullYear() === d2.getFullYear() &&
       d1.getMonth() === d2.getMonth() &&
@@ -796,7 +801,7 @@ class EmailNotifier extends Notifier {
   }
   private notifyExpired(member: Member, config: EmailConfigurationType) {
     const recipient = this.getRecipient_(member, config.To);
-    const bind:(s: string) => string = EmailNotifier.makeBinder(member.report);
+    const bind: (s: string) => string = EmailNotifier.makeBinder(member.report);
     this.notify(bind, recipient, config['Subject Line'], config['Bcc on Success'])
   }
   private notify(
