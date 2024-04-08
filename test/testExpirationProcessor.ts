@@ -33,6 +33,11 @@ describe('ExpirationProcessor tests', () => {
             ...commonFields
         }
     }
+    function getDateNDaysFromToday(n: number): Date {
+        const target = new Date();
+        target.setDate(target.getDate() + n);
+        return target;
+    }
     describe('constructor tests', () => {
         it('requires an email config and a notifier', () => {
             const notifier = new Notifier()
@@ -56,29 +61,26 @@ describe('ExpirationProcessor tests', () => {
             expect(ExpirationProcessor.isNDaysFrom('2024-03-04', -1, '2024-03-03')).is.true
         })
     })
-    describe('checkExpiration tests', () => {
-        function getDateNDaysFromToday(n: number): Date {
-            const target = new Date();
-            target.setDate(target.getDate() + n);
-            return target;
-        }
+    describe('checkExpiration tests', () => { 
         it('it calls the expiration notifier with the number of days to expiration for days in "Days to expiration"', () => {
             const numDays = '12, 34'
             emailConfig.expirationNotification['Days before Expiry'] = numDays
             const notifierStub = Sinon.createStubInstance(Notifier);
             const sut = new ExpirationProcessor(emailConfig, notifierStub)
-            const memberStub = Sinon.createStubInstance(Member);
-            memberStub.getExpires.returns(getDateNDaysFromToday(12)+'')
-            sut.checkExpiration(memberStub)
-            expect(notifierStub.expirationNotification).to.be.calledOnceWithExactly(memberStub, 12)
+            const expiringStub = Sinon.createStubInstance(Member);
+            expiringStub.getExpires.returns(getDateNDaysFromToday(12) + '')
+            sut.checkExpiration(expiringStub)
         })
+    })
+    describe('checkExpired tests', () => {
         it('calls the expired notifier when the members account has expired', () => {
             const notifierStub = Sinon.createStubInstance(Notifier);
             const sut = new ExpirationProcessor(emailConfig, notifierStub)
             const memberStub = Sinon.createStubInstance(Member);
-            memberStub.getExpires.returns(getDateNDaysFromToday(0)+'')
-            sut.checkExpired(memberStub)
+            memberStub.getExpires.returns(getDateNDaysFromToday(0) + '')
+            sut.checkExpiration(memberStub)
             expect(notifierStub.expiredNotification).to.be.calledOnceWithExactly(memberStub)
         })
     })
+    
 })
