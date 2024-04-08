@@ -77,7 +77,7 @@ describe('ExpirationProcessor tests', () => {
             const sut = new ExpirationProcessor(emailConfig, notifierStub)
             const memberStub = Sinon.createStubInstance(Member);
             memberStub.getExpires.returns(getDateNDaysFromToday(0)+'')
-            sut.checkExpiration(memberStub)
+            sut.checkExpired(memberStub)
             expect(notifierStub.expiredNotification).to.be.calledOnceWithExactly(memberStub)
         })
     })
