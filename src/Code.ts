@@ -1,3 +1,4 @@
+import { SinonStubbedInstance } from 'sinon';
 import {
   AdminDirectoryType,
   CurrentMember,
@@ -288,7 +289,37 @@ export class MemberCreationNotCompletedError extends DirectoryError {
 }
 
 export class ExpirationProcessor {
-  constructor(emailConfigCollection: Pick<EmailConfigurationCollection, 'expirationNotification' | 'expired' | 'deleted'>, notifier: Notifier) {}
+  notifier: Notifier;
+  emailConfigCollection: Pick<EmailConfigurationCollection, "expirationNotification" | "expired" | "deleted">;
+  /**
+   * Check the expiration of the given member and send the appropriate notification 
+   * @param member the member whose expiration date is to be checked
+   */
+  checkExpiration(member: Member) {
+      if (ExpirationProcessor.isNDaysFrom(new Date(), 30, member.getExpires())) {
+        this.notifier.expirationNotification(member, 30)
+      }
+      return this;
+  }
+  /**
+   * d1 is n days from d2
+   * @param d1 - the day to start the 'from' calculation
+   * @param n n - the number of days. N >0 d1 is before d2; N == 0 means d1 and d2 are the same day; N <0 means d2 is before d1
+   * @param d2 - the day that one wishes to test d1 is n days from
+   * @returns truee iff d1 is n days from d2
+   */
+  static isNDaysFrom(d1: string|number | Date, n: number, d2: string | number | Date,) {
+    d2 = new Date(d2);
+    d1 = new Date(d1);
+    d1.setDate(d1.getDate()+n);
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getDate() === d2.getDate(); 
+  }
+  constructor(emailConfigCollection: Pick<EmailConfigurationCollection, 'expirationNotification' | 'expired' | 'deleted'>, notifier: Notifier) { 
+    this.emailConfigCollection = emailConfigCollection;
+    this.notifier = notifier;
+  }
 }
 class Fixture1 {
   txn1: Transaction;
@@ -521,6 +552,9 @@ export class Member implements UserType {
       Member.incrementDateByOneYear(this.customSchemas.Club_Membership.expires)
     );
     return this;
+  }
+  getExpires() {
+    return this.customSchemas.Club_Membership.expires;
   }
   static incrementDateByOneYear(date: Date | string) {
     const d = new Date(date);
