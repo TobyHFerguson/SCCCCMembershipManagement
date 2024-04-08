@@ -296,8 +296,8 @@ export class ExpirationProcessor {
    * @param member the member whose expiration date is to be checked
    */
   checkExpiration(member: Member) {
-      if (ExpirationProcessor.isNDaysFrom(new Date(), 30, member.getExpires())) {
-        this.notifier.expirationNotification(member, 30)
+      if (ExpirationProcessor.isNDaysFrom(new Date(), Number(this.emailConfigCollection.expirationNotification['Days before Expiry']), member.getExpires())) {
+        this.notifier.expirationNotification(member, Number(this.emailConfigCollection.expirationNotification['Days before Expiry']))
       }
       return this;
   }
