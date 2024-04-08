@@ -87,8 +87,9 @@ function createMembershipReport() {
 
 function checkExpirations() {
   const expirationProcessor = new ExpirationProcessor(getEmailConfiguration_(), getEmailNotifier_());
-  getDirectory_().getMembers().forEach(m => expirationProcessor.)
+  getDirectory_().getMembers().forEach(m => expirationProcessor.checkExpiration(m))
 }
+
 function getEmailNotifier_() {
       const emailConfig = getEmailConfiguration_();
       const notifier = new EmailNotifier(GmailApp, emailConfig, { test: true });
@@ -127,6 +128,7 @@ function onOpen() {
       ui.createMenu('Membership Management')
         .addItem('Create Membership Report', 'createMembershipReport')
         .addItem('Process Transactions', 'processPaidTransactions')
+        .addItem('Check expirations', 'checkExpirations')
         .addToUi();
     }
 

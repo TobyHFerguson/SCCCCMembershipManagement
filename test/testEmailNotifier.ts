@@ -3,7 +3,7 @@ import Sinon = require('sinon');
 import sinonChai = require('sinon-chai');
 const expect = chai.expect;
 chai.use(sinonChai);
-import {EmailNotifier, Member} from '../src/Code';
+import { EmailNotifier, Member } from '../src/Code';
 import {
   CurrentMember,
   Draft,
@@ -111,9 +111,9 @@ const drafts = Object.keys(subject_lines).map((k) => {
   return new MyDraft(
     new MyMessage(
       '',
-      (<{[key: string]: string}>subject_lines)[k],
+      (<{ [key: string]: string }>subject_lines)[k],
       `${k}: PLAIN`,
-      {htmlBody: `${k}: HTML`}
+      { htmlBody: `${k}: HTML` }
     )
   );
 });
@@ -286,7 +286,7 @@ describe('Email Notifier tests', () => {
         'Subject Line': subject_lines.importSuccessSubject,
       },
     };
-    const notifier = new EmailNotifier(stub, emailConfigs, {...emailOptions});
+    const notifier = new EmailNotifier(stub, emailConfigs, { ...emailOptions });
     notifier.importSuccess(testFixtures.ce1, testFixtures.member1);
     expect(stub.sendEmail).to.be.calledWithMatch(
       testFixtures.ce1['Email Address'],
@@ -311,7 +311,7 @@ describe('Email Notifier tests', () => {
         'Subject Line': 'Import Problem',
       },
     };
-    const notifier = new EmailNotifier(stub, emailConfigs, {...emailOptions});
+    const notifier = new EmailNotifier(stub, emailConfigs, { ...emailOptions });
     notifier.importFailure(
       testFixtures.ce1,
       testFixtures.member1,
@@ -351,12 +351,51 @@ describe('Email Notifier tests', () => {
       name: 'SCCCC Membership',
       noReply: true,
     };
+    expect(stub.sendEmail).to.be.calledOnce;
     expect(stub.sendEmail).to.be.calledWithMatch(
       testFixtures.txn1['Email Address'],
       subject_lines.expirationNotificationSubject.replace('{{N}}', '3'),
       'expirationNotificationSubject: PLAIN',
       options
     );
+  })
+  it('an expired email should have all the tokens from the membership report', () => {
+    emailConfigs.expirationNotification = {
+      ...config,
+      ...{
+        To: 'home',
+        "Bcc on Success": 'expiration',
+        'Subject Line': subject_lines.expirationNotificationSubject
+      }
+    }
+    const mr = testFixtures.member1.report
+    const plainBody = `{{primary}}\n{{email}}\n{{phone}}\n{{First}}\n{{Last}}\n{{Joined}}\n{{Expires}}\n{{Membership Type}}\n{{Family}}`;
+    const pbDetokenized = `${mr.primary}\n${mr.email}\n${mr.phone}\n${mr.First}\n${mr.Last}\n${mr.Joined}\n${mr.Expires}\n${mr['Membership Type']}\n${mr.Family}`
+    const htmlBody = `<ul><li>{{primary}}</li><li>{{email}}</li>
+    <li>{{phone}}</li><li>{{First}}</li><li>{{Last}}</li>
+    <li>{{Joined}}</li><li>{{Expires}}</li><li>{{Membership Type}}</li>
+    <li>{{Family}}</li></ul>`
+    const hbDetokenized = `<ul><li>${mr.primary}</li><li>${mr.email}</li>
+    <li>${mr.phone}</li><li>${mr.First}</li><li>${mr.Last}</li>
+    <li>${mr.Joined}</li><li>${mr.Expires}</li><li>${mr['Membership Type']}</li>
+    <li>${mr.Family}</li></ul>`
+    const draft = new MyDraft(
+      new MyMessage(
+        '',
+        subject_lines.expirationNotificationSubject,
+        plainBody,
+        {
+          htmlBody 
+        }
+      )
+    );
+    stub.getDrafts.returns([draft])
+
+    const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
+    notifier.expirationNotification(testFixtures.member1, 3);
+    const args = stub.sendEmail.getCall(0).args;
+    expect(args[2]).to.be.equal(pbDetokenized)
+    expect(args[3].htmlBody).to.be.equal(hbDetokenized)
   })
   it('should send an email to the member when the membership has expired, and a copy to the bcc list', () => {
     emailConfigs.expired = {
@@ -388,7 +427,7 @@ describe('Email Notifier tests', () => {
   describe('string replacement tests', () => {
     it('should replace {{tokens}} with the proper values', () => {
       const s = '{{here}} is a {{value}}';
-      const b = {here: 'There', value: 27};
+      const b = { here: 'There', value: 27 };
       const expected = 'There is a 27';
       const actual = EmailNotifier.replaceTokens(s, b);
     });
