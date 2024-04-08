@@ -11,6 +11,7 @@ import {
   EmailConfigurationType,
   Message,
   MyMailApp,
+  SubjectLines,
   SystemConfiguration,
   Transaction,
 } from '../src/Types';
@@ -98,12 +99,15 @@ const subject_lines = {
   renewalFailureSubject: 'Renew problem',
   ambiguousSubject: 'Ambiguous transaction',
   expirationNotificationSubject: 'Your membership will expire in {{N}} days',
-  expirationSubject: 'Your membership has expired',
+  expiredNotificationSubject: 'Your membership has expired',
   importSuccessSubject: 'Your new SCCCC account has been created',
   importFailureSubject: 'Import Problem',
 };
 
-const drafts = Object.keys(subject_lines).map(k => {
+/**
+ * The drafts are an object of the form: 
+ */
+const drafts = Object.keys(subject_lines).map((k) => {
   return new MyDraft(
     new MyMessage(
       '',
@@ -351,6 +355,33 @@ describe('Email Notifier tests', () => {
       testFixtures.txn1['Email Address'],
       subject_lines.expirationNotificationSubject.replace('{{N}}', '3'),
       'expirationNotificationSubject: PLAIN',
+      options
+    );
+  })
+  it('should send an email to the member when the membership has expired, and a copy to the bcc list', () => {
+    emailConfigs.expired = {
+      ...config,
+      ...{
+        To: 'home',
+        "Bcc on Success": 'expired',
+        'Subject Line': subject_lines.expiredNotificationSubject
+      }
+    }
+    const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
+    notifier.expiredNotification(testFixtures.member1);
+    expect(stub.getDrafts).to.be.calledOnce;
+    const options = {
+      htmlBody: `expiredNotificationSubject: HTML`,
+      bcc: `expired@${testFixtures.sysConfig.domain}`,
+      attachments: undefined,
+      inlineImages: undefined,
+      name: 'SCCCC Membership',
+      noReply: true,
+    };
+    expect(stub.sendEmail).to.be.calledWithMatch(
+      testFixtures.txn1['Email Address'],
+      subject_lines.expiredNotificationSubject,
+      `expiredNotificationSubject: PLAIN`,
       options
     );
   })

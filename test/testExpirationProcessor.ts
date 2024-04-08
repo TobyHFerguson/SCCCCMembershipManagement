@@ -63,14 +63,22 @@ describe('ExpirationProcessor tests', () => {
             return target;
         }
         it('it calls the expiration notifier with the number of days to expiration for days in "Days to expiration"', () => {
+            const numDays = '12, 34'
+            emailConfig.expirationNotification['Days before Expiry'] = numDays
             const notifierStub = Sinon.createStubInstance(Notifier);
-            const numDays = 12
-            emailConfig.expirationNotification['Days before Expiry'] = ''+numDays
             const sut = new ExpirationProcessor(emailConfig, notifierStub)
             const memberStub = Sinon.createStubInstance(Member);
-            memberStub.getExpires.returns(getDateNDaysFromToday(numDays)+'')
+            memberStub.getExpires.returns(getDateNDaysFromToday(12)+'')
             sut.checkExpiration(memberStub)
-            expect(notifierStub.expirationNotification).to.be.calledOnceWithExactly(memberStub, numDays)
+            expect(notifierStub.expirationNotification).to.be.calledOnceWithExactly(memberStub, 12)
+        })
+        it('calls the expired notifier when the members account has expired', () => {
+            const notifierStub = Sinon.createStubInstance(Notifier);
+            const sut = new ExpirationProcessor(emailConfig, notifierStub)
+            const memberStub = Sinon.createStubInstance(Member);
+            memberStub.getExpires.returns(getDateNDaysFromToday(0)+'')
+            sut.checkExpiration(memberStub)
+            expect(notifierStub.expiredNotification).to.be.calledOnceWithExactly(memberStub)
         })
     })
 })

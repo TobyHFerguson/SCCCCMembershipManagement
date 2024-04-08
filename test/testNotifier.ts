@@ -98,5 +98,23 @@ describe('Notifier tests', () => {
     const myMember = new Member(cm1, testFixtures.sysConfig);
     const notifier = new Notifier();
     notifier.importSuccess(cm1, myMember);
+    const actual = notifier.importSuccessLog;
+    expect(actual).to.deep.equal([
+      {input:cm1, member:myMember}
+    ])
   });
+  it('should log an expiration notification', () => {
+      const notifier = new Notifier();
+      notifier.expirationNotification(testFixtures.member1, 7);
+      const actual = notifier.expirationNotificationLog;
+      const expected = [{member:testFixtures.member1}]
+      expect(actual).to.deep.equal(expected)
+  })
+  it('should log an expired notification', () => {
+    const notifier = new Notifier();
+    notifier.expiredNotification(testFixtures.member1);
+    const actual = notifier.expiredNotificationLog;
+    const expected = [{member:testFixtures.member1}]
+    expect(actual).to.deep.equal(expected)
+})
 });
