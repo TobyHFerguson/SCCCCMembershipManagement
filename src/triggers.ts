@@ -2,6 +2,7 @@ import exp = require('constants');
 import {
   Directory,
   EmailNotifier,
+  ExpirationProcessor,
   Member,
   Notifier,
   TransactionProcessor,
@@ -85,23 +86,8 @@ function createMembershipReport() {
 }
 
 function checkExpirations() {
-  const expirationProcessor = new ExpirationProcessor(getEmailConfig_(), getEmailNotifier_());
-  getDirectory_().getMembers().forEach(m => expirationProcessor.checkExpiration(m))
-  const directory = getDirectory_();
-  const notifier = getEmailNotifier_();
-  const emailConfig = getEmailConfig_();
-  const isNDaysFromToday = (dateToCheck: string | number | Date, N: number) =>
-    new Date(dateToCheck).getTime() === new Date(new Date().getTime() + N * 24 * 60 * 60 * 1000).getTime();
-
-  const members = directory.getMembers().forEach(m => {
-    if (isNDaysFromToday(new Date(m.report.Expires), 30)) {
-      notifier.expirationNotification(m, 30)
-    } else if (isNDaysFromToday(new Date(m.report.Expires), 14)) {
-      notifier.expirationNotification(m, 14)
-    } else if (isNDaysFromToday(new Date(m.report.Expires), 0)) {
-      notifier.(m)
-    }
-  }
+  const expirationProcessor = new ExpirationProcessor(getEmailConfiguration_(), getEmailNotifier_());
+  getDirectory_().getMembers().forEach(m => expirationProcessor.)
 }
 function getEmailNotifier_() {
       const emailConfig = getEmailConfiguration_();

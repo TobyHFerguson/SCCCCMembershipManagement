@@ -15,6 +15,7 @@
     "ttp": "npm run mochatest -- test/testTransactionProcessor.ts",
     "tep": "npm run mochatest -- test/testExpirationProcessor.ts",
     "tn": "npm run mochatest -- test/testNotifier.ts",
+    "run-test": "npm run mochatest --",
     "coverage": "npx nyc npm run mocha",
     "lint": "gts lint",
     "clean": "gts clean",

@@ -289,28 +289,22 @@ export class MemberCreationNotCompletedError extends DirectoryError {
 }
 
 export class ExpirationProcessor {
-  checkExpired(member: Member) {
-    const days: number[] = this.emailConfigCollection.expired['Days before Expiry'].split(',').map(n => Number(n));
-    days.forEach(d => {
-      if (ExpirationProcessor.isNDaysFrom(new Date(), d, member.getExpires())) {
-        this.notifier.expiredNotification(member)
-      }
-    })
-    return this;
-  }
   notifier: Notifier;
   emailConfigCollection: Pick<EmailConfigurationCollection, "expirationNotification" | "expired" | "deleted">;
   /**
    * Check the expiration of the given member and send the appropriate notification 
    * @param member the member whose expiration date is to be checked
-   */
-  checkExpiration(member: Member) {
-    const days: number[] = this.emailConfigCollection.expirationNotification['Days before Expiry'].split(',').map(n => Number(n));
-    days.forEach(d => {
-      if (ExpirationProcessor.isNDaysFrom(new Date(), d, member.getExpires())) {
-        this.notifier.expirationNotification(member, d)
+  */
+ checkExpiration(member: Member) {
+   const days: number[] = this.emailConfigCollection.expirationNotification['Days before Expiry'].split(',').map(n => Number(n));
+   days.forEach(d => {
+     if (ExpirationProcessor.isNDaysFrom(new Date(), d, member.getExpires())) {
+       this.notifier.expirationNotification(member, d)
       }
     })
+    if (ExpirationProcessor.isNDaysFrom(new Date(), 0, member.getExpires())) {
+      this.notifier.expiredNotification(member)
+    }
     return this;
   }
   /**
