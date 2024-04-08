@@ -64,11 +64,11 @@ describe('ExpirationProcessor tests', () => {
         }
         it('it calls the expiration notifier with the number of days to expiration for days in "Days to expiration"', () => {
             const notifierStub = Sinon.createStubInstance(Notifier);
-            const numDays = 30
+            const numDays = 12
             emailConfig.expirationNotification['Days before Expiry'] = ''+numDays
             const sut = new ExpirationProcessor(emailConfig, notifierStub)
             const memberStub = Sinon.createStubInstance(Member);
-            memberStub.getExpires.returns(getDateNDaysFromToday(30)+'')
+            memberStub.getExpires.returns(getDateNDaysFromToday(numDays)+'')
             sut.checkExpiration(memberStub)
             expect(notifierStub.expirationNotification).to.be.calledOnceWithExactly(memberStub, numDays)
         })
