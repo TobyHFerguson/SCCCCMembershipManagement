@@ -796,7 +796,7 @@ class EmailNotifier extends Notifier {
   }
   private notifyExpired(member: Member, config: EmailConfigurationType) {
     const recipient = this.getRecipient_(member, config.To);
-    const bind:(s: string) => string = EmailNotifier.makeBinder(member);
+    const bind:(s: string) => string = EmailNotifier.makeBinder(member.report);
     this.notify(bind, recipient, config['Subject Line'], config['Bcc on Success'])
   }
   private notify(
