@@ -359,44 +359,6 @@ describe('Email Notifier tests', () => {
       options
     );
   })
-  it('an expired email should have all the tokens from the membership report', () => {
-    emailConfigs.expirationNotification = {
-      ...config,
-      ...{
-        To: 'home',
-        "Bcc on Success": 'expiration',
-        'Subject Line': subject_lines.expirationNotificationSubject
-      }
-    }
-    const mr = testFixtures.member1.report
-    const plainBody = `{{primary}}\n{{email}}\n{{phone}}\n{{First}}\n{{Last}}\n{{Joined}}\n{{Expires}}\n{{Membership Type}}\n{{Family}}`;
-    const pbDetokenized = `${mr.primary}\n${mr.email}\n${mr.phone}\n${mr.First}\n${mr.Last}\n${mr.Joined}\n${mr.Expires}\n${mr['Membership Type']}\n${mr.Family}`
-    const htmlBody = `<ul><li>{{primary}}</li><li>{{email}}</li>
-    <li>{{phone}}</li><li>{{First}}</li><li>{{Last}}</li>
-    <li>{{Joined}}</li><li>{{Expires}}</li><li>{{Membership Type}}</li>
-    <li>{{Family}}</li></ul>`
-    const hbDetokenized = `<ul><li>${mr.primary}</li><li>${mr.email}</li>
-    <li>${mr.phone}</li><li>${mr.First}</li><li>${mr.Last}</li>
-    <li>${mr.Joined}</li><li>${mr.Expires}</li><li>${mr['Membership Type']}</li>
-    <li>${mr.Family}</li></ul>`
-    const draft = new MyDraft(
-      new MyMessage(
-        '',
-        subject_lines.expirationNotificationSubject,
-        plainBody,
-        {
-          htmlBody 
-        }
-      )
-    );
-    stub.getDrafts.returns([draft])
-
-    const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
-    notifier.expirationNotification(testFixtures.member1, 3);
-    const args = stub.sendEmail.getCall(0).args;
-    expect(args[2]).to.be.equal(pbDetokenized)
-    expect(args[3].htmlBody).to.be.equal(hbDetokenized)
-  })
   it('should send an email to the member when the membership has expired, and a copy to the bcc list', () => {
     emailConfigs.expired = {
       ...config,
@@ -423,6 +385,46 @@ describe('Email Notifier tests', () => {
       `expiredNotificationSubject: PLAIN`,
       options
     );
+  })
+  describe('Check that the appropriate objects are included in the notification', () => {
+    it('an expired email should have all the tokens from the membership report', () => {
+      emailConfigs.expirationNotification = {
+        ...config,
+        ...{
+          To: 'home',
+          "Bcc on Success": 'expiration',
+          'Subject Line': subject_lines.expirationNotificationSubject
+        }
+      }
+      const mr = testFixtures.member1.report
+      const plainBody = `{{primary}}\n{{email}}\n{{phone}}\n{{First}}\n{{Last}}\n{{Joined}}\n{{Expires}}\n{{Membership Type}}\n{{Family}}`;
+      const pbDetokenized = `${mr.primary}\n${mr.email}\n${mr.phone}\n${mr.First}\n${mr.Last}\n${mr.Joined}\n${mr.Expires}\n${mr['Membership Type']}\n${mr.Family}`
+      const htmlBody = `<ul><li>{{primary}}</li><li>{{email}}</li>
+      <li>{{phone}}</li><li>{{First}}</li><li>{{Last}}</li>
+      <li>{{Joined}}</li><li>{{Expires}}</li><li>{{Membership Type}}</li>
+      <li>{{Family}}</li></ul>`
+      const hbDetokenized = `<ul><li>${mr.primary}</li><li>${mr.email}</li>
+      <li>${mr.phone}</li><li>${mr.First}</li><li>${mr.Last}</li>
+      <li>${mr.Joined}</li><li>${mr.Expires}</li><li>${mr['Membership Type']}</li>
+      <li>${mr.Family}</li></ul>`
+      const draft = new MyDraft(
+        new MyMessage(
+          '',
+          subject_lines.expirationNotificationSubject,
+          plainBody,
+          {
+            htmlBody 
+          }
+        )
+      );
+      stub.getDrafts.returns([draft])
+  
+      const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
+      notifier.expirationNotification(testFixtures.member1, 3);
+      const args = stub.sendEmail.getCall(0).args;
+      expect(args[2]).to.be.equal(pbDetokenized)
+      expect(args[3].htmlBody).to.be.equal(hbDetokenized)
+    })
   })
   describe('string replacement tests', () => {
     it('should replace {{tokens}} with the proper values', () => {
