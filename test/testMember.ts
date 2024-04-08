@@ -119,4 +119,9 @@ describe('Member tests', () => {
     actual = new Member(currentMember, sysConfig);
     expect(actual.phone).to.equal(currentMember['Phone Number']);
   });
+  it('member.report.Expires should return date in YYYY-MM-DD format', () => {
+    const expected = Expires;
+    const actual = new Member(currentMember, sysConfig).report.Expires;
+    expect(actual).to.equal(expected)
+  })
 });

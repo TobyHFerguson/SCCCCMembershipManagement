@@ -55,6 +55,11 @@ describe('ExpirationProcessor tests', () => {
             expect(ExpirationProcessor.isNDaysFrom('2024-03-03', 1, '2024-03-04')).is.true
             expect(ExpirationProcessor.isNDaysFrom('2024-03-04', 1, '2024-03-03')).is.false
         })
+        it('days after can be detected', () => {
+            expect(ExpirationProcessor.isNDaysFrom('2024-03-03', 2, '2024-03-03')).is.false
+            expect(ExpirationProcessor.isNDaysFrom('2024-03-03', 2, '2024-03-05')).is.true
+            expect(ExpirationProcessor.isNDaysFrom('2024-03-04', 2, '2024-03-03')).is.false
+        })
         it('days before can be detected', () => {
             expect(ExpirationProcessor.isNDaysFrom('2024-03-03', -1, '2024-03-03')).is.false
             expect(ExpirationProcessor.isNDaysFrom('2024-03-03', -1, '2024-03-04')).is.false
@@ -70,9 +75,13 @@ describe('ExpirationProcessor tests', () => {
             const expiringStub = Sinon.createStubInstance(Member);
             expiringStub.getExpires.returns(getDateNDaysFromToday(12) + '')
             sut.checkExpiration(expiringStub)
+            expect(notifierStub.expirationNotification).to.be.calledWithExactly(expiringStub, 12)
+            expiringStub.getExpires.returns(getDateNDaysFromToday(34) + '')
+            sut.checkExpiration(expiringStub)
+            expect(notifierStub.expirationNotification).to.be.calledWithExactly(expiringStub, 34)
+            // expiringStub.getExpires.onCall(1).returns(getDateNDaysFromToday(5) + '')
+            // expiringStub.getExpires.onCall(1).returns(getDateNDaysFromToday(34) + '')
         })
-    })
-    describe('checkExpired tests', () => {
         it('calls the expired notifier when the members account has expired', () => {
             const notifierStub = Sinon.createStubInstance(Notifier);
             const sut = new ExpirationProcessor(emailConfig, notifierStub)
@@ -80,6 +89,17 @@ describe('ExpirationProcessor tests', () => {
             memberStub.getExpires.returns(getDateNDaysFromToday(0) + '')
             sut.checkExpiration(memberStub)
             expect(notifierStub.expiredNotification).to.be.calledOnceWithExactly(memberStub)
+        })
+        it('doesnt call any expiration nor expired notifiers when the account is not near expiration nor has expired', () => {
+            const numDays = '12'
+            emailConfig.expirationNotification['Days before Expiry'] = numDays
+            const notifierStub = Sinon.createStubInstance(Notifier);
+            const sut = new ExpirationProcessor(emailConfig, notifierStub)
+            const expiringStub = Sinon.createStubInstance(Member);
+            expiringStub.getExpires.returns(getDateNDaysFromToday(5) + '')
+            sut.checkExpiration(expiringStub)
+            expect(notifierStub.expirationNotification).to.not.be.called
+            expect(notifierStub.expiredNotification).to.not.be.called
         })
     })
     

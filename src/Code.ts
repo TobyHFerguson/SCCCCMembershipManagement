@@ -519,8 +519,8 @@ export class Member implements UserType {
       phone: this.phone,
       First: this.name.givenName,
       Last: this.name.familyName,
-      Joined: new Date(this.customSchemas.Club_Membership.Join_Date) + '',
-      Expires: new Date(this.customSchemas.Club_Membership.expires) + '',
+      Joined: this.customSchemas.Club_Membership.Join_Date,
+      Expires: this.customSchemas.Club_Membership.expires,
       'Membership Type': this.customSchemas.Club_Membership.membershipType,
       Family: this.customSchemas.Club_Membership.family,
     };
@@ -789,7 +789,7 @@ class EmailNotifier extends Notifier {
   private notifyExpirationNotification(member: Member, numDays: number, config: EmailConfigurationType) {
     const recipient = this.getRecipient_(member, config.To);
     const bind: (s: string) => string = EmailNotifier.makeBinder(
-      member,
+      member.report,
       { "N": '' + numDays }
     );
     this.notify(bind, recipient, config['Subject Line'], config['Bcc on Success'])
