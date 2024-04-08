@@ -289,6 +289,15 @@ export class MemberCreationNotCompletedError extends DirectoryError {
 }
 
 export class ExpirationProcessor {
+  checkExpired(member: Member) {
+    const days: number[] = this.emailConfigCollection.expired['Days before Expiry'].split(',').map(n => Number(n));
+    days.forEach(d => {
+      if (ExpirationProcessor.isNDaysFrom(new Date(), d, member.getExpires())) {
+        this.notifier.expiredNotification(member)
+      }
+    })
+    return this;
+  }
   notifier: Notifier;
   emailConfigCollection: Pick<EmailConfigurationCollection, "expirationNotification" | "expired" | "deleted">;
   /**
