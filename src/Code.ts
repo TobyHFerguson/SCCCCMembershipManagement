@@ -296,10 +296,13 @@ export class ExpirationProcessor {
    * @param member the member whose expiration date is to be checked
    */
   checkExpiration(member: Member) {
-      if (ExpirationProcessor.isNDaysFrom(new Date(), Number(this.emailConfigCollection.expirationNotification['Days before Expiry']), member.getExpires())) {
-        this.notifier.expirationNotification(member, Number(this.emailConfigCollection.expirationNotification['Days before Expiry']))
+    const days: number[] = this.emailConfigCollection.expirationNotification['Days before Expiry'].split(',').map(n => Number(n));
+    days.forEach(d => {
+      if (ExpirationProcessor.isNDaysFrom(new Date(), d, member.getExpires())) {
+        this.notifier.expirationNotification(member, d)
       }
-      return this;
+    })
+    return this;
   }
   /**
    * d1 is n days from d2
@@ -308,15 +311,15 @@ export class ExpirationProcessor {
    * @param d2 - the day that one wishes to test d1 is n days from
    * @returns truee iff d1 is n days from d2
    */
-  static isNDaysFrom(d1: string|number | Date, n: number, d2: string | number | Date,) {
+  static isNDaysFrom(d1: string | number | Date, n: number, d2: string | number | Date,) {
     d2 = new Date(d2);
     d1 = new Date(d1);
-    d1.setDate(d1.getDate()+n);
+    d1.setDate(d1.getDate() + n);
     return d1.getFullYear() === d2.getFullYear() &&
-           d1.getMonth() === d2.getMonth() &&
-           d1.getDate() === d2.getDate(); 
+      d1.getMonth() === d2.getMonth() &&
+      d1.getDate() === d2.getDate();
   }
-  constructor(emailConfigCollection: Pick<EmailConfigurationCollection, 'expirationNotification' | 'expired' | 'deleted'>, notifier: Notifier) { 
+  constructor(emailConfigCollection: Pick<EmailConfigurationCollection, 'expirationNotification' | 'expired' | 'deleted'>, notifier: Notifier) {
     this.emailConfigCollection = emailConfigCollection;
     this.notifier = notifier;
   }
@@ -568,6 +571,7 @@ export class Member implements UserType {
 }
 
 class Notifier implements NotificationType {
+
   joinSuccessLog = new Array<LogEntry>();
   joinFailureLog = new Array<LogEntry>();
   renewalSuccessLog = new Array<LogEntry>();
@@ -576,6 +580,7 @@ class Notifier implements NotificationType {
   importSuccessLog = new Array<LogEntry>();
   importFailureLog = new Array<LogEntry>();
   expirationNotificationLog = new Array<LogEntry>();
+  expiredNotificationLog = new Array<LogEntry>();
 
   /**
    * Notify anyone interested that a user has been added as a consequence of the transaction
@@ -606,6 +611,9 @@ class Notifier implements NotificationType {
   expirationNotification(member: Member, n: number) {
     this.expirationNotificationLog.push({ member: member });
   }
+  expiredNotification(member: Member) {
+    this.expiredNotificationLog.push({ member })
+  }
   log() {
     const self = this;
     function reportSuccess(l: LogEntry[], kind: string) {
@@ -634,10 +642,16 @@ class Notifier implements NotificationType {
         }
       });
     }
-    function reportExpirationNotification() {
+    function reportExpirationNotifications() {
       self.expirationNotificationLog.forEach(l => {
         if (!l.member) return;
         console.error(`${l.member.name.fullName}'s membership expires on ${l.member.customSchemas.Club_Membership.expires}`)
+      })
+    }
+    function reportExpiredNotifications() {
+      self.expiredNotificationLog.forEach(l => {
+        if (!l.member) return;
+        console.error(`${l.member.name.fullName}'s membership expired on ${l.member.customSchemas.Club_Membership.expires}`)
       })
     }
     reportSuccess(this.joinSuccessLog, 'joined');
@@ -653,7 +667,8 @@ class Notifier implements NotificationType {
     );
     reportSuccess(this.importSuccessLog, 'import');
     reportFailure(this.importFailureLog, 'import');
-    reportExpirationNotification()
+    reportExpirationNotifications();
+    reportExpiredNotifications();
   }
 }
 export { Notifier };
@@ -718,6 +733,11 @@ class EmailNotifier extends Notifier {
     super.expirationNotification(member, numDays);
     this.notifyExpirationNotification(member, numDays, this.#configs.expirationNotification)
   }
+  expiredNotification(member: Member) {
+    super.expiredNotification(member);
+    this.notifyExpired(member, this.#configs.expired)
+  }
+
   private makeBccList(bcc: string) {
     return bcc
       .split(',')
@@ -766,8 +786,14 @@ class EmailNotifier extends Notifier {
   private notifyExpirationNotification(member: Member, numDays: number, config: EmailConfigurationType) {
     const recipient = this.getRecipient_(member, config.To);
     const bind: (s: string) => string = EmailNotifier.makeBinder(
+      member,
       { "N": '' + numDays }
     );
+    this.notify(bind, recipient, config['Subject Line'], config['Bcc on Success'])
+  }
+  private notifyExpired(member: Member, config: EmailConfigurationType) {
+    const recipient = this.getRecipient_(member, config.To);
+    const bind:(s: string) => string = EmailNotifier.makeBinder(member);
     this.notify(bind, recipient, config['Subject Line'], config['Bcc on Success'])
   }
   private notify(
