@@ -122,6 +122,6 @@ describe('Member tests', () => {
   it('member.report.Expires should return date in YYYY-MM-DD format', () => {
     const expected = Expires;
     const actual = new Member(currentMember, sysConfig).report.Expires;
-    expect(actual).to.equal(expected)
-  })
+    expect(actual).to.equal(expected);
+  });
 });
