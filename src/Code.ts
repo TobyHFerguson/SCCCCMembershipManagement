@@ -141,7 +141,7 @@ class Directory {
    * @returns a copy of the updated member
    */
   updateMember(member: Member) {
-    return Utils.retryOnError(
+    return <Member>Utils.retryOnError(
       () => this.makeMember(this.updateMember_(member, member)),
       MemberCreationNotCompletedError
     );
@@ -157,7 +157,7 @@ class Directory {
         err.message = err.message.replace('userKey', key);
         throw new MemberNotFoundError(err);
       } else if (err.message.includes('User creation is not complete.')) {
-        throw new MemberCreationNotCompletedError(err);
+        throw new MemberCreationNotCompletedError(err.message);
       }
       throw new DirectoryError(err);
     }
@@ -261,30 +261,30 @@ class Directory {
 }
 export { Directory };
 class DirectoryError extends Error {
-  constructor(message: string) {
+  constructor(message?: string | undefined) {
     super(message);
     this.name = 'DirectoryError';
   }
 }
 
 export class MemberAlreadyExistsError extends DirectoryError {
-  constructor(message: string) {
+  constructor(message?: string | undefined) {
     super(message);
     this.name = 'MemberAlreadyExistsError';
   }
 }
 
 export class MemberNotFoundError extends DirectoryError {
-  constructor(message: string) {
+  constructor(message?: string | undefined) {
     super(message);
     this.name = 'MemberNotFoundError';
   }
 }
 
 export class MemberCreationNotCompletedError extends DirectoryError {
-  constructor(message: string) {
+  constructor(message?: string | undefined) {
     super(message);
-    this.name = 'UserConstructionNotCompletedError';
+    this.name = 'MemberCreationNotCompletedError';
   }
 }
 
@@ -1036,7 +1036,10 @@ const Utils = (() => {
           return f();
         } catch (err: any) {
           if (err.name && err.name === error.name) {
-            Utilities.sleep(t);
+            if (typeof Utilities !== 'undefined') { Utilities.sleep(t);} 
+            else {
+              setTimeout(() => {}, 1000);
+            }
           }
           throw err;
         }
@@ -1047,7 +1050,10 @@ const Utils = (() => {
         if (c()) {
           return true;
         }
-        Utilities.sleep(t);
+        if (typeof Utilities !== 'undefined') { Utilities.sleep(t);} 
+            else {
+              setTimeout(() => {}, 1000);
+            }
       }
       return false;
     },
