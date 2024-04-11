@@ -32,13 +32,13 @@ function processPaidTransactions() {
     .needFormulas();
   const keepFormulas = transactionsFiddler.getColumnsWithFormulas();
   const tp = new TransactionProcessor(directory, notifier);
-  transactionsFiddler.mapRows((row: object, { rowFormulas }) => {
+  transactionsFiddler.mapRows((row: object, {rowFormulas}) => {
     tp.processTransaction(<Transaction>row);
     keepFormulas.forEach(
       f =>
-      ((<{ [key: string]: object }>row)[f] = (<{ [key: string]: object }>(
-        rowFormulas
-      ))[f])
+        ((<{[key: string]: object}>row)[f] = (<{[key: string]: object}>(
+          rowFormulas
+        ))[f])
     );
     return row;
   });
@@ -86,15 +86,20 @@ function createMembershipReport() {
 }
 
 function checkExpirations() {
-  const expirationProcessor = new ExpirationProcessor(getEmailConfiguration_(), getEmailNotifier_());
-  getDirectory_().getMembers().forEach(m => expirationProcessor.checkExpiration(m))
+  const expirationProcessor = new ExpirationProcessor(
+    getEmailConfiguration_(),
+    getEmailNotifier_()
+  );
+  getDirectory_()
+    .getMembers()
+    .forEach(m => expirationProcessor.checkExpiration(m));
 }
 
 function getEmailNotifier_() {
-      const emailConfig = getEmailConfiguration_();
-      const notifier = new EmailNotifier(GmailApp, emailConfig, { test: true });
-      return notifier;
-    }
+  const emailConfig = getEmailConfiguration_();
+  const notifier = new EmailNotifier(GmailApp, emailConfig, {test: true});
+  return notifier;
+}
 
 function getEmailConfiguration_() {
   return <EmailConfigurationCollection>bmPreFiddler
@@ -106,92 +111,92 @@ function getEmailConfiguration_() {
     })
     .getData()
     .reduce((p, c) => {
-      const t: string = (<{ [key: string]: string; }>c)['Email Type'];
-      (<{ [key: string]: object; }>p)[t] = c;
+      const t: string = (<{[key: string]: string}>c)['Email Type'];
+      (<{[key: string]: object}>p)[t] = c;
       return p;
     }, {});
 }
 
-function updatedRow_(e: { range: GoogleAppsScript.Spreadsheet.Range }) {
-      console.log(`Column: ${e.range} Row ${e.range.getRow()}`);
-      // printRow(e.range.getRow())
-    }
+function updatedRow_(e: {range: GoogleAppsScript.Spreadsheet.Range}) {
+  console.log(`Column: ${e.range} Row ${e.range.getRow()}`);
+  // printRow(e.range.getRow())
+}
 
 /**
  * Creates the menu item "Mail Merge" for user to run scripts on drop-down.
  */
 function onOpen() {
-      const ui = SpreadsheetApp.getUi();
-      // ui.createMenu('Mail Merge')
-      //     .addItem('Send Emails', 'sendEmails')
-      //     .addToUi();
-      ui.createMenu('Membership Management')
-        .addItem('Create Membership Report', 'createMembershipReport')
-        .addItem('Process Transactions', 'processPaidTransactions')
-        .addItem('Check expirations', 'checkExpirations')
-        .addToUi();
-    }
+  const ui = SpreadsheetApp.getUi();
+  // ui.createMenu('Mail Merge')
+  //     .addItem('Send Emails', 'sendEmails')
+  //     .addToUi();
+  ui.createMenu('Membership Management')
+    .addItem('Create Membership Report', 'createMembershipReport')
+    .addItem('Process Transactions', 'processPaidTransactions')
+    .addItem('Check expirations', 'checkExpirations')
+    .addToUi();
+}
 
 function convertLinks_(sheetName: string) {
-      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-      if (!sheet) return;
-      const range = sheet.getDataRange();
-      const rtvs = range.getRichTextValues();
-      const values = range.getValues();
-      const newValues = rtvs.map((row, r) => {
-        return row.map((column, c) => {
-          if (!column) return null;
-          const v = column.getText() ? column.getText() : values[r][c];
-          return column.getLinkUrl()
-            ? `=hyperlink("${column.getLinkUrl()}", "${v}")`
-            : v;
-        });
-      });
-      range.setValues(newValues);
-      SpreadsheetApp.flush();
-    }
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) return;
+  const range = sheet.getDataRange();
+  const rtvs = range.getRichTextValues();
+  const values = range.getValues();
+  const newValues = rtvs.map((row, r) => {
+    return row.map((column, c) => {
+      if (!column) return null;
+      const v = column.getText() ? column.getText() : values[r][c];
+      return column.getLinkUrl()
+        ? `=hyperlink("${column.getLinkUrl()}", "${v}")`
+        : v;
+    });
+  });
+  range.setValues(newValues);
+  SpreadsheetApp.flush();
+}
 
 function getDirectory_() {
-      const directory = new Directory(getSystemConfig_());
-      return directory;
-    }
+  const directory = new Directory(getSystemConfig_());
+  return directory;
+}
 
 function getSystemConfig_() {
-      const systemConfigFiddler = bmPreFiddler.PreFiddler().getFiddler({
-        id: null,
-        sheetName: 'System Configuration',
-        createIfMissing: false,
-      });
-      const systemConfiguration = <SystemConfiguration>(
-        systemConfigFiddler.getData()[0]
-      );
-      return systemConfiguration;
-    }
+  const systemConfigFiddler = bmPreFiddler.PreFiddler().getFiddler({
+    id: null,
+    sheetName: 'System Configuration',
+    createIfMissing: false,
+  });
+  const systemConfiguration = <SystemConfiguration>(
+    systemConfigFiddler.getData()[0]
+  );
+  return systemConfiguration;
+}
 
 function migrateMember_(currentMember: CurrentMember): Member {
-      const directory = getDirectory_();
-      const nm = directory.makeMember(currentMember);
-      try {
-        return directory.addMember(nm);
-      } catch (err: any) {
-        if (err.message.endsWith('Entity already exists.')) {
-          return directory.updateMember(nm);
-        } else {
-          throw err;
-        }
-      }
+  const directory = getDirectory_();
+  const nm = directory.makeMember(currentMember);
+  try {
+    return directory.addMember(nm);
+  } catch (err: any) {
+    if (err.message.endsWith('Entity already exists.')) {
+      return directory.updateMember(nm);
+    } else {
+      throw err;
     }
+  }
+}
 
 function testMigrateMember() {
-      const currentMember: CurrentMember = {
-        'First Name': 'given',
-        'Last Name': 'family',
-        'Email Address': 'a@b.com',
-        'Phone Number': '+14083869343',
-        'In Directory': true,
-        Joined: Member.convertToYYYYMMDDFormat_(new Date('2024-05-23')),
-        Expires: Member.convertToYYYYMMDDFormat_(new Date('2025-05-23')),
-        'Membership Type': 'Family',
-      };
-      migrateMember_(currentMember);
-    }
+  const currentMember: CurrentMember = {
+    'First Name': 'given',
+    'Last Name': 'family',
+    'Email Address': 'a@b.com',
+    'Phone Number': '+14083869343',
+    'In Directory': true,
+    Joined: Member.convertToYYYYMMDDFormat_(new Date('2024-05-23')),
+    Expires: Member.convertToYYYYMMDDFormat_(new Date('2025-05-23')),
+    'Membership Type': 'Family',
+  };
+  migrateMember_(currentMember);
+}

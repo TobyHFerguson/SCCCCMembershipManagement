@@ -30,7 +30,7 @@ interface NotificationType {
 }
 
 interface LogEntry {
-  input?: Transaction | CurrentMember ;
+  input?: Transaction | CurrentMember;
   member?: Member;
   error?: Error;
 }
@@ -46,15 +46,15 @@ interface PersonalInformation {
 interface Transaction extends PersonalInformation {
   'Payable Order ID': string;
   'Payable Status': string;
-  "Timestamp":  Date;
-  "Processed"?:  string;
+  Timestamp: Date;
+  Processed?: string;
   'Payable Transaction ID': string;
   'In Directory': boolean;
 }
 
 interface MembershipInfo {
   'Membership Type': string;
-  Joined:  string;
+  Joined: string;
   Expires: string;
   Family?: string;
 }
@@ -225,13 +225,13 @@ interface Template {
   inlineImages: object;
 }
 interface EmailConfigurationType {
-  'Email Type': string,
-  'Subject Line': string,
-  'Days before Expiry': string,
+  'Email Type': string;
+  'Subject Line': string;
+  'Days before Expiry': string;
   To: string;
   'Bcc on Success': string;
   'Bcc on Failure': string;
-  'Notes': string;
+  Notes: string;
 }
 
 interface EmailConfigurationCollection {

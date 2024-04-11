@@ -3,7 +3,7 @@ import Sinon = require('sinon');
 import sinonChai = require('sinon-chai');
 const expect = chai.expect;
 chai.use(sinonChai);
-import { EmailNotifier, Member } from '../src/Code';
+import {EmailNotifier, Member} from '../src/Code';
 import {
   CurrentMember,
   Draft,
@@ -105,15 +105,15 @@ const subject_lines = {
 };
 
 /**
- * The drafts are an object of the form: 
+ * The drafts are an object of the form:
  */
-const drafts = Object.keys(subject_lines).map((k) => {
+const drafts = Object.keys(subject_lines).map(k => {
   return new MyDraft(
     new MyMessage(
       '',
-      (<{ [key: string]: string }>subject_lines)[k],
+      (<{[key: string]: string}>subject_lines)[k],
       `${k}: PLAIN`,
-      { htmlBody: `${k}: HTML` }
+      {htmlBody: `${k}: HTML`}
     )
   );
 });
@@ -131,8 +131,8 @@ const testFixtures = (() => {
     'Phone Number': '+14083869343',
     'Payable Status': 'paid',
     'Payable Order ID': 'CC-TF-RNB6',
-    "Payable Transaction ID": "1",
-    "In Directory": true,
+    'Payable Transaction ID': '1',
+    'In Directory': true,
     Timestamp: new Date(),
   };
   const ce1: CurrentMember = {
@@ -286,7 +286,7 @@ describe('Email Notifier tests', () => {
         'Subject Line': subject_lines.importSuccessSubject,
       },
     };
-    const notifier = new EmailNotifier(stub, emailConfigs, { ...emailOptions });
+    const notifier = new EmailNotifier(stub, emailConfigs, {...emailOptions});
     notifier.importSuccess(testFixtures.ce1, testFixtures.member1);
     expect(stub.sendEmail).to.be.calledWithMatch(
       testFixtures.ce1['Email Address'],
@@ -311,7 +311,7 @@ describe('Email Notifier tests', () => {
         'Subject Line': 'Import Problem',
       },
     };
-    const notifier = new EmailNotifier(stub, emailConfigs, { ...emailOptions });
+    const notifier = new EmailNotifier(stub, emailConfigs, {...emailOptions});
     notifier.importFailure(
       testFixtures.ce1,
       testFixtures.member1,
@@ -336,10 +336,10 @@ describe('Email Notifier tests', () => {
       ...config,
       ...{
         To: 'home',
-        "Bcc on Success": 'expiration',
-        'Subject Line': subject_lines.expirationNotificationSubject
-      }
-    }
+        'Bcc on Success': 'expiration',
+        'Subject Line': subject_lines.expirationNotificationSubject,
+      },
+    };
     const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
     notifier.expirationNotification(testFixtures.member1, 3);
     expect(stub.getDrafts).to.be.calledOnce;
@@ -358,21 +358,21 @@ describe('Email Notifier tests', () => {
       'expirationNotificationSubject: PLAIN',
       options
     );
-  })
+  });
   it('should send an email to the member when the membership has expired, and a copy to the bcc list', () => {
     emailConfigs.expired = {
       ...config,
       ...{
         To: 'home',
-        "Bcc on Success": 'expired',
-        'Subject Line': subject_lines.expiredNotificationSubject
-      }
-    }
+        'Bcc on Success': 'expired',
+        'Subject Line': subject_lines.expiredNotificationSubject,
+      },
+    };
     const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
     notifier.expiredNotification(testFixtures.member1);
     expect(stub.getDrafts).to.be.calledOnce;
     const options = {
-      htmlBody: `expiredNotificationSubject: HTML`,
+      htmlBody: 'expiredNotificationSubject: HTML',
       bcc: `expired@${testFixtures.sysConfig.domain}`,
       attachments: undefined,
       inlineImages: undefined,
@@ -382,18 +382,19 @@ describe('Email Notifier tests', () => {
     expect(stub.sendEmail).to.be.calledWithMatch(
       testFixtures.txn1['Email Address'],
       subject_lines.expiredNotificationSubject,
-      `expiredNotificationSubject: PLAIN`,
+      'expiredNotificationSubject: PLAIN',
       options
     );
-  })
+  });
   describe('Check that the appropriate objects are included in the notification', () => {
-    const mr = testFixtures.member1.report
-    const plainBody = `{{primary}}\n{{email}}\n{{phone}}\n{{First}}\n{{Last}}\n{{Joined}}\n{{Expires}}\n{{Membership Type}}\n{{Family}}`;
-    const pbDetokenized = `${mr.primary}\n${mr.email}\n${mr.phone}\n${mr.First}\n${mr.Last}\n${mr.Joined}\n${mr.Expires}\n${mr['Membership Type']}\n${mr.Family}`
+    const mr = testFixtures.member1.report;
+    const plainBody =
+      '{{primary}}\n{{email}}\n{{phone}}\n{{First}}\n{{Last}}\n{{Joined}}\n{{Expires}}\n{{Membership Type}}\n{{Family}}';
+    const pbDetokenized = `${mr.primary}\n${mr.email}\n${mr.phone}\n${mr.First}\n${mr.Last}\n${mr.Joined}\n${mr.Expires}\n${mr['Membership Type']}\n${mr.Family}`;
     const htmlBody = `<ul><li>{{primary}}</li><li>{{email}}</li>
     <li>{{phone}}</li><li>{{First}}</li><li>{{Last}}</li>
     <li>{{Joined}}</li><li>{{Expires}}</li><li>{{Membership Type}}</li>
-    <li>{{Family}}</li></ul>`
+    <li>{{Family}}</li></ul>`;
     const hbDetokenized = `<ul><li>${mr.primary}</li><li>${mr.email}</li>
     <li>${mr.phone}</li><li>${mr.First}</li><li>${mr.Last}</li>
     <li>${mr.Joined}</li><li>${mr.Expires}</li><li>${mr['Membership Type']}</li>
@@ -404,10 +405,10 @@ describe('Email Notifier tests', () => {
         ...config,
         ...{
           To: 'home',
-          "Bcc on Success": 'expiration',
-          'Subject Line': subject_lines.expirationNotificationSubject
-        }
-      }
+          'Bcc on Success': 'expiration',
+          'Subject Line': subject_lines.expirationNotificationSubject,
+        },
+      };
 
       const draft = new MyDraft(
         new MyMessage(
@@ -415,51 +416,46 @@ describe('Email Notifier tests', () => {
           subject_lines.expirationNotificationSubject,
           plainBody,
           {
-            htmlBody 
+            htmlBody,
           }
         )
       );
-      stub.getDrafts.returns([draft])
-  
+      stub.getDrafts.returns([draft]);
+
       const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
       notifier.expirationNotification(testFixtures.member1, 3);
       const args = stub.sendEmail.getCall(0).args;
-      expect(args[2]).to.be.equal(pbDetokenized)
-      expect(args[3].htmlBody).to.be.equal(hbDetokenized)
-    })
+      expect(args[2]).to.be.equal(pbDetokenized);
+      expect(args[3].htmlBody).to.be.equal(hbDetokenized);
+    });
     it('an expired email should have all the tokens from the membership report', () => {
       emailConfigs.expired = {
         ...config,
         ...{
           To: 'home',
-          "Bcc on Success": 'expiration',
-          'Subject Line': subject_lines.expiredNotificationSubject
-        }
-      }
+          'Bcc on Success': 'expiration',
+          'Subject Line': subject_lines.expiredNotificationSubject,
+        },
+      };
 
       const draft = new MyDraft(
-        new MyMessage(
-          '',
-          subject_lines.expiredNotificationSubject,
-          plainBody,
-          {
-            htmlBody 
-          }
-        )
+        new MyMessage('', subject_lines.expiredNotificationSubject, plainBody, {
+          htmlBody,
+        })
       );
-      stub.getDrafts.returns([draft])
-  
+      stub.getDrafts.returns([draft]);
+
       const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
       notifier.expiredNotification(testFixtures.member1);
       const args = stub.sendEmail.getCall(0).args;
-      expect(args[2]).to.be.equal(pbDetokenized)
-      expect(args[3].htmlBody).to.be.equal(hbDetokenized)
-    })
-  })
+      expect(args[2]).to.be.equal(pbDetokenized);
+      expect(args[3].htmlBody).to.be.equal(hbDetokenized);
+    });
+  });
   describe('string replacement tests', () => {
     it('should replace {{tokens}} with the proper values', () => {
       const s = '{{here}} is a {{value}}';
-      const b = { here: 'There', value: 27 };
+      const b = {here: 'There', value: 27};
       const expected = 'There is a 27';
       const actual = EmailNotifier.replaceTokens(s, b);
     });
