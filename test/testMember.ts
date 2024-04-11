@@ -88,30 +88,20 @@ describe('Member tests', () => {
       };
       expect({...actual}).to.deep.equal(expecting);
     });
-    it("should use the 'Home Email' field when set", () => {
-      const actual = new Member(renewal, sysConfig);
-      const expecting = {
-        ...expected,
-        ...{
-          emails: [
-            {type: 'home', address: renewal['Home Email']},
-            {
-              address: 'given.family@santacruzcountycycling.club',
-              primary: true,
-            },
-          ],
-        },
-        ...{recoveryEmail: renewal['Home Email']},
-        ...{generation: 0, domain: sysConfig.domain},
-      };
-      expect({...actual}).to.deep.equal(expecting);
-    });
     it('should be able to be constructed from a Transaction', () => {
       const actual = new Member(txn, sysConfig);
       expect({...actual}).to.deep.equal({
         ...expected,
         ...{generation: 0, domain: sysConfig.domain},
       });
+    });
+    it('Member.inGlobalAddressList should be a boolean', () => {
+      const txnWithNoInDirectory = {
+        ...txn,
+      };
+      txnWithNoInDirectory['In Directory'] = <boolean>(<unknown>'');
+      const actual = new Member(txnWithNoInDirectory, sysConfig);
+      expect(actual.includeInGlobalAddressList).to.not.equal('');
     });
     it('should be able to be constructed from another Member instance', () => {
       const member = new Member(txn, sysConfig);

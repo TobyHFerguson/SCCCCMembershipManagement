@@ -525,7 +525,9 @@ export class Member implements UserType {
       this.orgUnitPath = systemConfig.orgUnitPath.trim();
       this.recoveryEmail = email;
       this.recoveryPhone = phone;
-      this.includeInGlobalAddressList = m['In Directory'];
+      this.includeInGlobalAddressList = m['In Directory']
+        ? m['In Directory']
+        : true;
     } else {
       // Simply copy the values, deeply
       this.primaryEmail = deepCopy(m.primaryEmail).toLowerCase();
@@ -1055,6 +1057,10 @@ class TransactionProcessor {
         }
       }
     }
+  }
+  renew(txn: Transaction) {
+    const member = this.directory.makeMember(txn);
+    return this.renew_(txn, member);
   }
   /**
    * Process a membership renewal.

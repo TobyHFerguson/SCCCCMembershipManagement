@@ -20,18 +20,50 @@ import {
  */
 
 function handleOnEditEvent(event: GoogleAppsScript.Events.SheetsOnEdit) {
-  const knownSheets = ['Renewals', 'Transactions'];
   const sheetName = event.range.getSheet().getName();
-  if (knownSheets.includes(sheetName)) {
-    processPaidTransactions(sheetName);
+  switch (sheetName) {
+    case 'Renewals':
+      processRenewals();
+      break;
+    case 'Transactions':
+      processTransactions();
+      break;
+    default:
+      break;
   }
 }
 
 function processTransactions() {
   processPaidTransactions('Transactions');
 }
+
 function processRenewals() {
-  processPaidTransactions('Renewals');
+  const directory = getDirectory_();
+  const notifier = getEmailNotifier_();
+  const sheetName = 'Renewals';
+  convertLinks_(sheetName);
+  const fiddler = bmPreFiddler
+    .PreFiddler()
+    .getFiddler({
+      id: null,
+      sheetName,
+      createIfMissing: false,
+    })
+    .needFormulas();
+  const keepFormulas = fiddler.getColumnsWithFormulas();
+  const tp = new TransactionProcessor(directory, notifier);
+  fiddler.mapRows((row: object, {rowFormulas}) => {
+    tp.renew(<Transaction>row);
+    keepFormulas.forEach(
+      f =>
+        ((<{[key: string]: object}>row)[f] = (<{[key: string]: object}>(
+          rowFormulas
+        ))[f])
+    );
+    return row;
+  });
+  fiddler.dumpValues();
+  notifier.log();
 }
 function processPaidTransactions(sheetName: string) {
   const directory = getDirectory_();

@@ -84,7 +84,7 @@ describe('TransactionProcessor tests', () => {
       expect(oldMember.homeEmail).equals('a@b.com');
       expect(newMember.homeEmail).equals('x@y.com');
 
-      sut.renew_(renewal, oldMember);
+      sut.renew(renewal);
 
       expect(directoryStub.updateMember).to.be.calledOnce;
       const args = directoryStub.updateMember.args;
