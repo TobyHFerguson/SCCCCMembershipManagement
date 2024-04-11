@@ -50,6 +50,7 @@ interface Transaction extends PersonalInformation {
   Processed?: string;
   'Payable Transaction ID': string;
   'In Directory': boolean;
+  'Home Email'?: string;
 }
 
 interface MembershipInfo {
