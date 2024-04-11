@@ -471,7 +471,12 @@ export class Member implements UserType {
       const givenName = m['First Name'].trim();
       const familyName = m['Last Name'].trim();
       const fullName = `${givenName} ${familyName}`.trim();
-      const email = m['Email Address'].trim();
+      const email =
+        isTransaction(m) && m['Home Email']
+          ? m['Home Email'].trim()
+          : m['Email Address']
+            ? m['Email Address'].trim()
+            : '';
       const phone = m['Phone Number'].startsWith('+')
         ? m['Phone Number']
         : '+1' + m['Phone Number'].trim();
@@ -1058,9 +1063,8 @@ class TransactionProcessor {
    */
   renew_(txn: Transaction, member: Member) {
     const updatedMember = this.directory
-      .makeMember(member)
+      .makeMember(txn)
       .incrementExpirationDate();
-    updatedMember.includeInGlobalAddressList = txn['In Directory'];
     try {
       this.directory.updateMember(updatedMember);
       txn.Processed = new Date() + '';

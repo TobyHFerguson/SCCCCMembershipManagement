@@ -18,15 +18,30 @@ import {
 /**
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
-function processPaidTransactions() {
+
+function handleOnEditEvent(event: GoogleAppsScript.Events.SheetsOnEdit) {
+  const knownSheets = ['Renewals', 'Transactions'];
+  const sheetName = event.range.getSheet().getName();
+  if (knownSheets.includes(sheetName)) {
+    processPaidTransactions(sheetName);
+  }
+}
+
+function processTransactions() {
+  processPaidTransactions('Transactions');
+}
+function processRenewals() {
+  processPaidTransactions('Renewals');
+}
+function processPaidTransactions(sheetName: string) {
   const directory = getDirectory_();
   const notifier = getEmailNotifier_();
-  convertLinks_('Transactions');
+  convertLinks_(sheetName);
   const transactionsFiddler = bmPreFiddler
     .PreFiddler()
     .getFiddler({
       id: null,
-      sheetName: 'Transactions',
+      sheetName,
       createIfMissing: false,
     })
     .needFormulas();
@@ -132,7 +147,8 @@ function onOpen() {
   //     .addToUi();
   ui.createMenu('Membership Management')
     .addItem('Create Membership Report', 'createMembershipReport')
-    .addItem('Process Transactions', 'processPaidTransactions')
+    .addItem('Process Transactions', 'processTransactions')
+    .addItem('Process Renewals', 'processRenewals')
     .addItem('Check expirations', 'checkExpirations')
     .addToUi();
 }
