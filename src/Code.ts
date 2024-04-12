@@ -167,21 +167,21 @@ class Directory {
 
   /**
    * Return a copy of the given member, or throw if not found
-   * @param {Member} member The member to be returned
+   * @param {email}  The member to be returned
    * @returns A copy of the member
    * @throws MemberNotFoundError if the user cannot be found
    */
-  getMember(member: Member) {
+  getMember(email: string) {
     try {
       return this.makeMember(
-        this.#Users.get(member.primaryEmail, {
+        this.#Users.get(email, {
           projection: 'full',
           viewType: 'admin_view',
         })
       );
     } catch (err: any) {
       if (err.message.endsWith('Resource Not Found: userKey'))
-        throw new MemberNotFoundError(member.primaryEmail);
+        throw new MemberNotFoundError(email);
       throw new DirectoryError(err);
     }
   }
@@ -1058,8 +1058,24 @@ class TransactionProcessor {
       }
     }
   }
+  /**
+   * Renew a member from the authenticated renewal form.
+   * @param txn
+   * @returns
+   */
   renew(txn: Transaction) {
-    const member = this.directory.makeMember(txn);
+    if (txn['Home Email'] === undefined)
+      throw new Error(
+        'TransactionProcess.renew called with a transaction that doesnt come from the authenticated renewal form'
+      );
+    const member = this.directory.getMember(txn['Email Address']);
+    const ha = member.emails.find(e => e.type === 'home');
+    if (ha) ha.address = txn['Home Email'];
+    member.name.givenName = txn['First Name'];
+    member.name.familyName = txn['Last Name'];
+    member.name.fullName = `${txn['First Name']} ${txn['Last Name']}`;
+    member.phones = [{type: 'mobile', value: txn['Phone Number']}];
+    member.includeInGlobalAddressList = txn['In Directory'];
     return this.renew_(txn, member);
   }
   /**
@@ -1068,9 +1084,7 @@ class TransactionProcessor {
    * @param (User) member the member that is renewing their membership
    */
   renew_(txn: Transaction, member: Member) {
-    const updatedMember = this.directory
-      .makeMember(txn)
-      .incrementExpirationDate();
+    const updatedMember = member.incrementExpirationDate();
     try {
       this.directory.updateMember(updatedMember);
       txn.Processed = new Date() + '';

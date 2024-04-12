@@ -67,22 +67,34 @@ describe('TransactionProcessor tests', () => {
       expect(stub.addMember).to.be.calledTwice;
     });
     it("should use the 'Home Email' field when processing renewals", () => {
-      const renewal: Transaction = {
+      const oldMember = new Member(txn1, sysConfig);
+      const renewal = {
         ...txn1,
         'Home Email': 'x@y.com',
+        'Phone Number': '+14081230000',
+        'In Directory': false,
+        'First Name': 'Ginger',
+        'Last Name': 'Rogers',
       };
-      const directoryStub = Sinon.createStubInstance(Directory);
-      const oldMember = new Member(txn1, sysConfig);
-      const newTransaction = {
-        ...txn1,
-        'Email Address': 'x@y.com',
-      };
-      const newMember = new Member(newTransaction, sysConfig);
-      directoryStub.makeMember.returns(newMember);
-      const sut = new TransactionProcessor(directoryStub, new Notifier());
+      const newMember = new Member(txn1, sysConfig);
+      newMember.emails = [
+        {address: 'x@y.com', type: 'home'},
+        {address: 'fred.foo@sccc.club', primary: true},
+      ];
+      newMember.phones = [
+        {
+          value: '+14081230000',
+          type: 'mobile',
+        },
+      ];
+      newMember.includeInGlobalAddressList = false;
+      newMember.name.familyName = 'Rogers';
+      newMember.name.fullName = 'Ginger Rogers';
+      newMember.name.givenName = 'Ginger';
 
-      expect(oldMember.homeEmail).equals('a@b.com');
-      expect(newMember.homeEmail).equals('x@y.com');
+      const directoryStub = Sinon.createStubInstance(Directory);
+      directoryStub.getMember.returns(oldMember);
+      const sut = new TransactionProcessor(directoryStub, new Notifier());
 
       sut.renew(renewal);
 
