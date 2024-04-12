@@ -5,6 +5,7 @@ import {
   Transaction,
   SystemConfiguration,
   CurrentMember,
+  OrganizationOptions,
 } from '../src/Types';
 const expect = chai.expect;
 
@@ -33,7 +34,7 @@ describe('Member tests', () => {
     recoveryPhone: '+11234567890',
     includeInGlobalAddressList: true,
   };
-  const sysConfig: SystemConfiguration = {
+  const orgOptions: OrganizationOptions = {
     orgUnitPath: '/test',
     domain: 'santacruzcountycycling.club',
     groups: 'g@sccc.club',
@@ -71,7 +72,7 @@ describe('Member tests', () => {
   };
   describe('Constructor tests', () => {
     it("should use the 'Home Email' field when set", () => {
-      const actual = new Member(renewal, sysConfig);
+      const actual = new Member(renewal, orgOptions);
       const expecting = {
         ...expected,
         ...{
@@ -84,15 +85,15 @@ describe('Member tests', () => {
           ],
         },
         ...{recoveryEmail: renewal['Home Email']},
-        ...{generation: 0, domain: sysConfig.domain},
+        ...{generation: 0, domain: orgOptions.domain},
       };
       expect({...actual}).to.deep.equal(expecting);
     });
     it('should be able to be constructed from a Transaction', () => {
-      const actual = new Member(txn, sysConfig);
+      const actual = new Member(txn, orgOptions);
       expect({...actual}).to.deep.equal({
         ...expected,
-        ...{generation: 0, domain: sysConfig.domain},
+        ...{generation: 0, domain: orgOptions.domain},
       });
     });
     it('Member.inGlobalAddressList should be a boolean', () => {
@@ -100,22 +101,22 @@ describe('Member tests', () => {
         ...txn,
       };
       txnWithNoInDirectory['In Directory'] = <boolean>(<unknown>'');
-      const actual = new Member(txnWithNoInDirectory, sysConfig);
+      const actual = new Member(txnWithNoInDirectory, orgOptions);
       expect(actual.includeInGlobalAddressList).to.not.equal('');
     });
     it('should be able to be constructed from another Member instance', () => {
-      const member = new Member(txn, sysConfig);
-      const actual = new Member(member, sysConfig);
+      const member = new Member(txn, orgOptions);
+      const actual = new Member(member, orgOptions);
       expect(actual).to.deep.equal({
         ...expected,
-        ...{generation: 0, domain: sysConfig.domain},
+        ...{generation: 0, domain: orgOptions.domain},
       });
     });
     it('should be able to be constructed from a UserType', () => {
-      const actual = new Member(expected, sysConfig);
+      const actual = new Member(expected, orgOptions);
       expect(actual).to.deep.equal({
         ...expected,
-        ...{generation: 0, domain: sysConfig.domain},
+        ...{generation: 0, domain: orgOptions.domain},
       });
     });
     it('should be able to be constructed from a CurrentMember', () => {
@@ -127,12 +128,12 @@ describe('Member tests', () => {
           family: 'family',
         },
       };
-      const actual = new Member(currentMember, sysConfig);
+      const actual = new Member(currentMember, orgOptions);
       expect(actual).to.deep.equal({
         ...expected,
         ...{
           generation: 0,
-          domain: sysConfig.domain,
+          domain: orgOptions.domain,
           customSchemas: {...expectedClubMembership},
         },
       });
@@ -141,25 +142,25 @@ describe('Member tests', () => {
 
   describe('method tests', () => {
     it('should make a report containing membershp type and family data', () => {
-      const member = new Member(currentMember, sysConfig);
+      const member = new Member(currentMember, orgOptions);
       const actual = member.report;
       expect(actual['Membership Type']).to.equal('Family');
       expect(actual.Family).to.equal('family');
     });
     it('should only add a +1 when the phone number doesnt begin with a +', () => {
-      let actual = new Member(currentMember, sysConfig);
+      let actual = new Member(currentMember, orgOptions);
       expect(actual.phone).to.equal('+1' + currentMember['Phone Number']);
       currentMember['Phone Number'] = '+1' + currentMember['Phone Number'];
-      actual = new Member(currentMember, sysConfig);
+      actual = new Member(currentMember, orgOptions);
       expect(actual.phone).to.equal(currentMember['Phone Number']);
     });
     it('member.report.Expires should return date in YYYY-MM-DD format', () => {
       const expected = Expires;
-      const actual = new Member(currentMember, sysConfig).report.Expires;
+      const actual = new Member(currentMember, orgOptions).report.Expires;
       expect(actual).to.equal(expected);
     });
     it('incrementExpirationDate should increment the expiration date', () => {
-      const uut = new Member(txn, sysConfig);
+      const uut = new Member(txn, orgOptions);
       const previousYear = Number(uut.getExpires().split('-')[0]);
       uut.incrementExpirationDate();
       const nextYear = Number(uut.getExpires().split('-')[0]);

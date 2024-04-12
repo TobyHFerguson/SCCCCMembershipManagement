@@ -6,6 +6,7 @@ import sinonChai = require('sinon-chai');
 import {
   CurrentMember,
   MembersCollectionType,
+  OrganizationOptions,
   SystemConfiguration,
   Transaction,
   UserType,
@@ -45,7 +46,7 @@ class Members implements MembersCollectionType {
     return resource;
   }
 }
-const systemConfig: SystemConfiguration = {
+const orgOptions: OrganizationOptions = {
   orgUnitPath: '/test',
   domain: 'b.com',
   groups: '',
@@ -55,7 +56,10 @@ describe('Directory Tests', () => {
     it('should create an instance', () => {
       const users = Sinon.createStubInstance(Users);
       const members = Sinon.createStubInstance(Members);
-      const uut = new Directory(systemConfig, {Users: users, Members: members});
+      const uut = new Directory({
+        adminDirectory: {Users: users, Members: members},
+        options: orgOptions,
+      });
       expect(uut).to.not.be.null;
     });
   });
@@ -75,9 +79,12 @@ describe('Directory Tests', () => {
         const users = new Users();
         const member = Sinon.createStubInstance(Member);
         const members = Sinon.createStubInstance(Members);
-        const uut = new Directory(systemConfig, {
-          Users: users,
-          Members: members,
+        const uut = new Directory({
+          adminDirectory: {
+            Users: users,
+            Members: members,
+          },
+          options: orgOptions,
         });
         const updateStub = Sinon.stub(users, 'update');
         updateStub.returns(member);
@@ -90,26 +97,32 @@ describe('Directory Tests', () => {
       it('should put the members user key in the error message', () => {
         const users = new Users();
         const members = Sinon.createStubInstance(Members);
-        const uut = new Directory(systemConfig, {
-          Users: users,
-          Members: members,
+        const uut = new Directory({
+          adminDirectory: {
+            Users: users,
+            Members: members,
+          },
+          options: orgOptions,
         });
         const updateStub = Sinon.stub(users, 'update');
         updateStub.throws('invalid user key: userKey');
         try {
-          uut.updateMember(new Member(currentMember, systemConfig));
+          uut.updateMember(new Member(currentMember, orgOptions));
         } catch {}
 
         const actual = updateStub.exceptions[0].message;
-        const expected = `invalid user key: john.smith@${systemConfig.domain}`;
+        const expected = `invalid user key: john.smith@${orgOptions.domain}`;
         expect(actual).to.contain(expected);
       });
       it.skip('should retry when MemberCreationNotCompleted is thrown', () => {
         const users = new Users();
         const members = Sinon.createStubInstance(Members);
-        const uut = new Directory(systemConfig, {
-          Users: users,
-          Members: members,
+        const uut = new Directory({
+          adminDirectory: {
+            Users: users,
+            Members: members,
+          },
+          options: orgOptions,
         });
         const updateStub = Sinon.stub(users, 'update');
         updateStub
@@ -119,7 +132,7 @@ describe('Directory Tests', () => {
               'User creation is not complete.'
             )
           );
-        const member = new Member(currentMember, systemConfig);
+        const member = new Member(currentMember, orgOptions);
         updateStub.onCall(1).returns(member);
 
         uut.updateMember(member);
@@ -155,21 +168,27 @@ describe('Directory Tests', () => {
         const members = Sinon.createStubInstance(Members);
         const member = Sinon.createStubInstance(Member);
         users.list.returns({users: [member]});
-        const uut = new Directory(systemConfig, {
-          Users: users,
-          Members: members,
+        const uut = new Directory({
+          adminDirectory: {
+            Users: users,
+            Members: members,
+          },
+          options: orgOptions,
         });
         const actual = uut.getMembers();
-        const expected = [new Member(member, systemConfig)];
+        const expected = [new Member(member, orgOptions)];
         expect(actual).to.deep.equal(expected);
       });
       it('should throw the underlying error', () => {
         const users = Sinon.createStubInstance(Users);
         const members = Sinon.createStubInstance(Members);
         users.list.throws('this is an error');
-        const uut = new Directory(systemConfig, {
-          Users: users,
-          Members: members,
+        const uut = new Directory({
+          adminDirectory: {
+            Users: users,
+            Members: members,
+          },
+          options: orgOptions,
         });
         uut.getMembers();
         expect(users.list).to.have.thrown('this is an error');
@@ -178,14 +197,17 @@ describe('Directory Tests', () => {
         const users = Sinon.createStubInstance(Users);
         const members = Sinon.createStubInstance(Members);
         users.list.throws('Invalid Input: INVALID_OU_ID');
-        const uut = new Directory(systemConfig, {
-          Users: users,
-          Members: members,
+        const uut = new Directory({
+          adminDirectory: {
+            Users: users,
+            Members: members,
+          },
+          options: orgOptions,
         });
         try {
           uut.getMembers();
         } catch {}
-        const expected = `Sinon-provided Invalid Input: INVALID_OU_ID: "${systemConfig.orgUnitPath}"`;
+        const expected = `Sinon-provided Invalid Input: INVALID_OU_ID: "${orgOptions.orgUnitPath}"`;
         const actual = users.list.exceptions[0].message;
         expect(actual).to.deep.equal(expected);
         // The below doesn't work - I think the typescript definitions for sinonChai are out of date :-()

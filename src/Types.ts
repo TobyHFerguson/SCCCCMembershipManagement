@@ -205,9 +205,9 @@ export interface Draft {
 
 //
 interface MailerOptions {
-  test?: boolean;
-  domain?: string;
-  html?: boolean;
+  test: boolean;
+  domain: string;
+  html: boolean;
 }
 
 interface SubjectLines {
@@ -248,11 +248,12 @@ interface EmailConfigurationCollection {
   importFailure: EmailConfigurationType;
 }
 
-interface SystemConfiguration {
+export interface OrganizationOptions {
   orgUnitPath: string;
   domain: string;
   groups: string;
 }
+interface SystemConfiguration extends MailerOptions, OrganizationOptions {}
 
 export {
   Binding,

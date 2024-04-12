@@ -206,7 +206,7 @@ function convertLinks_(sheetName: string) {
 }
 
 function getDirectory_() {
-  const directory = new Directory(getSystemConfig_());
+  const directory = new Directory({options: getSystemConfig_()});
   return directory;
 }
 

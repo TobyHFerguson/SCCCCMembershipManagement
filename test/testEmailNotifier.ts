@@ -11,6 +11,7 @@ import {
   EmailConfigurationType,
   Message,
   MyMailApp,
+  OrganizationOptions,
   SubjectLines,
   SystemConfiguration,
   Transaction,
@@ -118,7 +119,7 @@ const drafts = Object.keys(subject_lines).map(k => {
   );
 });
 const testFixtures = (() => {
-  const sysConfig: SystemConfiguration = {
+  const orgOptions: OrganizationOptions = {
     orgUnitPath: '/test',
     domain: 'santacruzcountycycling.club',
     groups: 'email@a.com',
@@ -144,17 +145,17 @@ const testFixtures = (() => {
   return {
     txn1,
     ce1,
-    member1: new Member(txn1, sysConfig),
+    member1: new Member(txn1, orgOptions),
     error: new Error('this is the error message'),
     subject_lines,
-    sysConfig,
+    sysConfig: orgOptions,
   };
 })();
 describe('Email Notifier tests', () => {
-  let stub: Sinon.SinonStubbedInstance<MyLocalMailer>;
+  let mailerStub: Sinon.SinonStubbedInstance<MyLocalMailer>;
   beforeEach(() => {
-    stub = Sinon.createStubInstance(MyLocalMailer);
-    stub.getDrafts.returns(<never[]>drafts);
+    mailerStub = Sinon.createStubInstance(MyLocalMailer);
+    mailerStub.getDrafts.returns(<never[]>drafts);
   });
   const config: EmailConfigurationType = {
     'Email Type': '',
@@ -184,9 +185,9 @@ describe('Email Notifier tests', () => {
     html: false,
   };
   it('should send an email to the member on joinSuccess, and a copy to the bcc list', () => {
-    const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
+    const notifier = new EmailNotifier(mailerStub, emailConfigs, emailOptions);
     notifier.joinSuccess(testFixtures.txn1, testFixtures.member1);
-    expect(stub.getDrafts).to.be.calledOnce;
+    expect(mailerStub.getDrafts).to.be.calledOnce;
     const options = {
       htmlBody: 'joinSuccessSubject: HTML',
       attachments: undefined,
@@ -195,7 +196,7 @@ describe('Email Notifier tests', () => {
       name: 'SCCCC Membership',
       noReply: true,
     };
-    expect(stub.sendEmail).to.be.calledWithMatch(
+    expect(mailerStub.sendEmail).to.be.calledWithMatch(
       testFixtures.txn1['Email Address'],
       subject_lines.joinSuccessSubject,
       'joinSuccessSubject: PLAIN',
@@ -203,13 +204,13 @@ describe('Email Notifier tests', () => {
     );
   });
   it('when set to test it should send the email to the test address without any bcc', () => {
-    const notifier = new EmailNotifier(stub, emailConfigs, {
+    const notifier = new EmailNotifier(mailerStub, emailConfigs, {
       ...emailOptions,
       test: true,
     });
     notifier.joinSuccess(testFixtures.txn1, testFixtures.member1);
-    expect(stub.getDrafts).to.be.calledOnce;
-    expect(stub.sendEmail).to.be.calledWithMatch(
+    expect(mailerStub.getDrafts).to.be.calledOnce;
+    expect(mailerStub.sendEmail).to.be.calledWithMatch(
       'toby.ferguson+TEST@santacruzcountycycling.club',
       subject_lines.joinSuccessSubject,
       'joinSuccessSubject: PLAIN',
@@ -231,13 +232,13 @@ describe('Email Notifier tests', () => {
         'Subject Line': 'Join Problem',
       },
     };
-    const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
+    const notifier = new EmailNotifier(mailerStub, emailConfigs, emailOptions);
     notifier.joinFailure(
       testFixtures.txn1,
       testFixtures.member1,
       new Error('failure')
     );
-    expect(stub.sendEmail).to.be.calledWithMatch(
+    expect(mailerStub.sendEmail).to.be.calledWithMatch(
       `onFailure@${testFixtures.sysConfig.domain}`,
       'Join Problem',
       'joinFailureSubject: PLAIN',
@@ -261,9 +262,9 @@ describe('Email Notifier tests', () => {
         'Subject Line': 'Ambiguous transaction',
       },
     };
-    const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
+    const notifier = new EmailNotifier(mailerStub, emailConfigs, emailOptions);
     notifier.partial(testFixtures.txn1, testFixtures.member1);
-    expect(stub.sendEmail).to.be.calledWithMatch(
+    expect(mailerStub.sendEmail).to.be.calledWithMatch(
       `onFailure@${testFixtures.sysConfig.domain}`,
       'Ambiguous transaction',
       'ambiguousSubject: PLAIN',
@@ -286,9 +287,11 @@ describe('Email Notifier tests', () => {
         'Subject Line': subject_lines.importSuccessSubject,
       },
     };
-    const notifier = new EmailNotifier(stub, emailConfigs, {...emailOptions});
+    const notifier = new EmailNotifier(mailerStub, emailConfigs, {
+      ...emailOptions,
+    });
     notifier.importSuccess(testFixtures.ce1, testFixtures.member1);
-    expect(stub.sendEmail).to.be.calledWithMatch(
+    expect(mailerStub.sendEmail).to.be.calledWithMatch(
       testFixtures.ce1['Email Address'],
       'Your new SCCCC account has been created',
       'importSuccessSubject: PLAIN',
@@ -311,13 +314,15 @@ describe('Email Notifier tests', () => {
         'Subject Line': 'Import Problem',
       },
     };
-    const notifier = new EmailNotifier(stub, emailConfigs, {...emailOptions});
+    const notifier = new EmailNotifier(mailerStub, emailConfigs, {
+      ...emailOptions,
+    });
     notifier.importFailure(
       testFixtures.ce1,
       testFixtures.member1,
       new Error('Import Failure')
     );
-    expect(stub.sendEmail).to.be.calledWithMatch(
+    expect(mailerStub.sendEmail).to.be.calledWithMatch(
       testFixtures.ce1['Email Address'],
       'Import Problem',
       'importFailureSubject: PLAIN',
@@ -340,9 +345,9 @@ describe('Email Notifier tests', () => {
         'Subject Line': subject_lines.expirationNotificationSubject,
       },
     };
-    const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
+    const notifier = new EmailNotifier(mailerStub, emailConfigs, emailOptions);
     notifier.expirationNotification(testFixtures.member1, 3);
-    expect(stub.getDrafts).to.be.calledOnce;
+    expect(mailerStub.getDrafts).to.be.calledOnce;
     const options = {
       htmlBody: 'expirationNotificationSubject: HTML',
       bcc: `expiration@${testFixtures.sysConfig.domain}`,
@@ -351,8 +356,8 @@ describe('Email Notifier tests', () => {
       name: 'SCCCC Membership',
       noReply: true,
     };
-    expect(stub.sendEmail).to.be.calledOnce;
-    expect(stub.sendEmail).to.be.calledWithMatch(
+    expect(mailerStub.sendEmail).to.be.calledOnce;
+    expect(mailerStub.sendEmail).to.be.calledWithMatch(
       testFixtures.txn1['Email Address'],
       subject_lines.expirationNotificationSubject.replace('{{N}}', '3'),
       'expirationNotificationSubject: PLAIN',
@@ -368,9 +373,9 @@ describe('Email Notifier tests', () => {
         'Subject Line': subject_lines.expiredNotificationSubject,
       },
     };
-    const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
+    const notifier = new EmailNotifier(mailerStub, emailConfigs, emailOptions);
     notifier.expiredNotification(testFixtures.member1);
-    expect(stub.getDrafts).to.be.calledOnce;
+    expect(mailerStub.getDrafts).to.be.calledOnce;
     const options = {
       htmlBody: 'expiredNotificationSubject: HTML',
       bcc: `expired@${testFixtures.sysConfig.domain}`,
@@ -379,7 +384,7 @@ describe('Email Notifier tests', () => {
       name: 'SCCCC Membership',
       noReply: true,
     };
-    expect(stub.sendEmail).to.be.calledWithMatch(
+    expect(mailerStub.sendEmail).to.be.calledWithMatch(
       testFixtures.txn1['Email Address'],
       subject_lines.expiredNotificationSubject,
       'expiredNotificationSubject: PLAIN',
@@ -420,11 +425,15 @@ describe('Email Notifier tests', () => {
           }
         )
       );
-      stub.getDrafts.returns([draft]);
+      mailerStub.getDrafts.returns([draft]);
 
-      const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
+      const notifier = new EmailNotifier(
+        mailerStub,
+        emailConfigs,
+        emailOptions
+      );
       notifier.expirationNotification(testFixtures.member1, 3);
-      const args = stub.sendEmail.getCall(0).args;
+      const args = mailerStub.sendEmail.getCall(0).args;
       expect(args[2]).to.be.equal(pbDetokenized);
       expect(args[3].htmlBody).to.be.equal(hbDetokenized);
     });
@@ -443,11 +452,15 @@ describe('Email Notifier tests', () => {
           htmlBody,
         })
       );
-      stub.getDrafts.returns([draft]);
+      mailerStub.getDrafts.returns([draft]);
 
-      const notifier = new EmailNotifier(stub, emailConfigs, emailOptions);
+      const notifier = new EmailNotifier(
+        mailerStub,
+        emailConfigs,
+        emailOptions
+      );
       notifier.expiredNotification(testFixtures.member1);
-      const args = stub.sendEmail.getCall(0).args;
+      const args = mailerStub.sendEmail.getCall(0).args;
       expect(args[2]).to.be.equal(pbDetokenized);
       expect(args[3].htmlBody).to.be.equal(hbDetokenized);
     });
