@@ -53,6 +53,7 @@ function processRenewals() {
   const keepFormulas = fiddler.getColumnsWithFormulas();
   const tp = new TransactionProcessor(directory, notifier);
   fiddler.mapRows((row: object, {rowFormulas}) => {
+    if ((<Transaction>row).Processed) return row;
     tp.renew(<Transaction>row);
     keepFormulas.forEach(
       f =>
