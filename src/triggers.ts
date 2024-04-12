@@ -34,7 +34,7 @@ function handleOnEditEvent(event: GoogleAppsScript.Events.SheetsOnEdit) {
 }
 
 function processTransactions() {
-  processPaidTransactions('Transactions');
+  processPaidTransactions_('Transactions');
 }
 
 function processRenewals() {
@@ -66,7 +66,7 @@ function processRenewals() {
   fiddler.dumpValues();
   notifier.log();
 }
-function processPaidTransactions(sheetName: string) {
+function processPaidTransactions_(sheetName: string) {
   const directory = getDirectory_();
   const notifier = getEmailNotifier_();
   convertLinks_(sheetName);
