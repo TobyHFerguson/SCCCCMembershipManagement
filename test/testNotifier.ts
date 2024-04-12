@@ -5,6 +5,7 @@ import {
   Transaction,
   SystemConfiguration,
   CurrentMember,
+  OrganizationOptions,
 } from '../src/Types';
 import {Member, Notifier} from '../src/Code';
 const testFixtures = (() => {
@@ -32,7 +33,7 @@ const testFixtures = (() => {
     Timestamp: new Date('2024-03-29'),
     'In Directory': true,
   };
-  const sysConfig: SystemConfiguration = {
+  const orgOptions: OrganizationOptions = {
     orgUnitPath: '/test',
     domain: 'santacruzcountycycling.club',
     groups: 'email@a.com',
@@ -48,10 +49,10 @@ const testFixtures = (() => {
       expirationSubject: 'Your membership has expired',
     },
     txn1,
-    member1: new Member(txn1, sysConfig),
+    member1: new Member(txn1, orgOptions),
     error: new Error('this is the error message'),
     sendMail: sendMail,
-    sysConfig,
+    sysConfig: orgOptions,
   };
 })();
 describe('Notifier tests', () => {
