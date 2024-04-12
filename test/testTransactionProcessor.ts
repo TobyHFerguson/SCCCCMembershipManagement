@@ -68,6 +68,7 @@ describe('TransactionProcessor tests', () => {
     });
     it("should use the 'Home Email' field when processing renewals", () => {
       const oldMember = new Member(txn1, sysConfig);
+      oldMember.customSchemas.Club_Membership.expires = '2030-10-10';
       const renewal = {
         ...txn1,
         'Home Email': 'x@y.com',
@@ -76,21 +77,22 @@ describe('TransactionProcessor tests', () => {
         'First Name': 'Ginger',
         'Last Name': 'Rogers',
       };
-      const newMember = new Member(txn1, sysConfig);
-      newMember.emails = [
+      const expected = new Member(txn1, sysConfig);
+      expected.emails = [
         {address: 'x@y.com', type: 'home'},
         {address: 'fred.foo@sccc.club', primary: true},
       ];
-      newMember.phones = [
+      expected.phones = [
         {
           value: '+14081230000',
           type: 'mobile',
         },
       ];
-      newMember.includeInGlobalAddressList = false;
-      newMember.name.familyName = 'Rogers';
-      newMember.name.fullName = 'Ginger Rogers';
-      newMember.name.givenName = 'Ginger';
+      expected.includeInGlobalAddressList = false;
+      expected.name.familyName = 'Rogers';
+      expected.name.fullName = 'Ginger Rogers';
+      expected.name.givenName = 'Ginger';
+      expected.customSchemas.Club_Membership.expires = '2031-10-10';
 
       const directoryStub = Sinon.createStubInstance(Directory);
       directoryStub.getMember.returns(oldMember);
@@ -99,8 +101,8 @@ describe('TransactionProcessor tests', () => {
       sut.renew(renewal);
 
       expect(directoryStub.updateMember).to.be.calledOnce;
-      const args = directoryStub.updateMember.args;
-      expect(args[0][0]).to.deep.equal(newMember);
+      const actual = directoryStub.updateMember.args[0][0];
+      expect(actual).to.deep.equal(expected);
     });
   });
 });

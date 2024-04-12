@@ -592,9 +592,12 @@ export class Member implements UserType {
     return this;
   }
   incrementExpirationDate() {
-    Member.convertToYYYYMMDDFormat_(
-      Member.incrementDateByOneYear(this.customSchemas.Club_Membership.expires)
-    );
+    this.customSchemas.Club_Membership.expires =
+      Member.convertToYYYYMMDDFormat_(
+        Member.incrementDateByOneYear(
+          this.customSchemas.Club_Membership.expires
+        )
+      );
     return this;
   }
   getExpires() {

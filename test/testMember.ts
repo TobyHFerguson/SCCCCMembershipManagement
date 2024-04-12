@@ -158,5 +158,12 @@ describe('Member tests', () => {
       const actual = new Member(currentMember, sysConfig).report.Expires;
       expect(actual).to.equal(expected);
     });
+    it('incrementExpirationDate should increment the expiration date', () => {
+      const uut = new Member(txn, sysConfig);
+      const previousYear = Number(uut.getExpires().split('-')[0]);
+      uut.incrementExpirationDate();
+      const nextYear = Number(uut.getExpires().split('-')[0]);
+      expect(nextYear - previousYear).to.equal(1);
+    });
   });
 });
