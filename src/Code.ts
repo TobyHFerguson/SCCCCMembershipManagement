@@ -192,7 +192,7 @@ class Directory {
    * @returns {Member} the newly inserted member
    */
   addMember(m: Member | CurrentMember, wait = true) {
-    const member = isCurrentMember(m) ? this.makeMember(m) : m;
+    const member = isCurrentMember_(m) ? this.makeMember(m) : m;
     member.password = Math.random().toString(36);
     member.changePasswordAtNextLogin = true;
     try {
@@ -405,7 +405,7 @@ class Fixture1 {
   }
 }
 
-function isMember(
+function isMember_(
   member: Transaction | Member | UserType | CurrentMember
 ): member is Member {
   return (
@@ -414,7 +414,7 @@ function isMember(
   );
 }
 
-function isUserType(
+function isUserType_(
   member: Transaction | Member | UserType | CurrentMember
 ): member is UserType {
   return (
@@ -423,14 +423,14 @@ function isUserType(
   );
 }
 
-function isTransaction(
+function isTransaction_(
   txn: Transaction | Member | UserType | CurrentMember
 ): txn is Transaction {
   const t = txn as Transaction;
   return t['First Name'] !== undefined && t['Payable Order ID'] !== undefined;
 }
 
-function isCurrentMember(
+function isCurrentMember_(
   cm: Transaction | Member | UserType | CurrentMember
 ): cm is CurrentMember {
   const c = cm as CurrentMember;
@@ -467,12 +467,12 @@ export class Member implements UserType {
       return v ? JSON.parse(JSON.stringify(v)) : '';
     }
     this.domain = systemConfig.domain;
-    if (isTransaction(m) || isCurrentMember(m)) {
+    if (isTransaction_(m) || isCurrentMember_(m)) {
       const givenName = m['First Name'].trim();
       const familyName = m['Last Name'].trim();
       const fullName = `${givenName} ${familyName}`.trim();
       const email =
-        isTransaction(m) && m['Home Email']
+        isTransaction_(m) && m['Home Email']
           ? m['Home Email'].trim()
           : m['Email Address']
             ? m['Email Address'].trim()
@@ -504,7 +504,7 @@ export class Member implements UserType {
       ];
       this.customSchemas = {
         Club_Membership: {
-          ...(isCurrentMember(m)
+          ...(isCurrentMember_(m)
             ? {
                 Join_Date: '' + m.Joined,
                 expires: '' + m.Expires,
@@ -545,7 +545,7 @@ export class Member implements UserType {
         m.includeInGlobalAddressList !== undefined
           ? m.includeInGlobalAddressList
           : true;
-      if (isMember(m)) {
+      if (isMember_(m)) {
         this.generation = m.generation;
       }
     }
@@ -674,7 +674,7 @@ class Notifier implements NotificationType {
       l.forEach(l => {
         addInfoToError(l);
         if (!l.input) return;
-        if (isTransaction(l.input)) {
+        if (isTransaction_(l.input)) {
           console.error(
             `Txn ${l.input['Payable Transaction ID']} had ${kind} error: ${l.error}`
           );
@@ -919,7 +919,7 @@ class EmailNotifier extends Notifier {
     return this.#options.test
       ? `toby.ferguson+TEST@${this.#options.domain}`
       : to === 'home'
-        ? isTransaction(txn) || isCurrentMember(txn)
+        ? isTransaction_(txn) || isCurrentMember_(txn)
           ? txn['Email Address']
           : txn.homeEmail
         : `${to}@${this.#options.domain}`;
