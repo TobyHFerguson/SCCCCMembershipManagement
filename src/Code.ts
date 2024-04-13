@@ -253,20 +253,39 @@ class Directory {
     }
   }
   addMemberToGroup(member: Member, groupKey: string) {
-    const groupMember: GoogleAppsScript.AdminDirectory.Schema.Member = {
-      kind: 'admin#directory#member',
-      email: member.homeEmail,
-      role: 'MEMBER',
-      type: 'EXTERNAL',
-    };
+    groupKey = groupKey.trim();
+    let email;
     try {
-      this.#Members.insert(groupMember, groupKey.trim());
+      // https://developers.google.com/admin-sdk/directory/reference/rest/v1/members/insert
+      email = this.#Members.insert(
+        {email: member.homeEmail},
+        groupKey.trim()
+      ).email;
     } catch (err: any) {
-      if (!err.message.endsWith('Member already exists.')) throw err;
+      if (err.message.endsWith('Member already exists.')) {
+        email = member.homeEmail;
+        return;
+      }
+      if (err.message.endsWith('Condition not met')) {
+        // Perhaps this is a security group?
+        try {
+          email = this.#Members.insert(
+            {email: member.primaryEmail},
+            groupKey
+          ).email;
+        } catch (err2: any) {
+          if (err2.message.endsWith('Member already exists.')) {
+            email = member.primaryEmail;
+            return;
+          }
+        }
+      }
+    } finally {
+      if (email)
+        console.info(
+          `member ${member.primaryEmail}'s email (${email}) is a member of ${groupKey}`
+        );
     }
-    console.info(
-      `member ${member.name.fullName}'s home email (${member.homeEmail}) is in group ${groupKey}`
-    );
   }
   /**
    * Delete the given member
@@ -291,6 +310,7 @@ class Directory {
     }
   }
 }
+
 export {Directory};
 class DirectoryError extends Error {
   constructor(message?: string | undefined) {

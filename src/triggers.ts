@@ -251,3 +251,14 @@ function testMigrateMember() {
   };
   migrateMember_(currentMember);
 }
+
+function addMemberToSG() {
+  const directory = getDirectory_();
+  const member = directory.getMember(
+    'ginger.rogers@santacruzcountycycling.club'
+  );
+  directory.addMemberToGroup(
+    member,
+    'club_members@santacruzcountycycling.club'
+  );
+}
