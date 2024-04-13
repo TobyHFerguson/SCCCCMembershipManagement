@@ -27,7 +27,7 @@ const mailerOptionDefaults: MailerOptions = {
   test: true,
   domain: 'santacruzcountycycling.club',
   html: true,
-}
+};
 // class Users implements UsersCollectionType {
 //   #users: UserType[] = [];
 //   constructor(users?: Member[]) {
@@ -84,8 +84,8 @@ class Directory {
     adminDirectory?: AdminDirectoryType;
     options?: Partial<OrganizationOptions>;
   }) {
-    this.orgOptions = { ...organizationOptionDefaults, ...spec.options };
-    spec.adminDirectory =  spec.adminDirectory || AdminDirectory 
+    this.orgOptions = {...organizationOptionDefaults, ...spec.options};
+    spec.adminDirectory = spec.adminDirectory || AdminDirectory;
     if (!spec.adminDirectory?.Users)
       throw new Error(
         'Internal Error - spec.adminDirectory.Users is undefined'
@@ -151,8 +151,8 @@ class Directory {
   }
 
   /**
-   * Update the stored copy of the member's expiration date
-   * @param {Member} member The member whose expiration date is to be updated
+   * Update the member record whose primary email matches the given one.
+   * @param {Member} member The member with the new values
    * @returns a copy of the updated member
    */
   updateMember(member: Member) {
@@ -276,7 +276,7 @@ class Directory {
     }
   }
 }
-export { Directory };
+export {Directory};
 class DirectoryError extends Error {
   constructor(message?: string | undefined) {
     super(message);
@@ -347,9 +347,9 @@ export class ExpirationProcessor {
       if (d instanceof Date) return d;
       return new Date(
         d +
-        (typeof d === 'string' && d.match(/^\d{4}-\d{2}-\d{2}$/)
-          ? 'T00:00:00-08:00'
-          : '')
+          (typeof d === 'string' && d.match(/^\d{4}-\d{2}-\d{2}$/)
+            ? 'T00:00:00-08:00'
+            : '')
       );
     }
 
@@ -401,9 +401,9 @@ export class Member implements UserType {
   domain: string;
   generation = 0;
   primaryEmail: string;
-  name: { givenName: string; familyName: string; fullName: string };
-  emails: { address: string; type?: string; primary?: boolean }[];
-  phones: { value: string; type: string }[];
+  name: {givenName: string; familyName: string; fullName: string};
+  emails: {address: string; type?: string; primary?: boolean}[];
+  phones: {value: string; type: string}[];
   customSchemas: {
     Club_Membership: {
       expires: string;
@@ -426,7 +426,10 @@ export class Member implements UserType {
     function deepCopy(v: any) {
       return v ? JSON.parse(JSON.stringify(v)) : '';
     }
-    const orgOptions:OrganizationOptions = { ...organizationOptionDefaults, ...options}
+    const orgOptions: OrganizationOptions = {
+      ...organizationOptionDefaults,
+      ...options,
+    };
     this.domain = orgOptions.domain;
     if (isTransaction_(m) || isCurrentMember_(m)) {
       const givenName = m['First Name'].trim();
@@ -441,7 +444,7 @@ export class Member implements UserType {
       const phone = m['Phone Number'].startsWith('+')
         ? m['Phone Number']
         : '+1' + m['Phone Number'].trim();
-      const name = { givenName, familyName, fullName };
+      const name = {givenName, familyName, fullName};
       const primaryEmail = `${givenName}.${familyName}@${this.domain}`
         .toLowerCase()
         .trim();
@@ -467,20 +470,20 @@ export class Member implements UserType {
         Club_Membership: {
           ...(isCurrentMember_(m)
             ? {
-              Join_Date: '' + m.Joined,
-              expires: '' + m.Expires,
-              membershipType: m['Membership Type'],
-              ...(m['Membership Type'].trim() === 'Family'
-                ? { family: m.Family ? m.Family : m['Last Name'].trim() }
-                : {}),
-            }
+                Join_Date: '' + m.Joined,
+                expires: '' + m.Expires,
+                membershipType: m['Membership Type'],
+                ...(m['Membership Type'].trim() === 'Family'
+                  ? {family: m.Family ? m.Family : m['Last Name'].trim()}
+                  : {}),
+              }
             : {
-              Join_Date: Member.convertToYYYYMMDDFormat_(new Date()),
-              expires: Member.convertToYYYYMMDDFormat_(
-                Member.incrementDateByOneYear(new Date())
-              ),
-              membershipType: 'Individual',
-            }),
+                Join_Date: Member.convertToYYYYMMDDFormat_(new Date()),
+                expires: Member.convertToYYYYMMDDFormat_(
+                  Member.incrementDateByOneYear(new Date())
+                ),
+                membershipType: 'Individual',
+              }),
         },
       };
       this.orgUnitPath = orgOptions.orgUnitPath.trim();
@@ -592,31 +595,31 @@ class Notifier implements NotificationType {
    * @param {User} member The user that was joined
    */
   joinSuccess(txn: Transaction, member: Member) {
-    this.joinSuccessLog.push({ input: txn, member });
+    this.joinSuccessLog.push({input: txn, member});
   }
   joinFailure(txn: Transaction, member: Member, error: Error) {
-    this.joinFailureLog.push({ input: txn, member, error });
+    this.joinFailureLog.push({input: txn, member, error});
   }
   renewalSuccess(txn: Transaction, member: Member) {
-    this.renewalSuccessLog.push({ input: txn, member });
+    this.renewalSuccessLog.push({input: txn, member});
   }
   renewalFailure(txn: Transaction, member: Member, error: Error) {
-    this.renewalFailureLog.push({ input: txn, member, error });
+    this.renewalFailureLog.push({input: txn, member, error});
   }
   partial(txn: Transaction, member: Member) {
-    this.partialsLog.push({ input: txn, member });
+    this.partialsLog.push({input: txn, member});
   }
   importSuccess(cm: CurrentMember, member: Member) {
-    this.importSuccessLog.push({ input: cm, member });
+    this.importSuccessLog.push({input: cm, member});
   }
   importFailure(cm: CurrentMember, member: Member, error: Error) {
-    this.importFailureLog.push({ input: cm, member, error: error });
+    this.importFailureLog.push({input: cm, member, error: error});
   }
   expirationNotification(member: Member, n: number) {
-    this.expirationNotificationLog.push({ member: member });
+    this.expirationNotificationLog.push({member: member});
   }
   expiredNotification(member: Member) {
-    this.expiredNotificationLog.push({ member });
+    this.expiredNotificationLog.push({member});
   }
   log() {
     const self = this;
@@ -678,7 +681,7 @@ class Notifier implements NotificationType {
     reportExpiredNotifications();
   }
 }
-export { Notifier };
+export {Notifier};
 
 class EmailNotifier extends Notifier {
   #configs: EmailConfigurationCollection;
@@ -687,10 +690,10 @@ class EmailNotifier extends Notifier {
   #mailer: MyMailApp;
 
   /**
-   * 
+   *
    * @param mailer the mail app system
-   * @param configs the configuration for all the emails 
-   * @param options options for the mail system. 
+   * @param configs the configuration for all the emails
+   * @param options options for the mail system.
    */
   constructor(
     mailer: MyMailApp,
@@ -755,7 +758,7 @@ class EmailNotifier extends Notifier {
       .join(',');
   }
   private getBcc(bcc: string): GoogleAppsScript.Gmail.GmailAdvancedOptions {
-    return this.#options.test ? {} : { bcc };
+    return this.#options.test ? {} : {bcc};
   }
   private notifySuccess_(
     txn: Transaction | CurrentMember,
@@ -798,7 +801,7 @@ class EmailNotifier extends Notifier {
     const recipient = this.getRecipient_(member, config.To);
     const bind: (s: string) => string = EmailNotifier.makeBinder(
       member.report,
-      { N: '' + numDays }
+      {N: '' + numDays}
     );
     this.notify(
       bind,
@@ -835,30 +838,30 @@ class EmailNotifier extends Notifier {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore - there seems to be a problem with the Blob and the GmailAttachment types :-()
     const options: GoogleAppsScript.Gmail.GmailAdvancedOptions = {
-      ...(message.getAttachments({ includeInlineImages: false }).length > 0
-        ? { attachments: message.getAttachments({ includeInlineImages: false }) }
+      ...(message.getAttachments({includeInlineImages: false}).length > 0
+        ? {attachments: message.getAttachments({includeInlineImages: false})}
         : {}),
-      ...(message.getBcc() && { bcc: message.getBcc() }),
-      ...(message.getCc() && { cc: message.getCc() }),
-      ...(message.getFrom() && { from: message.getFrom() }),
-      ...(message.getBody() && { htmlBody: bind(message.getBody()) }),
-      ...(message.getAttachments({ includeAttachments: false }).length > 0 && {
+      ...(message.getBcc() && {bcc: message.getBcc()}),
+      ...(message.getCc() && {cc: message.getCc()}),
+      ...(message.getFrom() && {from: message.getFrom()}),
+      ...(message.getBody() && {htmlBody: bind(message.getBody())}),
+      ...(message.getAttachments({includeAttachments: false}).length > 0 && {
         inlineImages: EmailNotifier.getInlineImages_(message),
       }),
-      ...(message.getReplyTo() && { replyTo: message.getReplyTo() }),
+      ...(message.getReplyTo() && {replyTo: message.getReplyTo()}),
       ...this.getBcc(this.makeBccList(bcc)),
-      ...{ name: 'SCCCC Membership', noReply: true },
+      ...{name: 'SCCCC Membership', noReply: true},
     };
     this.#mailer.sendEmail(recipient, subject, plainBody, options);
   }
   static makeBinder(...args: any[]): (s: string) => string {
     const binding = args.reduce((p, arg) => {
-      return { ...p, ...EmailNotifier.convertToObjectType(arg) };
+      return {...p, ...EmailNotifier.convertToObjectType(arg)};
     }, {});
     // The above code is transpiled into code that converts date strings into date objects - not what we want at all!
 
     Object.keys(binding).forEach(
-      k => ((<{ [key: string]: string }>binding)[k] += '')
+      k => ((<{[key: string]: string}>binding)[k] += '')
     );
     const binder = (str: string) => {
       return EmailNotifier.replaceTokens(str, binding);
@@ -866,13 +869,13 @@ class EmailNotifier extends Notifier {
     return binder;
   }
 
-  static convertToObjectType(arg: any): { [key: string]: string } {
-    return { ...arg };
+  static convertToObjectType(arg: any): {[key: string]: string} {
+    return {...arg};
   }
   static replaceTokens(str: string, tokens = {}) {
     return str.replace(/{{[^{}]+}}/g, match => {
       const key = match.replace(/[{}]+/g, '');
-      return (<{ [key: string]: string }>tokens)[key] || match;
+      return (<{[key: string]: string}>tokens)[key] || match;
     });
   }
   private getRecipient_(txn: Transaction | CurrentMember | Member, to: string) {
@@ -894,17 +897,17 @@ class EmailNotifier extends Notifier {
 
     // Creates an inline image object with the image name as key
     // (can't rely on image index as array based on insert order)
-    const img_obj: { [key: string]: GoogleAppsScript.Gmail.GmailAttachment } = (<
+    const img_obj: {[key: string]: GoogleAppsScript.Gmail.GmailAttachment} = (<
       GoogleAppsScript.Gmail.GmailAttachment[]
-      >allInlineImages).reduce(
-        (obj, i) => (
-          ((<{ [key: string]: GoogleAppsScript.Gmail.GmailAttachment }>obj)[
-            i.getName()
-          ] = i),
-          obj
-        ),
-        {}
-      );
+    >allInlineImages).reduce(
+      (obj, i) => (
+        ((<{[key: string]: GoogleAppsScript.Gmail.GmailAttachment}>obj)[
+          i.getName()
+        ] = i),
+        obj
+      ),
+      {}
+    );
 
     //Regexp searches for all img string positions with cid
     const imgexp = RegExp('<img.*?src="cid:(.*?)".*?alt="(.*?)"[^>]+>', 'g');
@@ -919,7 +922,7 @@ class EmailNotifier extends Notifier {
     return inlineImagesObj;
   }
 }
-export { EmailNotifier };
+export {EmailNotifier};
 
 class TransactionProcessor {
   directory: Directory;
@@ -981,23 +984,23 @@ class TransactionProcessor {
   matchTransactionToMember_(
     txn: Transaction,
     member: Member
-  ): { full: boolean } | boolean {
-    const left = { email: member.homeEmail, phone: member.phone };
-    const right = { email: txn['Email Address'], phone: txn['Phone Number'] };
+  ): {full: boolean} | boolean {
+    const left = {email: member.homeEmail, phone: member.phone};
+    const right = {email: txn['Email Address'], phone: txn['Phone Number']};
     const result = TransactionProcessor.match(left, right);
     return result;
   }
   static match(
-    left: { email: string; phone: string },
-    right: { email: string; phone: string }
-  ): { full: boolean } | boolean {
+    left: {email: string; phone: string},
+    right: {email: string; phone: string}
+  ): {full: boolean} | boolean {
     const emailsMatch = left.email === right.email;
     const phonesMatch = left.phone === right.phone;
     const result =
       emailsMatch && phonesMatch
-        ? { full: true }
+        ? {full: true}
         : emailsMatch || phonesMatch
-          ? { full: false }
+          ? {full: false}
           : false;
     return result;
   }
@@ -1032,12 +1035,15 @@ class TransactionProcessor {
         'TransactionProcess.renew called with a transaction that doesnt come from the authenticated renewal form'
       );
     const member = this.directory.getMember(txn['Email Address']);
-    const ha = member.emails.find(e => e.type === 'home');
-    if (ha) ha.address = txn['Home Email'];
-    member.name.givenName = txn['First Name'];
-    member.name.familyName = txn['Last Name'];
-    member.name.fullName = `${txn['First Name']} ${txn['Last Name']}`;
-    member.phones = [{ type: 'mobile', value: txn['Phone Number'] }];
+    if (txn['Home Email']) {
+      const ha = member.emails.find(e => e.type === 'home');
+      if (ha) ha.address = txn['Home Email'];
+    }
+    if (txn['First Name']) member.name.givenName = txn['First Name'];
+    if (txn['Last Name']) member.name.familyName = txn['Last Name'];
+    member.name.fullName = `${member.name.givenName} ${member.name.familyName}`;
+    if (txn['Phone Number'])
+      member.phones = [{type: 'mobile', value: txn['Phone Number']}];
     member.includeInGlobalAddressList = txn['In Directory'];
     return this.renew_(txn, member);
   }
@@ -1060,21 +1066,23 @@ class TransactionProcessor {
     this.notifier.partial(txn, member);
   }
 }
-export { TransactionProcessor };
+export {TransactionProcessor};
 const Utils = (() => {
   return {
-    retryOnError: (f: any, error: { name: string }, t = 250) => {
+    retryOnError: (f: any, error: {name: string}, t = 250) => {
       while (true) {
         try {
           return f();
         } catch (err: any) {
           if (err.name && err.name === error.name) {
+            console.error('Utils.retryOnError: sleeping');
             if (typeof Utilities !== 'undefined') {
               Utilities.sleep(t);
             } else {
-              setTimeout(() => { }, 1000);
+              setTimeout(() => {}, 1000);
             }
           }
+          console.error(`Utils.retryOnError throwing ${err}`);
           throw err;
         }
       }
@@ -1087,7 +1095,7 @@ const Utils = (() => {
         if (typeof Utilities !== 'undefined') {
           Utilities.sleep(t);
         } else {
-          setTimeout(() => { }, 1000);
+          setTimeout(() => {}, 1000);
         }
       }
       return false;
