@@ -211,6 +211,7 @@ interface MailerOptions {
   domain: string;
   testEmails: boolean;
   html: boolean;
+  testUser: string;
 }
 
 interface SubjectLines {

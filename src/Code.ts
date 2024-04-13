@@ -12,11 +12,9 @@ import {
   MyMailApp,
   NotificationType,
   OrganizationOptions,
-  Renewal,
-  SystemConfiguration,
-  Transaction,
+  Renewal, Transaction,
   UserType,
-  UsersCollectionType,
+  UsersCollectionType
 } from './Types';
 
 const organizationOptionDefaults: OrganizationOptions = {
@@ -28,6 +26,7 @@ const mailerOptionDefaults: MailerOptions = {
   testEmails: true,
   domain: 'santacruzcountycycling.club',
   html: true,
+  testUser: 'toby.ferguson+TEST',
 };
 // class Users implements UsersCollectionType {
 //   #users: UserType[] = [];
@@ -893,11 +892,8 @@ class EmailNotifier extends Notifier {
     txn: Transaction | CurrentMember | Member,
     to: string
   ): string {
-    console.error('EmailNotifier.getRecipient_()');
-    console.error(this.#options);
-    console.error(to);
     if (this.#options.testEmails)
-      return `toby.ferguson+TEST@${this.#options.domain}`;
+      return `${this.#options.testUser}@${this.#options.domain}`;
     if (to !== 'home') return `${to}@${this.#options.domain}`;
     if (isRenewal_(txn)) return (<Renewal>txn)['Home Email'];
     if (isTransaction_(txn) || isCurrentMember_(txn))
@@ -1092,14 +1088,12 @@ const Utils = (() => {
           return f();
         } catch (err: any) {
           if (err.name && err.name === error.name) {
-            console.error('Utils.retryOnError: sleeping');
             if (typeof Utilities !== 'undefined') {
               Utilities.sleep(t);
             } else {
               setTimeout(() => {}, 1000);
             }
           }
-          console.error(`Utils.retryOnError throwing ${err}`);
           throw err;
         }
       }
