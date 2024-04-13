@@ -50,7 +50,10 @@ interface Transaction extends PersonalInformation {
   Processed?: string;
   'Payable Transaction ID': string;
   'In Directory': boolean;
-  'Home Email'?: string;
+}
+
+export interface Renewal extends Transaction {
+  'Home Email': string;
 }
 
 interface MembershipInfo {
@@ -205,8 +208,8 @@ export interface Draft {
 
 //
 interface MailerOptions {
-  test: boolean;
   domain: string;
+  testEmails: boolean;
   html: boolean;
 }
 
@@ -250,8 +253,8 @@ interface EmailConfigurationCollection {
 
 export interface OrganizationOptions {
   orgUnitPath: string;
-  domain: string;
   groups: string;
+  domain: string;
 }
 interface SystemConfiguration extends MailerOptions, OrganizationOptions {}
 

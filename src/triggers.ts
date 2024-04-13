@@ -10,6 +10,7 @@ import {
 import {
   CurrentMember,
   EmailConfigurationCollection,
+  Renewal,
   SystemConfiguration,
   Transaction,
   bmPreFiddler,
@@ -53,8 +54,8 @@ function processRenewals() {
   const keepFormulas = fiddler.getColumnsWithFormulas();
   const tp = new TransactionProcessor(directory, notifier);
   fiddler.mapRows((row: object, {rowFormulas}) => {
-    if ((<Transaction>row).Processed) return row;
-    tp.renew(<Transaction>row);
+    if ((<Renewal>row).Processed) return row;
+    tp.renew(<Renewal>row);
     keepFormulas.forEach(
       f =>
         ((<{[key: string]: object}>row)[f] = (<{[key: string]: object}>(
@@ -145,7 +146,7 @@ function checkExpirations() {
 
 function getEmailNotifier_() {
   const emailConfig = getEmailConfiguration_();
-  const notifier = new EmailNotifier(GmailApp, emailConfig, {test: true});
+  const notifier = new EmailNotifier(GmailApp, emailConfig, getSystemConfig_());
   return notifier;
 }
 
@@ -210,15 +211,16 @@ function getDirectory_() {
   return directory;
 }
 
+let systemConfiguration: SystemConfiguration;
+
 function getSystemConfig_() {
+  if (systemConfiguration) return systemConfiguration;
   const systemConfigFiddler = bmPreFiddler.PreFiddler().getFiddler({
     id: null,
     sheetName: 'System Configuration',
     createIfMissing: false,
   });
-  const systemConfiguration = <SystemConfiguration>(
-    systemConfigFiddler.getData()[0]
-  );
+  systemConfiguration = <SystemConfiguration>systemConfigFiddler.getData()[0];
   return systemConfiguration;
 }
 

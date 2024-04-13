@@ -6,6 +6,7 @@ import {
   SystemConfiguration,
   CurrentMember,
   OrganizationOptions,
+  Renewal,
 } from '../src/Types';
 const expect = chai.expect;
 
@@ -50,7 +51,7 @@ describe('Member tests', () => {
     Timestamp: new Date('2024-03-29'),
     'In Directory': true,
   };
-  const renewal: Transaction = {
+  const renewal: Renewal = {
     ...txn,
     'Home Email': 'x@y.com',
   };

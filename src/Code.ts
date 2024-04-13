@@ -12,6 +12,7 @@ import {
   MyMailApp,
   NotificationType,
   OrganizationOptions,
+  Renewal,
   SystemConfiguration,
   Transaction,
   UserType,
@@ -24,7 +25,7 @@ const organizationOptionDefaults: OrganizationOptions = {
   domain: 'santacruzcountycycling.club',
 };
 const mailerOptionDefaults: MailerOptions = {
-  test: true,
+  testEmails: true,
   domain: 'santacruzcountycycling.club',
   html: true,
 };
@@ -387,7 +388,18 @@ function isTransaction_(
   txn: Transaction | Member | UserType | CurrentMember
 ): txn is Transaction {
   const t = txn as Transaction;
-  return t['First Name'] !== undefined && t['Payable Order ID'] !== undefined;
+  return (
+    t['First Name'] !== undefined &&
+    t['Payable Order ID'] !== undefined &&
+    !isRenewal_(txn)
+  );
+}
+
+function isRenewal_(
+  txn: Transaction | Member | UserType | CurrentMember
+): txn is Renewal {
+  const t = txn as Renewal;
+  return t['Home Email'] !== undefined;
 }
 
 function isCurrentMember_(
@@ -420,7 +432,7 @@ export class Member implements UserType {
   changePasswordAtNextLogin?: boolean;
 
   constructor(
-    m: Transaction | Member | UserType | CurrentMember,
+    m: Transaction | Member | UserType | CurrentMember | Renewal,
     options?: Partial<OrganizationOptions>
   ) {
     function deepCopy(v: any) {
@@ -431,16 +443,15 @@ export class Member implements UserType {
       ...options,
     };
     this.domain = orgOptions.domain;
-    if (isTransaction_(m) || isCurrentMember_(m)) {
+    if (isTransaction_(m) || isCurrentMember_(m) || isRenewal_(m)) {
       const givenName = m['First Name'].trim();
       const familyName = m['Last Name'].trim();
       const fullName = `${givenName} ${familyName}`.trim();
-      const email =
-        isTransaction_(m) && m['Home Email']
-          ? m['Home Email'].trim()
-          : m['Email Address']
-            ? m['Email Address'].trim()
-            : '';
+      const email = isRenewal_(m)
+        ? (<Renewal>m)['Home Email'].trim()
+        : m['Email Address']
+          ? m['Email Address'].trim()
+          : '';
       const phone = m['Phone Number'].startsWith('+')
         ? m['Phone Number']
         : '+1' + m['Phone Number'].trim();
@@ -758,7 +769,7 @@ class EmailNotifier extends Notifier {
       .join(',');
   }
   private getBcc(bcc: string): GoogleAppsScript.Gmail.GmailAdvancedOptions {
-    return this.#options.test ? {} : {bcc};
+    return this.#options.testEmails ? {} : {bcc};
   }
   private notifySuccess_(
     txn: Transaction | CurrentMember,
@@ -878,14 +889,20 @@ class EmailNotifier extends Notifier {
       return (<{[key: string]: string}>tokens)[key] || match;
     });
   }
-  private getRecipient_(txn: Transaction | CurrentMember | Member, to: string) {
-    return this.#options.test
-      ? `toby.ferguson+TEST@${this.#options.domain}`
-      : to === 'home'
-        ? isTransaction_(txn) || isCurrentMember_(txn)
-          ? txn['Email Address']
-          : txn.homeEmail
-        : `${to}@${this.#options.domain}`;
+  private getRecipient_(
+    txn: Transaction | CurrentMember | Member,
+    to: string
+  ): string {
+    console.error('EmailNotifier.getRecipient_()');
+    console.error(this.#options);
+    console.error(to);
+    if (this.#options.testEmails)
+      return `toby.ferguson+TEST@${this.#options.domain}`;
+    if (to !== 'home') return `${to}@${this.#options.domain}`;
+    if (isRenewal_(txn)) return (<Renewal>txn)['Home Email'];
+    if (isTransaction_(txn) || isCurrentMember_(txn))
+      return txn['Email Address'];
+    return txn.homeEmail;
   }
 
   static getInlineImages_(message: Message) {
@@ -1029,7 +1046,7 @@ class TransactionProcessor {
    * @param txn
    * @returns
    */
-  renew(txn: Transaction) {
+  renew(txn: Renewal) {
     if (txn['Home Email'] === undefined)
       throw new Error(
         'TransactionProcess.renew called with a transaction that doesnt come from the authenticated renewal form'
