@@ -139,6 +139,20 @@ describe('Member tests', () => {
         },
       });
     });
+    it('should never generate a phone number if the given number is empty', () => {
+      const txn1 = {
+        ...txn,
+        ...{'Phone Number': ''},
+      };
+      const expected1 = {
+        ...expected,
+        ...{generation: 0, domain: orgOptions.domain},
+        ...{phones: [{type: 'mobile', value: ''}]},
+        ...{recoveryPhone: ''},
+      };
+      const actual = new Member(txn1, orgOptions);
+      expect({...actual}).to.deep.equal(expected1);
+    });
   });
 
   describe('method tests', () => {

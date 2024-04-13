@@ -33,6 +33,17 @@ describe('TransactionProcessor tests', () => {
       const r = {email: 'email1', phone: 'phone2'};
       expect(TransactionProcessor.match(l, r)).to.deep.equal({full: false});
     });
+    it('should match if only one phone is present', () => {
+      const l = {email: 'email1', phone: ''};
+      const r = {email: 'email1', phone: 'phone2'};
+      expect(TransactionProcessor.match(l, r)).to.deep.equal({full: true});
+      expect(TransactionProcessor.match(r, l)).to.deep.equal({full: true});
+    });
+    it('should not match just because only one phone is present', () => {
+      const l = {email: 'email1', phone: ''};
+      const r = {email: 'email2', phone: 'phone2'};
+      expect(TransactionProcessor.match(l, r)).to.be.false;
+    });
   });
   describe('method tests', () => {
     const txn1: Transaction = {
