@@ -20,8 +20,8 @@ class Users implements UsersCollectionType {
   get(userKey: string) {
     return {};
   }
-  insert() {
-    return {};
+  insert(user: UserType) {
+    return user;
   }
   list(optionalArgs: {}) {
     return {};
@@ -74,6 +74,28 @@ describe('Directory Tests', () => {
       Joined: new Date() + '',
       Expires: new Date() + '',
     };
+    describe('addMember tests', () => {
+      it('should add member to all SG - Club Membership group', () => {
+        const usersStub = Sinon.createStubInstance(Users);
+        const membersStub = Sinon.createStubInstance(Members);
+        const uut = new Directory({
+          adminDirectory: {Users: usersStub, Members: membersStub},
+          options: orgOptions,
+        });
+        const member = uut.makeMember(currentMember);
+        usersStub.insert.returns(member);
+        const spy = Sinon.spy(uut, 'addMemberToGroup');
+        uut.addMember(currentMember);
+        expect(spy).to.be.calledOnce;
+        expect(spy.args[0][1]).to.equal(
+          'club_members@santacruzcountycycling.club'
+        );
+        const memberAdded = spy.args[0][0];
+        delete memberAdded.changePasswordAtNextLogin;
+        delete memberAdded.password;
+        expect(memberAdded).to.deep.equal(member);
+      });
+    });
     describe('update member tests', () => {
       it('should update the all fields in the member', () => {
         const users = new Users();

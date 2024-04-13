@@ -12,19 +12,32 @@ import {
   MyMailApp,
   NotificationType,
   OrganizationOptions,
-  Renewal, Transaction,
+  Renewal,
+  Transaction,
   UserType,
-  UsersCollectionType
+  UsersCollectionType,
 } from './Types';
 
+const defaultDomain = 'santacruzcountycycling.club';
+const alwaysGroup = `club_members@${defaultDomain}`;
+function ensureAlwaysGroup(groups: string) {
+  // return groups.includes(alwaysGroup) ? groups : groups.split(',').concat(alwaysGroup).join(',')
+  if (!groups.includes(alwaysGroup)) {
+    const split = groups.split(',');
+    const concat = split.filter(s => s !== '').concat(alwaysGroup);
+    const joined = concat.join(',');
+    return joined;
+  }
+  return groups;
+}
 const organizationOptionDefaults: OrganizationOptions = {
   groups: '',
   orgUnitPath: '/test',
-  domain: 'santacruzcountycycling.club',
+  domain: defaultDomain,
 };
 const mailerOptionDefaults: MailerOptions = {
   testEmails: true,
-  domain: 'santacruzcountycycling.club',
+  domain: defaultDomain,
   html: true,
   testUser: 'toby.ferguson+TEST',
 };
@@ -85,6 +98,8 @@ class Directory {
     options?: Partial<OrganizationOptions>;
   }) {
     this.orgOptions = {...organizationOptionDefaults, ...spec.options};
+    this.orgOptions.groups = ensureAlwaysGroup(this.orgOptions.groups);
+
     spec.adminDirectory = spec.adminDirectory || AdminDirectory;
     if (!spec.adminDirectory?.Users)
       throw new Error(
@@ -432,15 +447,16 @@ export class Member implements UserType {
 
   constructor(
     m: Transaction | Member | UserType | CurrentMember | Renewal,
-    options?: Partial<OrganizationOptions>
+    options: Partial<OrganizationOptions>
   ) {
     function deepCopy(v: any) {
       return v ? JSON.parse(JSON.stringify(v)) : '';
     }
-    const orgOptions: OrganizationOptions = {
+    const orgOptions: Required<OrganizationOptions> = {
       ...organizationOptionDefaults,
       ...options,
     };
+    orgOptions.groups = ensureAlwaysGroup(orgOptions.groups);
     this.domain = orgOptions.domain;
     if (isTransaction_(m) || isCurrentMember_(m) || isRenewal_(m)) {
       const givenName = m['First Name'].trim();
@@ -451,9 +467,12 @@ export class Member implements UserType {
         : m['Email Address']
           ? m['Email Address'].trim()
           : '';
-      const phone = m['Phone Number'].startsWith('+')
-        ? m['Phone Number']
-        : '+1' + m['Phone Number'].trim();
+      const phone =
+        m['Phone Number'].length === 0
+          ? ''
+          : m['Phone Number'].startsWith('+')
+            ? m['Phone Number'].trim()
+            : '+1' + m['Phone Number'].trim();
       const name = {givenName, familyName, fullName};
       const primaryEmail = `${givenName}.${familyName}@${this.domain}`
         .toLowerCase()
@@ -1008,13 +1027,22 @@ class TransactionProcessor {
     right: {email: string; phone: string}
   ): {full: boolean} | boolean {
     const emailsMatch = left.email === right.email;
-    const phonesMatch = left.phone === right.phone;
-    const result =
-      emailsMatch && phonesMatch
+    const bothPhonesDefined =
+      left.phone.length !== 0 && right.phone.length !== 0;
+    const phonesMatch =
+      left.phone.length === 0 ||
+      right.phone.length === 0 ||
+      left.phone === right.phone;
+    const result = !bothPhonesDefined
+      ? emailsMatch
+        ? {full: true}
+        : false
+      : emailsMatch && phonesMatch
         ? {full: true}
         : emailsMatch || phonesMatch
           ? {full: false}
           : false;
+
     return result;
   }
   join_(txn: Transaction) {
