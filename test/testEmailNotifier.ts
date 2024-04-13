@@ -9,6 +9,7 @@ import {
   Draft,
   EmailConfigurationCollection,
   EmailConfigurationType,
+  MailerOptions,
   Message,
   MyMailApp,
   OrganizationOptions,
@@ -179,8 +180,8 @@ describe('Email Notifier tests', () => {
     importSuccess: config,
     importFailure: config,
   };
-  const emailOptions = {
-    test: false,
+  const emailOptions: MailerOptions = {
+    testEmails: false,
     domain: 'santacruzcountycycling.club',
     html: false,
   };
@@ -206,7 +207,7 @@ describe('Email Notifier tests', () => {
   it('when set to test it should send the email to the test address without any bcc', () => {
     const notifier = new EmailNotifier(mailerStub, emailConfigs, {
       ...emailOptions,
-      test: true,
+      testEmails: true,
     });
     notifier.joinSuccess(testFixtures.txn1, testFixtures.member1);
     expect(mailerStub.getDrafts).to.be.calledOnce;
