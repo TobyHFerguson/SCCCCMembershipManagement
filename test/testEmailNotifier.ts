@@ -184,6 +184,7 @@ describe('Email Notifier tests', () => {
     testEmails: false,
     domain: 'santacruzcountycycling.club',
     html: false,
+    testUser: 'toby.ferguson+TEST',
   };
   it('should send an email to the member on joinSuccess, and a copy to the bcc list', () => {
     const notifier = new EmailNotifier(mailerStub, emailConfigs, emailOptions);
@@ -205,14 +206,16 @@ describe('Email Notifier tests', () => {
     );
   });
   it('when set to test it should send the email to the test address without any bcc', () => {
-    const notifier = new EmailNotifier(mailerStub, emailConfigs, {
+    const options = {
       ...emailOptions,
       testEmails: true,
-    });
+      testUser: 'test.user',
+    };
+    const notifier = new EmailNotifier(mailerStub, emailConfigs, options);
     notifier.joinSuccess(testFixtures.txn1, testFixtures.member1);
     expect(mailerStub.getDrafts).to.be.calledOnce;
     expect(mailerStub.sendEmail).to.be.calledWithMatch(
-      'toby.ferguson+TEST@santacruzcountycycling.club',
+      `${options.testUser}@${options.domain}`,
       subject_lines.joinSuccessSubject,
       'joinSuccessSubject: PLAIN',
       {
