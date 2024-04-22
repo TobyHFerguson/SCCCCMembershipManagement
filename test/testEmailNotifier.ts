@@ -257,6 +257,39 @@ describe('Email Notifier tests', () => {
     );
     // expect(actual).to.deep.equal(expected)
   });
+  it('renewal processing should replace the tokens in the html body', () => {
+    // Replace the htmlBody in the renewalSuccess draft:
+    const renewalDraft = drafts.find(
+      d => d.getMessage().getSubject() === subject_lines.renewalSuccessSubject
+    );
+    if (renewalDraft) {
+      (<MyMessage>renewalDraft.getMessage()).options = {
+        htmlBody:
+          "Your <a ref='https://checkout.payableplugins.com/order/{{Payable Order ID}}'>{{Payable Order ID}}</a> is always available, should you need it for any reason.",
+      };
+    }
+    // Ensure the config is set up
+    emailConfigs.renewSuccess['Subject Line'] =
+      subject_lines.renewalSuccessSubject;
+    const notifier = new EmailNotifier(mailerStub, emailConfigs, emailOptions);
+    notifier.renewalSuccess(testFixtures.txn1, testFixtures.member1);
+    expect(mailerStub.getDrafts).to.be.calledOnce;
+    const options = {
+      htmlBody:
+        "Your <a ref='https://checkout.payableplugins.com/order/CC-TF-RNB6'>CC-TF-RNB6</a> is always available, should you need it for any reason.",
+      attachments: undefined,
+      inlineImages: undefined,
+      bcc: `a@${testFixtures.sysConfig.domain},b@${testFixtures.sysConfig.domain}`,
+      name: 'SCCCC Membership',
+      noReply: true,
+    };
+    expect(mailerStub.sendEmail).to.be.calledWithMatch(
+      testFixtures.txn1['Email Address'],
+      subject_lines.renewalSuccessSubject,
+      'renewalSuccessSubject: PLAIN',
+      options
+    );
+  });
   it('should send an email to onFailure and bcc ambiguousBCC on partial', () => {
     emailConfigs.ambiguousTransaction = {
       ...config,
@@ -475,6 +508,16 @@ describe('Email Notifier tests', () => {
       const b = {here: 'There', value: 27};
       const expected = 'There is a 27';
       const actual = EmailNotifier.replaceTokens(s, b);
+      expect(actual).to.equal(expected);
+    });
+    it('should work on html content', () => {
+      const s =
+        "Your <a ref='https://checkout.payableplugins.com/order/{{Payable Order ID}}'>{{Payable Order ID}}</a> is always available, should you need it for any reason.";
+      const b = {'Payable Order ID': 'CDF27'};
+      const expected =
+        "Your <a ref='https://checkout.payableplugins.com/order/CDF27'>CDF27</a> is always available, should you need it for any reason.";
+      const actual = EmailNotifier.replaceTokens(s, b);
+      expect(actual).to.equal(expected);
     });
   });
 });
