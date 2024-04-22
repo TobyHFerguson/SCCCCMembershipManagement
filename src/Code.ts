@@ -912,6 +912,11 @@ class EmailNotifier extends Notifier {
     Object.keys(binding).forEach(
       k => ((<{[key: string]: string}>binding)[k] += '')
     );
+    // We want to create a special 'As Link' version of Payable Order ID
+    const poid = binding['Payable Order ID'];
+    if (poid)
+      binding['Payable Order ID As Link'] =
+        `<a href='https://checkout.payableplugins.com/order/${poid}'>${poid}</a>`;
     const binder = (str: string) => {
       return EmailNotifier.replaceTokens(str, binding);
     };
