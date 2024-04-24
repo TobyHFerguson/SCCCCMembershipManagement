@@ -226,6 +226,7 @@ class Directory {
     member.password = Math.random().toString(36);
     member.changePasswordAtNextLogin = true;
     try {
+      // https://developers.google.com/admin-sdk/directory/reference/rest/v1/users/insert
       const newMember = this.makeMember(this.#Users.insert(member));
       if (wait) {
         Utils.waitNTimesOnCondition(4000, () => this.isKnownMember(newMember));
@@ -248,6 +249,7 @@ class Directory {
         if (err.message.endsWith('Invalid Input: primary_user_email')) {
           err.message += `: ${member.primaryEmail}`;
         }
+        console.error(member);
         throw new DirectoryError(err);
       }
     }
@@ -487,12 +489,10 @@ export class Member implements UserType {
         : m['Email Address']
           ? m['Email Address'].trim()
           : '';
-      const phone =
-        m['Phone Number'].length === 0
-          ? ''
-          : m['Phone Number'].startsWith('+')
-            ? m['Phone Number'].trim()
-            : '+1' + m['Phone Number'].trim();
+      let phone = String(m['Phone Number']);
+      phone = (
+        phone.length === 0 ? '' : phone.startsWith('+') ? phone : '+1' + phone
+      ).trim();
       const name = {givenName, familyName, fullName};
       const primaryEmail = `${givenName}.${familyName}@${this.domain}`
         .toLowerCase()
@@ -515,12 +515,13 @@ export class Member implements UserType {
           type: 'mobile',
         },
       ];
+      // Join/Expiry dates must be strings in YYYY-MM-DD format
       this.customSchemas = {
         Club_Membership: {
           ...(isCurrentMember_(m)
             ? {
-                Join_Date: '' + m.Joined,
-                expires: '' + m.Expires,
+                Join_Date: Member.convertToYYYYMMDDFormat_(m.Joined),
+                expires: Member.convertToYYYYMMDDFormat_(m.Expires),
                 membershipType: m['Membership Type'],
                 ...(m['Membership Type'].trim() === 'Family'
                   ? {family: m.Family ? m.Family : m['Last Name'].trim()}
