@@ -180,11 +180,12 @@ function onOpen() {
   //     .addItem('Send Emails', 'sendEmails')
   //     .addToUi();
   ui.createMenu('Membership Management')
-    .addItem('Create Membership Report', 'createMembershipReport')
-    .addItem('Process Transactions', 'processTransactions')
-    .addItem('Process Renewals', 'processRenewals')
-    .addItem('Check expirations', 'checkExpirations')
-    .addToUi();
+        .addItem('Create Membership Report', createMembershipReport.name)
+        .addItem('Process Transactions', processTransactions.name)
+        .addItem('Process Renewals', processRenewals.name)
+        .addItem('Migrate CE Members', migrateCEMembers.name)
+        .addItem('Check Expirations', checkExpirations.name)
+        .addToUi();
 }
 
 function convertLinks_(sheetName: string) {
