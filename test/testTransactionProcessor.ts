@@ -10,7 +10,7 @@ import {
   Notifier,
   TransactionProcessor,
 } from '../src/Code';
-import {Transaction} from '../src/Types';
+import {Transaction, UserType} from '../src/Types';
 
 describe('TransactionProcessor tests', () => {
   describe('member matching tests', () => {
@@ -58,7 +58,7 @@ describe('TransactionProcessor tests', () => {
       'Phone Number': '1234561234',
     };
     const sysConfig = {orgUnitPath: '/test', domain: 'sccc.club', groups: ''};
-    it('should generate new email addresses when the same name has already been used', () => {
+    it('addMember() should generate new email addresses when the same name has already been used', () => {
       const txn2: Transaction = {
         ...txn1,
         'Email Address': 'X@Y.com',
@@ -77,7 +77,7 @@ describe('TransactionProcessor tests', () => {
       expect(stub.getMembers).to.be.calledOnce;
       expect(stub.addMember).to.be.calledTwice;
     });
-    it("should use the 'Home Email' field when processing renewals", () => {
+    it("renew() should use the 'Home Email' field when processing renewals", () => {
       const oldMember = new Member(txn1, sysConfig);
       oldMember.customSchemas.Club_Membership.expires = '2030-10-10';
       const renewal = {
@@ -115,5 +115,23 @@ describe('TransactionProcessor tests', () => {
       const actual = directoryStub.updateMember.args[0][0];
       expect(actual).to.deep.equal(expected);
     });
+    it('has an updateUser() method that updates the user, but leaves the expiry date untouched', () => {
+      const directoryStub = Sinon.createStubInstance(Directory);
+      const notifierStub = Sinon.createStubInstance(Notifier);
+      const sut = new TransactionProcessor(directoryStub, notifierStub);
+
+      const inputUser:UserType = {};
+      inputUser.emails = new Array({type: 'home', address: 'a@b.com'});
+      inputUser.phones = new Array({type: 'mobile', value: '+14083869003'});
+      inputUser.primaryEmail = 'x.y@santacruzcountycycling.club';
+      inputUser.includeInGlobalAddressList = false;
+
+      sut.updateUser(inputUser);
+
+      const actual = directoryStub.updateMember.args[0][0]
+      expect(actual).to.deep.equal(inputUser)
+
+
+    })
   });
 });
