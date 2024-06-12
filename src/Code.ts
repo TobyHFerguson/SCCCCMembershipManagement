@@ -626,7 +626,8 @@ export class Member implements UserType {
     return new Date(d).toISOString().split('T')[0];
   }
   static usToInternational(localPhoneNumber: string) {
-    const phoneNumber = localPhoneNumber === '' ? '' : '+1' + localPhoneNumber.trim().replaceAll('(', '').replaceAll(')', '').replaceAll(' ', '')
+    const notDigitsGlobal = /\D/g;
+    const phoneNumber = localPhoneNumber === '' ? '' : '+1' + localPhoneNumber.trim().replaceAll(notDigitsGlobal, '')
     return phoneNumber;
   }
 }

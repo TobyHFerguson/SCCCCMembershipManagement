@@ -22,7 +22,7 @@ describe('Member tests', () => {
       {type: 'home', address: 'a@b.com'},
       {address: 'given.family@santacruzcountycycling.club', primary: true},
     ],
-    phones: [{type: 'mobile', value: '(123) 456 789'}],
+    phones: [{type: 'mobile', value: '(123) 456-7890'}],
     customSchemas: {
       Club_Membership: {
         expires: expires,
@@ -32,7 +32,7 @@ describe('Member tests', () => {
     },
     orgUnitPath: '/test',
     recoveryEmail: 'a@b.com',
-    recoveryPhone: '+1123456789',
+    recoveryPhone: '+11234567890',
     includeInGlobalAddressList: true,
   };
   const orgOptions: OrganizationOptions = {
@@ -44,7 +44,7 @@ describe('Member tests', () => {
     'First Name': 'given',
     'Last Name': 'family',
     'Email Address': 'a@b.com',
-    'Phone Number': '(123) 456 789',
+    'Phone Number': '(123) 456-7890',
     'Payable Status': 'paid',
     'Payable Transaction ID': 'CC-TF-RNB6',
     'Payable Order ID': '1234',
@@ -64,7 +64,7 @@ describe('Member tests', () => {
     'First Name': 'given',
     'Last Name': 'family',
     'Email Address': 'a@b.com',
-    'Phone Number': '(123) 456 789',
+    'Phone Number': '(123) 456-7890',
     'In Directory': true,
     Joined,
     Expires,
