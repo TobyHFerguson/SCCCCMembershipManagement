@@ -22,7 +22,7 @@ describe('Member tests', () => {
       {type: 'home', address: 'a@b.com'},
       {address: 'given.family@santacruzcountycycling.club', primary: true},
     ],
-    phones: [{type: 'mobile', value: '+11234567890'}],
+    phones: [{type: 'mobile', value: '(123) 456 789'}],
     customSchemas: {
       Club_Membership: {
         expires: expires,
@@ -32,7 +32,7 @@ describe('Member tests', () => {
     },
     orgUnitPath: '/test',
     recoveryEmail: 'a@b.com',
-    recoveryPhone: '+11234567890',
+    recoveryPhone: '+1123456789',
     includeInGlobalAddressList: true,
   };
   const orgOptions: OrganizationOptions = {
@@ -44,7 +44,7 @@ describe('Member tests', () => {
     'First Name': 'given',
     'Last Name': 'family',
     'Email Address': 'a@b.com',
-    'Phone Number': '1234567890',
+    'Phone Number': '(123) 456 789',
     'Payable Status': 'paid',
     'Payable Transaction ID': 'CC-TF-RNB6',
     'Payable Order ID': '1234',
@@ -64,7 +64,7 @@ describe('Member tests', () => {
     'First Name': 'given',
     'Last Name': 'family',
     'Email Address': 'a@b.com',
-    'Phone Number': '1234567890',
+    'Phone Number': '(123) 456 789',
     'In Directory': true,
     Joined,
     Expires,
@@ -162,13 +162,6 @@ describe('Member tests', () => {
       expect(actual['Membership Type']).to.equal('Family');
       expect(actual.Family).to.equal('family');
     });
-    it('should only add a +1 when the phone number doesnt begin with a +', () => {
-      let actual = new Member(currentMember, orgOptions);
-      expect(actual.phone).to.equal('+1' + currentMember['Phone Number']);
-      currentMember['Phone Number'] = '+1' + currentMember['Phone Number'];
-      actual = new Member(currentMember, orgOptions);
-      expect(actual.phone).to.equal(currentMember['Phone Number']);
-    });
     it('member.report.Expires should return date in YYYY-MM-DD format', () => {
       const expected = Expires;
       const actual = new Member(currentMember, orgOptions).report.Expires;
@@ -182,4 +175,15 @@ describe('Member tests', () => {
       expect(nextYear - previousYear).to.equal(1);
     });
   });
+
+  describe('ancillary Tests', () => {
+    describe('phone number tests', () => {
+      it('should convert a US phone number into an international number', () => {
+        const phoneNumber = '(408) 123 1234'
+        const expected = '+14081231234'
+        const actual = Member.usToInternational(phoneNumber)
+        expect(actual).to.equal(expected);
+      })
+    })
+  })
 });

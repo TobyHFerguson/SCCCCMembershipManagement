@@ -489,10 +489,7 @@ export class Member implements UserType {
         : m['Email Address']
           ? m['Email Address'].trim()
           : '';
-      let phone = String(m['Phone Number']);
-      phone = (
-        phone.length === 0 ? '' : phone.startsWith('+') ? phone : '+1' + phone
-      ).trim();
+      let phone = String(m['Phone Number']).trim();
       const name = {givenName, familyName, fullName};
       const primaryEmail = `${givenName}.${familyName}@${this.domain}`
         .toLowerCase()
@@ -538,7 +535,9 @@ export class Member implements UserType {
       };
       this.orgUnitPath = orgOptions.orgUnitPath.trim();
       this.recoveryEmail = email;
-      this.recoveryPhone = phone;
+      // Recovery Phone numbers must include country code, as per:
+      //https://developers.google.com/admin-sdk/directory/reference/rest/v1/users#User
+      this.recoveryPhone = phone.length === 0 ? '' : Member.usToInternational(phone)
       this.includeInGlobalAddressList = m['In Directory']
         ? m['In Directory']
         : true;
@@ -625,6 +624,10 @@ export class Member implements UserType {
   static convertToYYYYMMDDFormat_(date: Date | string) {
     const d = new Date(date);
     return new Date(d).toISOString().split('T')[0];
+  }
+  static usToInternational(localPhoneNumber: string) {
+    const phoneNumber = localPhoneNumber === '' ? '' : '+1' + localPhoneNumber.trim().replaceAll('(', '').replaceAll(')', '').replaceAll(' ', '')
+    return phoneNumber;
   }
 }
 
