@@ -8,9 +8,10 @@
         "libraryId": "13JUFGY18RHfjjuKmIRRfvmGlCYrEkEtN6uUm-iLUcxOUFRJD-WBX-tkR"
       },
       {
-        "userSymbol": "bmUnitTester",
-        "version": "9",
-        "libraryId": "1zOlHMOpO89vqLPe5XpC-wzA9r5yaBkWt_qFjKqFNsIZtNJ-iUjBYDt-x"
+        "userSymbol": "ML",
+        "version": "0",
+        "libraryId": "1wrclUMyocec_HYQJtbMI_hcA1Fv8v1GDMaJQMI3aqrTvxRhxyYxgkPe-",
+        "developmentMode": true
       }
     ],
     "enabledAdvancedServices": [
