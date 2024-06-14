@@ -94,13 +94,12 @@ class Directory {
   #Members: MembersCollectionType;
 
   constructor(spec: {
-    adminDirectory?: AdminDirectoryType;
+    adminDirectory: AdminDirectoryType;
     options?: Partial<OrganizationOptions>;
   }) {
     this.orgOptions = {...organizationOptionDefaults, ...spec.options};
     this.orgOptions.groups = ensureAlwaysGroup(this.orgOptions.groups);
 
-    spec.adminDirectory = spec.adminDirectory || AdminDirectory;
     if (!spec.adminDirectory?.Users)
       throw new Error(
         'Internal Error - spec.adminDirectory.Users is undefined'
