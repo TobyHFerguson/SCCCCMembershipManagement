@@ -3,3 +3,4 @@ install_nvm.sh
 .clasprc.json
 .nyc_output
 build/
+.DS_Store
