@@ -189,6 +189,7 @@ function getSystemConfig_() {
         createIfMissing: false
     });
     systemConfiguration = systemConfigFiddler.getData()[0];
+    systemConfiguration.groups = 'public_';
     return systemConfiguration;
 }
 function migrateMember_(currentMember) {
