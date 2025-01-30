@@ -52,7 +52,7 @@ function processTransactions() {
       if (matches.length > 0) {
         matches.forEach((match) => {
           const member = membershipFiddler.getData()[match];
-          member["Expires"] += 365;
+            member["Expires"] = new Date(new Date(member["Expires"]).setFullYear(new Date(member["Expires"]).getFullYear() + 1));
         })
       } else {
         const newMember = {
