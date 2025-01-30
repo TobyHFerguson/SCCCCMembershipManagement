@@ -1,6 +1,17 @@
 /**
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
+
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('Membership Management')
+    .addItem('Create Membership Report', createMembershipReport.name)
+    .addItem('Process Transactions', processTransactions.name)
+    .addItem('Check Expirations', checkExpirations.name)
+    .addToUi();
+}
+
+
 function handleOnEditEvent(event) {
   const sheetName = event.range.getSheet().getName();
   switch (sheetName) {
@@ -15,61 +26,53 @@ function handleOnEditEvent(event) {
   }
 }
 function processTransactions() {
-  processPaidTransactions_('Transactions');
-}
-function processRenewals() {
-  const directory = getDirectory_();
-  const notifier = getEmailNotifier_();
-  const sheetName = 'Renewals';
-  convertLinks_(sheetName);
-  const fiddler = bmPreFiddler
-    .PreFiddler()
-    .getFiddler({
-      id: null,
-      sheetName: sheetName,
-      createIfMissing: false,
-    })
-    .needFormulas();
-  const keepFormulas = fiddler.getColumnsWithFormulas();
-  const tp = new ML.TransactionProcessor(directory, notifier);
-  fiddler.mapRows((row, _a) => {
-    const rowFormulas = _a.rowFormulas;
-    if (row.Processed) return row;
-    tp.renew(row);
-    keepFormulas.forEach(f => {
-      return (row[f] = rowFormulas[f]);
-    });
-    delete row.password;
-    return row;
-  });
-  fiddler.dumpValues();
-  notifier.log();
-}
-function processPaidTransactions_(sheetName) {
-  const directory = getDirectory_();
-  const notifier = getEmailNotifier_();
-  convertLinks_(sheetName);
+  convertLinks_('Transactions');
   const transactionsFiddler = bmPreFiddler
     .PreFiddler()
     .getFiddler({
       id: null,
-      sheetName: sheetName,
+      sheetName: 'Transactions',
       createIfMissing: false,
-    })
-    .needFormulas();
+    }).needFormulas();
+  const membershipFiddler = bmPreFiddler.PreFiddler().getFiddler({
+    id: null,
+    sheetName: 'Membership',
+    createIfMissing: false,
+  });
+  const bulkGroupFiddler = bmPreFiddler.PreFiddler().getFiddler({
+    id: null,
+    sheetName: 'Membership',
+    createIfMissing: false,
+  });
+
   const keepFormulas = transactionsFiddler.getColumnsWithFormulas();
-  const tp = new ML.TransactionProcessor(directory, notifier);
-  transactionsFiddler.mapRows((row, _a) => {
-    const rowFormulas = _a.rowFormulas;
-    tp.processTransaction(row);
-    keepFormulas.forEach(f => {
-      return (row[f] = rowFormulas[f]);
-    });
-    delete row.password;
+  transactionsFiddler.mapRows((row, { rowFormulas }) => {
+    if (row["Payable Status"].toLowerCase().startsWith("paid") && !row.Processed) {
+      const matches = membershipFiddler.selectRows("Email", (value) => value === row["Email Address"]);
+      if (matches.length > 0) {
+        matches.forEach((match) => {
+          const member = membershipFiddler.getData()[match];
+          member["Expires"] += 365;
+        })
+      } else {
+        const newMember = {
+          Email: row["Email Address"],
+          First: row["First Name"],
+          Last: row["Last Name"],
+          Joined: new Date(),
+          Expires: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
+        };
+        membershipFiddler.insertRows(null, 1, newMember)
+      }
+      membershipFiddler.setData(membershipFiddler.sort("Email")).dumpValues();
+      keepFormulas.forEach(formula => {
+        return (row[formula] = rowFormulas[formula]);
+      });
+      row.Processed = new Date();
+    }
     return row;
   });
   transactionsFiddler.dumpValues();
-  notifier.log();
 }
 function migrateCEMembers() {
   const notifier = getEmailNotifier_();
@@ -150,22 +153,7 @@ function updatedRow_(e) {
   console.log('Column: '.concat(e.range, ' Row ').concat(e.range.getRow()));
   // printRow(e.range.getRow())
 }
-/**
- * Creates the menu item "Mail Merge" for user to run scripts on drop-down.
- */
-function onOpen() {
-  const ui = SpreadsheetApp.getUi();
-  // ui.createMenu('Mail Merge')
-  //     .addItem('Send Emails', 'sendEmails')
-  //     .addToUi();
-  ui.createMenu('Membership Management')
-    .addItem('Create Membership Report', createMembershipReport.name)
-    .addItem('Process Transactions', processTransactions.name)
-    .addItem('Process Renewals', processRenewals.name)
-    .addItem('Migrate CE Members', migrateCEMembers.name)
-    .addItem('Check Expirations', checkExpirations.name)
-    .addToUi();
-}
+
 function convertLinks_(sheetName) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   if (!sheet) return;

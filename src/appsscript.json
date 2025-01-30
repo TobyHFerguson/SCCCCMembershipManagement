@@ -6,19 +6,6 @@
         "userSymbol": "bmPreFiddler",
         "version": "34",
         "libraryId": "13JUFGY18RHfjjuKmIRRfvmGlCYrEkEtN6uUm-iLUcxOUFRJD-WBX-tkR"
-      },
-      {
-        "userSymbol": "ML",
-        "version": "0",
-        "libraryId": "1wrclUMyocec_HYQJtbMI_hcA1Fv8v1GDMaJQMI3aqrTvxRhxyYxgkPe-",
-        "developmentMode": true
-      }
-    ],
-    "enabledAdvancedServices": [
-      {
-        "userSymbol": "AdminDirectory",
-        "version": "directory_v1",
-        "serviceId": "admin"
       }
     ]
   },
@@ -28,10 +15,6 @@
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
   "oauthScopes": [
-    "https://www.googleapis.com/auth/admin.directory.user",
-    "https://www.googleapis.com/auth/spreadsheets.currentonly",
-    "https://www.googleapis.com/auth/gmail.compose",
-    "https://www.googleapis.com/auth/gmail.readonly",
-    "https://www.googleapis.com/auth/admin.directory.group"
+    "https://www.googleapis.com/auth/spreadsheets.currentonly"
   ]
 }
