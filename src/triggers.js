@@ -18,7 +18,7 @@ const _getGroupEmails = (() => {
   let cachedGroupEmails = null;
   return () => {
     if (cachedGroupEmails) return cachedGroupEmails;
-    cachedGroupEmails = _getFiddler('Group Email Addresses').getData().map(row => row.Email);
+    cachedGroupEmails = getFiddler_('Group Email Addresses').getData().map(row => row.Email);
     return cachedGroupEmails;
   };
 })();
@@ -38,25 +38,25 @@ function handleOnEditEvent(event) {
 }
 function processTransactions() {
   convertLinks_('Transactions');
-  const bulkGroupFiddler = _getFiddler('Bulk Add Groups');
+  const bulkGroupFiddler = getFiddler_('Bulk Add Groups');
   const bulkGroupEmails = bulkGroupFiddler.getData();
-  const emailScheduleFiddler = _getFiddler('Email Schedule');
+  const emailScheduleFiddler = getFiddler_('Email Schedule');
   const emailSchedule = emailScheduleFiddler.getData();
-  const membershipFiddler = _getFiddler('Membership');
+  const membershipFiddler = getFiddler_('Membership');
   const membershipData = membershipFiddler.getData();
-  const processedTransactionsFiddler = _getFiddler('Processed Transactions');
-  const transactionsFiddler = _getFiddler('Transactions').needFormulas();
+  const processedTransactionsFiddler = getFiddler_('Processed Transactions');
+  const transactionsFiddler = getFiddler_('Transactions').needFormulas();
 
   const keepFormulas = transactionsFiddler.getColumnsWithFormulas();
   const numMembers = membershipData.length;
   transactionsFiddler.mapRows((row, { rowFormulas }) => {
     if (row["Payable Status"].toLowerCase().startsWith("paid") && !row.Processed) {
-      const matches = numMembers ? membershipFiddler.selectRows("Email", (value) => value === row["Email Address"]) : []
+      const matches = numMembers ? membershipFiddler.selectRows("Email", (value) => value === row["Email Address"]) : [];
       if (matches.length > 0) { // member exists
         matches.forEach((match) => {
           const member = membershipData[match];
           renewMember(member, row.Period, emailSchedule);
-        })
+        });
       } else { // new member
         const newMember = {
           Email: row["Email Address"],
@@ -72,24 +72,24 @@ function processTransactions() {
         _getGroupEmails().forEach((groupEmail) => {
           bulkGroupEmails.push({
             "Group Email [Required]": groupEmail,
-            "Member Email": newMember["Email"],
+            "Member Email": newMember.Email,
             "Member Type": "USER",
             "Member Role": "MEMBER"
           });
-        })
+        });
       }
       row.Processed = new Date();
       console.log(`row.Processed set to ${row.Processed}`);
     }
     keepFormulas.forEach(formula => {
-      return (row[formula] = rowFormulas[formula]);
+      row[formula] = rowFormulas[formula];
     });
     return row;
   });
 
   emailSchedule.sort((a, b) => new Date(a["Scheduled On"]) - new Date(b["Scheduled On"]));
   emailScheduleFiddler.setData(emailSchedule).dumpValues();
-  bulkGroupFiddler.setData(bulkGroupEmails).dumpValues()
+  bulkGroupFiddler.setData(bulkGroupEmails).dumpValues();
   membershipData.sort((a, b) => a.Email.localeCompare(b.Email));
   membershipFiddler.setData(membershipData).dumpValues();
   transactionsFiddler.dumpValues();
@@ -158,7 +158,7 @@ function getFiddler_(sheetName) {
     'CE Members': { sheetName: 'CE Members', createIfMissing: true },
     'Email Schedule': { sheetName: 'Email Schedule', createIfMissing: true },
     'Group Email Addresses': { sheetName: 'Group Email Addresses', createIfMissing: false },
-    'Membership': { sheetName: 'Membership', createIfMissing: false },
+    'Membership': { sheetName: 'Membership', createIfMissing: true },
     'MembershipReport': { sheetName: 'MembershipReport', createIfMissing: true },
     'Processed Transactions': { sheetName: 'Processed Transactions', createIfMissing: true },
     'Transactions': { sheetName: 'Transactions', createIfMissing: false }
