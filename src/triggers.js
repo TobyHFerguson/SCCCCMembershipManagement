@@ -110,7 +110,7 @@ function addRenewedMemberToEmailSchedule(member, emailSchedule) {
   const email = member.Email;
   const index = emailSchedule.findIndex(item => item.Email === email);
   if (index !== -1) {
-    for (let i = emailSchedule.length - 1; i >= index; i--) {
+    for (let i = emailSchedule.length - 1; i >= 0; i--) {
       if (emailSchedule[i].Email === email) {
         emailSchedule.splice(i, 1);
       }
