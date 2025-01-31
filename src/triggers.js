@@ -58,25 +58,7 @@ function processTransactions() {
           renewMember(member, row.Period, emailSchedule);
         });
       } else { // new member
-        const newMember = {
-          Email: row["Email Address"],
-          First: row["First Name"],
-          Last: row["Last Name"],
-          Joined: new Date(),
-          Period: row.Period,
-          Expires: calculateExpirationDate(row.Period),
-        };
-        addNewMemberToEmailSchedule(newMember, emailSchedule);
-        membershipData.push(newMember);
-        console.log(`newMember ${newMember["Email"]} expires on ${newMember["Expires"]}`);
-        _getGroupEmails().forEach((groupEmail) => {
-          bulkGroupEmails.push({
-            "Group Email [Required]": groupEmail,
-            "Member Email": newMember.Email,
-            "Member Type": "USER",
-            "Member Role": "MEMBER"
-          });
-        });
+        addNewMember(row, emailSchedule, membershipData, bulkGroupEmails);
       }
       row.Processed = new Date();
       console.log(`row.Processed set to ${row.Processed}`);
@@ -87,12 +69,37 @@ function processTransactions() {
     return row;
   });
 
+  bulkGroupFiddler.setData(bulkGroupEmails).dumpValues();
   emailSchedule.sort((a, b) => new Date(a["Scheduled On"]) - new Date(b["Scheduled On"]));
   emailScheduleFiddler.setData(emailSchedule).dumpValues();
-  bulkGroupFiddler.setData(bulkGroupEmails).dumpValues();
   membershipData.sort((a, b) => a.Email.localeCompare(b.Email));
   membershipFiddler.setData(membershipData).dumpValues();
   transactionsFiddler.dumpValues();
+}
+
+function addNewMember(row, emailSchedule, membershipData, bulkGroupEmails) {
+  const newMember = {
+    Email: row["Email Address"],
+    First: row["First Name"],
+    Last: row["Last Name"],
+    Joined: new Date(),
+    Period: row.Period,
+    Expires: calculateExpirationDate(row.Period),
+  };
+  membershipData.push(newMember);
+  addNewMemberToEmailSchedule(newMember, emailSchedule);
+  addNewMemberToBulkGroups(bulkGroupEmails, newMember);
+}
+
+function addNewMemberToBulkGroups(bulkGroupEmails, newMember) {
+  _getGroupEmails().forEach((groupEmail) => {
+    bulkGroupEmails.push({
+      "Group Email [Required]": groupEmail,
+      "Member Email": newMember.Email,
+      "Member Type": "USER",
+      "Member Role": "MEMBER"
+    });
+  });
 }
 
 function addNewMemberToEmailSchedule(member, emailSchedule) {
@@ -127,10 +134,11 @@ function addMemberToEmailSchedule(member, emailSchedule, emailType) {
   });
 }
 
-function renewMember(member, period) {
+function renewMember(member, period, emailSchedule) {
   member.Period = period;
   member["Renewed On"] = new Date();
   member.Expires = calculateExpirationDate(period, member.Expires);
+  addRenewedMemberToEmailSchedule(member, emailSchedule);
 }
 
 function calculateExpirationDate(period, expires) {
