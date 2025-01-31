@@ -2,6 +2,7 @@
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
 
+
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('Membership Management')
@@ -11,6 +12,16 @@ function onOpen() {
     .addToUi();
 }
 
+
+
+const _getGroupEmails = (() => {
+  let cachedGroupEmails = null;
+  return () => {
+    if (cachedGroupEmails) return cachedGroupEmails;
+    cachedGroupEmails = _getFiddler('Group Email Addresses').getData().map(row => row.Email);
+    return cachedGroupEmails;
+  };
+})();
 
 function handleOnEditEvent(event) {
   const sheetName = event.range.getSheet().getName();
@@ -27,52 +38,139 @@ function handleOnEditEvent(event) {
 }
 function processTransactions() {
   convertLinks_('Transactions');
-  const transactionsFiddler = bmPreFiddler
-    .PreFiddler()
-    .getFiddler({
-      id: null,
-      sheetName: 'Transactions',
-      createIfMissing: false,
-    }).needFormulas();
-  const membershipFiddler = bmPreFiddler.PreFiddler().getFiddler({
-    id: null,
-    sheetName: 'Membership',
-    createIfMissing: false,
-  });
-  const bulkGroupFiddler = bmPreFiddler.PreFiddler().getFiddler({
-    id: null,
-    sheetName: 'Membership',
-    createIfMissing: false,
-  });
+  const bulkGroupFiddler = _getFiddler('Bulk Add Groups');
+  const bulkGroupEmails = bulkGroupFiddler.getData();
+  const emailScheduleFiddler = _getFiddler('Email Schedule');
+  const emailSchedule = emailScheduleFiddler.getData();
+  const membershipFiddler = _getFiddler('Membership');
+  const membershipData = membershipFiddler.getData();
+  const processedTransactionsFiddler = _getFiddler('Processed Transactions');
+  const transactionsFiddler = _getFiddler('Transactions').needFormulas();
 
   const keepFormulas = transactionsFiddler.getColumnsWithFormulas();
+  const numMembers = membershipData.length;
   transactionsFiddler.mapRows((row, { rowFormulas }) => {
     if (row["Payable Status"].toLowerCase().startsWith("paid") && !row.Processed) {
-      const matches = membershipFiddler.selectRows("Email", (value) => value === row["Email Address"]);
-      if (matches.length > 0) {
+      const matches = numMembers ? membershipFiddler.selectRows("Email", (value) => value === row["Email Address"]) : []
+      if (matches.length > 0) { // member exists
         matches.forEach((match) => {
-          const member = membershipFiddler.getData()[match];
-            member["Expires"] = new Date(new Date(member["Expires"]).setFullYear(new Date(member["Expires"]).getFullYear() + 1));
+          const member = membershipData[match];
+          renewMember(member, row.Period, emailSchedule);
         })
-      } else {
+      } else { // new member
         const newMember = {
           Email: row["Email Address"],
           First: row["First Name"],
           Last: row["Last Name"],
           Joined: new Date(),
-          Expires: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
+          Period: row.Period,
+          Expires: calculateExpirationDate(row.Period),
         };
-        membershipFiddler.insertRows(null, 1, newMember)
+        addNewMemberToEmailSchedule(newMember, emailSchedule);
+        membershipData.push(newMember);
+        console.log(`newMember ${newMember["Email"]} expires on ${newMember["Expires"]}`);
+        _getGroupEmails().forEach((groupEmail) => {
+          bulkGroupEmails.push({
+            "Group Email [Required]": groupEmail,
+            "Member Email": newMember["Email"],
+            "Member Type": "USER",
+            "Member Role": "MEMBER"
+          });
+        })
       }
-      membershipFiddler.setData(membershipFiddler.sort("Email")).dumpValues();
-      keepFormulas.forEach(formula => {
-        return (row[formula] = rowFormulas[formula]);
-      });
       row.Processed = new Date();
+      console.log(`row.Processed set to ${row.Processed}`);
     }
+    keepFormulas.forEach(formula => {
+      return (row[formula] = rowFormulas[formula]);
+    });
     return row;
   });
+
+  emailSchedule.sort((a, b) => new Date(a["Scheduled On"]) - new Date(b["Scheduled On"]));
+  emailScheduleFiddler.setData(emailSchedule).dumpValues();
+  bulkGroupFiddler.setData(bulkGroupEmails).dumpValues()
+  membershipData.sort((a, b) => a.Email.localeCompare(b.Email));
+  membershipFiddler.setData(membershipData).dumpValues();
   transactionsFiddler.dumpValues();
+}
+
+function addNewMemberToEmailSchedule(member, emailSchedule) {
+  addMemberToEmailSchedule(member, emailSchedule, 'joined');
+}
+
+function addRenewedMemberToEmailSchedule(member, emailSchedule) {
+  const email = member.Email;
+  const index = emailSchedule.findIndex(item => item.Email === email);
+  if (index !== -1) {
+    for (let i = emailSchedule.length - 1; i >= index; i--) {
+      if (emailSchedule[i].Email === email) {
+        emailSchedule.splice(i, 1);
+      }
+    }
+  }
+  addMemberToEmailSchedule(member, emailSchedule, 'renewed');
+}
+function addMemberToEmailSchedule(member, emailSchedule, emailType) {
+  const email = member.Email;
+  const dates = [-30, -15, 0, 15].map(days => addDaysToDate(member.Expires, days));
+  dates.unshift(new Date());
+  const emailTypes = [emailType, 'expiry1', 'expiry2', 'expiry3', 'expiry4'];
+  dates.forEach((date, index) => {
+    emailSchedule.push({
+      Email: email,
+      Type: emailTypes[index],
+      "Scheduled On": date,
+      First: member.First,
+      Last: member.Last
+    });
+  });
+}
+
+function renewMember(member, period) {
+  member.Period = period;
+  member["Renewed On"] = new Date();
+  member.Expires = calculateExpirationDate(period, member.Expires);
+}
+
+function calculateExpirationDate(period, expires) {
+  const today = new Date();
+  const futureDate = new Date(today.setFullYear(today.getFullYear() + period));
+
+  if (!expires) {
+    return futureDate;
+  }
+
+  const expirationDate = new Date(expires);
+  const futureExpirationDate = new Date(expirationDate.setFullYear(expirationDate.getFullYear() + period));
+
+  return futureDate > futureExpirationDate ? futureDate : futureExpirationDate;
+}
+function addDaysToDate(date, days) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+function getFiddler_(sheetName) {
+
+  const sheetMappings = {
+    'Bulk Add Groups': { sheetName: 'Bulk Add Groups', createIfMissing: true },
+    'CE Members': { sheetName: 'CE Members', createIfMissing: true },
+    'Email Schedule': { sheetName: 'Email Schedule', createIfMissing: true },
+    'Group Email Addresses': { sheetName: 'Group Email Addresses', createIfMissing: false },
+    'Membership': { sheetName: 'Membership', createIfMissing: false },
+    'MembershipReport': { sheetName: 'MembershipReport', createIfMissing: true },
+    'Processed Transactions': { sheetName: 'Processed Transactions', createIfMissing: true },
+    'Transactions': { sheetName: 'Transactions', createIfMissing: false }
+  };
+
+  let spec = {}
+  if (sheetMappings[sheetName]) {
+    spec.sheetName = sheetMappings[sheetName].sheetName;
+    spec.createIfMissing = sheetMappings[sheetName].createIfMissing;
+  }
+
+  return bmPreFiddler.PreFiddler().getFiddler(spec);
 }
 function migrateCEMembers() {
   const notifier = getEmailNotifier_();
