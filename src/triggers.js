@@ -45,36 +45,44 @@ function processTransactions() {
   const membershipFiddler = getFiddler_('Membership');
   const membershipData = membershipFiddler.getData();
   const processedTransactionsFiddler = getFiddler_('Processed Transactions');
+  const processedTransactions = getDataWithFormulas(processedTransactionsFiddler);
   const transactionsFiddler = getFiddler_('Transactions').needFormulas();
+  const transactions = getDataWithFormulas(transactionsFiddler);
 
-  const keepFormulas = transactionsFiddler.getColumnsWithFormulas();
   const numMembers = membershipData.length;
-  transactionsFiddler.mapRows((row, { rowFormulas }) => {
-    if (row["Payable Status"].toLowerCase().startsWith("paid") && !row.Processed) {
+  for (i = transactions.length - 1; i >= 0; i--) { // reverse order so as to preserve index during deletion
+    const row = transactions[i]
+    if (row["Payable Status"].toLowerCase().startsWith("paid") ) {
       const matches = numMembers ? membershipFiddler.selectRows("Email", (value) => value === row["Email Address"]) : [];
       if (matches.length > 0) { // member exists
         matches.forEach((match) => {
           const member = membershipData[match];
-          renewMember(member, row.Period, emailSchedule);
+          const years = getPeriod(row);
+          renewMember(member, years, emailSchedule);
         });
       } else { // new member
         addNewMember(row, emailSchedule, membershipData, bulkGroupEmails);
       }
       row.Processed = new Date();
+      processedTransactions.push(row);
+      transactions.splice(i, 1)
       console.log(`row.Processed set to ${row.Processed}`);
     }
-    keepFormulas.forEach(formula => {
-      row[formula] = rowFormulas[formula];
-    });
-    return row;
-  });
+  }
 
   bulkGroupFiddler.setData(bulkGroupEmails).dumpValues();
   emailSchedule.sort((a, b) => new Date(a["Scheduled On"]) - new Date(b["Scheduled On"]));
   emailScheduleFiddler.setData(emailSchedule).dumpValues();
   membershipData.sort((a, b) => a.Email.localeCompare(b.Email));
   membershipFiddler.setData(membershipData).dumpValues();
-  transactionsFiddler.dumpValues();
+  transactionsFiddler.removeAllRows().dumpValues();
+  processedTransactionsFiddler.setData(processedTransactions).dumpValues();
+}
+
+function getPeriod(row) {
+  const yearsMatch = row.Payment.match(/(\d+)\s*year/);
+  const years = yearsMatch ? parseInt(yearsMatch[1], 10) : 1;
+  return years;
 }
 
 function addNewMember(row, emailSchedule, membershipData, bulkGroupEmails) {
@@ -83,8 +91,8 @@ function addNewMember(row, emailSchedule, membershipData, bulkGroupEmails) {
     First: row["First Name"],
     Last: row["Last Name"],
     Joined: new Date(),
-    Period: row.Period,
-    Expires: calculateExpirationDate(row.Period),
+    Period: getPeriod(row),
+    Expires: calculateExpirationDate(getPeriod(row)),
   };
   membershipData.push(newMember);
   addNewMemberToEmailSchedule(newMember, emailSchedule);
@@ -333,3 +341,53 @@ function addMemberToSG() {
     'club_members@santacruzcountycycling.club'
   );
 }
+
+
+function getDataWithFormulas(fiddler) {
+  fiddler.needFormulas();
+  return mergeObjects(fiddler.getData(), fiddler.getFormulaData(), fiddler.getColumnsWithFormulas());
+}
+/**
+ * Merges two lists of objects based on a list of keys using spread syntax.
+ * @param {Array} a - The first list of objects.
+ * @param {Array} b - The second list of objects.
+ * @param {Array} k - The list of keys.
+ * @returns {Array} - The list of merged objects.
+ */
+function mergeObjects(a, b, k) {
+  return a.map((objA, index) => {
+    const objB = b[index];
+    const mergedObj = { ...objA };
+    k.forEach(key => {
+      if (objB.hasOwnProperty(key)) {
+        mergedObj[key] = objB[key];
+      }
+    });
+    return mergedObj;
+  });
+}
+
+function moveFormulasAndData(sourceSheet, targetSheetName) {
+  let targetSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(targetSheetName);
+  if (!targetSheet) {
+    targetSheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet(targetSheetName);
+  }
+  if (!targetSheet) {
+    throw new Error(`Target sheet ${targetSheetName} not found.`);
+  }
+
+  const sourceRange = sourceSheet.getDataRange();
+  const sourceValues = sourceRange.getValues();
+  const sourceFormulas = sourceRange.getFormulas();
+
+  const targetRange = targetSheet.getRange(1, 1, sourceValues.length, sourceValues[0].length);
+  targetRange.setValues(sourceValues);
+  targetRange.setFormulas(sourceFormulas);
+
+  // Clear all data except the first row in the source sheet
+  const numRows = sourceSheet.getLastRow();
+  if (numRows > 1) {
+    sourceSheet.getRange(2, 1, numRows - 1, sourceSheet.getLastColumn()).clearContent();
+  }
+}
+// Create the target sheet if it doesn't exist
