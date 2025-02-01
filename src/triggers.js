@@ -63,7 +63,7 @@ function processTransactions() {
       } else { // new member
         addNewMember(row, emailSchedule, membershipData, bulkGroupEmails);
       }
-      row.Processed = new Date();
+      row.Timestamp = new Date();
       processedTransactions.push(row);
       transactions.splice(i, 1)
       console.log(`row.Processed set to ${row.Processed}`);
@@ -93,6 +93,7 @@ function addNewMember(row, emailSchedule, membershipData, bulkGroupEmails) {
     Joined: new Date(),
     Period: getPeriod(row),
     Expires: calculateExpirationDate(getPeriod(row)),
+    "Renewed On": '',
   };
   membershipData.push(newMember);
   addNewMemberToEmailSchedule(newMember, emailSchedule);
@@ -111,7 +112,7 @@ function addNewMemberToBulkGroups(bulkGroupEmails, newMember) {
 }
 
 function addNewMemberToEmailSchedule(member, emailSchedule) {
-  addMemberToEmailSchedule(member, emailSchedule, 'joined');
+  addMemberToEmailSchedule(member, emailSchedule, 'Join');
 }
 
 function addRenewedMemberToEmailSchedule(member, emailSchedule) {
@@ -124,21 +125,37 @@ function addRenewedMemberToEmailSchedule(member, emailSchedule) {
       }
     }
   }
-  addMemberToEmailSchedule(member, emailSchedule, 'renewed');
+  addMemberToEmailSchedule(member, emailSchedule, 'Renewal');
 }
 function addMemberToEmailSchedule(member, emailSchedule, emailType) {
   const email = member.Email;
   const dates = [-30, -15, 0, 15].map(days => addDaysToDate(member.Expires, days));
   dates.unshift(new Date());
-  const emailTypes = [emailType, 'expiry1', 'expiry2', 'expiry3', 'expiry4'];
+  const emailTypes = [emailType, 'Expiry 1', 'Expiry 2', 'Expiry 3', 'Expiry 4'];
+  const membershipLookupFormula = '=IFERROR(VLOOKUP(INDIRECT("A"&ROW()), Membership!$A:$G, COLUMN(), FALSE), "")';
+  const emailLookupFormula = '=vlookup(indirect("H"&row()),Emails!$A$1:$C$7, column() - 8, false)';
+  const canonicalEntry = {
+    Email: '',
+    First: membershipLookupFormula,
+    Last: membershipLookupFormula,
+    Joined: membershipLookupFormula,
+    Period: membershipLookupFormula,
+    Expires: membershipLookupFormula,
+    "Renewed On": membershipLookupFormula,
+    Type: '',
+    "Scheduled On": '',
+    Subject: emailLookupFormula,
+    Body: emailLookupFormula
+  }
   dates.forEach((date, index) => {
-    emailSchedule.push({
+    const newEntry = {
+      ...canonicalEntry,
       Email: email,
       Type: emailTypes[index],
       "Scheduled On": date,
-      First: member.First,
-      Last: member.Last
-    });
+    };
+    console.log(`Adding ${newEntry} to emailSchedule`);
+    emailSchedule.push(newEntry);
   });
 }
 
@@ -366,28 +383,3 @@ function mergeObjects(a, b, k) {
     return mergedObj;
   });
 }
-
-function moveFormulasAndData(sourceSheet, targetSheetName) {
-  let targetSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(targetSheetName);
-  if (!targetSheet) {
-    targetSheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet(targetSheetName);
-  }
-  if (!targetSheet) {
-    throw new Error(`Target sheet ${targetSheetName} not found.`);
-  }
-
-  const sourceRange = sourceSheet.getDataRange();
-  const sourceValues = sourceRange.getValues();
-  const sourceFormulas = sourceRange.getFormulas();
-
-  const targetRange = targetSheet.getRange(1, 1, sourceValues.length, sourceValues[0].length);
-  targetRange.setValues(sourceValues);
-  targetRange.setFormulas(sourceFormulas);
-
-  // Clear all data except the first row in the source sheet
-  const numRows = sourceSheet.getLastRow();
-  if (numRows > 1) {
-    sourceSheet.getRange(2, 1, numRows - 1, sourceSheet.getLastColumn()).clearContent();
-  }
-}
-// Create the target sheet if it doesn't exist
