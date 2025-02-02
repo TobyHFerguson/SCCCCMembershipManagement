@@ -127,11 +127,10 @@ function addRenewedMemberToEmailSchedule(member, emailSchedule) {
 }
 function addMemberToEmailSchedule(member, emailSchedule, emailType) {
   const email = member.Email;
-  const dates = [-30, -15, 0, 15].map(days => addDaysToDate(member.Expires, days));
-  dates.unshift(new Date());
   const emailTypes = [emailType, 'Expiry 1', 'Expiry 2', 'Expiry 3', 'Expiry 4'];
   const membershipLookupFormula = '=IFERROR(VLOOKUP(INDIRECT("A"&ROW()), Membership!$A:$G, COLUMN(), FALSE), "")';
   const emailLookupFormula = '=vlookup(indirect("H"&row()),Emails!$A$1:$C$7, column() - 8, false)';
+  const scheduledOnLookupFormula = `=IFERROR(INDIRECT("F"&ROW()) + iferror(vlookup(indirect("H"&row()), 'Expiry Schedule'!$A:$B, 2, FALSE), 0) , "")`
   const canonicalEntry = {
     Email: '',
     First: membershipLookupFormula,
@@ -141,16 +140,15 @@ function addMemberToEmailSchedule(member, emailSchedule, emailType) {
     Expires: membershipLookupFormula,
     "Renewed On": membershipLookupFormula,
     Type: '',
-    "Scheduled On": '',
+    "Scheduled On": scheduledOnLookupFormula,
     Subject: emailLookupFormula,
     Body: emailLookupFormula
   }
-  dates.forEach((date, index) => {
+  emailTypes.forEach(t => {
     const newEntry = {
       ...canonicalEntry,
       Email: email,
-      Type: emailTypes[index],
-      "Scheduled On": date,
+      Type: t,
     };
     console.log(`Adding ${newEntry} to emailSchedule`);
     emailSchedule.push(newEntry);
