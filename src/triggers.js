@@ -7,6 +7,7 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('Membership Management')
     .addItem('Process Transactions', processTransactions.name)
+    .addItem('Send Emails', sendEmails.name)
     .addToUi();
 }
 
@@ -23,10 +24,11 @@ const _getGroupEmails = (() => {
 
 function sendEmails() {
   const emailFiddler = getFiddler_('Email Schedule');
-  const emails = emailFiddler.getData();
+  const emails = emailFiddler.getData().sort((a, b) => new Date(b["Scheduled On"]) - new Date(a["Scheduled On"]));
   const emailLogFiddler = getFiddler_('Email Log'); // getFiddler_('Email Log');
   const emailLog = emailLogFiddler.getData();
-  emails.forEach((row) => {
+  for (let i = emails.length - 1; i >= 0; i--) {
+    const row = emails[i];
     console.log(`Scheduled On: ${row["Scheduled On"]} <= new Date(): ${row["Scheduled On"] <= new Date()}`);
     if (new Date(row["Scheduled On"]).getTime() <= new Date().getTime()) {
       console.log(`Sending email to ${row.Email} with subject ${row.Subject} and body ${row.Body}`);
@@ -53,10 +55,11 @@ function sendEmails() {
       MailApp.sendEmail(row.Email, Subject, Body);
       row.Timestamp = new Date();
       emailLog.push(row);
+      emails.splice(i, 1); // Remove the processed email
     }
+  }
     emailLogFiddler.setData(emailLog).dumpValues()
-    emailFiddler.dumpValues();
-  });
+    emailFiddler.setData(emails).dumpValues();
 }
 
 function processTransactions() {
@@ -94,7 +97,7 @@ function processTransactions() {
   }
 
   bulkGroupFiddler.setData(bulkGroupEmails).dumpValues();
-  emailSchedule.sort((a, b) => new Date(a["Scheduled On"]) - new Date(b["Scheduled On"]));
+  emailSchedule.sort((a, b) => new Date(b["Scheduled On"]) - new Date(a["Scheduled On"]));
   emailScheduleFiddler.setData(emailSchedule).dumpValues();
   membershipData.sort((a, b) => a.Email.localeCompare(b.Email));
   membershipFiddler.setData(membershipData).dumpValues();
