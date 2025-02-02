@@ -6,9 +6,7 @@
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('Membership Management')
-    .addItem('Create Membership Report', createMembershipReport.name)
     .addItem('Process Transactions', processTransactions.name)
-    .addItem('Check Expirations', checkExpirations.name)
     .addToUi();
 }
 
