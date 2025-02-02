@@ -21,18 +21,42 @@ const _getGroupEmails = (() => {
   };
 })();
 
-function handleOnEditEvent(event) {
-  const sheetName = event.range.getSheet().getName();
-  switch (sheetName) {
-    case 'Renewals':
-      processRenewals();
-      break;
-    case 'Transactions':
-      processTransactions();
-      break;
-    default:
-      break;
-  }
+function sendEmails() {
+  const emailFiddler = getFiddler_('Email Schedule');
+  const emails = emailFiddler.getData();
+  const emailLogFiddler = getFiddler_('Email Log'); // getFiddler_('Email Log');
+  const emailLog = emailLogFiddler.getData();
+  emails.forEach((row) => {
+    console.log(`Scheduled On: ${row["Scheduled On"]} <= new Date(): ${row["Scheduled On"] <= new Date()}`);
+    if (new Date(row["Scheduled On"]).getTime() <= new Date().getTime()) {
+      console.log(`Sending email to ${row.Email} with subject ${row.Subject} and body ${row.Body}`);
+      const dateFields = ["Scheduled On", "Expires", "Joined", "Renewed On"]; // Add the names of fields that should be treated as dates
+      const Subject = row.Subject.replace(/{([^}]+)}/g, (_, key) => {
+        let value = row[key];
+        if (dateFields.includes(key)) {
+          value = new Date(value); // Convert to Date object if it's a date field
+          return value.toLocaleDateString(); // Convert Date objects to local date string
+        }
+        return value || ""; // Handles missing keys gracefully
+      });
+      const Body = row.Body.replace(/{([^}]+)}/g, (_, key) => {
+        let value = row[key];
+        if (dateFields.includes(key)) {
+          console.log(`Converting ${value} to date`);
+          value = new Date(value); // Convert to Date object if it's a date field
+          console.log(`Converted to ${value}`);
+          return value.toLocaleDateString(); // Convert Date objects to local date string
+        }
+        return value || ""; // Handles missing keys gracefully
+      });
+      console.log(`Sending email to ${row.Email} with subject ${Subject} and body ${Body}`);
+      MailApp.sendEmail(row.Email, Subject, Body);
+      row.Timestamp = new Date();
+      emailLog.push(row);
+    }
+    emailLogFiddler.setData(emailLog).dumpValues()
+    emailFiddler.dumpValues();
+  });
 }
 
 function processTransactions() {
@@ -212,6 +236,7 @@ function getFiddler_(sheetName) {
   const sheetMappings = {
     'Bulk Add Groups': { sheetName: 'Bulk Add Groups', createIfMissing: true },
     'CE Members': { sheetName: 'CE Members', createIfMissing: true },
+    'Email Log': { sheetName: 'Email Log', createIfMissing: true },
     'Email Schedule': { sheetName: 'Email Schedule', createIfMissing: true },
     'Group Email Addresses': { sheetName: 'Group Email Addresses', createIfMissing: false },
     'Membership': { sheetName: 'Membership', createIfMissing: true },
