@@ -227,85 +227,14 @@ function getFiddler_(sheetName) {
 
   return bmPreFiddler.PreFiddler().getFiddler(spec);
 }
-function migrateCEMembers() {
-  const notifier = getEmailNotifier_();
-  const directory = getDirectory_();
-  const ceFiddler = bmPreFiddler.PreFiddler().getFiddler({
-    id: null,
-    sheetName: 'CE Members',
-    createIfMissing: false,
-  });
-  ceFiddler
-    .mapRows(row => {
-      const cm = row;
-      if (!cm.Imported) {
-        let newMember = directory.makeMember(cm);
-        try {
-          newMember = migrateMember_(cm);
-          cm.Imported = ML.Member.convertToYYYYMMDDFormat_(new Date());
-          notifier.importSuccess(cm, newMember);
-        } catch (err) {
-          notifier.importFailure(cm, newMember, err);
-        }
-      }
-      delete row.password;
-      return row;
-    })
-    .dumpValues();
-  notifier.log();
-}
-function createMembershipReport() {
-  const directory = getDirectory_();
-  const reportMembers = directory.getMembers().map(m => {
-    return m.report;
-  });
-  const membersFiddler = bmPreFiddler.PreFiddler().getFiddler({
-    id: null,
-    sheetName: 'MembershipReport',
-    createIfMissing: true,
-  });
-  if (reportMembers !== undefined) membersFiddler.setData(reportMembers);
-  membersFiddler.dumpValues();
-}
-function checkExpirations() {
-  const expirationProcessor = new ML.ExpirationProcessor(
-    getEmailConfiguration_(),
-    getEmailNotifier_()
-  );
-  getDirectory_()
-    .getMembers()
-    .forEach(m => {
-      return expirationProcessor.checkExpiration(m);
-    });
-}
-function getEmailNotifier_() {
-  const emailConfig = getEmailConfiguration_();
-  const notifier = new ML.EmailNotifier(
-    GmailApp,
-    emailConfig,
-    getSystemConfig_()
-  );
-  return notifier;
-}
-function getEmailConfiguration_() {
-  return bmPreFiddler
-    .PreFiddler()
-    .getFiddler({
-      id: null,
-      sheetName: 'Email Configuration',
-      createIfMissing: false,
-    })
-    .getData()
-    .reduce((p, c) => {
-      const t = c['Email Type'];
-      p[t] = c;
-      return p;
-    }, {});
-}
-function updatedRow_(e) {
-  console.log('Column: '.concat(e.range, ' Row ').concat(e.range.getRow()));
-  // printRow(e.range.getRow())
-}
+
+
+
+
+/**
+ * Converts links in a sheet to hyperlinks.
+ * @param {String} sheetName - The name of the sheet.
+ */
 
 function convertLinks_(sheetName) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
