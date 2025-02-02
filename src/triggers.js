@@ -157,6 +157,12 @@ function addMemberToEmailSchedule(member, emailSchedule, emailType) {
   });
 }
 
+/**
+ * 
+ * @param {*} member 
+ * @param {number} period 
+ * @param {} emailSchedule 
+ */
 function renewMember(member, period, emailSchedule) {
   member.Period = period;
   member["Renewed On"] = new Date();
@@ -164,6 +170,14 @@ function renewMember(member, period, emailSchedule) {
   addRenewedMemberToEmailSchedule(member, emailSchedule);
 }
 
+/**
+ * Calculates an expiration date based on a period in years and an optional existing expiration date.
+ * 
+ * The value returned is the greater of period added to today or the existing expiration date.
+ * @param {number} period - The period in years.
+ * @param {Date} [expires] - the existing expiration date, if any
+ * @returns {Date} - The expiration date
+ */
 function calculateExpirationDate(period, expires) {
   const today = new Date();
   const futureDate = new Date(today.setFullYear(today.getFullYear() + period));
@@ -177,13 +191,25 @@ function calculateExpirationDate(period, expires) {
 
   return futureDate > futureExpirationDate ? futureDate : futureExpirationDate;
 }
+
+/**
+ * Returns a new date with days added to it.
+ * @param {Date} date 
+ * @param {number} days 
+ * @returns {Date}
+ */
 function addDaysToDate(date, days) {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
   return result;
 }
-function getFiddler_(sheetName) {
 
+/**
+ * Gets a fiddler based on the sheet name.
+ * @param {String} sheetName - the anme of the sheet.
+ * @returns {Fiddler} - The fiddler.
+ */
+function getFiddler_(sheetName) {
   const sheetMappings = {
     'Bulk Add Groups': { sheetName: 'Bulk Add Groups', createIfMissing: true },
     'CE Members': { sheetName: 'CE Members', createIfMissing: true },
@@ -301,63 +327,13 @@ function convertLinks_(sheetName) {
   range.setValues(newValues);
   SpreadsheetApp.flush();
 }
-function getDirectory_() {
-  const directory = new ML.Directory({
-    adminDirectory: AdminDirectory,
-    options: getSystemConfig_(),
-  });
-  return directory;
-}
-let systemConfiguration;
-function getSystemConfig_() {
-  if (systemConfiguration) return systemConfiguration;
-  const systemConfigFiddler = bmPreFiddler.PreFiddler().getFiddler({
-    id: null,
-    sheetName: 'System Configuration',
-    createIfMissing: false,
-  });
-  systemConfiguration = systemConfigFiddler.getData()[0];
-  systemConfiguration.groups = 'public_';
-  return systemConfiguration;
-}
-function migrateMember_(currentMember) {
-  const directory = getDirectory_();
-  const nm = directory.makeMember(currentMember);
-  try {
-    return directory.addMember(nm);
-  } catch (err) {
-    if (err.message.endsWith('Entity already exists.')) {
-      return directory.updateMember(nm);
-    } else {
-      throw err;
-    }
-  }
-}
-function testMigrateMember() {
-  const currentMember = {
-    'First Name': 'given',
-    'Last Name': 'family',
-    'Email Address': 'a@b.com',
-    'Phone Number': '+14083869343',
-    'In Directory': true,
-    Joined: Member.convertToYYYYMMDDFormat_(new Date('2024-05-23')),
-    Expires: Member.convertToYYYYMMDDFormat_(new Date('2025-05-23')),
-    'Membership Type': 'Family',
-  };
-  migrateMember_(currentMember);
-}
-function addMemberToSG() {
-  const directory = getDirectory_();
-  const member = directory.getMember(
-    'ginger.rogers@santacruzcountycycling.club'
-  );
-  directory.addMemberToGroup(
-    member,
-    'club_members@santacruzcountycycling.club'
-  );
-}
 
 
+/**
+ * Returns the data from a fiddler with formulas merged into it.
+ * @param {fiddler} fiddler 
+ * @returns {Array} - The merged data.
+ */
 function getDataWithFormulas(fiddler) {
   fiddler.needFormulas();
   return mergeObjects(fiddler.getData(), fiddler.getFormulaData(), fiddler.getColumnsWithFormulas());
