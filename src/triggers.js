@@ -34,6 +34,7 @@ function handleOnEditEvent(event) {
       break;
   }
 }
+
 function processTransactions() {
   convertLinks_('Transactions');
   const bulkGroupFiddler = getFiddler_('Bulk Add Groups');
@@ -50,7 +51,7 @@ function processTransactions() {
   const numMembers = membershipData.length;
   for (i = transactions.length - 1; i >= 0; i--) { // reverse order so as to preserve index during deletion
     const row = transactions[i]
-    if (row["Payable Status"].toLowerCase().startsWith("paid") ) {
+    if (row["Payable Status"].toLowerCase().startsWith("paid")) {
       const matches = numMembers ? membershipFiddler.selectRows("Email", (value) => value === row["Email Address"]) : [];
       if (matches.length > 0) { // member exists
         matches.forEach((match) => {
