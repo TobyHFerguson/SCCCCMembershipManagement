@@ -2,6 +2,20 @@
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
 
+function saveFiddlerWithFormulas_(fiddler) {
+  const formulas = fiddler.getColumnsWithFormulas();
+  fiddler.mapRows((row, { rowFormulas }) => {
+
+    formulas.forEach(f => {
+      // log(`row[${f}]: `, row[f]);
+      // log(`rowFormulas[${f}]:`, rowFormulas[f])
+      row[f] = rowFormulas[f]
+    }
+    );
+    return row;
+  });
+  fiddler.dumpValues();
+}
 
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
@@ -11,13 +25,7 @@ function onOpen() {
     .addToUi();
 } ""
 
-/**
- * Sets the Timestamp field of a row object to the current date and time.
- * @param {Object} row - The row object to update.
- */
-function setTimestamp(row) {
-  row.Timestamp = new Date();
-}
+
 
 
 
@@ -66,17 +74,16 @@ function sendEmails() {
     } else {
       const Subject = expandTemplate(row.Subject, row);
       const Body = expandTemplate(row.Body, row);
-      console.log(`Sending email to ${row.Email} with subject ${Subject} and body ${Body}`);
-      MailApp.sendEmail(row.Email, Subject, Body);
+      log(`Sending email to ${row.Email} with subject ${Subject} and body ${Body}`);
+      sendEmail(row.Email, Subject, Body);
       numEmailsSent++;
-      setTimestamp(row);
-      emailLog.push(row);
+      emailLog.push({ Timestamp: new Date(), ...row });
       emailSchedule.splice(i, 1); // Remove the processed email
     }
   }
   if (numEmailsSent > 0) { // Only do work if there's work to do!
-    emailLogFiddler.setData(emailLog).dumpValues()
-    emailScheduleFiddler.setData(emailSchedule).dumpValues();
+    saveFiddlerWithFormulas_(emailLogFiddler.setData(emailLog));
+    saveFiddlerWithFormulas_(emailScheduleFiddler.setData(emailSchedule));
   }
 }
 
@@ -115,7 +122,7 @@ function processTransactions() {
   const transactions = getDataWithFormulas(transactionsFiddler);
 
   const numMemberCols = membershipFiddler.getNumColumns();
-  console.log(`numMemberCols: ${numMemberCols}`);
+  log(`numMemberCols: ${numMemberCols}`);
   const emailToMemberMap = new Map(numMemberCols ? membershipData.map((member, index) => [member.Email, index]) : []);
   const processedRows = [];
   for (i = transactions.length - 1; i >= 0; i--) { // reverse order so as to preserve index during deletion
@@ -135,13 +142,15 @@ function processTransactions() {
     }
   }
   processedTransactions.push(...processedRows);
+  // log('Processed Rows:', processedRows);
 
-  bulkGroupFiddler.setData(bulkGroupEmails).dumpValues();
-  emailScheduleFiddler.setData(emailSchedule).dumpValues();
+  saveFiddlerWithFormulas_(bulkGroupFiddler.setData(bulkGroupEmails));
+  saveFiddlerWithFormulas_(emailScheduleFiddler.setData(emailSchedule));
   membershipData.sort((a, b) => a.Email.localeCompare(b.Email));
-  membershipFiddler.setData(membershipData).dumpValues();
-  transactionsFiddler.removeAllRows().dumpValues();
-  processedTransactionsFiddler.setData(processedTransactions).dumpValues();
+  saveFiddlerWithFormulas_(membershipFiddler.setData(membershipData))
+  saveFiddlerWithFormulas_(transactionsFiddler.removeAllRows());
+  saveFiddlerWithFormulas_(transactionsFiddler);
+  saveFiddlerWithFormulas_(processedTransactionsFiddler.setData(processedTransactions))
 }
 
 function getPeriod(row) {
@@ -220,7 +229,7 @@ function addMemberToEmailSchedule(member, emailSchedule, emailType) {
       ...canonicalEntry,
       Type: t,
       Email: email,
-      ... (t === 'Join' || t === 'Renew' ? { "Scheduled On" : joinRenewLookupFormula } : {}) // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax#spread_in_object_literals
+      ...(t == 'Join' ? { "Scheduled On": joinLookupFormula } : t === 'Renew' ? { "Scheduled On": renewLookupFormula } : {}) // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax#spread_in_object_literals
     };
     emailSchedule.push(newEntry);
   });
@@ -297,7 +306,7 @@ function getFiddler_(sheetName, createIfMissing = true) {
     spec.createIfMissing = sheetMappings[sheetName].createIfMissing;
   }
 
-  return bmPreFiddler.PreFiddler().getFiddler(spec);
+  return bmPreFiddler.PreFiddler().getFiddler(spec).needFormulas();
 }
 
 
@@ -355,4 +364,52 @@ function mergeObjects(a, b, k) {
     });
     return mergedObj;
   });
+}
+/**
+ * Logs messages to the console if the script property 'logging' is true.
+ * @param  {...any} args - The messages or objects to log.
+ */
+function log(...args) {
+  const logging = PropertiesService.getScriptProperties().getProperty('logging') === 'true';
+  if (logging) {
+    console.log(...args);
+  }
+}
+
+/**
+ * Sends an email if the 'testEmails' script property is not found or is true.
+ * @param {string} recipient - The email address of the recipient.
+ * @param {string} subject - The subject line of the email.
+ * @param {string} body - The body of the email.
+ * @param {Object} [options] - An object containing advanced parameters.
+ */
+function sendEmail(recipient, subject, body, options) {
+  const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
+  if (!testEmails || testEmails !== 'true') {
+    MailApp.sendEmail(recipient, subject, body, options);
+  } else {
+    log(`Email not sent due to testEmails property: To=${recipient}, Subject=${subject}, Body=${body}`);
+  }
+}
+
+function testSendEmail() {
+  const recipient = "test@example.com";
+  const subject = "Test Subject";
+  const body = "This is a test email body.";
+  const options = {
+    cc: "cc@example.com",
+    bcc: "bcc@example.com",
+    attachments: [Utilities.newBlob("Attachment content", "text/plain", "test.txt")]
+  };
+  sendEmail(recipient, subject, body, options);
+}
+
+function testSaveFiddlerWithFormulas() {
+  let fiddler = bmPreFiddler.PreFiddler().getFiddler({ sheetName: 'Test', createIfMissing: true }).needFormulas();
+  const data = [{ value: "=1 + 2" }];
+  fiddler.setData(data);
+  saveFiddlerWithFormulas_(fiddler);
+  fiddler = bmPreFiddler.PreFiddler().getFiddler({ sheetName: 'Test', createIfMissing: true }).needFormulas();
+  fiddler.setData(data);
+  saveFiddlerWithFormulas_(fiddler);
 }
