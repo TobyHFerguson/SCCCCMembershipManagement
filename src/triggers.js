@@ -208,9 +208,9 @@ function addMemberToEmailSchedule(member, emailSchedule, emailType) {
   // They are independent of row and column location, so rows and columns can be moved around without breaking the formulas.
   const joinLookupFormula = `=INDIRECT(ADDRESS(ROW(),XMATCH("Joined",$1:$1,0)))`
   const renewLookupFormula = `=INDIRECT(ADDRESS(ROW(),XMATCH("Renewed On",$1:$1,0)))`
-  const membershipLookupFormula = `=IFERROR(INDEX(Membership!$A:$ZZZ,MATCH(INDIRECT(ADDRESS(ROW(),XMATCH("Email",$1:$1,0))),Membership!$A:$A,0),XMATCH(INDEX($1:$1,COLUMN()),Membership!$1:$1,0)),"")`
-  const emailLookupFormula = `=IFERROR(VLOOKUP(INDIRECT(ADDRESS(ROW(),XMATCH("Type",$1:$1,0))),Emails!$A$1:$C$7,XMATCH(INDEX($1:$1,COLUMN()),Emails!$1:$1,0),FALSE),0)`
-  const scheduledOnLookupFormula = `=IFERROR(INDIRECT(ADDRESS(ROW(),XMATCH("Expires",$1:$1,0))) + IFERROR(VLOOKUP(INDIRECT(ADDRESS(ROW(),XMATCH("Type",$1:$1,0))),'Expiry Schedule'!$A:$B,2,FALSE),0),"")`
+  const membershipLookupFormula = `=INDEX(Membership!$A:$ZZZ,MATCH(INDIRECT(ADDRESS(ROW(),XMATCH("Email",$1:$1,0))),Membership!$A:$A,0),XMATCH(INDEX($1:$1,COLUMN()),Membership!$1:$1,0))`
+  const emailLookupFormula = `=VLOOKUP(INDIRECT(ADDRESS(ROW(),XMATCH("Type",$1:$1,0))),Emails!$A$1:$C$7,XMATCH(INDEX($1:$1,COLUMN()),Emails!$1:$1,0),FALSE)`
+  const scheduledOnLookupFormula = `=INDIRECT(ADDRESS(ROW(),XMATCH("Expires",$1:$1,0))) + VLOOKUP(INDIRECT(ADDRESS(ROW(),XMATCH("Type",$1:$1,0))),'Expiry Schedule'!$A:$B,2,FALSE)`
   const canonicalEntry = {
     "Scheduled On": scheduledOnLookupFormula,
     Type: '',
