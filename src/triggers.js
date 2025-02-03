@@ -9,9 +9,10 @@ function saveFiddlerWithFormulas_(fiddler) {
     formulas.forEach(f => {
       // log(`row[${f}]: `, row[f]);
       // log(`rowFormulas[${f}]:`, rowFormulas[f])
-      row[f] = rowFormulas[f]
-    }
-    );
+      if (rowFormulas && rowFormulas[f] !== undefined) {
+        row[f] = rowFormulas[f];
+      }
+    });
     return row;
   });
   fiddler.dumpValues();
