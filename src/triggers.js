@@ -9,6 +9,14 @@ function onOpen() {
     .addItem('Process Transactions', processTransactions.name)
     .addItem('Send Emails', sendEmails.name)
     .addToUi();
+} ""
+
+/**
+ * Sets the Timestamp field of a row object to the current date and time.
+ * @param {Object} row - The row object to update.
+ */
+function setTimestamp(row) {
+  row.Timestamp = new Date();
 }
 
 
@@ -22,45 +30,76 @@ const _getGroupEmails = (() => {
   };
 })();
 
+/**
+ * Sends scheduled emails based on the email schedule data.
+ * 
+ * This function retrieves the email schedule and email log data, sorts the schedule by date,
+ * and sends emails that are scheduled to be sent on or before the current date and time.
+ * After sending an email, it logs the email and updates the schedule.
+ * 
+ * The function performs the following steps:
+ * 1. Retrieves and sorts the email schedule data.
+ * 2. Retrieves the email log data.
+ * 3. Iterates through the email schedule in reverse order.
+ * 4. Sends emails that are scheduled for the current date or earlier.
+ * 5. Logs the sent emails and updates the email schedule.
+ * 
+ * Note: The email schedule is sorted in reverse order, so the function starts processing
+ * from the end where dates are more likely to be in the past.
+ * 
+ * @function
+ */
 function sendEmails() {
-  const emailFiddler = getFiddler_('Email Schedule');
-  const emails = emailFiddler.getData().sort((a, b) => new Date(b["Scheduled On"]) - new Date(a["Scheduled On"]));
+  const emailScheduleFiddler = getFiddler_('Email Schedule');
+  const emailSchedule = emailScheduleFiddler.getData().sort((a, b) => new Date(b["Scheduled On"]) - new Date(a["Scheduled On"]));
   const emailLogFiddler = getFiddler_('Email Log'); // getFiddler_('Email Log');
   const emailLog = emailLogFiddler.getData();
-  for (let i = emails.length - 1; i >= 0; i--) {
-    const row = emails[i];
-    console.log(`Scheduled On: ${row["Scheduled On"]} <= new Date(): ${row["Scheduled On"] <= new Date()}`);
-    if (new Date(row["Scheduled On"]).getTime() <= new Date().getTime()) {
-      console.log(`Sending email to ${row.Email} with subject ${row.Subject} and body ${row.Body}`);
-      const dateFields = ["Scheduled On", "Expires", "Joined", "Renewed On"]; // Add the names of fields that should be treated as dates
-      const Subject = row.Subject.replace(/{([^}]+)}/g, (_, key) => {
-        let value = row[key];
-        if (dateFields.includes(key)) {
-          value = new Date(value); // Convert to Date object if it's a date field
-          return value.toLocaleDateString(); // Convert Date objects to local date string
-        }
-        return value || ""; // Handles missing keys gracefully
-      });
-      const Body = row.Body.replace(/{([^}]+)}/g, (_, key) => {
-        let value = row[key];
-        if (dateFields.includes(key)) {
-          console.log(`Converting ${value} to date`);
-          value = new Date(value); // Convert to Date object if it's a date field
-          console.log(`Converted to ${value}`);
-          return value.toLocaleDateString(); // Convert Date objects to local date string
-        }
-        return value || ""; // Handles missing keys gracefully
-      });
+  let numEmailsSent = 0;
+  // The emailSchedule is in reverse sorted order and we start at the far end 
+  // where the dates are more likely to be in the past.
+  const now = new Date().getTime()
+  for (let i = emailSchedule.length - 1; i >= 0; i--) {
+    const row = emailSchedule[i];
+    // We test and see if we've hit a future date - if so we can finish
+    if (new Date(row["Scheduled On"]).getTime() > now) {
+      break;
+    } else {
+      const Subject = expandTemplate(row.Subject, row);
+      const Body = expandTemplate(row.Body, row);
       console.log(`Sending email to ${row.Email} with subject ${Subject} and body ${Body}`);
       MailApp.sendEmail(row.Email, Subject, Body);
-      row.Timestamp = new Date();
+      numEmailsSent++;
+      setTimestamp(row);
       emailLog.push(row);
-      emails.splice(i, 1); // Remove the processed email
+      emailSchedule.splice(i, 1); // Remove the processed email
     }
   }
+  if (numEmailsSent > 0) { // Only do work if there's work to do!
     emailLogFiddler.setData(emailLog).dumpValues()
-    emailFiddler.setData(emails).dumpValues();
+    emailScheduleFiddler.setData(emailSchedule).dumpValues();
+  }
 }
+
+/**
+ * Expands a template string by replacing placeholders with corresponding values from a row object.
+ * Placeholders are in the format {key}, where key is a property name in the row object.
+ * Date fields specified in the dateFields array are converted to local date strings.
+ *
+ * @param {string} template - The template string containing placeholders.
+ * @param {Object} row - The object containing values to replace placeholders.
+ * @returns {string} - The expanded template string with placeholders replaced by corresponding values.
+ */
+function expandTemplate(template, row) {
+  const dateFields = ["Scheduled On", "Expires", "Joined", "Renewed On"]; // Add the names of fields that should be treated as dates
+  return template.replace(/{([^}]+)}/g, (_, key) => {
+    let value = row[key];
+    if (dateFields.includes(key)) {
+      value = new Date(value); // Convert to Date object if it's a date field
+      return value.toLocaleDateString(); // Convert Date objects to local date string
+    }
+    return value || "";
+  });
+};
 
 function processTransactions() {
   convertLinks_('Transactions');
@@ -75,29 +114,29 @@ function processTransactions() {
   const transactionsFiddler = getFiddler_('Transactions').needFormulas();
   const transactions = getDataWithFormulas(transactionsFiddler);
 
-  const numMembers = membershipData.length;
+  const numMemberCols = membershipFiddler.getNumColumns();
+  console.log(`numMemberCols: ${numMemberCols}`);
+  const emailToMemberMap = new Map(numMemberCols ? membershipData.map((member, index) => [member.Email, index]) : []);
+  const processedRows = [];
   for (i = transactions.length - 1; i >= 0; i--) { // reverse order so as to preserve index during deletion
-    const row = transactions[i]
+    const row = transactions[i];
     if (row["Payable Status"].toLowerCase().startsWith("paid")) {
-      const matches = numMembers ? membershipFiddler.selectRows("Email", (value) => value === row["Email Address"]) : [];
-      if (matches.length > 0) { // member exists
-        matches.forEach((match) => {
-          const member = membershipData[match];
-          const years = getPeriod(row);
-          renewMember(member, years, emailSchedule);
-        });
+      const matchIndex = emailToMemberMap.get(row["Email Address"]);
+      if (matchIndex !== undefined) { // member exists
+        const member = membershipData[matchIndex];
+        const years = getPeriod(row);
+        renewMember(member, years, emailSchedule);
       } else { // new member
         addNewMember(row, emailSchedule, membershipData, bulkGroupEmails);
       }
       row.Timestamp = new Date();
-      processedTransactions.push(row);
-      transactions.splice(i, 1)
-      console.log(`row.Processed set to ${row.Processed}`);
+      processedRows.push(row);
+      transactions.splice(i, 1);
     }
   }
+  processedTransactions.push(...processedRows);
 
   bulkGroupFiddler.setData(bulkGroupEmails).dumpValues();
-  emailSchedule.sort((a, b) => new Date(b["Scheduled On"]) - new Date(a["Scheduled On"]));
   emailScheduleFiddler.setData(emailSchedule).dumpValues();
   membershipData.sort((a, b) => a.Email.localeCompare(b.Email));
   membershipFiddler.setData(membershipData).dumpValues();
@@ -156,10 +195,14 @@ function addRenewedMemberToEmailSchedule(member, emailSchedule) {
 function addMemberToEmailSchedule(member, emailSchedule, emailType) {
   const email = member.Email;
   const emailTypes = [emailType, 'Expiry 1', 'Expiry 2', 'Expiry 3', 'Expiry 4'];
-  const membershipLookupFormula = '=IFERROR(VLOOKUP(INDIRECT("A"&ROW()), Membership!$A:$G, COLUMN(), FALSE), "")';
-  const emailLookupFormula = '=vlookup(indirect("H"&row()),Emails!$A$1:$C$7, column() - 8, false)';
-  const scheduledOnLookupFormula = `=IFERROR(INDIRECT("F"&ROW()) + iferror(vlookup(indirect("H"&row()), 'Expiry Schedule'!$A:$B, 2, FALSE), 0) , "")`
+  // These formulas all use the column heading to look up the value in the Membership sheet or the Emails sheet.
+  // They are independent of row and column location, so rows and columns can be moved around without breaking the formulas.
+  const membershipLookupFormula = `=IFERROR(INDEX(Membership!$A:$ZZZ,MATCH(INDIRECT(ADDRESS(ROW(),XMATCH("Email",$1:$1,0))),Membership!$A:$A,0),XMATCH(INDEX($1:$1,COLUMN()),Membership!$1:$1,0)),"")`
+  const emailLookupFormula = `=IFERROR(VLOOKUP(INDIRECT(ADDRESS(ROW(),XMATCH("Type",$1:$1,0))),Emails!$A$1:$C$7,XMATCH(INDEX($1:$1,COLUMN()),Emails!$1:$1,0),FALSE),0)`
+  const scheduledOnLookupFormula = `=IFERROR(INDIRECT(ADDRESS(ROW(),XMATCH("Expires",$1:$1,0))) + IFERROR(VLOOKUP(INDIRECT(ADDRESS(ROW(),XMATCH("Type",$1:$1,0))),'Expiry Schedule'!$A:$B,2,FALSE),0),"")`
   const canonicalEntry = {
+    "Scheduled On": scheduledOnLookupFormula,
+    Type: '',
     Email: '',
     First: membershipLookupFormula,
     Last: membershipLookupFormula,
@@ -167,18 +210,15 @@ function addMemberToEmailSchedule(member, emailSchedule, emailType) {
     Period: membershipLookupFormula,
     Expires: membershipLookupFormula,
     "Renewed On": membershipLookupFormula,
-    Type: '',
-    "Scheduled On": scheduledOnLookupFormula,
     Subject: emailLookupFormula,
     Body: emailLookupFormula
   }
   emailTypes.forEach(t => {
     const newEntry = {
       ...canonicalEntry,
-      Email: email,
       Type: t,
+      Email: email,
     };
-    console.log(`Adding ${newEntry} to emailSchedule`);
     emailSchedule.push(newEntry);
   });
 }
@@ -235,16 +275,16 @@ function addDaysToDate(date, days) {
  * @param {String} sheetName - the anme of the sheet.
  * @returns {Fiddler} - The fiddler.
  */
-function getFiddler_(sheetName) {
+function getFiddler_(sheetName, createIfMissing = true) {
   const sheetMappings = {
-    'Bulk Add Groups': { sheetName: 'Bulk Add Groups', createIfMissing: true },
-    'CE Members': { sheetName: 'CE Members', createIfMissing: true },
-    'Email Log': { sheetName: 'Email Log', createIfMissing: true },
-    'Email Schedule': { sheetName: 'Email Schedule', createIfMissing: true },
+    'Bulk Add Groups': { sheetName: 'Bulk Add Groups', createIfMissing },
+    'CE Members': { sheetName: 'CE Members', createIfMissing },
+    'Email Log': { sheetName: 'Email Log', createIfMissing },
+    'Email Schedule': { sheetName: 'Email Schedule', createIfMissing },
     'Group Email Addresses': { sheetName: 'Group Email Addresses', createIfMissing: false },
-    'Membership': { sheetName: 'Membership', createIfMissing: true },
-    'MembershipReport': { sheetName: 'MembershipReport', createIfMissing: true },
-    'Processed Transactions': { sheetName: 'Processed Transactions', createIfMissing: true },
+    'Membership': { sheetName: 'Membership', createIfMissing },
+    'MembershipReport': { sheetName: 'MembershipReport', createIfMissing },
+    'Processed Transactions': { sheetName: 'Processed Transactions', createIfMissing },
     'Transactions': { sheetName: 'Transactions', createIfMissing: false }
   };
 
