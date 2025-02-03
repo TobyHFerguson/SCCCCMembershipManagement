@@ -59,7 +59,8 @@ const _getGroupEmails = (() => {
  */
 function sendEmails() {
   const emailScheduleFiddler = getFiddler_('Email Schedule');
-  const emailSchedule = emailScheduleFiddler.getData().sort((a, b) => new Date(b["Scheduled On"]) - new Date(a["Scheduled On"]));
+  const emailSchedule = emailScheduleFiddler.getData();
+  emailSchedule.sort((a, b) => new Date(b["Scheduled On"]) - new Date(a["Scheduled On"]));
   const emailLogFiddler = getFiddler_('Email Log'); // getFiddler_('Email Log');
   const emailLog = emailLogFiddler.getData();
   let numEmailsSent = 0;
@@ -74,7 +75,6 @@ function sendEmails() {
     } else {
       const Subject = expandTemplate(row.Subject, row);
       const Body = expandTemplate(row.Body, row);
-      log(`Sending email to ${row.Email} with subject ${Subject} and body ${Body}`);
       sendEmail(row.Email, Subject, Body);
       numEmailsSent++;
       emailLog.push({ Timestamp: new Date(), ...row });
@@ -386,6 +386,7 @@ function log(...args) {
 function sendEmail(recipient, subject, body, options) {
   const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
   if (!testEmails || testEmails !== 'true') {
+    log(`Sending email to ${row.Email} with subject ${Subject} and body ${Body}`);
     MailApp.sendEmail(recipient, subject, body, options);
   } else {
     log(`Email not sent due to testEmails property: To=${recipient}, Subject=${subject}, Body=${body}`);
