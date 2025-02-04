@@ -2,22 +2,6 @@
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
 
-function saveFiddlerWithFormulas_(fiddler) {
-  const formulas = fiddler.getColumnsWithFormulas();
-  fiddler.mapRows((row, { rowFormulas }) => {
-
-    formulas.forEach(f => {
-      // log(`row[${f}]: `, row[f]);
-      // log(`rowFormulas[${f}]:`, rowFormulas[f])
-      if (rowFormulas && rowFormulas[f] !== undefined) {
-        row[f] = rowFormulas[f];
-      }
-    });
-    return row;
-  });
-  fiddler.dumpValues();
-}
-
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('Membership Management')
@@ -62,17 +46,11 @@ function sendEmails() {
   const emailScheduleFiddler = getFiddler_('Email Schedule');
   const emailScheduleData = emailScheduleFiddler.getData();
   let emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
-  log('Email Schedule:', emailScheduleData);
-  log('Email Schedule Formulas:', emailScheduleFormulas);
-  sortArraysByValue(emailScheduleData, emailScheduleFormulas, (a, b) => {
-    log('a:', a);
-    log('b:', b);
-    const dateA = new Date(a["Scheduled On"]);
-    const dateB = new Date(b["Scheduled On"]);
-    log(`Comparing dates: ${dateA} and ${dateB}`);
-    return dateB - dateA;
-  });
-  
+
+  sortArraysByValue(emailScheduleData, emailScheduleFormulas, (a, b) => new Date(b["Scheduled On"]) - new Date(a["Scheduled On"]));
+  log('sendEmails() - emailScheduleData', emailScheduleData.filter(row => row.Type === 'Join'));
+  log('sendEmails() - emailScheduleFormulas', emailScheduleFormulas.filter(row => row.Type === 'Join'));
+
   // The emailSchedule is in reverse sorted order and we start at the far end 
   // where the dates are more likely to be in the past.
   const now = new Date().getTime()
@@ -86,7 +64,6 @@ function sendEmails() {
       const Subject = expandTemplate(row.Subject, row);
       const Body = expandTemplate(row.Body, row);
       emailsToSend.push({ recipient: row.Email, subject: Subject, body: Body });
-      log(`Removing item ${i} from emails`);
       emailScheduleData.splice(i, 1); // Remove the processed email
       emailScheduleFormulas.splice(i, 1); // Remove the processed email
     }
@@ -94,7 +71,7 @@ function sendEmails() {
   if (emailsToSend.length > 0) { // Only do work if there's work to do!
     sendEmail(emailsToSend);
     let emails = combineArrays(emailScheduleFormulas, emailScheduleData);
-  log('Emails:', emails);
+    log('emails:', emails.filter(row => row.Type === 'Join'));
     emailScheduleFiddler.setData(emails).dumpValues();
   }
 }
@@ -125,16 +102,23 @@ function processTransactions() {
   const bulkGroupFiddler = getFiddler_('Bulk Add Groups');
   const bulkGroupEmails = bulkGroupFiddler.getData();
   const emailScheduleFiddler = getFiddler_('Email Schedule');
-  const emailSchedule = emailScheduleFiddler.getData();
+  const emailScheduleData = emailScheduleFiddler.getData();
+  const emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
+
   const membershipFiddler = getFiddler_('Membership');
   const membershipData = membershipFiddler.getData();
   const processedTransactionsFiddler = getFiddler_('Processed Transactions');
   const processedTransactions = getDataWithFormulas(processedTransactionsFiddler);
   const transactionsFiddler = getFiddler_('Transactions').needFormulas();
   const transactions = getDataWithFormulas(transactionsFiddler);
+  const headerAndData1 = transactionsFiddler.getSheet().getRange(1, 1, 2, transactionsFiddler.getNumColumns()).getValues();
+  const headerAndData1Copy = headerAndData1.map((row, index) => index === 1 ? row.map(() => '') : row);
+  
+ 
 
+  log('processTransactions() - emailScheduleData[Join]', emailScheduleData.filter(row => row.Type === 'Join'));
+  log('processTransactions() - emailScheduleFormulas[Join]', emailScheduleFormulas.filter(row => row.Type === 'Join'));
   const numMemberCols = membershipFiddler.getNumColumns();
-  log(`numMemberCols: ${numMemberCols}`);
   const emailToMemberMap = new Map(numMemberCols ? membershipData.map((member, index) => [member.Email, index]) : []);
   const processedRows = [];
   for (i = transactions.length - 1; i >= 0; i--) { // reverse order so as to preserve index during deletion
@@ -144,9 +128,9 @@ function processTransactions() {
       if (matchIndex !== undefined) { // member exists
         const member = membershipData[matchIndex];
         const years = getPeriod(row);
-        renewMember(member, years, emailSchedule);
+        renewMember(member, years, emailScheduleData, emailScheduleFormulas);
       } else { // new member
-        addNewMember(row, emailSchedule, membershipData, bulkGroupEmails);
+        addNewMember(row, emailScheduleData, emailScheduleFormulas, membershipData, bulkGroupEmails);
       }
       row.Timestamp = new Date();
       processedRows.push(row);
@@ -156,13 +140,15 @@ function processTransactions() {
   processedTransactions.push(...processedRows);
   // log('Processed Rows:', processedRows);
 
-  saveFiddlerWithFormulas_(bulkGroupFiddler.setData(bulkGroupEmails));
-  saveFiddlerWithFormulas_(emailScheduleFiddler.setData(emailSchedule));
+  bulkGroupFiddler.setData(bulkGroupEmails).dumpValues();
+  log('ProcessTransactions - emailSchedule.filter(row => row.Type === "Join"):', emailScheduleData.filter(row => row.Type === 'Join'));
+  const emails = combineArrays(emailScheduleFormulas, emailScheduleData)
+  emails.filter(email => email.Type === 'Join').forEach(row => log('row:', row));
+  emailScheduleFiddler.setData(emails).dumpValues();
   membershipData.sort((a, b) => a.Email.localeCompare(b.Email));
-  saveFiddlerWithFormulas_(membershipFiddler.setData(membershipData))
-  saveFiddlerWithFormulas_(transactionsFiddler.removeAllRows());
-  saveFiddlerWithFormulas_(transactionsFiddler);
-  saveFiddlerWithFormulas_(processedTransactionsFiddler.setData(processedTransactions))
+  membershipFiddler.setData(membershipData).dumpValues();
+  transactionsFiddler.setData(transactions.length === 0 ? headerAndData1Copy : transactions).dumpValues();
+  processedTransactionsFiddler.setData(processedTransactions).dumpValues();
 }
 
 function getPeriod(row) {
@@ -171,7 +157,7 @@ function getPeriod(row) {
   return years;
 }
 
-function addNewMember(row, emailSchedule, membershipData, bulkGroupEmails) {
+function addNewMember(row, emailScheduleData, emailScheduleFormulas, membershipData, bulkGroupEmails) {
   const newMember = {
     Email: row["Email Address"],
     First: row["First Name"],
@@ -182,7 +168,7 @@ function addNewMember(row, emailSchedule, membershipData, bulkGroupEmails) {
     "Renewed On": '',
   };
   membershipData.push(newMember);
-  addNewMemberToEmailSchedule(newMember, emailSchedule);
+  addNewMemberToEmailSchedule(newMember, emailScheduleData, emailScheduleFormulas);
   addNewMemberToBulkGroups(bulkGroupEmails, newMember);
 }
 
@@ -197,23 +183,31 @@ function addNewMemberToBulkGroups(bulkGroupEmails, newMember) {
   });
 }
 
-function addNewMemberToEmailSchedule(member, emailSchedule) {
-  addMemberToEmailSchedule(member, emailSchedule, 'Join');
+function addNewMemberToEmailSchedule(member, emailScheduleData, emailScheduleFormulas) {
+  addMemberToEmailSchedule(member, emailScheduleData, emailScheduleFormulas, 'Join');
 }
 
-function addRenewedMemberToEmailSchedule(member, emailSchedule) {
+function addRenewedMemberToEmailSchedule(member, emailScheduleData, emailScheduleFormulas) {
   const email = member.Email;
-  const index = emailSchedule.findIndex(item => item.Email === email);
-  if (index !== -1) {
-    for (let i = emailSchedule.length - 1; i >= 0; i--) {
-      if (emailSchedule[i].Email === email) {
-        emailSchedule.splice(i, 1);
-      }
+  removeEmails(email, emailScheduleData, emailScheduleFormulas);
+  addMemberToEmailSchedule(member, emailScheduleData, emailScheduleFormulas, 'Renewal');
+}
+
+/**
+ * Removes all objects from the data & formula arrays whose Email property matches the given email address.
+ * @param {string} email - The email address to match.
+ * @param {Array} emailScheduleData - The array of objects.
+ */
+function removeEmails(email, emailScheduleData, emailScheduleFormulas) {
+  for (let i = emailScheduleData.length - 1; i >= 0; i--) {
+    if (emailScheduleData[i].Email === email) {
+      emailScheduleData.splice(i, 1);
+      emailScheduleFormulas.splice(i, 1);
     }
   }
-  addMemberToEmailSchedule(member, emailSchedule, 'Renewal');
 }
-function addMemberToEmailSchedule(member, emailSchedule, emailType) {
+
+function addMemberToEmailSchedule(member, emailScheduleData, emailScheduleFormulas, emailType) {
   const email = member.Email;
   const emailTypes = [emailType, 'Expiry 1', 'Expiry 2', 'Expiry 3', 'Expiry 4'];
   // These formulas all use the column heading to look up the value in the Membership sheet or the Emails sheet.
@@ -237,13 +231,18 @@ function addMemberToEmailSchedule(member, emailSchedule, emailType) {
     Body: emailLookupFormula
   }
   emailTypes.forEach(t => {
-    const newEntry = {
-      ...canonicalEntry,
+    const addOn = {
       Type: t,
       Email: email,
-      ...(t == 'Join' ? { "Scheduled On": joinLookupFormula } : t === 'Renew' ? { "Scheduled On": renewLookupFormula } : {}) // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax#spread_in_object_literals
+      ...(t === 'Join' ? { "Scheduled On": joinLookupFormula } : t === 'Renewal' ? { "Scheduled On": renewLookupFormula } : {}) // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax#spread_in_object_literals
+    }
+    const newEntry = {
+      ...canonicalEntry,
+      ...addOn
     };
-    emailSchedule.push(newEntry);
+    log('newEntry.Email', newEntry.Email, 'newEntry.Type:', newEntry.Type, 'newEntry["Scheduled On"]:', newEntry["Scheduled On"]);
+    emailScheduleData.push(newEntry);
+    emailScheduleFormulas.push(newEntry);
   });
 }
 
@@ -251,13 +250,13 @@ function addMemberToEmailSchedule(member, emailSchedule, emailType) {
  * 
  * @param {*} member 
  * @param {number} period 
- * @param {} emailSchedule 
+ * @param {} emailScheduleData 
  */
-function renewMember(member, period, emailSchedule) {
+function renewMember(member, period, emailScheduleData, emailScheduleFormulas) {
   member.Period = period;
   member["Renewed On"] = new Date();
   member.Expires = calculateExpirationDate(period, member.Expires);
-  addRenewedMemberToEmailSchedule(member, emailSchedule);
+  addRenewedMemberToEmailSchedule(member, emailScheduleData, emailScheduleFormulas);
 }
 
 /**
@@ -398,7 +397,7 @@ function sendEmail(emails) {
     emails.forEach(email => log(`Email not sent due to testEmails property: To=${email.recipient}, Subject=${email.subject}, Body=${email.body}`));
   } else {
     emails.forEach(email => sendSingleEmail(email, emailLog));
-    saveFiddlerWithFormulas_(emailLogFiddler.setData(emailLog));
+    emailLogFiddler.setData(emailLog).dumpValues();
   }
 }
 
