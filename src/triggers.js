@@ -62,9 +62,16 @@ function sendEmails() {
   const emailScheduleFiddler = getFiddler_('Email Schedule');
   const emailScheduleData = emailScheduleFiddler.getData();
   let emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
-  sortArraysByValue(emailScheduleData, emailScheduleFormulas, (a, b) => new Date(b["Scheduled On"]) - new Date(a["Scheduled On"])); 
   log('Email Schedule:', emailScheduleData);
   log('Email Schedule Formulas:', emailScheduleFormulas);
+  sortArraysByValue(emailScheduleData, emailScheduleFormulas, (a, b) => {
+    log('a:', a);
+    log('b:', b);
+    const dateA = new Date(a["Scheduled On"]);
+    const dateB = new Date(b["Scheduled On"]);
+    log(`Comparing dates: ${dateA} and ${dateB}`);
+    return dateB - dateA;
+  });
   
   // The emailSchedule is in reverse sorted order and we start at the far end 
   // where the dates are more likely to be in the past.
@@ -86,7 +93,7 @@ function sendEmails() {
   }
   if (emailsToSend.length > 0) { // Only do work if there's work to do!
     sendEmail(emailsToSend);
-    let emails = combineArrays_(emailScheduleFormulas, emailScheduleData);
+    let emails = combineArrays(emailScheduleFormulas, emailScheduleData);
   log('Emails:', emails);
     emailScheduleFiddler.setData(emails).dumpValues();
   }

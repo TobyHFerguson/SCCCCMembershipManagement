@@ -34,7 +34,7 @@ function saveSortedFiddlerWithFormulas_(fiddler, data, sortFunction) {
     const formulas = fiddler.getFormulaData();
     let combined ;
     if (formulas.length === data.length) {
-         combined = sortAndCombine_(formulas, data, sortFunction);
+         combined = sortAndCombine(formulas, data, sortFunction);
     } else {
         combined = data;
     }
@@ -52,7 +52,7 @@ function testFiddlerSort_() {
     console.log("keepFormulas", keepFormulas);
     const data2 = fiddler.getData();
     log("data2", data2);
-    assertEqual_(data2.map(d => [d.value]), data.map(d => [d.expected]));
+    assertEqual(data2.map(d => [d.value]), data.map(d => [d.expected]));
     const formulas = fiddler.getFormulaData();
     log("formulas", formulas);
     data2.sort((a, b) => a.value - b.value);
@@ -67,7 +67,7 @@ function testFiddlerSort_() {
     sortArraysByValue_(data3, formulas2)
     log("data3", data3);
     log("formulas2", formulas2);
-    let f3 = combineArrays_(formulas2, data3);
+    let f3 = combineArrays(formulas2, data3);
     log(f3);
     fiddler.setData(f3);
     saveFiddlerWithFormulas_(fiddler);
@@ -77,7 +77,7 @@ function testFiddlerSort_() {
     const formulas4 = fiddler.getFormulaData();
     log("formulas4", formulas4);
 }
-function assertEqual_(actual, expected) {
+function assertEqual(actual, expected) {
     if (JSON.stringify(actual) !== JSON.stringify(expected)) {
         throw new Error(`Assertion failed: ${JSON.stringify(actual)} !== ${JSON.stringify(expected)}`);
     }
@@ -113,8 +113,22 @@ function sortArraysByValue_(arr1, arr2, sortFunction) {
     }
 }
 
+function combineArrays(arr1, arr2) {
+    if (arr1.length !== arr2.length) {
+        throw new Error("Both arrays must have the same length");
+    }
 
-function sortAndCombine_(arr1, arr2, sortFunction) {
+    return arr1.map((item, index) => {
+        const combinedItem = { ...arr2[index] };
+        for (const key in item) {
+            if (item[key] !== "" && item[key] !== undefined) {
+                combinedItem[key] = item[key];
+            }
+        }
+        return combinedItem;
+    });
+}
+function sortAndCombine(arr1, arr2, sortFunction) {
     sortArraysByValue_(arr1, arr2, sortFunction);
-    return combineArrays_(arr1, arr2);
+    return combineArrays(arr1, arr2);
 }
