@@ -62,12 +62,11 @@ function sendEmails() {
   const emailScheduleFiddler = getFiddler_('Email Schedule');
   const emailSchedule = emailScheduleFiddler.getData();
   emailSchedule.sort((a, b) => new Date(b["Scheduled On"]) - new Date(a["Scheduled On"]));
-  const emailLogFiddler = getFiddler_('Email Log'); // getFiddler_('Email Log');
-  const emailLog = emailLogFiddler.getData();
-  let numEmailsSent = 0;
+
   // The emailSchedule is in reverse sorted order and we start at the far end 
   // where the dates are more likely to be in the past.
   const now = new Date().getTime()
+  const emailsToSend = [];
   for (let i = emailSchedule.length - 1; i >= 0; i--) {
     const row = emailSchedule[i];
     // We test and see if we've hit a future date - if so we can finish
@@ -76,14 +75,12 @@ function sendEmails() {
     } else {
       const Subject = expandTemplate(row.Subject, row);
       const Body = expandTemplate(row.Body, row);
-      sendEmail(row.Email, Subject, Body);
-      numEmailsSent++;
-      emailLog.push({ Timestamp: new Date(), ...row });
+      emailsToSend.push({ recipient: row.Email, subject: Subject, body: Body });
       emailSchedule.splice(i, 1); // Remove the processed email
     }
   }
-  if (numEmailsSent > 0) { // Only do work if there's work to do!
-    saveFiddlerWithFormulas_(emailLogFiddler.setData(emailLog));
+  if (emailsToSend.length > 0) { // Only do work if there's work to do!
+    sendEmail(emailsToSend);
     saveFiddlerWithFormulas_(emailScheduleFiddler.setData(emailSchedule));
   }
 }
@@ -377,22 +374,30 @@ function log(...args) {
   }
 }
 
-/**
- * Sends an email if the 'testEmails' script property is not found or is true.
- * @param {string} recipient - The email address of the recipient.
- * @param {string} subject - The subject line of the email.
- * @param {string} body - The body of the email.
- * @param {Object} [options] - An object containing advanced parameters.
- */
-function sendEmail(recipient, subject, body, options) {
+
+function sendEmail(emails) {
+  log(`Number of emails to be sent: ${emails.length}`);
+  const emailLogFiddler = getFiddler_('Email Log');
+  const emailLog = emailLogFiddler.getData();
   const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
-  if (!testEmails || testEmails !== 'true') {
-    log(`Sending email to ${row.Email} with subject ${Subject} and body ${Body}`);
-    MailApp.sendEmail(recipient, subject, body, options);
+  if (testEmails === 'true') { // Use test path only if testEmails is explicitly set to true
+    emails.forEach(email => log(`Email not sent due to testEmails property: To=${email.recipient}, Subject=${email.subject}, Body=${email.body}`));
   } else {
-    log(`Email not sent due to testEmails property: To=${recipient}, Subject=${subject}, Body=${body}`);
+    emails.forEach(email => sendSingleEmail(email, emailLog));
+    saveFiddlerWithFormulas_(emailLogFiddler.setData(emailLog));
   }
 }
+
+function sendSingleEmail(email, emailLog) {
+  log(`Email Sent: To=${email.recipient}, Subject=${email.subject}, Body=${email.body}`);
+  try {
+    MailApp.sendEmail(email.recipient, email.subject, email.body);
+  } catch (error) {
+    log(`Failed to send email to ${email.recipient}: ${error.message}`);
+  }
+  emailLog.push({ Timestamp: new Date(), ...email });
+}
+
 
 function testSendEmail() {
   const recipient = "test@example.com";
