@@ -60,15 +60,18 @@ const _getGroupEmails = (() => {
  */
 function sendEmails() {
   const emailScheduleFiddler = getFiddler_('Email Schedule');
-  const emailSchedule = emailScheduleFiddler.getData();
-  emailSchedule.sort((a, b) => new Date(b["Scheduled On"]) - new Date(a["Scheduled On"]));
-
+  const emailScheduleData = emailScheduleFiddler.getData();
+  let emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
+  sortArraysByValue(emailScheduleData, emailScheduleFormulas, (a, b) => new Date(b["Scheduled On"]) - new Date(a["Scheduled On"])); 
+  log('Email Schedule:', emailScheduleData);
+  log('Email Schedule Formulas:', emailScheduleFormulas);
+  
   // The emailSchedule is in reverse sorted order and we start at the far end 
   // where the dates are more likely to be in the past.
   const now = new Date().getTime()
   const emailsToSend = [];
-  for (let i = emailSchedule.length - 1; i >= 0; i--) {
-    const row = emailSchedule[i];
+  for (let i = emailScheduleData.length - 1; i >= 0; i--) {
+    const row = emailScheduleData[i];
     // We test and see if we've hit a future date - if so we can finish
     if (new Date(row["Scheduled On"]).getTime() > now) {
       break;
@@ -76,12 +79,16 @@ function sendEmails() {
       const Subject = expandTemplate(row.Subject, row);
       const Body = expandTemplate(row.Body, row);
       emailsToSend.push({ recipient: row.Email, subject: Subject, body: Body });
-      emailSchedule.splice(i, 1); // Remove the processed email
+      log(`Removing item ${i} from emails`);
+      emailScheduleData.splice(i, 1); // Remove the processed email
+      emailScheduleFormulas.splice(i, 1); // Remove the processed email
     }
   }
   if (emailsToSend.length > 0) { // Only do work if there's work to do!
     sendEmail(emailsToSend);
-    saveFiddlerWithFormulas_(emailScheduleFiddler.setData(emailSchedule));
+    let emails = combineArrays_(emailScheduleFormulas, emailScheduleData);
+  log('Emails:', emails);
+    emailScheduleFiddler.setData(emails).dumpValues();
   }
 }
 
