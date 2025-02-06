@@ -113,8 +113,8 @@ function processTransactions() {
   const transactions = getDataWithFormulas(transactionsFiddler);
   const headerAndData1 = transactionsFiddler.getSheet().getRange(1, 1, 2, transactionsFiddler.getNumColumns()).getValues();
   const headerAndData1Copy = headerAndData1.map((row, index) => index === 1 ? row.map(() => '') : row);
-  
- 
+
+
 
   log('processTransactions() - emailScheduleData[Join]', emailScheduleData.filter(row => row.Type === 'Join'));
   log('processTransactions() - emailScheduleFormulas[Join]', emailScheduleFormulas.filter(row => row.Type === 'Join'));
@@ -424,12 +424,31 @@ function testSendEmail() {
   MailApp.sendEmail(recipient, subject, body, options);
 }
 
-function testSaveFiddlerWithFormulas() {
-  let fiddler = bmPreFiddler.PreFiddler().getFiddler({ sheetName: 'Test', createIfMissing: true }).needFormulas();
-  const data = [{ value: "=1 + 2" }];
-  fiddler.setData(data);
-  saveFiddlerWithFormulas_(fiddler);
-  fiddler = bmPreFiddler.PreFiddler().getFiddler({ sheetName: 'Test', createIfMissing: true }).needFormulas();
-  fiddler.setData(data);
-  saveFiddlerWithFormulas_(fiddler);
+
+function sortArraysByValue(arr1, arr2, compareFn) {
+  if (arr1.length !== arr2.length) {
+    throw new Error("Both arrays must have the same length");
+  }
+  const combined = arr1.map((value, index) => ({ value, index }));
+  combined.sort((a, b) => compareFn(a.value !== undefined ? a.value : a, b.value !== undefined ? b.value : b));
+  const sortedArr1 = combined.map(item => item.value);
+  const sortedArr2 = combined.map(item => arr2[item.index]);
+  arr1.splice(0, arr1.length, ...sortedArr1);
+  arr2.splice(0, arr2.length, ...sortedArr2);
+}
+
+function combineArrays(arr1, arr2) {
+  if (arr1.length !== arr2.length) {
+    throw new Error("Both arrays must have the same length");
+  }
+
+  return arr1.map((item, index) => {
+    const combinedItem = { ...arr2[index] };
+    for (const key in item) {
+      if (item[key] !== "" && item[key] !== undefined) {
+        combinedItem[key] = item[key];
+      }
+    }
+    return combinedItem;
+  });
 }
