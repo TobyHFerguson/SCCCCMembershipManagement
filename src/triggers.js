@@ -6,7 +6,7 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('Membership Management')
     .addItem('Process Transactions', processTransactions.name)
-    .addItem('Send Emails', sendEmails.name)
+    .addItem('Send Emails', sendScheduledEmails.name)
     .addToUi();
 } ""
 
@@ -42,7 +42,7 @@ const _getGroupEmails = (() => {
  * 
  * @function
  */
-function sendEmails() {
+function sendScheduledEmails() {
   const emailScheduleFiddler = getFiddler_('Email Schedule');
   const emailScheduleData = emailScheduleFiddler.getData();
   let emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
@@ -63,13 +63,13 @@ function sendEmails() {
     } else {
       const Subject = expandTemplate(row.Subject, row);
       const Body = expandTemplate(row.Body, row);
-      emailsToSend.push({ recipient: row.Email, subject: Subject, body: Body });
+      emailsToSend.push({ to: row.Email, subject: Subject, htmlBody: Body });
       emailScheduleData.splice(i, 1); // Remove the processed email
       emailScheduleFormulas.splice(i, 1); // Remove the processed email
     }
   }
   if (emailsToSend.length > 0) { // Only do work if there's work to do!
-    sendEmail(emailsToSend);
+    sendEmails(emailsToSend);
     let emails = combineArrays(emailScheduleFormulas, emailScheduleData);
     log('emails:', emails.filter(row => row.Type === 'Join'));
     emailScheduleFiddler.setData(emails).dumpValues();
@@ -388,13 +388,13 @@ function log(...args) {
 }
 
 
-function sendEmail(emails) {
+function sendEmails(emails) {
   log(`Number of emails to be sent: ${emails.length}`);
   const emailLogFiddler = getFiddler_('Email Log');
   const emailLog = emailLogFiddler.getData();
   const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
   if (testEmails === 'true') { // Use test path only if testEmails is explicitly set to true
-    emails.forEach(email => log(`Email not sent due to testEmails property: To=${email.recipient}, Subject=${email.subject}, Body=${email.body}`));
+    emails.forEach(email => log(`Email not sent due to testEmails property: To=${email.to}, Subject=${email.subject}, Body=${email.body}`));
   } else {
     emails.forEach(email => sendSingleEmail(email, emailLog));
     emailLogFiddler.setData(emailLog).dumpValues();
@@ -402,11 +402,11 @@ function sendEmail(emails) {
 }
 
 function sendSingleEmail(email, emailLog) {
-  log(`Email Sent: To=${email.recipient}, Subject=${email.subject}, Body=${email.body}`);
+  log(`Email Sent: :`, email);
   try {
-    MailApp.sendEmail(email.recipient, email.subject, email.body);
+    MailApp.sendEmail(email);
   } catch (error) {
-    log(`Failed to send email to ${email.recipient}: ${error.message}`);
+    log(`Failed to send email to ${email.to}: ${error.message}`);
   }
   emailLog.push({ Timestamp: new Date(), ...email });
 }
@@ -421,7 +421,7 @@ function testSendEmail() {
     bcc: "bcc@example.com",
     attachments: [Utilities.newBlob("Attachment content", "text/plain", "test.txt")]
   };
-  sendEmail(recipient, subject, body, options);
+  MailApp.sendEmail(recipient, subject, body, options);
 }
 
 function testSaveFiddlerWithFormulas() {
