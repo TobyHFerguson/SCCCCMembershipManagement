@@ -1,7 +1,7 @@
 /**
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
-function sendScheduledEmails() {
+function sendScheduledEmails_() {
   const emailScheduleFiddler = getFiddler_('Email Schedule');
   const emailScheduleData = emailScheduleFiddler.getData();
   const emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
@@ -9,54 +9,155 @@ function sendScheduledEmails() {
   const emailsToSend = createEmails(emailScheduleData);
   sendEmails_(emailsToSend);
   const combined = combineArrays(emailScheduleFormulas, emailScheduleData);
-  const remainingEmails = combined.filter((_, i) => i >= emailsToSend.length);  
+  const remainingEmails = combined.filter((_, i) => i >= emailsToSend.length);
   emailScheduleFiddler.setData(remainingEmails).dumpValues();
 }
 
+/**
+ * Creates a set of functions to generate email messages based on provided specifications.
+ *
+ * @param {Array<Object>} emailSpecs - An array of email specification objects.
+ * @param {string} emailSpecs[].Type - The type of the email.
+ * @param {string} emailSpecs[].Subject - The subject template of the email.
+ * @param {string} emailSpecs[].Body - The body template of the email.
+ * @returns {Object} An object where each key is an email type and each value is a function that generates an email message.
+ */
+function makeCreateMessageFuns_(emailSpecs) {
+  let result = emailSpecs.reduce((handlers, emailSpec) => {
+    handlers[emailSpec.Type] = (member) => {
+      const subject = expandTemplate(emailSpec.Subject, member);
+      const htmlBody = expandTemplate(emailSpec.Body, member);
+      return { to: member.Email, subject, htmlBody }
+    };
+    return handlers;
+  }, {});
+  log('makeCreateMessageFuns_', result);
+  return result;
+}
 
+/**
+ * Creates an object with functions to send emails based on the provided message creation functions.
+ *
+ * @param {Object} createMessageFuns - An object where keys are email types and values are functions that create email messages.
+ * @returns {Object} An object where keys are email types and values are functions that send emails to members.
+ */
+function makeSendEmailFuns_(createMessageFuns) {
+  const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
+  return (member, type) => {
+    log(`createMessageFuns inside makeSendEmailFuns_:`, createMessageFuns);
+    log(`Sending email of type: ${type} to member: ${JSON.stringify(member)}`);
+    const createMessageFun = createMessageFuns[type];
+    if (!createMessageFun) {
+      log(`No createMessageFun found for type: ${type}`);
+      return member;
+    }
+    const message = createMessageFun(member);
+    log(`Generated message: ${JSON.stringify(message)}`);
+    if (testEmails === 'true') {
+      log(`Email not sent due to testEmails property: To=${member.Email}, Subject=${message.subject}, htmlBody=${message.htmlBody}`);
+    } else {
+      sendSingleEmail_(message);
+      log(`Email sent: To=${member.Email}, Subject=${message.subject}`);
+    }
+    return member;
+  }
+}
+
+function makeEmailSender_(emailSpecs) {
+  const sendEmail = makeSendEmailFuns_(makeCreateMessageFuns_(emailSpecs));
+  return (member, type) => { sendEmail(member, type); return member; };
+}
+
+
+function makeGroupJoiner_(groupEmails) {
+  const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
+  return (member) => {
+    if (!member.RenewedOn)
+      groupEmails.forEach(groupEmail => {
+        if (testEmails === 'true') {
+          log(`Group membership not added to ${groupEmail} due to testEmails property: ${member.Email}`);
+        } else {
+          addMemberToGroup(groupEmail, member.Email)
+        }
+      }
+      );
+    return member;
+  }
+};
+
+function makeTransactionProcessor_(membershipData, newMembers) {
+  log('membershipData:', membershipData);
+  const membershipByEmail = Object.keys(membershipData).reduce((acc, email) => { acc.email = membershipData; return acc; }, {});
+  return (txn) => {
+    const email = txn['Email Address'];
+    let member = membershipByEmail[email];
+    if (!member) {
+      member = {
+        Email: txn["Email Address"],
+        First: txn["First Name"],
+        Last: txn["Last Name"],
+        Joined: new Date(),
+        Period: getPeriod(txn),
+        Expires: calculateExpirationDate(getPeriod(txn)),
+        RenewedOn: '',
+      };
+      newMembers.push(member);
+    } else {
+      const period = getPeriod(txn);
+      member.Period = period;
+      member.RenewedOn = new Date();
+      member.Expires = calculateExpirationDate(period, member.Expires);
+    }
+    return member;
+  }
+}
 function processTransactions() {
   convertLinks_('Transactions');
-  const transactionsFiddler = getFiddler_('Transactions').needFormulas();
-  const transactions = getDataWithFormulas_(transactionsFiddler);
-  if (transactions.length === 0) { return; }
-
-
-  const bulkGroupFiddler = getFiddler_('Bulk Add Groups');
-  const bulkGroupEmails = bulkGroupFiddler.getData();
-  const emailScheduleFiddler = getFiddler_('Email Schedule');
-  const emailScheduleData = emailScheduleFiddler.getData();
-  const emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
-
   const membershipFiddler = getFiddler_('Membership');
   const membershipData = membershipFiddler.getData();
-  const processedTransactionsFiddler = getFiddler_('Processed Transactions');
-  const processedTransactions = getDataWithFormulas_(processedTransactionsFiddler);
+  const sendEmail = makeEmailSender_(getFiddler_('Email Specifications').getData());
+  const newMembers = [];
+  const processTxn = makeTransactionProcessor_(membershipData, newMembers);
+  const joinGroup = makeGroupJoiner_(getGroupEmails_());
+  const newLogMessages = []
+  const transactions = getFiddler_('Transactions')
 
-  const { processedRows, updatedTransactions } = processTransactionsData(transactions, membershipData, emailScheduleData, emailScheduleFormulas, bulkGroupEmails);
-  processedTransactions.push(...processedRows);
+  transactions.getData().map(txn => processTxn(txn))
+    .map(member => joinGroup(member))
+    .map(member => { log(member); return member; })
+    .map(member => sendEmail(member, member.RenewedOn ? 'Renewal' : 'Join'))
+    .map(message => newLogMessages.push(message));
 
-  bulkGroupFiddler.setData(bulkGroupEmails).dumpValues();
-  const emails = combineArrays(emailScheduleFormulas, emailScheduleData);
-  emailScheduleFiddler.setData(emails).dumpValues();
-  membershipData.sort((a, b) => a.Email.localeCompare(b.Email));
-  membershipFiddler.setData(membershipData).dumpValues();
-  transactionsFiddler.setData(updatedTransactions).dumpValues();
-  processedTransactionsFiddler.setData(processedTransactions).dumpValues();
+  
+
+  membershipFiddler.setData(newMembers).dumpValues();
+
+  const emailLogFiddler = getFiddler_('Email Log');
+  const logs = [...emailLogFiddler.getData(), ...newLogMessages]
+  emailLogFiddler.setData(logs).dumpValues();
+
+  const keepTransactions = PropertiesService.getScriptProperties().getProperty('keepTransactions');
+  if (keepTransactions && keepTransactions === 'true') {
+    log
+  } else {
+    log('transactions.getData(): ', transactions.getData())
+    transactions.filterRows(_ => false).dumpValues();
+  }
 }
 
-function addMembersToGroups(){
+function addMembersToGroups_() {
   const bulkGroupFiddler = getFiddler_('Bulk Add Groups');
-  bulkGroupFiddler.mapRows(row => {addMemberToGroup(row['Group Email [Required]'], row['Member Email']); return row;}).filterRows(_ => false).dumpValues();
+  bulkGroupFiddler.mapRows(row => { addMemberToGroup(row['Group Email [Required]'], row['Member Email']); return row; }).filterRows(_ => false).dumpValues();
 }
 
-function removeMembersFromGroups() {
+function removeMembersFromGroups_() {
   const bulkGroupFiddler = getFiddler_('Bulk Remove Groups');
-  bulkGroupFiddler.mapRows(row => {removeMemberFromGroup(row['Group Email [Required]'], row['Member Email']); return row;}).filterRows(_ => false).dumpValues();
+  bulkGroupFiddler.mapRows(row => { removeMemberFromGroup(row['Group Email [Required]'], row['Member Email']); return row; }).filterRows(_ => false).dumpValues();
 }
 
 function sendEmails_(emails) {
   log(`Number of emails to be sent: ${emails.length}`);
-  const emailLogFiddler = getFiddler_('Email Log');
+
   const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
   if (testEmails === 'true') { // Use test path only if testEmails is explicitly set to true
     emails.forEach(email => log(`Email not sent due to testEmails property: To=${email.to}, Subject=${email.subject}, htmlBody=${email.htmlBody}`));
@@ -136,24 +237,6 @@ function convertLinks_(sheetName) {
  * @returns {Fiddler} - The fiddler.
  */
 function getFiddler_(sheetName, createIfMissing = true) {
-  const sheetMappings = {
-    'Bulk Add Groups': { sheetName: 'Bulk Add Groups', createIfMissing },
-    'CE Members': { sheetName: 'CE Members', createIfMissing },
-    'Email Log': { sheetName: 'Email Log', createIfMissing },
-    'Email Schedule': { sheetName: 'Email Schedule', createIfMissing },
-    'Group Email Addresses': { sheetName: 'Group Email Addresses', createIfMissing: false },
-    'Membership': { sheetName: 'Membership', createIfMissing },
-    'MembershipReport': { sheetName: 'MembershipReport', createIfMissing },
-    'Processed Transactions': { sheetName: 'Processed Transactions', createIfMissing },
-    'Transactions': { sheetName: 'Transactions', createIfMissing: false }
-  };
-
-  let spec = {};
-  if (sheetMappings[sheetName]) {
-    spec.sheetName = sheetMappings[sheetName].sheetName;
-    spec.createIfMissing = sheetMappings[sheetName].createIfMissing;
-  }
-
-  return bmPreFiddler.PreFiddler().getFiddler(spec).needFormulas();
+  return bmPreFiddler.PreFiddler().getFiddler({ sheetName, createIfMissing });
 }
 

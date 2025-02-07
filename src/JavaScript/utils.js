@@ -9,3 +9,9 @@ function log(...args) {
     console.log(...args);
   }
 }
+
+function blank(object) {
+  Object.keys(object).forEach(key => {
+    object.key =''
+  });
+}
