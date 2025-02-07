@@ -16,9 +16,7 @@ function processTransactions() {
     const membershipData = membershipFiddler.getData();
     const processedTransactionsFiddler = getFiddler_('Processed Transactions');
     const processedTransactions = getDataWithFormulas(processedTransactionsFiddler);
-    const headerAndData1 = transactionsFiddler.getSheet().getRange(1, 1, 2, transactionsFiddler.getNumColumns()).getValues();
-    const headerAndData1Copy = headerAndData1.map((row, index) => index === 1 ? row.map(() => '') : row);
-  
+    
     const { processedRows, updatedTransactions } = processTransactionsData(transactions, membershipData, emailScheduleData, emailScheduleFormulas, bulkGroupEmails);
     log('updatedTransactions', updatedTransactions);
     log('updatedTransactions.length', updatedTransactions.length);
@@ -29,7 +27,7 @@ function processTransactions() {
     emailScheduleFiddler.setData(emails).dumpValues();
     membershipData.sort((a, b) => a.Email.localeCompare(b.Email));
     membershipFiddler.setData(membershipData).dumpValues();
-    transactionsFiddler.setData(updatedTransactions.length === 0 ? headerAndData1Copy : updatedTransactions).dumpValues();
+    transactionsFiddler.setData(updatedTransactions).dumpValues();
     processedTransactionsFiddler.setData(processedTransactions).dumpValues();
   }
 
