@@ -1,46 +1,45 @@
 // Apps Script functions
 function processTransactions() {
-    convertLinks_('Transactions');
-    const transactionsFiddler = getFiddler_('Transactions').needFormulas();
-    const transactions = getDataWithFormulas_(transactionsFiddler);
-    if (transactions.length === 0) { return; }
+  convertLinks_('Transactions');
+  const transactionsFiddler = getFiddler_('Transactions').needFormulas();
+  const transactions = getDataWithFormulas_(transactionsFiddler);
+  if (transactions.length === 0) { return; }
 
 
-    const bulkGroupFiddler = getFiddler_('Bulk Add Groups');
-    const bulkGroupEmails = bulkGroupFiddler.getData();
-    const emailScheduleFiddler = getFiddler_('Email Schedule');
-    const emailScheduleData = emailScheduleFiddler.getData();
-    const emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
+  const bulkGroupFiddler = getFiddler_('Bulk Add Groups');
+  const bulkGroupEmails = bulkGroupFiddler.getData();
+  const emailScheduleFiddler = getFiddler_('Email Schedule');
+  const emailScheduleData = emailScheduleFiddler.getData();
+  const emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
 
-    const membershipFiddler = getFiddler_('Membership');
-    const membershipData = membershipFiddler.getData();
-    const processedTransactionsFiddler = getFiddler_('Processed Transactions');
-    const processedTransactions = getDataWithFormulas_(processedTransactionsFiddler);
+  const membershipFiddler = getFiddler_('Membership');
+  const membershipData = membershipFiddler.getData();
+  const processedTransactionsFiddler = getFiddler_('Processed Transactions');
+  const processedTransactions = getDataWithFormulas_(processedTransactionsFiddler);
 
-    const { processedRows, updatedTransactions } = processTransactionsData(transactions, membershipData, emailScheduleData, emailScheduleFormulas, bulkGroupEmails);
-    log('updatedTransactions', updatedTransactions);
-    log('updatedTransactions.length', updatedTransactions.length);
-    processedTransactions.push(...processedRows);
+  const { processedRows, updatedTransactions } = processTransactionsData(transactions, membershipData, emailScheduleData, emailScheduleFormulas, bulkGroupEmails);
+  log('updatedTransactions', updatedTransactions);
+  log('updatedTransactions.length', updatedTransactions.length);
+  processedTransactions.push(...processedRows);
 
-    bulkGroupFiddler.setData(bulkGroupEmails).dumpValues();
-    const emails = combineArrays(emailScheduleFormulas, emailScheduleData);
-    emailScheduleFiddler.setData(emails).dumpValues();
-    membershipData.sort((a, b) => a.Email.localeCompare(b.Email));
-    membershipFiddler.setData(membershipData).dumpValues();
-    transactionsFiddler.setData(updatedTransactions).dumpValues();
-    processedTransactionsFiddler.setData(processedTransactions).dumpValues();
+  bulkGroupFiddler.setData(bulkGroupEmails).dumpValues();
+  const emails = combineArrays(emailScheduleFormulas, emailScheduleData);
+  emailScheduleFiddler.setData(emails).dumpValues();
+  membershipData.sort((a, b) => a.Email.localeCompare(b.Email));
+  membershipFiddler.setData(membershipData).dumpValues();
+  transactionsFiddler.setData(updatedTransactions).dumpValues();
+  processedTransactionsFiddler.setData(processedTransactions).dumpValues();
 }
 
 function sendScheduledEmailsAppScript() {
-    const emailScheduleFiddler = getFiddler_('Email Schedule');
-    const emailScheduleData = emailScheduleFiddler.getData();
-    let emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
-
-    const sentEmails = sendScheduledEmails(emailScheduleData, emailScheduleFormulas);
-    if (sentEmails.length > 0) {
-        const remainingEmails = combineArrays(emailScheduleFormulas, emailScheduleData);
-        emailScheduleFiddler.setData(remainingEmails).dumpValues();
-    }
+  const emailScheduleFiddler = getFiddler_('Email Schedule');
+  const emailScheduleData = emailScheduleFiddler.getData();
+  const emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
+  sortArraysByValue(emailScheduleData, emailScheduleFormulas, (a, b) => new Date(a["Scheduled On"]) - new Date(b["Scheduled On"]));
+  const numSentEmails = sendScheduledEmails(emailScheduleData);
+  const remainingEmails = combineArrays(emailScheduleFormulas, emailScheduleData);
+  remainingEmails.splice(0, numSentEmails);
+  emailScheduleFiddler.setData(remainingEmails).dumpValues();
 }
 
 /**
@@ -49,8 +48,8 @@ function sendScheduledEmailsAppScript() {
 * @returns {Array} - The merged data.
 */
 function getDataWithFormulas_(fiddler) {
-    fiddler.needFormulas();
-    return mergeObjects(fiddler.getData(), fiddler.getFormulaData(), fiddler.getColumnsWithFormulas());
+  fiddler.needFormulas();
+  return mergeObjects(fiddler.getData(), fiddler.getFormulaData(), fiddler.getColumnsWithFormulas());
 }
 
 /**
@@ -58,25 +57,25 @@ function getDataWithFormulas_(fiddler) {
  */
 
 function onOpen() {
-    const ui = SpreadsheetApp.getUi();
-    ui.createMenu('Membership Management')
-      .addItem('Process Transactions', processTransactions.name)
-      .addItem('Send Emails', sendScheduledEmails.name)
-      .addToUi();
-  } ""
-  
-  
-  
-  
-  
-  const getGroupEmails_ = (() => {
-    let cachedGroupEmails = null;
-    return () => {
-      if (cachedGroupEmails) return cachedGroupEmails;
-      cachedGroupEmails = getFiddler_('Group Email Addresses').getData().map(row => row.Email);
-      return cachedGroupEmails;
-    };
-  })();
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('Membership Management')
+    .addItem('Process Transactions', processTransactions.name)
+    .addItem('Send Emails', sendScheduledEmails.name)
+    .addToUi();
+} ""
+
+
+
+
+
+const getGroupEmails_ = (() => {
+  let cachedGroupEmails = null;
+  return () => {
+    if (cachedGroupEmails) return cachedGroupEmails;
+    cachedGroupEmails = getFiddler_('Group Email Addresses').getData().map(row => row.Email);
+    return cachedGroupEmails;
+  };
+})();
 /**
  * Converts links in a sheet to hyperlinks.
  * @param {String} sheetName - The name of the sheet.
