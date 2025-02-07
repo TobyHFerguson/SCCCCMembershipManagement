@@ -71,7 +71,7 @@ function sendSingleEmail_(email, emailLog) {
 */
 function getDataWithFormulas_(fiddler) {
   fiddler.needFormulas();
-  return mergeObjects(fiddler.getData(), fiddler.getFormulaData(), fiddler.getColumnsWithFormulas());
+  return combineArrays(fiddler.getFormulaData(), fiddler.getData());
 }
 
 /**
