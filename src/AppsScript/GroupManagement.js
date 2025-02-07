@@ -67,5 +67,14 @@ function addMemberToGroup(groupEmail, email) {
  * @customfunction
  */
 function removeMemberFromGroup(groupEmail, memberEmail) {
-    AdminDirectory.Members.remove(groupKey = groupEmail, memberKey = memberEmail);
+    try {
+        AdminDirectory.Members.remove(groupKey = groupEmail, memberKey = memberEmail);
+        Logger.log(`Successfully removed ${memberEmail} from ${groupEmail}`);
+    } catch (e) {
+        if (e.message && e.message.includes("Resource Not Found")) {
+            Logger.log(`Member ${memberEmail} does not exist in ${groupEmail}`);
+        } else {
+            throw e;
+        }
+    }
 }
