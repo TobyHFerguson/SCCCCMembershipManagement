@@ -17,15 +17,18 @@
  * 
  * @function
  */
-function sendScheduledEmails(emailScheduleData) {
-  const today = new Date()
-  const emailsToSend = emailScheduleData.filter(row => new Date(row["Scheduled On"]) <= today).map(row => {
+function createEmails(emailScheduleData) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Set the time to the start of the day
+  return emailScheduleData.filter(row => {
+    const scheduledDate = new Date(row["Scheduled On"]);
+    scheduledDate.setHours(0, 0, 0, 0); // Set the time to the start of the day
+    return scheduledDate <= today;
+  }).map(row => {
     const Subject = expandTemplate(row.Subject, row);
     const Body = expandTemplate(row.Body, row);
     return { to: row.Email, subject: Subject, htmlBody: Body }
-  })
-  sendEmails(emailsToSend);
-  return emailsToSend.length
+  });
 }
 
 
@@ -50,28 +53,7 @@ function expandTemplate(template, row) {
   });
 };
 
-function sendEmails(emails) {
-  log(`Number of emails to be sent: ${emails.length}`);
-  const emailLogFiddler = getFiddler_('Email Log');
-  const emailLog = emailLogFiddler.getData();
-  const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
-  if (testEmails === 'true') { // Use test path only if testEmails is explicitly set to true
-    emails.forEach(email => log(`Email not sent due to testEmails property: To=${email.to}, Subject=${email.subject}, Body=${email.body}`));
-  } else {
-    emails.forEach(email => sendSingleEmail(email, emailLog));
-    emailLogFiddler.setData(emailLog).dumpValues();
-  }
-}
 
-function sendSingleEmail(email, emailLog) {
-  log(`Email Sent: :`, email);
-  try {
-    MailApp.sendEmail(email);
-  } catch (error) {
-    log(`Failed to send email to ${email.to}: ${error.message}`);
-  }
-  emailLog.push({ Timestamp: new Date(), ...email });
-}
 
 
 function testSendEmail() {
