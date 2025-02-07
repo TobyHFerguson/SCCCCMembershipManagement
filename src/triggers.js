@@ -202,6 +202,15 @@ function sortArraysByValue(arr1, arr2, compareFn) {
   arr2.splice(0, arr2.length, ...sortedArr2);
 }
 
+/**
+ * Combines two arrays of objects by merging the properties of objects at the same index.
+ * If a property in the first array's object is an empty string or undefined, the property from the second array's object is used.
+ * 
+ * @param {Array<Object>} arr1 - The first array of objects.
+ * @param {Array<Object>} arr2 - The second array of objects.
+ * @returns {Array<Object>} A new array of objects with combined properties.
+ * @throws {Error} If the lengths of the two arrays are not equal.
+ */
 function combineArrays(arr1, arr2) {
   if (arr1.length !== arr2.length) {
     throw new Error("Both arrays must have the same length");
