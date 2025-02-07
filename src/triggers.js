@@ -23,113 +23,37 @@ const _getGroupEmails = (() => {
   };
 })();
 
+
+
+// Pure JavaScript functions
 /**
- * Sends scheduled emails based on the email schedule data.
- * 
- * This function retrieves the email schedule and email log data, sorts the schedule by date,
- * and sends emails that are scheduled to be sent on or before the current date and time.
- * After sending an email, it logs the email and updates the schedule.
- * 
- * The function performs the following steps:
- * 1. Retrieves and sorts the email schedule data.
- * 2. Retrieves the email log data.
- * 3. Iterates through the email schedule in reverse order.
- * 4. Sends emails that are scheduled for the current date or earlier.
- * 5. Logs the sent emails and updates the email schedule.
- * 
- * Note: The email schedule is sorted in reverse order, so the function starts processing
- * from the end where dates are more likely to be in the past.
- * 
- * @function
- */
-function sendScheduledEmails() {
-  const emailScheduleFiddler = getFiddler_('Email Schedule');
-  const emailScheduleData = emailScheduleFiddler.getData();
-  let emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
-
-  sortArraysByValue(emailScheduleData, emailScheduleFormulas, (a, b) => new Date(b["Scheduled On"]) - new Date(a["Scheduled On"]));
-  log('sendEmails() - emailScheduleData', emailScheduleData.filter(row => row.Type === 'Join'));
-  log('sendEmails() - emailScheduleFormulas', emailScheduleFormulas.filter(row => row.Type === 'Join'));
-
-  // The emailSchedule is in reverse sorted order and we start at the far end 
-  // where the dates are more likely to be in the past.
-  const now = new Date().getTime()
-  const emailsToSend = [];
-  for (let i = emailScheduleData.length - 1; i >= 0; i--) {
-    const row = emailScheduleData[i];
-    // We test and see if we've hit a future date - if so we can finish
-    if (new Date(row["Scheduled On"]).getTime() > now) {
-      break;
-    } else {
-      const Subject = expandTemplate(row.Subject, row);
-      const Body = expandTemplate(row.Body, row);
-      emailsToSend.push({ to: row.Email, subject: Subject, htmlBody: Body });
-      emailScheduleData.splice(i, 1); // Remove the processed email
-      emailScheduleFormulas.splice(i, 1); // Remove the processed email
-    }
-  }
-  if (emailsToSend.length > 0) { // Only do work if there's work to do!
-    sendEmails(emailsToSend);
-    let emails = combineArrays(emailScheduleFormulas, emailScheduleData);
-    log('emails:', emails.filter(row => row.Type === 'Join'));
-    emailScheduleFiddler.setData(emails).dumpValues();
-  }
-}
-
-/**
- * Expands a template string by replacing placeholders with corresponding values from a row object.
- * Placeholders are in the format {key}, where key is a property name in the row object.
- * Date fields specified in the dateFields array are converted to local date strings.
+ * Processes transaction data by updating membership information and handling email schedules. Always returns one empty row, thus ensuring that the headers aren't removed from the source spreadsheet
  *
- * @param {string} template - The template string containing placeholders.
- * @param {Object} row - The object containing values to replace placeholders.
- * @returns {string} - The expanded template string with placeholders replaced by corresponding values.
+ * @param {Array<Object>} transactions - Array of transaction objects.
+ * @param {Array<Object>} membershipData - Array of membership data objects.
+ * @param {Array<Object>} emailScheduleData - Array of email schedule data objects.
+ * @param {Array<Object>} emailScheduleFormulas - Array of email schedule formula objects.
+ * @param {Array<Object>} bulkGroupEmails - Array of bulk group email objects.
+ * @returns {Object} An object containing processed rows and the updated transactions.
+ * @returns {Array<Object>} return.processedRows - Array of processed transaction rows.
+ * @returns {Array<Object>} return.result - Array of updated transactions.
  */
-function expandTemplate(template, row) {
-  const dateFields = ["Scheduled On", "Expires", "Joined", "Renewed On"]; // Add the names of fields that should be treated as dates
-  return template.replace(/{([^}]+)}/g, (_, key) => {
-    let value = row[key];
-    if (dateFields.includes(key)) {
-      value = new Date(value); // Convert to Date object if it's a date field
-      return value.toLocaleDateString(); // Convert Date objects to local date string
-    }
-    return value || "";
-  });
-};
-
-function processTransactions() {
-  convertLinks_('Transactions');
-  const bulkGroupFiddler = getFiddler_('Bulk Add Groups');
-  const bulkGroupEmails = bulkGroupFiddler.getData();
-  const emailScheduleFiddler = getFiddler_('Email Schedule');
-  const emailScheduleData = emailScheduleFiddler.getData();
-  const emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
-
-  const membershipFiddler = getFiddler_('Membership');
-  const membershipData = membershipFiddler.getData();
-  const processedTransactionsFiddler = getFiddler_('Processed Transactions');
-  const processedTransactions = getDataWithFormulas(processedTransactionsFiddler);
-  const transactionsFiddler = getFiddler_('Transactions').needFormulas();
-  const transactions = getDataWithFormulas(transactionsFiddler);
-  const headerAndData1 = transactionsFiddler.getSheet().getRange(1, 1, 2, transactionsFiddler.getNumColumns()).getValues();
-  const headerAndData1Copy = headerAndData1.map((row, index) => index === 1 ? row.map(() => '') : row);
-
-
-
-  log('processTransactions() - emailScheduleData[Join]', emailScheduleData.filter(row => row.Type === 'Join'));
-  log('processTransactions() - emailScheduleFormulas[Join]', emailScheduleFormulas.filter(row => row.Type === 'Join'));
-  const numMemberCols = membershipFiddler.getNumColumns();
-  const emailToMemberMap = new Map(numMemberCols ? membershipData.map((member, index) => [member.Email, index]) : []);
+function processTransactionsData(transactions, membershipData, emailScheduleData, emailScheduleFormulas, bulkGroupEmails) {
+  const headerRow = Object.keys(transactions[0]).reduce((acc, key) => {
+    acc[key] = '';
+    return acc;
+  }, {});
+  const emailToMemberMap = new Map(membershipData.map((member, index) => [member.Email, index]));
   const processedRows = [];
-  for (i = transactions.length - 1; i >= 0; i--) { // reverse order so as to preserve index during deletion
+  for (let i = transactions.length - 1; i >= 0; i--) {
     const row = transactions[i];
     if (row["Payable Status"].toLowerCase().startsWith("paid")) {
       const matchIndex = emailToMemberMap.get(row["Email Address"]);
-      if (matchIndex !== undefined) { // member exists
+      if (matchIndex !== undefined) {
         const member = membershipData[matchIndex];
         const years = getPeriod(row);
         renewMember(member, years, emailScheduleData, emailScheduleFormulas);
-      } else { // new member
+      } else {
         addNewMember(row, emailScheduleData, emailScheduleFormulas, membershipData, bulkGroupEmails);
       }
       row.Timestamp = new Date();
@@ -137,19 +61,12 @@ function processTransactions() {
       transactions.splice(i, 1);
     }
   }
-  processedTransactions.push(...processedRows);
-  // log('Processed Rows:', processedRows);
+  const updatedTransactions = transactions.length === 0 ? [headerRow] : transactions;
 
-  bulkGroupFiddler.setData(bulkGroupEmails).dumpValues();
-  log('ProcessTransactions - emailSchedule.filter(row => row.Type === "Join"):', emailScheduleData.filter(row => row.Type === 'Join'));
-  const emails = combineArrays(emailScheduleFormulas, emailScheduleData)
-  emails.filter(email => email.Type === 'Join').forEach(row => log('row:', row));
-  emailScheduleFiddler.setData(emails).dumpValues();
-  membershipData.sort((a, b) => a.Email.localeCompare(b.Email));
-  membershipFiddler.setData(membershipData).dumpValues();
-  transactionsFiddler.setData(transactions.length === 0 ? headerAndData1Copy : transactions).dumpValues();
-  processedTransactionsFiddler.setData(processedTransactions).dumpValues();
+  return { processedRows, updatedTransactions };
 }
+
+
 
 function getPeriod(row) {
   const yearsMatch = row.Payment.match(/(\d+)\s*year/);
@@ -172,6 +89,7 @@ function addNewMember(row, emailScheduleData, emailScheduleFormulas, membershipD
   addNewMemberToBulkGroups(bulkGroupEmails, newMember);
 }
 
+// JavaScript function
 function addNewMemberToBulkGroups(bulkGroupEmails, newMember) {
   _getGroupEmails().forEach((groupEmail) => {
     bulkGroupEmails.push({
@@ -230,6 +148,7 @@ function addMemberToEmailSchedule(member, emailScheduleData, emailScheduleFormul
     Subject: emailLookupFormula,
     Body: emailLookupFormula
   }
+  const logMessages = [];
   emailTypes.forEach(t => {
     const addOn = {
       Type: t,
@@ -240,10 +159,11 @@ function addMemberToEmailSchedule(member, emailScheduleData, emailScheduleFormul
       ...canonicalEntry,
       ...addOn
     };
-    log('newEntry.Email', newEntry.Email, 'newEntry.Type:', newEntry.Type, 'newEntry["Scheduled On"]:', newEntry["Scheduled On"]);
+    logMessages.push(`newEntry.Email: ${newEntry.Email}, newEntry.Type: ${newEntry.Type}, newEntry["Scheduled On"]: ${newEntry["Scheduled On"]}`);
     emailScheduleData.push(newEntry);
     emailScheduleFormulas.push(newEntry);
   });
+  log(logMessages.join('\n'));
 }
 
 /**
@@ -357,72 +277,9 @@ function getDataWithFormulas(fiddler) {
   fiddler.needFormulas();
   return mergeObjects(fiddler.getData(), fiddler.getFormulaData(), fiddler.getColumnsWithFormulas());
 }
-/**
- * Merges two lists of objects based on a list of keys using spread syntax.
- * @param {Array} a - The first list of objects.
- * @param {Array} b - The second list of objects.
- * @param {Array} k - The list of keys.
- * @returns {Array} - The list of merged objects.
- */
-function mergeObjects(a, b, k) {
-  return a.map((objA, index) => {
-    const objB = b[index];
-    const mergedObj = { ...objA };
-    k.forEach(key => {
-      if (objB.hasOwnProperty(key)) {
-        mergedObj[key] = objB[key];
-      }
-    });
-    return mergedObj;
-  });
-}
-/**
- * Logs messages to the console if the script property 'logging' is true.
- * @param  {...any} args - The messages or objects to log.
- */
-function log(...args) {
-  const logging = PropertiesService.getScriptProperties().getProperty('logging') === 'true';
-  if (logging) {
-    console.log(...args);
-  }
-}
 
 
-function sendEmails(emails) {
-  log(`Number of emails to be sent: ${emails.length}`);
-  const emailLogFiddler = getFiddler_('Email Log');
-  const emailLog = emailLogFiddler.getData();
-  const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
-  if (testEmails === 'true') { // Use test path only if testEmails is explicitly set to true
-    emails.forEach(email => log(`Email not sent due to testEmails property: To=${email.to}, Subject=${email.subject}, Body=${email.body}`));
-  } else {
-    emails.forEach(email => sendSingleEmail(email, emailLog));
-    emailLogFiddler.setData(emailLog).dumpValues();
-  }
-}
 
-function sendSingleEmail(email, emailLog) {
-  log(`Email Sent: :`, email);
-  try {
-    MailApp.sendEmail(email);
-  } catch (error) {
-    log(`Failed to send email to ${email.to}: ${error.message}`);
-  }
-  emailLog.push({ Timestamp: new Date(), ...email });
-}
-
-
-function testSendEmail() {
-  const recipient = "test@example.com";
-  const subject = "Test Subject";
-  const body = "This is a test email body.";
-  const options = {
-    cc: "cc@example.com",
-    bcc: "bcc@example.com",
-    attachments: [Utilities.newBlob("Attachment content", "text/plain", "test.txt")]
-  };
-  MailApp.sendEmail(recipient, subject, body, options);
-}
 
 
 function sortArraysByValue(arr1, arr2, compareFn) {
