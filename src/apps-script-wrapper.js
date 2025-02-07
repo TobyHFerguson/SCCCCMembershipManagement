@@ -18,8 +18,6 @@ function processTransactions() {
   const processedTransactions = getDataWithFormulas_(processedTransactionsFiddler);
 
   const { processedRows, updatedTransactions } = processTransactionsData(transactions, membershipData, emailScheduleData, emailScheduleFormulas, bulkGroupEmails);
-  log('updatedTransactions', updatedTransactions);
-  log('updatedTransactions.length', updatedTransactions.length);
   processedTransactions.push(...processedRows);
 
   bulkGroupFiddler.setData(bulkGroupEmails).dumpValues();
@@ -31,17 +29,41 @@ function processTransactions() {
   processedTransactionsFiddler.setData(processedTransactions).dumpValues();
 }
 
-function sendScheduledEmailsAppScript() {
+function sendScheduledEmails() {
   const emailScheduleFiddler = getFiddler_('Email Schedule');
   const emailScheduleData = emailScheduleFiddler.getData();
   const emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
   sortArraysByValue(emailScheduleData, emailScheduleFormulas, (a, b) => new Date(a["Scheduled On"]) - new Date(b["Scheduled On"]));
-  const numSentEmails = sendScheduledEmails(emailScheduleData);
-  const remainingEmails = combineArrays(emailScheduleFormulas, emailScheduleData);
-  remainingEmails.splice(0, numSentEmails);
+  const emailsToSend = createEmails(emailScheduleData);
+  sendEmails_(emailsToSend);
+  const combined = combineArrays(emailScheduleFormulas, emailScheduleData);
+  const remainingEmails = combined.filter((_, i) => i >= emailsToSend.length);  
   emailScheduleFiddler.setData(remainingEmails).dumpValues();
 }
 
+function sendEmails_(emails) {
+  log(`Number of emails to be sent: ${emails.length}`);
+  const emailLogFiddler = getFiddler_('Email Log');
+  const emailLog = emailLogFiddler.getData();
+  const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
+  if (testEmails === 'true') { // Use test path only if testEmails is explicitly set to true
+    emails.forEach(email => log(`Email not sent due to testEmails property: To=${email.to}, Subject=${email.subject}, Body=${email.body}`));
+  } else {
+    const emailsSent = emails.map(email => sendSingleEmail_(email));
+    emailLog.push(...emailsSent);
+    emailLogFiddler.setData(emailLog).dumpValues();
+  }
+}
+
+function sendSingleEmail_(email, emailLog) {
+  log(`Email Sent: :`, email);
+  try {
+    MailApp.sendEmail(email);
+    return { Timestamp: new Date(), ...email };
+  } catch (error) {
+    log(`Failed to send email to ${email.to}: ${error.message}`);
+  }
+}
 /**
 * Returns the data from a fiddler with formulas merged into it.
 * @param {fiddler} fiddler 
