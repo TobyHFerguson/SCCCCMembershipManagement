@@ -39,33 +39,32 @@ function makeCreateMessageFuns_(emailSpecs) {
  * Creates an object with functions to send emails based on the provided message creation functions.
  *
  * @param {Object} createMessageFuns - An object where keys are email types and values are functions that create email messages.
- * @returns {Object} An object where keys are email types and values are functions that send emails to members.
+ * @returns {Object} An object where keys are email types and values are functions that send emails to members and return the message.
  */
 function makeSendEmailFuns_(createMessageFuns) {
   const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
   return (member, type) => {
-    log(`createMessageFuns inside makeSendEmailFuns_:`, createMessageFuns);
-    log(`Sending email of type: ${type} to member: ${JSON.stringify(member)}`);
     const createMessageFun = createMessageFuns[type];
     if (!createMessageFun) {
       log(`No createMessageFun found for type: ${type}`);
-      return member;
+      return;
     }
-    const message = createMessageFun(member);
-    log(`Generated message: ${JSON.stringify(message)}`);
+    let message = createMessageFun(member);
     if (testEmails === 'true') {
       log(`Email not sent due to testEmails property: To=${member.Email}, Subject=${message.subject}, htmlBody=${message.htmlBody}`);
     } else {
-      sendSingleEmail_(message);
+      message = sendSingleEmail_(message);
       log(`Email sent: To=${member.Email}, Subject=${message.subject}`);
     }
-    return member;
+    return message;
   }
 }
 
 function makeEmailSender_(emailSpecs) {
   const sendEmail = makeSendEmailFuns_(makeCreateMessageFuns_(emailSpecs));
-  return (member, type) => { sendEmail(member, type); return member; };
+  return (member, type) => { 
+    log('makeEmailSender_', member, type);
+    return sendEmail(member, type) };
 }
 
 
@@ -85,9 +84,8 @@ function makeGroupJoiner_(groupEmails) {
   }
 };
 
-function makeTransactionProcessor_(membershipData, newMembers) {
-  log('membershipData:', membershipData);
-  const membershipByEmail = Object.keys(membershipData).reduce((acc, email) => { acc.email = membershipData; return acc; }, {});
+function makeTransactionProcessor_(membershipData, newMembers, newProcessedTransactions) {
+  const membershipByEmail = membershipData.reduce((acc, member) => {let e = member.Email; acc[e] = member; return acc;}, {})
   return (txn) => {
     const email = txn['Email Address'];
     let member = membershipByEmail[email];
@@ -108,33 +106,46 @@ function makeTransactionProcessor_(membershipData, newMembers) {
       member.RenewedOn = new Date();
       member.Expires = calculateExpirationDate(period, member.Expires);
     }
+    newProcessedTransactions.push(txn);
     return member;
   }
 }
+
+function lgr_(name) { return (item) => {log(name, item); return item;} };
 function processTransactions() {
   convertLinks_('Transactions');
   const membershipFiddler = getFiddler_('Membership');
-  const membershipData = membershipFiddler.getData();
   const sendEmail = makeEmailSender_(getFiddler_('Email Specifications').getData());
   const newMembers = [];
-  const processTxn = makeTransactionProcessor_(membershipData, newMembers);
+  const newProcessedTransactions = []
+  const membershipData = membershipFiddler.getData();
+  const processTxn = makeTransactionProcessor_(membershipData, newMembers, newProcessedTransactions);
   const joinGroup = makeGroupJoiner_(getGroupEmails_());
   const newLogMessages = []
+
+
   const transactions = getFiddler_('Transactions')
 
   transactions.getData().map(txn => processTxn(txn))
+  .map(lgr_('txn'))
     .map(member => joinGroup(member))
-    .map(member => { log(member); return member; })
+    .map(lgr_('member'))
     .map(member => sendEmail(member, member.RenewedOn ? 'Renewal' : 'Join'))
+    .map(lgr_('message'))
     .map(message => newLogMessages.push(message));
 
-  
 
-  membershipFiddler.setData(newMembers).dumpValues();
+
+  const newData = [...membershipData, ...newMembers];
+  membershipFiddler.setData(newData).dumpValues();
 
   const emailLogFiddler = getFiddler_('Email Log');
   const logs = [...emailLogFiddler.getData(), ...newLogMessages]
   emailLogFiddler.setData(logs).dumpValues();
+
+  const processedTransactionsFiddler = getFiddler_('Processed Transactions');
+  const npt = [...processedTransactionsFiddler.getData(), ...newProcessedTransactions];
+  processedTransactionsFiddler.setData(npt).dumpValues();
 
   const keepTransactions = PropertiesService.getScriptProperties().getProperty('keepTransactions');
   if (keepTransactions && keepTransactions === 'true') {
