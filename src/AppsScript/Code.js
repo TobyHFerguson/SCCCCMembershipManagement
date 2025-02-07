@@ -44,7 +44,10 @@ function processTransactions() {
   processedTransactionsFiddler.setData(processedTransactions).dumpValues();
 }
 
-
+function addMembersToGroups(){
+  const bulkGroupFiddler = getFiddler_('Bulk Add Groups');
+  bulkGroupFiddler.mapRows(row => {addMemberToGroup(row['Group Email [Required]'], row['Member Email']); return row;}).filterRows(_ => false).dumpValues();
+}
 
 function sendEmails_(emails) {
   log(`Number of emails to be sent: ${emails.length}`);
