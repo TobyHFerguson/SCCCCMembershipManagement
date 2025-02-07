@@ -47,7 +47,7 @@ function sendEmails_(emails) {
   const emailLog = emailLogFiddler.getData();
   const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
   if (testEmails === 'true') { // Use test path only if testEmails is explicitly set to true
-    emails.forEach(email => log(`Email not sent due to testEmails property: To=${email.to}, Subject=${email.subject}, Body=${email.body}`));
+    emails.forEach(email => log(`Email not sent due to testEmails property: To=${email.to}, Subject=${email.subject}, htmlBody=${email.htmlBody}`));
   } else {
     const emailsSent = emails.map(email => sendSingleEmail_(email));
     emailLog.push(...emailsSent);
