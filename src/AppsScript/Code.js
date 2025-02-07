@@ -49,6 +49,11 @@ function addMembersToGroups(){
   bulkGroupFiddler.mapRows(row => {addMemberToGroup(row['Group Email [Required]'], row['Member Email']); return row;}).filterRows(_ => false).dumpValues();
 }
 
+function removeMembersFromGroups() {
+  const bulkGroupFiddler = getFiddler_('Bulk Remove Groups');
+  bulkGroupFiddler.mapRows(row => {removeMemberFromGroup(row['Group Email [Required]'], row['Member Email']); return row;}).filterRows(_ => false).dumpValues();
+}
+
 function sendEmails_(emails) {
   log(`Number of emails to be sent: ${emails.length}`);
   const emailLogFiddler = getFiddler_('Email Log');
