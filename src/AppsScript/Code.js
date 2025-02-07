@@ -1,4 +1,19 @@
-// Apps Script functions
+/**
+ * @OnlyCurrentDoc - only edit this spreadsheet, and no other
+ */
+function sendScheduledEmails() {
+  const emailScheduleFiddler = getFiddler_('Email Schedule');
+  const emailScheduleData = emailScheduleFiddler.getData();
+  const emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
+  sortArraysByValue(emailScheduleData, emailScheduleFormulas, (a, b) => new Date(a["Scheduled On"]) - new Date(b["Scheduled On"]));
+  const emailsToSend = createEmails(emailScheduleData);
+  sendEmails_(emailsToSend);
+  const combined = combineArrays(emailScheduleFormulas, emailScheduleData);
+  const remainingEmails = combined.filter((_, i) => i >= emailsToSend.length);  
+  emailScheduleFiddler.setData(remainingEmails).dumpValues();
+}
+
+
 function processTransactions() {
   convertLinks_('Transactions');
   const transactionsFiddler = getFiddler_('Transactions').needFormulas();
@@ -29,30 +44,28 @@ function processTransactions() {
   processedTransactionsFiddler.setData(processedTransactions).dumpValues();
 }
 
-function sendScheduledEmails() {
-  const emailScheduleFiddler = getFiddler_('Email Schedule');
-  const emailScheduleData = emailScheduleFiddler.getData();
-  const emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
-  sortArraysByValue(emailScheduleData, emailScheduleFormulas, (a, b) => new Date(a["Scheduled On"]) - new Date(b["Scheduled On"]));
-  const emailsToSend = createEmails(emailScheduleData);
-  sendEmails_(emailsToSend);
-  const combined = combineArrays(emailScheduleFormulas, emailScheduleData);
-  const remainingEmails = combined.filter((_, i) => i >= emailsToSend.length);  
-  emailScheduleFiddler.setData(remainingEmails).dumpValues();
-}
+
 
 function sendEmails_(emails) {
   log(`Number of emails to be sent: ${emails.length}`);
   const emailLogFiddler = getFiddler_('Email Log');
-  const emailLog = emailLogFiddler.getData();
   const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
   if (testEmails === 'true') { // Use test path only if testEmails is explicitly set to true
     emails.forEach(email => log(`Email not sent due to testEmails property: To=${email.to}, Subject=${email.subject}, htmlBody=${email.htmlBody}`));
   } else {
     const emailsSent = emails.map(email => sendSingleEmail_(email));
-    emailLog.push(...emailsSent);
+    const emailLog = [...emailLogFiddler.getData(), ...emailsSent];
     emailLogFiddler.setData(emailLog).dumpValues();
   }
+}
+
+
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('Membership Management')
+    .addItem('Process Transactions', processTransactions.name)
+    .addItem('Send Emails', sendScheduledEmails.name)
+    .addToUi();
 }
 
 function sendSingleEmail_(email, emailLog) {
@@ -74,17 +87,7 @@ function getDataWithFormulas_(fiddler) {
   return combineArrays(fiddler.getFormulaData(), fiddler.getData());
 }
 
-/**
- * @OnlyCurrentDoc - only edit this spreadsheet, and no other
- */
 
-function onOpen() {
-  const ui = SpreadsheetApp.getUi();
-  ui.createMenu('Membership Management')
-    .addItem('Process Transactions', processTransactions.name)
-    .addItem('Send Emails', sendScheduledEmails.name)
-    .addToUi();
-} ""
 
 
 
