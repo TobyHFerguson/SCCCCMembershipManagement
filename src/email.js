@@ -20,7 +20,8 @@
 function sendScheduledEmails(emailScheduleData, emailScheduleFormulas) {
     sortArraysByValue(emailScheduleData, emailScheduleFormulas, (a, b) => new Date(b["Scheduled On"]) - new Date(a["Scheduled On"]));
     const emailsToSend = getEmailsToSend(emailScheduleData, emailScheduleFormulas);
-    return sendEmails(emailsToSend);
+    sendEmails(emailsToSend);
+    return emailsToSend.length
 }
 
 function getEmailsToSend(emailScheduleData, emailScheduleFormulas) {
