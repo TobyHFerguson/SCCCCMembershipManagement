@@ -1,6 +1,8 @@
 /**
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
+const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
+
 function sendScheduledEmails_() {
   const emailScheduleFiddler = getFiddler_('Email Schedule');
   const emailScheduleData = emailScheduleFiddler.getData();
@@ -20,7 +22,7 @@ function sendScheduledEmails_() {
  * @param {string} emailSpecs[].Type - The type of the email.
  * @param {string} emailSpecs[].Subject - The subject template of the email.
  * @param {string} emailSpecs[].Body - The body template of the email.
- * @returns {Object} An object where each key is an email type and each value is a function that generates an email message.
+ * @returns {Object} An object where each key is an email type and each value is a function that takes a member object and returns an email message object.
  */
 function makeCreateMessageFuns_(emailSpecs) {
   let result = emailSpecs.reduce((handlers, emailSpec) => {
@@ -35,36 +37,47 @@ function makeCreateMessageFuns_(emailSpecs) {
   return result;
 }
 
+
 /**
- * Creates an object with functions to send emails based on the provided message creation functions.
+ * Creates a function to send emails based on the provided message creation functions.
  *
  * @param {Object} createMessageFuns - An object where keys are email types and values are functions that create email messages.
- * @returns {Object} An object where keys are email types and values are functions that send emails to members and return the message.
+ * @returns {Function} A function that sends an email to a member based on the specified type.
+ * The returned function takes two parameters:
+ *   @param {Object} member - The member to whom the email will be sent. Should have an `Email` property.
+ *   @param {string} type - The type of email to send. Should correspond to a key in `createMessageFuns`.
+ * The return function returns:
+ *   @returns {Object} The message object that was sent.
  */
 function makeSendEmailFuns_(createMessageFuns) {
-  const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
   return (member, type) => {
     const createMessageFun = createMessageFuns[type];
     if (!createMessageFun) {
       log(`No createMessageFun found for type: ${type}`);
       return;
     }
-    let message = createMessageFun(member);
+    const message = createMessageFun(member);
+    let sentMessage
     if (testEmails === 'true') {
-      log(`Email not sent due to testEmails property: To=${member.Email}, Subject=${message.subject}, htmlBody=${message.htmlBody}`);
+      log(`Email sent: To=${member.Email}, Subject=${sentMessage.subject}`);
     } else {
-      message = sendSingleEmail_(message);
+      sentMessage = sendSingleEmail_(message); // Send the email and update the message object with any additional information
       log(`Email sent: To=${member.Email}, Subject=${message.subject}`);
     }
     return message;
   }
 }
 
+/**
+ * Creates an email sender function based on the provided email specifications.
+ *
+ * @param {Object} emailSpecs - The specifications for the email.
+ * @returns {Function} A function that sends an email to a member of a specified type.
+ */
 function makeEmailSender_(emailSpecs) {
   const sendEmail = makeSendEmailFuns_(makeCreateMessageFuns_(emailSpecs));
-  return (member, type) => { 
-    log('makeEmailSender_', member, type);
-    return sendEmail(member, type) };
+  return (member, type) =>
+    log('makeEmailSender_', member, type) || sendEmail(member, type);
 }
 
 
@@ -85,7 +98,7 @@ function makeGroupJoiner_(groupEmails) {
 };
 
 function makeTransactionProcessor_(membershipData, newMembers, newProcessedTransactions) {
-  const membershipByEmail = membershipData.reduce((acc, member) => {let e = member.Email; acc[e] = member; return acc;}, {})
+  const membershipByEmail = membershipData.reduce((acc, member) => { let e = member.Email; acc[e] = member; return acc; }, {})
   return (txn) => {
     const email = txn['Email Address'];
     let member = membershipByEmail[email];
@@ -111,7 +124,7 @@ function makeTransactionProcessor_(membershipData, newMembers, newProcessedTrans
   }
 }
 
-function lgr_(name) { return (item) => {log(name, item); return item;} };
+function lgr_(name) { return (item) => { log(name, item); return item; } };
 function processTransactions() {
   convertLinks_('Transactions');
   const membershipFiddler = getFiddler_('Membership');
@@ -127,7 +140,7 @@ function processTransactions() {
   const transactions = getFiddler_('Transactions')
 
   transactions.getData().map(txn => processTxn(txn))
-  .map(lgr_('txn'))
+    .map(lgr_('txn'))
     .map(member => joinGroup(member))
     .map(lgr_('member'))
     .map(member => sendEmail(member, member.RenewedOn ? 'Renewal' : 'Join'))
@@ -187,15 +200,15 @@ function onOpen() {
     .addItem('Send Emails', sendScheduledEmails.name)
     .addToUi();
 }
-
 function sendSingleEmail_(email, emailLog) {
-  log(`Email Sent: :`, email);
+  log(`Email Sent: To=${email.to}, Subject=${email.subject}, Body=${email.htmlBody}`);
   try {
     MailApp.sendEmail(email);
     return { Timestamp: new Date(), ...email };
   } catch (error) {
     log(`Failed to send email to ${email.to}: ${error.message}`);
   }
+}
 }
 /**
 * Returns the data from a fiddler with formulas merged into it.
