@@ -18,11 +18,9 @@
  * @function
  */
 function createEmails(emailScheduleData) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Set the time to the start of the day
+  const today = getDay(new Date());
   return emailScheduleData.filter(row => {
-    const scheduledDate = new Date(row["Scheduled On"]);
-    scheduledDate.setHours(0, 0, 0, 0); // Set the time to the start of the day
+    const scheduledDate = getDay(row["Scheduled On"]);
     return scheduledDate <= today;
   }).map(row => {
     const Subject = expandTemplate(row.Subject, row);
@@ -31,7 +29,9 @@ function createEmails(emailScheduleData) {
   });
 }
 
-
+function getDay(date) { 
+  return new Date(new Date(date).setHours(0, 0, 0, 0));
+}
 /**
  * Expands a template string by replacing placeholders with corresponding values from a row object.
  * Placeholders are in the format {key}, where key is a property name in the row object.

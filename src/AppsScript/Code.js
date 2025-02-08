@@ -3,16 +3,75 @@
  */
 const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
 
-function sendScheduledEmails_() {
-  const emailScheduleFiddler = getFiddler_('Email Schedule');
-  const emailScheduleData = emailScheduleFiddler.getData();
-  const emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
-  sortArraysByValue(emailScheduleData, emailScheduleFormulas, (a, b) => new Date(a["Scheduled On"]) - new Date(b["Scheduled On"]));
-  const emailsToSend = createEmails(emailScheduleData);
-  sendEmails_(emailsToSend);
-  const combined = combineArrays(emailScheduleFormulas, emailScheduleData);
-  const remainingEmails = combined.filter((_, i) => i >= emailsToSend.length);
-  emailScheduleFiddler.setData(remainingEmails).dumpValues();
+function processFullyExpiredMembers() {
+  const emailSpecs = getFiddler_('Email Specifications').getData().reduce((acc, emailSpec) => {let t = emailSpec.Type;  acc[t] = emailSpec; return acc}, {});
+
+  const membershipFiddler = getFiddler_('Membership');
+  membershipFiddler.getData().map(member => {
+    if (pastExpiration_(member.Expires, emailSpecs.Expiry_4.Offset)) {
+      return sendExpiry4Email_(member, emailSpecs.Expiry_4.Subject, emailSpecs.Expiry_4.Body);
+    }
+  }).map(lgr_('message'));
+
+  // getAllGroupEmails_().forEach(groupEmail => { removeMemberFromGroup(groupEmail, member.Email) });
+
+}
+
+function pastExpiration_(expirationDate, offset) {
+  const currentDate = getDay(new Date());
+  const lastDay = getDay(addDaysToDate(expirationDate, offset));
+  const result = currentDate >=lastDay
+  return result;
+}
+
+function sendExpiry4Email_(member, Subject, Body) {
+  const subject = expandTemplate(Subject, member);
+  const htmlBody = expandTemplate(Body, member);
+  return sendSingleEmail_({ to: member.Email, subject, htmlBody });
+}
+
+function processTransactions() {
+  convertLinks_('Transactions');
+  const membershipFiddler = getFiddler_('Membership');
+  const sendEmail = makeEmailSender_(getFiddler_('Email Specifications').getData());
+  const newMembers = [];
+  const newProcessedTransactions = []
+  const membershipData = membershipFiddler.getData();
+  const processTxn = makeTransactionProcessor_(membershipData, newMembers, newProcessedTransactions);
+  const joinGroup = makeGroupJoiner_(getGroupEmails_());
+  const newLogMessages = []
+
+
+  const transactions = getFiddler_('Transactions')
+
+  transactions.getData().map(txn => processTxn(txn))
+    .map(lgr_('txn'))
+    .map(member => joinGroup(member))
+    .map(lgr_('member'))
+    .map(member => sendEmail(member, member.RenewedOn ? 'Renewal' : 'Join'))
+    .map(lgr_('message'))
+    .map(message => newLogMessages.push(message));
+
+
+
+  const newData = [...membershipData, ...newMembers];
+  membershipFiddler.setData(newData).dumpValues();
+
+  const emailLogFiddler = getFiddler_('Email Log');
+  const logs = [...emailLogFiddler.getData(), ...newLogMessages]
+  emailLogFiddler.setData(logs).dumpValues();
+
+  const processedTransactionsFiddler = getFiddler_('Processed Transactions');
+  const npt = [...processedTransactionsFiddler.getData(), ...newProcessedTransactions];
+  processedTransactionsFiddler.setData(npt).dumpValues();
+
+  const keepTransactions = PropertiesService.getScriptProperties().getProperty('keepTransactions');
+  if (keepTransactions && keepTransactions === 'true') {
+    log
+  } else {
+    log('transactions.getData(): ', transactions.getData())
+    transactions.filterRows(_ => false).dumpValues();
+  }
 }
 
 /**
@@ -125,59 +184,8 @@ function makeTransactionProcessor_(membershipData, newMembers, newProcessedTrans
 }
 
 function lgr_(name) { return (item) => { log(name, item); return item; } };
-function processTransactions() {
-  convertLinks_('Transactions');
-  const membershipFiddler = getFiddler_('Membership');
-  const sendEmail = makeEmailSender_(getFiddler_('Email Specifications').getData());
-  const newMembers = [];
-  const newProcessedTransactions = []
-  const membershipData = membershipFiddler.getData();
-  const processTxn = makeTransactionProcessor_(membershipData, newMembers, newProcessedTransactions);
-  const joinGroup = makeGroupJoiner_(getGroupEmails_());
-  const newLogMessages = []
 
 
-  const transactions = getFiddler_('Transactions')
-
-  transactions.getData().map(txn => processTxn(txn))
-    .map(lgr_('txn'))
-    .map(member => joinGroup(member))
-    .map(lgr_('member'))
-    .map(member => sendEmail(member, member.RenewedOn ? 'Renewal' : 'Join'))
-    .map(lgr_('message'))
-    .map(message => newLogMessages.push(message));
-
-
-
-  const newData = [...membershipData, ...newMembers];
-  membershipFiddler.setData(newData).dumpValues();
-
-  const emailLogFiddler = getFiddler_('Email Log');
-  const logs = [...emailLogFiddler.getData(), ...newLogMessages]
-  emailLogFiddler.setData(logs).dumpValues();
-
-  const processedTransactionsFiddler = getFiddler_('Processed Transactions');
-  const npt = [...processedTransactionsFiddler.getData(), ...newProcessedTransactions];
-  processedTransactionsFiddler.setData(npt).dumpValues();
-
-  const keepTransactions = PropertiesService.getScriptProperties().getProperty('keepTransactions');
-  if (keepTransactions && keepTransactions === 'true') {
-    log
-  } else {
-    log('transactions.getData(): ', transactions.getData())
-    transactions.filterRows(_ => false).dumpValues();
-  }
-}
-
-function addMembersToGroups_() {
-  const bulkGroupFiddler = getFiddler_('Bulk Add Groups');
-  bulkGroupFiddler.mapRows(row => { addMemberToGroup(row['Group Email [Required]'], row['Member Email']); return row; }).filterRows(_ => false).dumpValues();
-}
-
-function removeMembersFromGroups_() {
-  const bulkGroupFiddler = getFiddler_('Bulk Remove Groups');
-  bulkGroupFiddler.mapRows(row => { removeMemberFromGroup(row['Group Email [Required]'], row['Member Email']); return row; }).filterRows(_ => false).dumpValues();
-}
 
 function sendEmails_(emails) {
   log(`Number of emails to be sent: ${emails.length}`);
@@ -200,6 +208,7 @@ function onOpen() {
     .addItem('Send Emails', sendScheduledEmails.name)
     .addToUi();
 }
+
 function sendSingleEmail_(email, emailLog) {
   log(`Email Sent: To=${email.to}, Subject=${email.subject}, Body=${email.htmlBody}`);
   try {
@@ -209,7 +218,7 @@ function sendSingleEmail_(email, emailLog) {
     log(`Failed to send email to ${email.to}: ${error.message}`);
   }
 }
-}
+
 /**
 * Returns the data from a fiddler with formulas merged into it.
 * @param {fiddler} fiddler 
