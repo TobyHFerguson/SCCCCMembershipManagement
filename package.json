@@ -8,12 +8,16 @@
     "push:watch": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp push -w",
     "push": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp push",
     "pull": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp pull",
-    "open": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp open"
+    "open": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp open",
+    "docs": "npx jsdoc src/JavaScript -d docs"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/TobyHFerguson/SCCCCManagement.git"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "jsdoc": "^4.0.4"
+  }
 }
