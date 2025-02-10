@@ -1,0 +1,29 @@
+{                                                                                                                                                                                                                                                        
+  "tags": {
+    "allowUnknownTags": true
+  },
+  "source": {
+    "include": ["./src/JavaScript"],
+    "includePattern": ".+\\.js(doc|x)?$",
+    "excludePattern": "(^|\\/|\\\\)_"
+  },
+  "plugins": ["plugins/markdown"],
+  "templates": {
+    "cleverLinks": false,
+    "monospaceLinks": false
+  },
+  "opts": {
+    "destination": "./out/",
+    "recurse": true,
+    "readme": "README.md"
+  },
+  "docdash": {
+    "typedefs": true,
+    "menu": {
+      "Table of Contents": {
+        "class": "menu-item",
+        "link": "toc.html"
+      }
+    }
+  }
+}
