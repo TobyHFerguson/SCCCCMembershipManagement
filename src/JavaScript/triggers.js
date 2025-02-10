@@ -9,7 +9,13 @@ function processPaidTransactions(transactions, members) {
   const membersByEmail = new Map(members.map(member => [member["Email Address"], member]));
   const memberAdditions = transactions.filter(transaction => transaction["Payable Status"].toLowerCase().startsWith("paid"))
     .map(transaction => {
-      return { email: transaction["Email Address"], period: getPeriod(transaction), first: transaction["First Name"], last: transaction["Last Name"] };
+      return {
+        email: transaction["Email Address"],
+        period: getPeriod(transaction), 
+        first: transaction["First Name"], 
+        last: transaction["Last Name"],
+        type: membersByEmail.has(transaction["Email Address"]) ? 'Renew' : 'Add'
+      };
     });
   return memberAdditions;
 }
