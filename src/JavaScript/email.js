@@ -17,20 +17,41 @@
  * 
  * @function
  */
-function createEmails(emailScheduleData) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Set the time to the start of the day
-  return emailScheduleData.filter(row => {
-    const scheduledDate = new Date(row["Scheduled On"]);
-    scheduledDate.setHours(0, 0, 0, 0); // Set the time to the start of the day
-    return scheduledDate <= today;
-  }).map(row => {
-    const Subject = expandTemplate(row.Subject, row);
-    const Body = expandTemplate(row.Body, row);
-    return { to: row.Email, subject: Subject, htmlBody: Body }
-  });
+function doScheduledActions(emailScheduleData, activeMembers, expiredMembers) {
+  const today = midday();
+  // Set the time to the start of the day
+  const newSchedule = emailScheduleData.filter(scheduledAction => {
+    const scheduledDate = midday(new Date(scheduledAction["Scheduled On"]));
+    if (scheduledDate <= today) {
+      performScheduledAction(scheduledAction, activeMembers, expiredMembers);
+      return false;
+    } else {
+      return true;
+    }
+  })
+  return newSchedule;
 }
 
+
+/**
+ * Sends an email based on the scheduled action data.
+ * 
+ * This function sends an email using the data in the scheduled action object.
+ * It uses the MailApp service to send the email and logs the email in the email log.
+ * 
+ * @param {Object} scheduledAction - The scheduled action object containing email data.
+ */
+function performScheduledAction(scheduledAction, activeMembers, expiredMembers) {
+  if (scheduledAction.Type === 'Expiry4') {
+    expiredMember(scheduledAction.Email, activeMembers, expiredMembers);
+  }
+  const email = {
+    to: scheduledAction.Email,
+    subject: scheduledAction.Subject,
+    htmlBody: expandTemplate(scheduledAction.Body, scheduledAction)
+  };
+  sendSingleEmail_(email);
+}
 
 /**
  * Expands a template string by replacing placeholders with corresponding values from a row object.
