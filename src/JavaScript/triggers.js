@@ -26,7 +26,9 @@ if (typeof module !== 'undefined' && module.exports) {
     createScheduleEntries_,
     ActionType,
     today,
-    addDaysToDate_
+    addDaysToDate_,
+    addRenewedMemberToActionSchedule_,
+    calculateExpirationDate_
   };
 }
 
@@ -57,20 +59,36 @@ function today(date = new Date()) {
  * @property {Date} [Migrated] - The date the member was migrated.
  */
 
+/**
+ * @typedef {Object} ActionSchedule
+ * @property {Date} Date - The date of the action.
+ * @property {string} Email - The member email concerned.
+ * @property {ActionType} Type - The action to be taken.
+ */
+
+/**
+ * Represents the specification linking an action type the corresponding email subject and body. The offset is the number of days relative to expiry to send the email. (negtive being before expiry, positive being after expiry)
+ * A missing offset means the action is to be taken immediately.
+ * @typedef {Object} ActionSpec
+ * @property {ActionType} Type - The type of action.
+ * @property {number} [Offset] - The offset in days from expiry for the action. No offset means immediate
+ * @property {string} Subject - The subject of the email.
+ * @property {string} Body - The body of the email.
+ */
 // Pure JavaScript functions
 /**
  * Processes transaction data by updating membership information and handling email schedules. Always returns one empty row, thus ensuring that the headers aren't removed from the source spreadsheet
  *
  * @param {Array<Transaction>} transactions - Array of transaction objects.
  * @param {Array<Member>} membershipData - Array of membership data objects.
- * @param {Array<EmailSchedule>} emailScheduleData - Array of email schedule data objects.
- * @param {Array<string>} actionSpecs - Array of email schedule formula objects.
+ * @param {Array<ActionSchedule>} actionSchedule - Array of email schedule data objects.
+ * @param {Array<ActionSpec>} actionSpecs - Array of email schedule formula objects.
  * @param {Array<Object>} bulkGroupEmails - Array of bulk group email objects.
  * @returns {Object} An object containing processed rows and the updated transactions.
  * @returns {Array<Object>} return.processedRows - Array of processed transaction rows.
  * @returns {Array<Object>} return.result - Array of updated transactions.
  */
-function processPaidTransactions_(transactions, membershipData, emailScheduleData, actionSpecs) {
+function processPaidTransactions_(transactions, membershipData, actionSchedule, actionSpecs) {
   
   const emailToMemberMap = new Map(membershipData.map((member, index) => [member.Email, index]));
   const newMembers = [];
@@ -80,10 +98,10 @@ function processPaidTransactions_(transactions, membershipData, emailScheduleDat
       if (matchIndex !== undefined) {
         const member = membershipData[matchIndex];
         const years = getPeriod(txn);
-        renewMember(member, years, emailScheduleData, actionSpecs);
+        renewMember(member, years, actionSchedule, actionSpecs);
       } else {
-        newMembers.push(addNewMember(txn, emailScheduleData, actionSpecs, membershipData));
-        
+        const newMember = addNewMember(txn, actionSchedule, actionSpecs, membershipData)
+        newMembers.push(newMember.Email);
       }
       txn.Timestamp = new Date();
       txn.Processed = true;
@@ -103,42 +121,42 @@ function getPeriod(txn) {
   return years;
 }
 
-function addNewMember(txn, emailScheduleData, actionSpecs, membershipData) {
+function addNewMember(txn, actionSchedule, actionSpecs, membershipData) {
   const newMember = {
     Email: txn["Email Address"],
     First: txn["First Name"],
     Last: txn["Last Name"],
     Joined: new Date(),
     Period: getPeriod(txn),
-    Expires: calculateExpirationDate(getPeriod(txn)),
+    Expires: calculateExpirationDate_(getPeriod(txn)),
     "Renewed On": '',
   };
   membershipData.push(newMember);
-  addNewMemberToEmailSchedule(newMember, emailScheduleData, actionSpecs);
-  return newMember.Email
+  addNewMemberToActionSchedule_(newMember, actionSchedule, actionSpecs);
+  return newMember
 }
 
-function addNewMemberToEmailSchedule(member, emailScheduleData, actionSpecs) {
-  const scheduleEntries = createScheduleEntries_(member, emailScheduleData, actionSpecs, 'Join');
-  emailScheduleData.push(...scheduleEntries);
+function addNewMemberToActionSchedule_(member, actionSchedule, actionSpecs) {
+  const scheduleEntries = createScheduleEntries_(member, ActionType.Join, actionSpecs) ;
+  actionSchedule.push(...scheduleEntries);
 }
 
-function addRenewedMemberToEmailSchedule(member, emailScheduleData, emailSpecs) {
+function addRenewedMemberToActionSchedule_(member, actionSchedule, actionSpecs) {
   const email = member.Email;
-  removeEmails(email, emailScheduleData);
-  const scheduleEntries = createScheduleEntries_(member, emailScheduleData, emailSpecs, 'Renewal');
-  emailScheduleData.push(...scheduleEntries);
+  removeEmails(email, actionSchedule);
+  const scheduleEntries = createScheduleEntries_(member, ActionType.Renew, actionSpecs);
+  actionSchedule.push(...scheduleEntries);
 }
 
 /**
  * Removes all objects from the data & formula arrays whose Email property matches the given email address.
  * @param {string} email - The email address to match.
- * @param {Array} emailScheduleData - The array of objects.
+ * @param {Array} actionSchedule - The array of objects.
  */
-function removeEmails(email, emailScheduleData) {
-  for (let i = emailScheduleData.length - 1; i >= 0; i--) {
-    if (emailScheduleData[i].Email === email) {
-      emailScheduleData.splice(i, 1);
+function removeEmails(email, actionSchedule) {
+  for (let i = actionSchedule.length - 1; i >= 0; i--) {
+    if (actionSchedule[i].Email === email) {
+      actionSchedule.splice(i, 1);
     }
   }
 }
@@ -149,7 +167,6 @@ function removeEmails(email, emailScheduleData) {
  * @property {string} email - The member email concerned.
  * @property {ActionType} action - The action to be taken.
  */
-
 function createScheduleEntries_(member, type, actionSpecs) {
   const scheduleEntries = [];
   switch (type) {
@@ -163,7 +180,7 @@ function createScheduleEntries_(member, type, actionSpecs) {
   return scheduleEntries;
 }
 
-function addMemberToEmailSchedule(member, emailScheduleData, emailSpecs, emailType) {
+function addMemberToEmailSchedule(member, actionSchedule, actionSpecs, emailType) {
   const email = member.Email;
   const emailTypes = [emailType, 'Expiry 1', 'Expiry 2', 'Expiry 3', 'Expiry 4'];
   // These formulas all use the column heading to look up the value in the Membership sheet or the Emails sheet.
@@ -198,7 +215,7 @@ function addMemberToEmailSchedule(member, emailScheduleData, emailSpecs, emailTy
       ...addOn
     };
     logMessages.push(`newEntry.Email: ${newEntry.Email}, newEntry.Type: ${newEntry.Type}, newEntry["Scheduled On"]: ${newEntry["Scheduled On"]}`);
-    emailScheduleData.push(newEntry);
+    actionSchedule.push(newEntry);
     emailScheduleFormulas.push(newEntry);
   });
   log(logMessages.join('\n'));
@@ -208,13 +225,13 @@ function addMemberToEmailSchedule(member, emailScheduleData, emailSpecs, emailTy
  * 
  * @param {*} member 
  * @param {number} period 
- * @param {} emailScheduleData 
+ * @param {} actionSchedule 
  */
-function renewMember(member, period, emailScheduleData, emailSpecs) {
+function renewMember(member, period, actionSchedule, actionSpecs) {
   member.Period = period;
   member["Renewed On"] = new Date();
-  member.Expires = calculateExpirationDate(period, member.Expires);
-  addRenewedMemberToEmailSchedule(member, emailScheduleData, emailSpecs);
+  member.Expires = calculateExpirationDate_(period, member.Expires);
+  addRenewedMemberToActionSchedule_(member, actionSchedule, actionSpecs);
 }
 
 /**
@@ -225,16 +242,18 @@ function renewMember(member, period, emailScheduleData, emailSpecs) {
  * @param {Date} [expires] - the existing expiration date, if any
  * @returns {Date} - The expiration date
  */
-function calculateExpirationDate(period, expires) {
+function calculateExpirationDate_(period, expires) {
   const today = new Date();
-  const futureDate = new Date(today.setFullYear(today.getFullYear() + period));
+  const futureDate = new Date(today);
+  futureDate.setFullYear(futureDate.getFullYear() + period);
 
   if (!expires) {
     return futureDate;
   }
 
   const expirationDate = new Date(expires);
-  const futureExpirationDate = new Date(expirationDate.setFullYear(expirationDate.getFullYear() + period));
+  const futureExpirationDate = new Date(expirationDate);
+  futureExpirationDate.setFullYear(futureExpirationDate.getFullYear() + period);
 
   return futureDate > futureExpirationDate ? futureDate : futureExpirationDate;
 }
