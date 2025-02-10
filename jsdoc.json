@@ -1,29 +1,38 @@
-{                                                                                                                                                                                                                                                        
-  "tags": {
-    "allowUnknownTags": true
-  },
-  "source": {
-    "include": ["./src/JavaScript"],
-    "includePattern": ".+\\.js(doc|x)?$",
-    "excludePattern": "(^|\\/|\\\\)_"
-  },
-  "plugins": ["plugins/markdown"],
-  "templates": {
-    "cleverLinks": false,
-    "monospaceLinks": false
-  },
-  "opts": {
-    "destination": "./out/",
-    "recurse": true,
-    "readme": "README.md"
-  },
-  "docdash": {
-    "typedefs": true,
-    "menu": {
-      "Table of Contents": {
-        "class": "menu-item",
-        "link": "toc.html"
+{
+    "tags": {
+      "allowUnknownTags": true
+    },
+    "source": {
+      "include": ["./src/JavaScript"],
+      "includePattern": ".+\\.js(doc|x)?$",
+      "excludePattern": "(^|\\/|\\\\)_"
+    },
+    "plugins": ["plugins/markdown"],
+    "templates": {
+      "cleverLinks": false,
+      "monospaceLinks": false
+    },
+    "opts": {
+      "destination": "./docs/",
+      "recurse": true,
+      "readme": "README.md",
+       "navigation": { 
+        "include": [
+          "identifiers", 
+          "typedefs",   
+          "modules",    
+          "externals" 
+        ]
       }
-    }
+    },
+      "docdash": {
+          "typedefs": true,
+          "search": true,
+          "menu": {
+            "Table of Contents": {
+              "class": "menu-item",
+              "link": "index.html" 
+            }
+          }
+        }
   }
-}

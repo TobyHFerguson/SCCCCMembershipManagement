@@ -36,45 +36,8 @@ function today_(date = new Date()) {
   return new Date().setHours(12, 0, 0, 0);
 }
 
-/**
- * Represents a transaction object.
- * @typedef {Object} Transaction
- * @property {string} Email Address - The email address associated with the transaction.
- * @property {string} First Name- The first name of the person associated with the transaction.
- * @property {string} Last Name - The last name of the person associated with the transaction.
- * @property {string} Payable Status - The status of the transaction (e.g., "paid").
- * @property {string} Payment - The payment details of the transaction. This is a string such as '1 year'.
- * @property {Date} Timestamp - The timestamp when the transaction was processed.
- */
-/**
- * Represents a member object.
- * @typedef {Object} Member
- * @property {string} Email - The email address of the member.
- * @property {string} First - The first name of the member.
- * @property {string} Last - The last name of the member.
- * @property {Date} Joined - The date the member joined.
- * @property {number} Period - The membership period in years.
- * @property {Date} Expires - The expiration date of the membership.
- * @property {Date} [Renewed On] - The date the membership was last renewed.
- * @property {Date} [Migrated] - The date the member was migrated.
- */
 
-/**
- * @typedef {Object} ActionSchedule
- * @property {Date} Date - The date of the action.
- * @property {string} Email - The member email concerned.
- * @property {ActionType} Type - The action to be taken.
- */
 
-/**
- * Represents the specification linking an action type the corresponding email subject and body. The offset is the number of days relative to expiry to send the email. (negtive being before expiry, positive being after expiry)
- * A missing offset means the action is to be taken immediately.
- * @typedef {Object} ActionSpec
- * @property {ActionType} Type - The type of action.
- * @property {number} [Offset] - The offset in days from expiry for the action. No offset means immediate
- * @property {string} Subject - The subject of the email.
- * @property {string} Body - The body of the email.
- */
 // Pure JavaScript functions
 /**
  * Processes transaction data by updating membership information and handling email schedules. Always returns one empty row, thus ensuring that the headers aren't removed from the source spreadsheet
@@ -161,12 +124,7 @@ function removeEmails_(email, actionSchedule) {
   }
 }
 
-/**
- * typedef {Object} ScheduleEntry
- * @property {Date} date - The date of the action.
- * @property {string} email - The member email concerned.
- * @property {ActionType} action - The action to be taken.
- */
+
 function createScheduleEntries_(member, type, actionSpecs) {
   const scheduleEntries = [];
   switch (type) {
