@@ -1,12 +1,12 @@
 /**
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
-function sendScheduledEmails() {
+function executeScheduledActions() {
   const emailScheduleFiddler = getFiddler_('Email Schedule');
   const emailScheduleData = emailScheduleFiddler.getData();
   const emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
   sortArraysByValue(emailScheduleData, emailScheduleFormulas, (a, b) => new Date(a["Scheduled On"]) - new Date(b["Scheduled On"]));
-  const emailsToSend = createEmails(emailScheduleData);
+  const emailsToSend = doScheduledActions(emailScheduleData);
   sendEmails_(emailsToSend);
   const combined = combineArrays(emailScheduleFormulas, emailScheduleData);
   const remainingEmails = combined.filter((_, i) => i >= emailsToSend.length);  
@@ -21,26 +21,27 @@ function processTransactions() {
   if (transactions.length === 0) { return; }
 
 
+
   const bulkGroupFiddler = getFiddler_('Bulk Add Groups');
   const bulkGroupEmails = bulkGroupFiddler.getData();
   const emailScheduleFiddler = getFiddler_('Email Schedule');
   const emailScheduleData = emailScheduleFiddler.getData();
-  const emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
-
+  
   const membershipFiddler = getFiddler_('Membership');
   const membershipData = membershipFiddler.getData();
   const processedTransactionsFiddler = getFiddler_('Processed Transactions');
   const processedTransactions = getDataWithFormulas_(processedTransactionsFiddler);
+  const actionSpecs = getFiddler_('Action Specs').getData();
+  const expirationSpecs = actionSpecs.reduce((acc, spec) => { acc[spec.Type] = spec.Offset; return acc; }, {});
 
-  const { processedRows, updatedTransactions } = processTransactionsData(transactions, membershipData, emailScheduleData, emailScheduleFormulas, bulkGroupEmails);
+  const newMembers = processTransactionsData(transactions, membershipData, emailScheduleData, actionSpecs);
   processedTransactions.push(...processedRows);
 
   bulkGroupFiddler.setData(bulkGroupEmails).dumpValues();
-  const emails = combineArrays(emailScheduleFormulas, emailScheduleData);
   emailScheduleFiddler.setData(emails).dumpValues();
   membershipData.sort((a, b) => a.Email.localeCompare(b.Email));
   membershipFiddler.setData(membershipData).dumpValues();
-  transactionsFiddler.setData(updatedTransactions).dumpValues();
+  transactionsFiddler.setData(updatedTransactions.length > 1 ? updatedTransactions : transactionsHeaderRow).dumpValues();
   processedTransactionsFiddler.setData(processedTransactions).dumpValues();
 }
 
@@ -72,7 +73,7 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('Membership Management')
     .addItem('Process Transactions', processTransactions.name)
-    .addItem('Send Emails', sendScheduledEmails.name)
+    .addItem('Send Emails', executeScheduledActions.name)
     .addToUi();
 }
 

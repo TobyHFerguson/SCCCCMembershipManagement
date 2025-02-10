@@ -9,3 +9,11 @@ function log(...args) {
     console.log(...args);
   }
 }
+
+
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+
+  }
+}
