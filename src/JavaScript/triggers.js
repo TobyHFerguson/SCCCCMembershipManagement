@@ -101,7 +101,7 @@ function processPaidTransactions_(transactions, membershipData, actionSchedule, 
         renewMember(member, years, actionSchedule, actionSpecs);
       } else {
         const newMember = addNewMember(txn, actionSchedule, actionSpecs, membershipData)
-        newMembers.push(newMember.Email);
+        newMembers.push({Email: newMember.Email});
       }
       txn.Timestamp = new Date();
       txn.Processed = true;
