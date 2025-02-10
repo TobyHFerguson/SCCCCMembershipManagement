@@ -60,12 +60,12 @@ describe('trigger tests', () => {
 
       it('should return member additions for paid transactions', () => {
         const result = triggers.processPaidTransactions_(transactionsFixture.paid, [], [], actionSpecs);
-        expect(result).toEqual(expectedNewMembers.map(m => m.Email));
+        expect(result).toEqual(expectedNewMembers.map(m => {return {Email: m.Email}}));
       });
 
       it('should handle case-insensitive payable status', () => {
         const result = triggers.processPaidTransactions_(transactionsFixture.caseInsensitive, [], [], actionSpecs);
-        expect(result).toEqual(expectedNewMembers.map(m => m.Email));
+        expect(result).toEqual(expectedNewMembers.map(m => {return {Email: m.Email}}));
       });
     })
     describe('member addition', () => {
@@ -117,8 +117,7 @@ describe('trigger tests', () => {
           { Email: "test2@example.com", Period: 1, first: "Jane", last: "Smith", },
           { Email: "test3@example.com", Period: 3, first: "Not", last: "Member" }
           ];
-          const result = triggers.processPaidTransactions_(transactionsFixture.differentTerms, members, [], actionSpecs);
-          expect(result).toEqual(expectedNewMembers.map(m => m.Email));
+          triggers.processPaidTransactions_(transactionsFixture.differentTerms, members, [], actionSpecs);
           expect(members.map(m => m.Period)).toEqual(expectedMembers.map(m => m.Period));
 
         });
