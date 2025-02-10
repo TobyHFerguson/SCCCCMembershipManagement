@@ -22,7 +22,7 @@ const ActionType = {
 };
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    processPaidTransactions_,
+    processPaidTransactions,
     createScheduleEntries_,
     ActionType,
     today,
@@ -88,7 +88,7 @@ function today(date = new Date()) {
  * @returns {Array<Object>} return.processedRows - Array of processed transaction rows.
  * @returns {Array<Object>} return.result - Array of updated transactions.
  */
-function processPaidTransactions_(transactions, membershipData, actionSchedule, actionSpecs) {
+function processPaidTransactions(transactions, membershipData, actionSchedule, actionSpecs) {
   
   const emailToMemberMap = new Map(membershipData.map((member, index) => [member.Email, index]));
   const newMembers = [];

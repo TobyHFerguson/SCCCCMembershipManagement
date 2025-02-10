@@ -19,30 +19,33 @@ function processTransactions() {
   const transactionsFiddler = getFiddler_('Transactions').needFormulas();
   const transactions = getDataWithFormulas_(transactionsFiddler);
   if (transactions.length === 0) { return; }
+  const transactionsHeaderRow = Object.keys(transactions[0]).reduce((acc, key) => {
+    acc[key] = '';
+    return acc;
+  }, {});
 
+  const actionScheduleFiddler = getFiddler_('Action Schedule');
+  const actionSchedule = actionScheduleFiddler.getData();
 
-
-  const bulkGroupFiddler = getFiddler_('Bulk Add Groups');
-  const bulkGroupEmails = bulkGroupFiddler.getData();
-  const emailScheduleFiddler = getFiddler_('Email Schedule');
-  const emailScheduleData = emailScheduleFiddler.getData();
   
   const membershipFiddler = getFiddler_('Membership');
   const membershipData = membershipFiddler.getData();
-  const processedTransactionsFiddler = getFiddler_('Processed Transactions');
-  const processedTransactions = getDataWithFormulas_(processedTransactionsFiddler);
+
+ 
   const actionSpecs = getFiddler_('Action Specs').getData();
-  const expirationSpecs = actionSpecs.reduce((acc, spec) => { acc[spec.Type] = spec.Offset; return acc; }, {});
+  
+  const newMembers = processPaidTransactions(transactions, membershipData, actionSchedule, actionSpecs);
+  
+  const bulkGroupFiddler = getFiddler_('Group Add Emails');
+  const groupAddEmails = [...bulkGroupFiddler.getData(), ...newMembers];
+  bulkGroupFiddler.setData(groupAddEmails).dumpValues();
 
-  const newMembers = processTransactionsData(transactions, membershipData, emailScheduleData, actionSpecs);
-  processedTransactions.push(...processedRows);
-
-  bulkGroupFiddler.setData(bulkGroupEmails).dumpValues();
-  emailScheduleFiddler.setData(emails).dumpValues();
-  membershipData.sort((a, b) => a.Email.localeCompare(b.Email));
+  transactionsFiddler.setData(transactions.length > 1 ? transactions : transactionsHeaderRow).dumpValues();
+  
   membershipFiddler.setData(membershipData).dumpValues();
-  transactionsFiddler.setData(updatedTransactions.length > 1 ? updatedTransactions : transactionsHeaderRow).dumpValues();
-  processedTransactionsFiddler.setData(processedTransactions).dumpValues();
+  
+  actionScheduleFiddler.setData(actionSchedule).dumpValues();
+
 }
 
 function addMembersToGroups(){
@@ -137,24 +140,6 @@ function convertLinks_(sheetName) {
  * @returns {Fiddler} - The fiddler.
  */
 function getFiddler_(sheetName, createIfMissing = true) {
-  const sheetMappings = {
-    'Bulk Add Groups': { sheetName: 'Bulk Add Groups', createIfMissing },
-    'CE Members': { sheetName: 'CE Members', createIfMissing },
-    'Email Log': { sheetName: 'Email Log', createIfMissing },
-    'Email Schedule': { sheetName: 'Email Schedule', createIfMissing },
-    'Group Email Addresses': { sheetName: 'Group Email Addresses', createIfMissing: false },
-    'Membership': { sheetName: 'Membership', createIfMissing },
-    'MembershipReport': { sheetName: 'MembershipReport', createIfMissing },
-    'Processed Transactions': { sheetName: 'Processed Transactions', createIfMissing },
-    'Transactions': { sheetName: 'Transactions', createIfMissing: false }
-  };
-
-  let spec = {};
-  if (sheetMappings[sheetName]) {
-    spec.sheetName = sheetMappings[sheetName].sheetName;
-    spec.createIfMissing = sheetMappings[sheetName].createIfMissing;
-  }
-
-  return bmPreFiddler.PreFiddler().getFiddler(spec).needFormulas();
+  return bmPreFiddler.PreFiddler().getFiddler({sheetName, createIfMissing}).needFormulas();
 }
 

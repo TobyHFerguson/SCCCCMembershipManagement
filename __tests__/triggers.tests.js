@@ -54,17 +54,17 @@ describe('trigger tests', () => {
   describe('processPaidTransactions_', () => {
     describe('group members functionality', () => {
       it('should return an empty array when no transactions are paid', () => {
-        const result = triggers.processPaidTransactions_(transactionsFixture.unpaid, membersFixture);
+        const result = triggers.processPaidTransactions(transactionsFixture.unpaid, membersFixture);
         expect(result).toEqual([]);
       });
 
       it('should return member additions for paid transactions', () => {
-        const result = triggers.processPaidTransactions_(transactionsFixture.paid, [], [], actionSpecs);
+        const result = triggers.processPaidTransactions(transactionsFixture.paid, [], [], actionSpecs);
         expect(result).toEqual(expectedNewMembers.map(m => {return {Email: m.Email}}));
       });
 
       it('should handle case-insensitive payable status', () => {
-        const result = triggers.processPaidTransactions_(transactionsFixture.caseInsensitive, [], [], actionSpecs);
+        const result = triggers.processPaidTransactions(transactionsFixture.caseInsensitive, [], [], actionSpecs);
         expect(result).toEqual(expectedNewMembers.map(m => {return {Email: m.Email}}));
       });
     })
@@ -76,7 +76,7 @@ describe('trigger tests', () => {
           { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Joined: "2025-02-10", Expires: "2027-02-10", "Renewed On": "" },
           { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Joined: "2025-02-10", Expires: "2028-02-10", "Renewed On": "" }]
 
-        triggers.processPaidTransactions_(transactionsFixture.paid, members, [], actionSpecs);
+        triggers.processPaidTransactions(transactionsFixture.paid, members, [], actionSpecs);
         members.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expectedMembers.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
 
@@ -87,7 +87,7 @@ describe('trigger tests', () => {
         const expectedMembers = [
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: getDateString(), Expires: triggers.addDaysToDate_(new Date(), 365), "Renewed On": triggers.today() },
         ]
-        triggers.processPaidTransactions_(transactionsFixture.paid, members, [], actionSpecs);
+        triggers.processPaidTransactions(transactionsFixture.paid, members, [], actionSpecs);
         members.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expectedMembers.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
       });
@@ -96,7 +96,7 @@ describe('trigger tests', () => {
         const expectedMembers = [
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: getDateString(), Expires: triggers.addDaysToDate_(new Date(), 365 + 10), "Renewed On": triggers.today() },
         ]
-        triggers.processPaidTransactions_(transactionsFixture.paid, members, [], actionSpecs);
+        triggers.processPaidTransactions(transactionsFixture.paid, members, [], actionSpecs);
         members.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expectedMembers.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
       });
@@ -105,7 +105,7 @@ describe('trigger tests', () => {
         const expectedMembers = [
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: getDateString(), Expires: triggers.addDaysToDate_(new Date(), 365), "Renewed On": triggers.today() },
         ]
-        triggers.processPaidTransactions_(transactionsFixture.paid, members, [], actionSpecs);
+        triggers.processPaidTransactions(transactionsFixture.paid, members, [], actionSpecs);
         members.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expectedMembers.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
       });
@@ -117,14 +117,14 @@ describe('trigger tests', () => {
           { Email: "test2@example.com", Period: 1, first: "Jane", last: "Smith", },
           { Email: "test3@example.com", Period: 3, first: "Not", last: "Member" }
           ];
-          triggers.processPaidTransactions_(transactionsFixture.differentTerms, members, [], actionSpecs);
+          triggers.processPaidTransactions(transactionsFixture.differentTerms, members, [], actionSpecs);
           expect(members.map(m => m.Period)).toEqual(expectedMembers.map(m => m.Period));
 
         });
 
         it('should return period as 1 if payment term is not specified', () => {
           const members = []
-          triggers.processPaidTransactions_(transactionsFixture.noTerm, members, [], actionSpecs);
+          triggers.processPaidTransactions(transactionsFixture.noTerm, members, [], actionSpecs);
           expect(members.map(m => m.Period)).toEqual([1, 1, 1])
         });
       })
@@ -140,7 +140,7 @@ describe('trigger tests', () => {
           { Email: txn["Email Address"], Type: triggers.ActionType.Expiry3, Date: triggers.addDaysToDate_(new Date(), 365), },
           { Email: txn["Email Address"], Type: triggers.ActionType.Expiry4, Date: triggers.addDaysToDate_(new Date(), 365 + 1), }
         ].map(e => { e.Date = getDateString(e.Date); return e; });
-        triggers.processPaidTransactions_([txn], [], actionSchedule, actionSpecs);
+        triggers.processPaidTransactions([txn], [], actionSchedule, actionSpecs);
         actionSchedule.forEach(a => a.Date = getDateString(a.Date));
         expect(actionSchedule).toEqual(expected);
       })
@@ -169,7 +169,7 @@ describe('trigger tests', () => {
           { Email: "test2@example.com", Type: triggers.ActionType.Expiry3, Date: triggers.addDaysToDate_(new Date(), (3 * 365)), },
           { Email: "test2@example.com", Type: triggers.ActionType.Expiry4, Date: triggers.addDaysToDate_(new Date(), (3 * 365) + 1), },
         ].map(e => { e.Date = getDateString(e.Date); return e; });
-        triggers.processPaidTransactions_(txns, members, actionSchedule, actionSpecs);
+        triggers.processPaidTransactions(txns, members, actionSchedule, actionSpecs);
         actionSchedule.forEach(a => a.Date = getDateString(a.Date));
         expect(actionSchedule).toEqual(expected);
       });
