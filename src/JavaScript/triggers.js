@@ -1,24 +1,179 @@
+
+/**
+ * @enum {string}
+ * @readonly
+ * @property {string} Join - Represents a new member joining.
+ * @property {string} Renew - Represents a member renewing their membership.
+ * @property {string} Migrate - Represents a member migrating.
+ * @property {string} Expiry1 - Represents the first expiry notification.
+ * @property {string} Expiry2 - Represents the second expiry notification.
+ * @property {string} Expiry3 - Represents the third expiry notification.
+ * @property {string} Expiry4 - Represents the fourth expiry notification.
+ */
+const ActionType = {
+  Join: 'Join',
+  Renew: 'Renew',
+  Migrate: 'Migrate',
+  Expiry1: 'Expiry 1',
+  Expiry2: 'Expiry 2',
+  Expiry3: 'Expiry 3',
+  Expiry4: 'Expiry 4'
+};
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     processPaidTransactions,
-    // ...other exports...
+    ActionType,
+    processMemberAdditions,
+    createScheduleEntry
   };
 }
 
+/**
+ * Represents a transaction object.
+ * @typedef {Object} Transaction
+ * @property {string} Email Address - The email address associated with the transaction.
+ * @property {string} First Name- The first name of the person associated with the transaction.
+ * @property {string} Last Name - The last name of the person associated with the transaction.
+ * @property {string} Payable Status - The status of the transaction (e.g., "paid").
+ * @property {string} Payment - The payment details of the transaction. This is a string such as '1 year'.
+ * @property {Date} Timestamp - The timestamp when the transaction was processed.
+ */
+/**
+ * Represents a member object.
+ * @typedef {Object} Member
+ * @property {string} Email - The email address of the member.
+ * @property {string} First - The first name of the member.
+ * @property {string} Last - The last name of the member.
+ * @property {Date} Joined - The date the member joined.
+ * @property {number} Period - The membership period in years.
+ * @property {Date} Expires - The expiration date of the membership.
+ * @property {Date} [Renewed On] - The date the membership was last renewed.
+ * @property {Date} [Migrated] - The date the member was migrated.
+ */
+
+/**
+ * @typedef {Object} MemberAddition
+ * @property {string} email - The email address of the member.
+ * @property {string} period - The period associated with the transaction.
+ * @property {string} first - The first name of the member.
+ * @property {string} last - The last name of the member.
+ * @property {ActionType} type - The type of addition ('Renew' if the member exists, 'Add' otherwise).
+ */
+
+/**
+ * Processes paid transactions and returns an array of member additions.
+ *
+ * @param {Array<Transaction>} transactions - The list of transactions to process.
+ * @param {Array<Member>} members - The list of current members.
+ * @returns {Array<MemberAddition>} An array of member additions.
+ */
 function processPaidTransactions(transactions, members) {
   const membersByEmail = new Map(members.map(member => [member["Email Address"], member]));
   const memberAdditions = transactions.filter(transaction => transaction["Payable Status"].toLowerCase().startsWith("paid"))
     .map(transaction => {
       return {
         email: transaction["Email Address"],
-        period: getPeriod(transaction), 
-        first: transaction["First Name"], 
+        period: getPeriod(transaction),
+        first: transaction["First Name"],
         last: transaction["Last Name"],
-        type: membersByEmail.has(transaction["Email Address"]) ? 'Renew' : 'Add'
+        type: membersByEmail.has(transaction["Email Address"]) ? ActionType.Renew : ActionType.Add
       };
     });
   return memberAdditions;
 }
+
+/**
+ * @typedef {Object} ActionSchedule
+ * @property {Date} date - The date of the action.
+ * @property {string} email - The member email concerned.
+ * @property {ActionType} action - The action to be taken.
+ */
+
+/**
+ * @typedef {Object} ActionSpec
+ * @property {ActionType} Type - The type of action.
+ * @property {number} [Offset] - The offset in days from expiry for the action. No offset means immediate
+ * @property {string} [Subject] - The subject of the email.
+ * @property {string} [Body] - The body of the email.
+ */
+
+/**
+ * Processes member additions by updating existing members or adding new members,
+ * and schedules actions based on the additions.
+ *
+ * @param {Array<Object>} memberAdditions - List of member additions with details.
+ * @param {Array<Object>} members - List of existing members.
+ * @param {Array<Object>} actionSchedule - List to store scheduled actions.
+ * @param {Object} actionSpecs - Specifications for creating schedule entries.
+ * @returns {Array<Object>} - List of processed members.
+ */
+function processMemberAdditions(memberAdditions, members, actionSchedule, actionSpecs) {
+  const membersByEmail = new Map(members.map(member => [member["Email Address"], member]));
+  const newActionSchedule = []
+  const addTogroups = []
+  const addedMembers = memberAdditions.map(addition => {
+    let member;
+    switch (addition.type) {
+      case ActionType.Renew:
+        member = membersByEmail.get(addition.email);
+        member.Period = addition.period;
+        member["Renewed On"] = new Date();
+        member.Expires = calculateExpirationDate(addition.period, member.Expires);
+        break;
+      case ActionType.Join:
+        member = {
+          "Email Address": addition.email,
+          First: addition.first,
+          Last: addition.last,
+          Joined: new Date(),
+          Period: addition.period,
+          Expires: calculateExpirationDate(addition.period),
+          "Renewed On": ''
+        }
+        addTogroups.push(member)
+        break;
+      case ActionType.Migrate:
+        member = {
+          "Email Address": addition.email,
+          First: addition.first,
+          Last: addition.last,
+          Joined: new Date(),
+          Period: addition.period,
+          Expires: calculateExpirationDate(addition.period),
+          "Renewed On": '',
+          "Migrated": new Date()
+        }
+        addTogroups.push(member)
+        break;
+    }
+    actionSchedule.push(createScheduleEntry(member, addition.type, actionSpecs));
+    return member;
+  })
+  return { addedMembers, actionSchedule: newActionSchedule, addTogroups };
+}
+
+/**
+ * typedef {Object} ScheduleEntry
+ * @property {Date} date - The date of the action.
+ * @property {string} email - The member email concerned.
+ * @property {ActionType} action - The action to be taken.
+ */
+
+function createScheduleEntry(member, type, actionSpecs) {
+  const expirationSpecs = actionSpecs.filter(spec => spec.Type.startsWith('Expiry')).reduce((acc, spec) => { acc[spec.Type] = spec.Offset; return acc; }, {});
+  const schedule = [];
+  switch (type) {
+    case 'Add':
+    case 'Renew':
+      schedule.push({ date: today(), action: type, email: member["Email Address"] });
+    case 'Migration':
+      break;
+  }
+  expirationSpecs.forEach(({ type, offset }) => schedule.push({ date: addDaysToDate(member.Expires, offset), action: type, email: member["Email Address"] }));
+  return schedule;
+}
+
+
 
 
 // Pure JavaScript functions

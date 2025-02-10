@@ -1,4 +1,5 @@
 const triggers = require('../src/JavaScript/triggers');
+const { today } = require('../src/JavaScript/utils');
 
 const transactionsFixture = {
   unpaid: [
@@ -37,9 +38,9 @@ const membersFixture = [
 ];
 
 const expectedNewMembers = [
-  { email: "test1@example.com", period: 1, first: "John", last: "Doe", type: 'Renew' },
-  { email: "test2@example.com", period: 2, first: "Jane", last: "Smith", type: 'Renew' },
-  {email: "test3@example.com", period: 3, first: "Not", last: "Member", type: 'Add'}
+  { email: "test1@example.com", period: 1, first: "John", last: "Doe", type: triggers.ActionType.Renew },
+  { email: "test2@example.com", period: 2, first: "Jane", last: "Smith", type: triggers.ActionType.Renew }, 
+  { email: "test3@example.com", period: 3, first: "Not", last: "Member", type: triggers.ActionType.Add }
 ];
 
 describe('processPaidTransactions', () => {
@@ -60,18 +61,47 @@ describe('processPaidTransactions', () => {
 
   it('should return correct period for transactions with different payment terms', () => {
     const result = triggers.processPaidTransactions(transactionsFixture.differentTerms, membersFixture);
-    expect(result).toEqual([{ email: "test1@example.com", period: 3, first: "John", last: "Doe", type: 'Renew' },
-      { email: "test2@example.com", period: 1, first: "Jane", last: "Smith", type: 'Renew' },
-      {email: "test3@example.com", period: 3, first: "Not", last: "Member", type: 'Add'}
+    expect(result).toEqual([{ email: "test1@example.com", period: 3, first: "John", last: "Doe", type: triggers.ActionType.Renew },
+    { email: "test2@example.com", period: 1, first: "Jane", last: "Smith", type: triggers.ActionType.Renew },
+    { email: "test3@example.com", period: 3, first: "Not", last: "Member", type: triggers.ActionType.Add }
     ]);
   });
 
   it('should return period as 1 if payment term is not specified', () => {
     const result = triggers.processPaidTransactions(transactionsFixture.noTerm, membersFixture);
     expect(result).toEqual([
-      { email: "test1@example.com", period: 1, first: "John", last: "Doe", type: 'Renew' },
-      { email: "test2@example.com", period: 1, first: "Jane", last: "Smith", type: 'Renew' },
-      {email: "test3@example.com", period: 1, first: "Not", last: "Member", type: 'Add'}
+      { email: "test1@example.com", period: 1, first: "John", last: "Doe", type: triggers.ActionType.Renew }, 
+      { email: "test2@example.com", period: 1, first: "Jane", last: "Smith", type: triggers.ActionType.Renew },
+      { email: "test3@example.com", period: 1, first: "Not", last: "Member", type: triggers.ActionType.Add }
     ]);
   });
 });
+
+describe('processMemberAdditions', () => {
+  const members = [
+    { Email: "test1@example.com", First: "Test", Last: "One", Joined: "2020-01-01", Expires: "2021-01-01" },
+    { Email: "test2@example.com", First: "Test", Last: "Two", Joined: "2020-01-01", Expires: "2022-01-01", "Renewed On": "2021-01-01" },
+    { Email: "test3@example.com", First: "Test", Last: "Three", Joined: "2020-01-01", Expires: "2023-01-01", Migrated: "2021-01-01" }
+  ]
+  const actionSpecs = [
+    { type: triggers.ActionType.Add, expected: [{ email: "
+  ]
+
+  describe('createScheduleEntry', () => {
+    it('should return a schedule entry for a new member', () => {
+      const member = members[0];
+      const result = triggers.createScheduleEntry(member, triggers.ActionType.Add,);
+      const expected = [{ email: member.Email, date: today(), type: ActionType.Add },
+      { email: member.Email, date: today(), type: ActionType.Expiry1 },
+      { email: member.Email, date: today(), type: ActionType.Expiry2 },
+      { email: member.Email, date: today(), type: ActionType.Expiry3 },
+      { email: member.Email, date: today(), type: ActionType.Expiry4 }
+      ];
+      expect(result).toEqual(expected);
+    })
+    it.skip('should return empty array when there are no new members', () => {
+      const result = triggers.processMemberAdditions([], members);
+      expect(result).toEqual([]);
+    });
+  })
+})
