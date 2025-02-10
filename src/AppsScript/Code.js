@@ -44,15 +44,7 @@ function processTransactions() {
   processedTransactionsFiddler.setData(processedTransactions).dumpValues();
 }
 
-function addMembersToGroups(){
-  const bulkGroupFiddler = getFiddler_('Bulk Add Groups');
-  bulkGroupFiddler.mapRows(row => {addMemberToGroup(row['Group Email [Required]'], row['Member Email']); return row;}).filterRows(_ => false).dumpValues();
-}
 
-function removeMembersFromGroups() {
-  const bulkGroupFiddler = getFiddler_('Bulk Remove Groups');
-  bulkGroupFiddler.mapRows(row => {removeMemberFromGroup(row['Group Email [Required]'], row['Member Email']); return row;}).filterRows(_ => false).dumpValues();
-}
 
 function sendEmails_(emails) {
   log(`Number of emails to be sent: ${emails.length}`);
@@ -136,24 +128,6 @@ function convertLinks_(sheetName) {
  * @returns {Fiddler} - The fiddler.
  */
 function getFiddler_(sheetName, createIfMissing = true) {
-  const sheetMappings = {
-    'Bulk Add Groups': { sheetName: 'Bulk Add Groups', createIfMissing },
-    'CE Members': { sheetName: 'CE Members', createIfMissing },
-    'Email Log': { sheetName: 'Email Log', createIfMissing },
-    'Email Schedule': { sheetName: 'Email Schedule', createIfMissing },
-    'Group Email Addresses': { sheetName: 'Group Email Addresses', createIfMissing: false },
-    'Membership': { sheetName: 'Membership', createIfMissing },
-    'MembershipReport': { sheetName: 'MembershipReport', createIfMissing },
-    'Processed Transactions': { sheetName: 'Processed Transactions', createIfMissing },
-    'Transactions': { sheetName: 'Transactions', createIfMissing: false }
-  };
-
-  let spec = {};
-  if (sheetMappings[sheetName]) {
-    spec.sheetName = sheetMappings[sheetName].sheetName;
-    spec.createIfMissing = sheetMappings[sheetName].createIfMissing;
-  }
-
-  return bmPreFiddler.PreFiddler().getFiddler(spec).needFormulas();
+  return bmPreFiddler.PreFiddler().getFiddler({sheetName, createIfMissing}).needFormulas();
 }
 

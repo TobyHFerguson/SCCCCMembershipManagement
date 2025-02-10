@@ -1,4 +1,5 @@
 
+const logging = PropertiesService.getScriptProperties().getProperty('logging');
 /**
  * Logs messages to the console if the script property 'logging' is true.
  * @param  {...any} args - The messages or objects to log.

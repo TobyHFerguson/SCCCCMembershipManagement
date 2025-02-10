@@ -1,5 +1,18 @@
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    processPaidTransactions,
+    // ...other exports...
+  };
+}
 
-
+function processPaidTransactions(transactions, members) {
+  const membersByEmail = new Map(members.map(member => [member["Email Address"], member]));
+  const memberAdditions = transactions.filter(transaction => transaction["Payable Status"].toLowerCase().startsWith("paid"))
+    .map(transaction => {
+      return { email: transaction["Email Address"], period: getPeriod(transaction), first: transaction["First Name"], last: transaction["Last Name"] };
+    });
+  return memberAdditions;
+}
 
 
 // Pure JavaScript functions
@@ -45,8 +58,9 @@ function processTransactionsData(transactions, membershipData, emailScheduleData
 
 
 
-function getPeriod(row) {
-  const yearsMatch = row.Payment.match(/(\d+)\s*year/);
+function getPeriod(txn) {
+  if (!txn || !txn.Payment) return 1;
+  const yearsMatch = txn.Payment.match(/(\d+)\s*year/)
   const years = yearsMatch ? parseInt(yearsMatch[1], 10) : 1;
   return years;
 }
