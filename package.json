@@ -9,7 +9,7 @@
     "push": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp push",
     "pull": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp pull",
     "open": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp open",
-    "docs": "npx jsdoc src/JavaScript -d docs"
+    "docs": "npx jsdoc -c jsdoc.json"
   },
   "repository": {
     "type": "git",
