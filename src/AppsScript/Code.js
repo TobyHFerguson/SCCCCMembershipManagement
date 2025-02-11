@@ -1,8 +1,28 @@
-
 /**
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
+function processExpiringMembers() {
+  const expiredMembersQueueFiddler = getFiddler_('Expired Members Queue');
+  const expiredMembersQueue = expiredMembersQueueFiddler.getData();
+  if (expiredMembersQueue.length === 0) { return; }
+  const membershipFiddler = getFiddler_('Membership');
+  const membershipData = membershipFiddler.getData();
+  const groupRemoveFiddler = getFiddler_('Group Remove List');
+  const groupRemoveList = groupRemoveFiddler.getData();
+  const emailSendFiddler = getFiddler_('Email Queue');
+  const emailSendList = emailSendFiddler.getData();
+  
+  const numProcessed = ExpirationManager.expireMembers(expiredMembersQueue, membershipData, groupRemoveList, emailSendList);
 
+  if (numProcessed === 0) return;
+
+  expiredMembersQueueFiddler.setData(expiredMembersQueue.length > 0 ? expiredMembersQueue : {Email: ''}).dumpValues();
+  membershipFiddler.setData(membershipData).dumpValues();
+  groupRemoveFiddler.setData(groupRemoveList.length).dumpValues();
+  emailSendFiddler.setData(emailSendList).dumpValues();
+
+}
+  
 function doGroupRemove() {
   const groupAddFiddler = getFiddler_('Group Remove List');
   const members = groupAddFiddler.getData();
