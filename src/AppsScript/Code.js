@@ -2,6 +2,72 @@
 /**
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
+function doGroupAdds() {
+  const groupAddFiddler  = getFiddler_('Group Add List');
+  const members = groupAddFiddler.getData();
+  const groupEmails = getFiddler_('Group Email Addresses', createIfMissing = false).getData();
+  const groupAdder = getGroupAdder_();
+
+  try {
+    GroupManager.addMembersToGroups(members, groupEmails, groupAdder);
+  } catch (error) {
+    if (error instanceof AggregateError) {
+      error.errors.forEach(err => log(`Error: ${err.message}`));
+    } else {
+    log(`Error: ${error.message}`);
+    }
+  }
+  // Preserve the header row if all the members have been processed.
+  groupAddFiddler.setData(members.length > 1 ? members : [{Email: ''}]).dumpValues();
+}
+
+function getGroupAdder_() {
+  if (PropertiesService.getScriptProperties().getProperty('testGroupAdds') === 'true') {
+    return (member, group) => log(`Group Add: `, member, ' to ', group);
+  } else {
+    return (member, group) => addMemberToGroup_(member.Email, group.Email);
+  }
+}
+
+/**
+ * Adds a single member to a Google Group using the Admin SDK API.
+ *
+ * @param {string} groupEmail The email address of the Google Group.
+ * @param {string} memberEmail The email address of the member to add.
+ * @customfunction
+ */
+function addMemberToGroup_(memberEmail, groupEmail) {
+  try {
+      AdminDirectory.Members.insert({ email: memberEmail, role: "MEMBER" }, groupEmail);
+      Logger.log(`Successfully added ${memberEmail} to ${groupEmail}`);
+  } catch (e) {
+      if (e.message && e.message.includes("Member already exists")) {
+          Logger.log(`Member ${memberEmail} already exists in ${groupEmail}`);
+      } else {
+          throw e
+      }
+  }
+}
+
+/**
+* Removes a single member from a Google Group using the Admin SDK API.
+*
+* @param {string} groupEmail The email address of the Google Group.
+* @param {string} memberEmail The email address of the member to remove.
+* @customfunction
+*/
+function removeMemberFromGroup_(memberEmail, groupEmail) {
+  try {
+      AdminDirectory.Members.remove({ groupKey: groupEmail, memberKey: memberEmail });
+      Logger.log(`Successfully removed ${memberEmail} from ${groupEmail}`);
+  } catch (e) {
+      if (e.message && e.message.includes("Resource Not Found")) {
+          Logger.log(`Member ${memberEmail} does not exist in ${groupEmail}`);
+      } else {
+          throw e;
+      }
+  }
+}
 function processEmailQueue() {
   const emailQueueFiddler = getFiddler_('Email Queue');
   const emailQueue = emailQueueFiddler.getData();
@@ -83,12 +149,12 @@ function processTransactions() {
 
 function addMembersToGroups() {
   const bulkGroupFiddler = getFiddler_('Bulk Add Groups');
-  bulkGroupFiddler.mapRows(row => { addMemberToGroup(row['Group Email [Required]'], row['Member Email']); return row; }).filterRows(_ => false).dumpValues();
+  bulkGroupFiddler.mapRows(row => { addMemberToGroup_(row['Group Email [Required]'], row['Member Email']); return row; }).filterRows(_ => false).dumpValues();
 }
 
 function removeMembersFromGroups() {
   const bulkGroupFiddler = getFiddler_('Bulk Remove Groups');
-  bulkGroupFiddler.mapRows(row => { removeMemberFromGroup(row['Group Email [Required]'], row['Member Email']); return row; }).filterRows(_ => false).dumpValues();
+  bulkGroupFiddler.mapRows(row => { removeMemberFromGroup_(row['Group Email [Required]'], row['Member Email']); return row; }).filterRows(_ => false).dumpValues();
 }
 
 function sendEmails_(emails) {
@@ -133,20 +199,6 @@ function getDataWithFormulas_(fiddler) {
   return combineArrays(fiddler.getFormulaData(), fiddler.getData());
 }
 
-
-
-
-
-
-
-const getGroupEmails_ = (() => {
-  let cachedGroupEmails = null;
-  return () => {
-    if (cachedGroupEmails) return cachedGroupEmails;
-    cachedGroupEmails = getFiddler_('Group Email Addresses').getData().map(row => row.Email);
-    return cachedGroupEmails;
-  };
-})();
 /**
  * Converts links in a sheet to hyperlinks.
  * @param {String} sheetName - The name of the sheet.
