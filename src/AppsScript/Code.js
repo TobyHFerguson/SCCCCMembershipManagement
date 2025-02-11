@@ -1,6 +1,28 @@
+
 /**
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
+function processEmailQueue() {
+  const emailQueueFiddler = getFiddler_('Email Queue');
+  const emailQueue = emailQueueFiddler.getData();
+  const actionSpecsFiddler = getFiddler_('Action Specs');
+  const actionSpecs = actionSpecsFiddler.getData();
+  const membersFiddler = getFiddler_('Membership');
+  const members = membersFiddler.getData();
+  const sendFun = getEmailSender_();
+
+  sendEmails(emailQueue, sendFun, actionSpecs, members);
+
+  emailQueueFiddler.setData(emailQueue).dumpValues();
+}
+function getEmailSender_() {
+  const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails') === 'true';
+  if (testEmails) {
+    return (email) => log(`Email not sent due to testEmails property: To=${email.to}, Subject=${email.subject}, htmlBody=${email.htmlBody}`);
+  } else {
+    return (email) => sendSingleEmail_(email);
+  }
+}
 
 function doActionSchedule() {
   const actionScheduleFiddler = getFiddler_('Action Schedule')
@@ -22,17 +44,6 @@ function doActionSchedule() {
     expiredMembersQueueFiddler.setData(expiredMembersQueueData).dumpValues();
   }
   actionScheduleFiddler.setData(actionSchedule).dumpValues();
-}
-function executeScheduledActions() {
-  const emailScheduleFiddler = getFiddler_('Email Schedule');
-  const emailScheduleData = emailScheduleFiddler.getData();
-  const emailScheduleFormulas = emailScheduleFiddler.getFormulaData();
-  sortArraysByValue(emailScheduleData, emailScheduleFormulas, (a, b) => new Date(a["Scheduled On"]) - new Date(b["Scheduled On"]));
-  const emailsToSend = doScheduledActions(emailScheduleData);
-  sendEmails_(emailsToSend);
-  const combined = combineArrays(emailScheduleFormulas, emailScheduleData);
-  const remainingEmails = combined.filter((_, i) => i >= emailsToSend.length);
-  emailScheduleFiddler.setData(remainingEmails).dumpValues();
 }
 
 
@@ -109,7 +120,7 @@ function sendSingleEmail_(email, emailLog) {
     MailApp.sendEmail(email);
     return { Timestamp: new Date(), ...email };
   } catch (error) {
-    log(`Failed to send email to ${email.to}: ${error.message}`);
+    console.error(`Failed to send email to ${email.to}: ${error.message}`);
   }
 }
 /**
