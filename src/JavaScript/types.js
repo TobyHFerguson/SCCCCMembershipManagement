@@ -44,3 +44,22 @@
  * @property {string} email - The member email concerned.
  * @property {ActionType} action - The action to be taken.
  */
+
+/**
+ * @typedef {Object} EmailQueueEntry
+ * @property {string} email - The member email concerned.
+ * @property {ActionType} action - The action to be taken.
+ */
+
+/**
+ * @typedef {EmailQueueEntry[]} EmailQueue - An array of email queue entries.
+ */
+
+/**
+ * @typedef {Object} ExpiredMembersQueueEntry
+ * @property {string} email - The member email concerned.
+ */
+
+/**
+ * @typedef {ExpiredMembersQueueEntry[]} ExpiredMembersQueue - An array of expired members queue entries.
+ */
