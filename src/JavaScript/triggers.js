@@ -20,17 +20,7 @@ const ActionType = {
   Expiry3: 'Expiry3',
   Expiry4: 'Expiry4'
 };
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    processPaidTransactions,
-    createScheduleEntries_,
-    ActionType,
-    today: today_,
-    addDaysToDate_,
-    addRenewedMemberToActionSchedule_,
-    calculateExpirationDate_
-  };
-}
+
 
 function today_(date = new Date()) {
   return new Date().setHours(12, 0, 0, 0);
@@ -223,4 +213,16 @@ function combineArrays(arr1, arr2) {
     }
     return combinedItem;
   });
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    processPaidTransactions,
+    createScheduleEntries_,
+    ActionType,
+    today_,
+    addDaysToDate_,
+    addRenewedMemberToActionSchedule_,
+    calculateExpirationDate_
+  };
 }
