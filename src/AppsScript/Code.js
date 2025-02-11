@@ -2,8 +2,27 @@
 /**
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
+
+function doGroupRemove() {
+  const groupAddFiddler = getFiddler_('Group Remove List');
+  const members = groupAddFiddler.getData();
+  const groupEmails = getFiddler_('Group Email Addresses', createIfMissing = false).getData();
+  const groupRemover = getGroupRemover_();
+
+  try {
+    GroupManager.removeMembersFromGroups(members, groupEmails, groupRemover);
+  } catch (error) {
+    if (error instanceof AggregateError) {
+      error.errors.forEach(err => log(`Error: ${err.message}`));
+    } else {
+      log(`Error: ${error.message}`);
+    }
+  }
+  // Preserve the header row if all the members have been processed.
+  groupAddFiddler.setData(members.length > 1 ? members : [{ Email: '' }]).dumpValues();
+}
 function doGroupAdds() {
-  const groupAddFiddler  = getFiddler_('Group Add List');
+  const groupAddFiddler = getFiddler_('Group Add List');
   const members = groupAddFiddler.getData();
   const groupEmails = getFiddler_('Group Email Addresses', createIfMissing = false).getData();
   const groupAdder = getGroupAdder_();
@@ -14,11 +33,11 @@ function doGroupAdds() {
     if (error instanceof AggregateError) {
       error.errors.forEach(err => log(`Error: ${err.message}`));
     } else {
-    log(`Error: ${error.message}`);
+      log(`Error: ${error.message}`);
     }
   }
   // Preserve the header row if all the members have been processed.
-  groupAddFiddler.setData(members.length > 1 ? members : [{Email: ''}]).dumpValues();
+  groupAddFiddler.setData(members.length > 1 ? members : [{ Email: '' }]).dumpValues();
 }
 
 function getGroupAdder_() {
@@ -26,6 +45,14 @@ function getGroupAdder_() {
     return (member, group) => log(`Group Add: `, member, ' to ', group);
   } else {
     return (member, group) => addMemberToGroup_(member.Email, group.Email);
+  }
+}
+
+function getGroupRemover_() {
+  if (PropertiesService.getScriptProperties().getProperty('testGroupRemoves') === 'true') {
+    return (member, group) => log(`Group Remove: `, member, ' from ', group);
+  } else {
+    return (member, group) => removeMemberFromGroup_(member.Email, group.Email);
   }
 }
 
@@ -38,14 +65,14 @@ function getGroupAdder_() {
  */
 function addMemberToGroup_(memberEmail, groupEmail) {
   try {
-      AdminDirectory.Members.insert({ email: memberEmail, role: "MEMBER" }, groupEmail);
-      Logger.log(`Successfully added ${memberEmail} to ${groupEmail}`);
+    AdminDirectory.Members.insert({ email: memberEmail, role: "MEMBER" }, groupEmail);
+    Logger.log(`Successfully added ${memberEmail} to ${groupEmail}`);
   } catch (e) {
-      if (e.message && e.message.includes("Member already exists")) {
-          Logger.log(`Member ${memberEmail} already exists in ${groupEmail}`);
-      } else {
-          throw e
-      }
+    if (e.message && e.message.includes("Member already exists")) {
+      Logger.log(`Member ${memberEmail} already exists in ${groupEmail}`);
+    } else {
+      throw e
+    }
   }
 }
 
@@ -58,14 +85,16 @@ function addMemberToGroup_(memberEmail, groupEmail) {
 */
 function removeMemberFromGroup_(memberEmail, groupEmail) {
   try {
-      AdminDirectory.Members.remove({ groupKey: groupEmail, memberKey: memberEmail });
-      Logger.log(`Successfully removed ${memberEmail} from ${groupEmail}`);
+    AdminDirectory.Members.remove(groupEmail, memberEmail);
+    Logger.log(`Successfully removed ${memberEmail} from ${groupEmail}`);
   } catch (e) {
-      if (e.message && e.message.includes("Resource Not Found")) {
-          Logger.log(`Member ${memberEmail} does not exist in ${groupEmail}`);
-      } else {
-          throw e;
-      }
+    if (e.message && e.message.includes("Resource Not Found")) {
+      Logger.log(`Member ${memberEmail} does not exist in ${groupEmail}`);
+    } else if (e.message && e.message === 'API call to directory.members.delete failed with error: Missing required field: memberKey') {
+      throw new Error(`The member email ${memberEmail} is not valid.`);
+    }
+    throw e
+
   }
 }
 function processEmailQueue() {
