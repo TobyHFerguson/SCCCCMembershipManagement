@@ -7,11 +7,11 @@
  * @return {string} A success message or an error message.
  */
 function addMembersToGroup(groupEmail, memberEmails) {
-    const f = accumulateErrors((email) => addMemberToGroup(groupEmail, email));
+    const f = accumulateErrors((email) => addMemberToGroup_(groupEmail, email));
     f(memberEmails);
 }
 function removeMembersFromGroup(groupEmail, memberEmails) {
-    const f = accumulateErrors((email) => removeMemberFromGroup(groupEmail, email));
+    const f = accumulateErrors((email) => removeMemberFromGroup_(groupEmail, email));
     f(memberEmails);
 }
 
@@ -39,42 +39,4 @@ function accumulateErrors(fn) {
     };
 }
 
-/**
- * Adds a single member to a Google Group using the Admin SDK API.
- *
- * @param {string} groupEmail The email address of the Google Group.
- * @param {string} memberEmail The email address of the member to add.
- * @customfunction
- */
-function addMemberToGroup(groupEmail, email) {
-    try {
-        AdminDirectory.Members.insert({ email, role: "MEMBER" }, groupEmail);
-        Logger.log(`Successfully added ${email} to ${groupEmail}`);
-    } catch (e) {
-        if (e.message && e.message.includes("Member already exists")) {
-            Logger.log(`Member ${email} already exists in ${groupEmail}`);
-        } else {
-            throw e
-        }
-    }
-}
 
-/**
- * Removes a single member from a Google Group using the Admin SDK API.
- *
- * @param {string} groupEmail The email address of the Google Group.
- * @param {string} memberEmail The email address of the member to remove.
- * @customfunction
- */
-function removeMemberFromGroup(groupEmail, memberEmail) {
-    try {
-        AdminDirectory.Members.remove(groupKey = groupEmail, memberKey = memberEmail);
-        Logger.log(`Successfully removed ${memberEmail} from ${groupEmail}`);
-    } catch (e) {
-        if (e.message && e.message.includes("Resource Not Found")) {
-            Logger.log(`Member ${memberEmail} does not exist in ${groupEmail}`);
-        } else {
-            throw e;
-        }
-    }
-}
