@@ -15,11 +15,11 @@ const GroupManager = (function () {
             for (let group of groups) {
                 try {
                     fun(member, group);
+                    members.splice(i, 1);
                 } catch (error) {
                     errors.push(error);
                 }
             }
-            members.splice(i, 1);
         }
         if (errors.length > 0) {
             throw new AggregateError(errors, 'One or more errors occurred while processing the list');
