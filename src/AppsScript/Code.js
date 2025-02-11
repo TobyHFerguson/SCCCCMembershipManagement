@@ -19,7 +19,7 @@ function doGroupRemove() {
     }
   }
   // Preserve the header row if all the members have been processed.
-  groupAddFiddler.setData(members.length > 1 ? members : [{ Email: '' }]).dumpValues();
+  groupAddFiddler.setData(members.length > 0 ? members : [{ Email: '' }]).dumpValues();
 }
 function doGroupAdds() {
   const groupAddFiddler = getFiddler_('Group Add List');
@@ -89,14 +89,15 @@ function removeMemberFromGroup_(memberEmail, groupEmail) {
     Logger.log(`Successfully removed ${memberEmail} from ${groupEmail}`);
   } catch (e) {
     if (e.message && e.message.includes("Resource Not Found")) {
-      Logger.log(`Member ${memberEmail} does not exist in ${groupEmail}`);
-    } else if (e.message && e.message === 'API call to directory.members.delete failed with error: Missing required field: memberKey') {
-      throw new Error(`The member email ${memberEmail} is not valid.`);
+      Logger.log(`Error: ${memberEmail} not found in ${groupEmail} - one or both of those resources do not exist. Check the addresses and try again`);
+    } else if (e.message && e.message === 'API call to directory.members.delete failed with error: Missing required field: ') {
+      throw new Error(`Removing member ${memberEmail} from group ${groupEmail} - one or both of those addresses are not valid email addresses.`);
+    } else {
+      throw e
     }
-    throw e
-
   }
 }
+
 function processEmailQueue() {
   const emailQueueFiddler = getFiddler_('Email Queue');
   const emailQueue = emailQueueFiddler.getData();
