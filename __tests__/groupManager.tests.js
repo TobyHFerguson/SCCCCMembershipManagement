@@ -77,4 +77,25 @@ describe('GroupManager', () => {
             }
         });
     })
+    describe('errors dont affect the list', () => {
+        const members = [{ Email: 1 }, { Email: 2 }];
+        const groupEmails = [{ Group: 1 }, { Group: 2 }];
+        test('should not affect the list if  errors are thrown', () => {
+            const result = []
+            const groupAddFun = (member, group) => { throw new Error() };
+
+            const expectedResult = [
+                { groupEmail: 1, memberEmail: 2 },
+                { groupEmail: 2, memberEmail: 2 },
+                { groupEmail: 1, memberEmail: 1 },
+                { groupEmail: 2, memberEmail: 1 }
+            ];
+            expect(GroupManager).toBeDefined();
+            try {
+                GroupManager.addMembersToGroups(members, groupEmails, groupAddFun);
+            } catch (e) {
+                expect(members.length).toBe(2);
+            }
+        });
+    })
 });
