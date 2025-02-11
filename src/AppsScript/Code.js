@@ -1,6 +1,10 @@
 /**
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
+
+function doActionSchedule() {
+  processActionSchedule();
+}
 function executeScheduledActions() {
   const emailScheduleFiddler = getFiddler_('Email Schedule');
   const emailScheduleData = emailScheduleFiddler.getData();
