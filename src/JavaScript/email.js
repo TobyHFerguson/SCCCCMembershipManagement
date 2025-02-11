@@ -1,3 +1,26 @@
+
+
+function sendEmails_(emailQueue, senderFun, actionSpecs, members) {
+  const membersByEmail = members.reduce((acc, member) => { acc[member.Email] = member; return acc; }, {});
+  if (!emailQueue || emailQueue.length === 0) { 
+    return;
+  }
+  for (let i = emailQueue.length - 1; i >= 0; i--) {
+    const email = emailQueue[i];
+    const member = membersByEmail[email.Email];
+    const spec = actionSpecs.find(spec => spec.Type === email.Type);
+    if (spec) {
+      senderFun({
+        to: email.Email,
+        subject: expandTemplate_(spec.Subject, member),
+        htmlBody: expandTemplate_(spec.Body, member)
+      });
+      emailQueue.splice(i, 1);
+    }
+  } 
+
+}
+
 /**
  * Sends scheduled emails based on the email schedule data.
  * 
@@ -48,7 +71,7 @@ function performScheduledAction(scheduledAction, activeMembers, expiredMembers) 
   const email = {
     to: scheduledAction.Email,
     subject: scheduledAction.Subject,
-    htmlBody: expandTemplate(scheduledAction.Body, scheduledAction)
+    htmlBody: expandTemplate_(scheduledAction.Body, scheduledAction)
   };
   sendSingleEmail_(email);
 }
@@ -62,7 +85,7 @@ function performScheduledAction(scheduledAction, activeMembers, expiredMembers) 
  * @param {Object} row - The object containing values to replace placeholders.
  * @returns {string} - The expanded template string with placeholders replaced by corresponding values.
  */
-function expandTemplate(template, row) {
+function expandTemplate_(template, row) {
   const dateFields = ["Scheduled On", "Expires", "Joined", "Renewed On"]; // Add the names of fields that should be treated as dates
   return template.replace(/{([^}]+)}/g, (_, key) => {
     let value = row[key];
@@ -87,4 +110,10 @@ function testSendEmail() {
     attachments: [Utilities.newBlob("Attachment content", "text/plain", "test.txt")]
   };
   MailApp.sendEmail(recipient, subject, body, options);
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    sendEmails_
+  };
 }
