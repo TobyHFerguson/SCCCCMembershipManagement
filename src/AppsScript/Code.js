@@ -3,7 +3,25 @@
  */
 
 function doActionSchedule() {
-  processActionSchedule();
+  const actionScheduleFiddler = getFiddler_('Action Schedule')
+  const actionSchedule = actionScheduleFiddler.getData()
+  const numActionsBefore = actionSchedule.length;
+  const { emailQueue, expiredMembersQueue } = processActionSchedule(actionSchedule);
+  if (numActionsBefore == actionSchedule.length) {
+    return;
+  }
+  // Get here because queues have changed.
+  if (emailQueue) {
+    const emailQueueFiddler = getFiddler_('Email Queue');
+    const emailQueueData = [...emailQueueFiddler.getData(), ...emailQueue]
+    emailQueueFiddler.setData(emailQueueData).dumpValues();
+  }
+  if (expiredMembersQueue) {
+    const expiredMembersQueueFiddler = getFiddler_('Expired Members Queue');
+    const expiredMembersQueueData = [...expiredMembersQueueFiddler.getData(), ...expiredMembersQueue]
+    expiredMembersQueueFiddler.setData(expiredMembersQueueData).dumpValues();
+  }
+  actionScheduleFiddler.setData(actionSchedule).dumpValues();
 }
 function executeScheduledActions() {
   const emailScheduleFiddler = getFiddler_('Email Schedule');
@@ -13,7 +31,7 @@ function executeScheduledActions() {
   const emailsToSend = doScheduledActions(emailScheduleData);
   sendEmails_(emailsToSend);
   const combined = combineArrays(emailScheduleFormulas, emailScheduleData);
-  const remainingEmails = combined.filter((_, i) => i >= emailsToSend.length);  
+  const remainingEmails = combined.filter((_, i) => i >= emailsToSend.length);
   emailScheduleFiddler.setData(remainingEmails).dumpValues();
 }
 
@@ -31,35 +49,35 @@ function processTransactions() {
   const actionScheduleFiddler = getFiddler_('Action Schedule');
   const actionSchedule = actionScheduleFiddler.getData();
 
-  
+
   const membershipFiddler = getFiddler_('Membership');
   const membershipData = membershipFiddler.getData();
 
- 
+
   const actionSpecs = getFiddler_('Action Specs').getData();
-  
+
   const newMembers = processPaidTransactions(transactions, membershipData, actionSchedule, actionSpecs);
-  
+
   const bulkGroupFiddler = getFiddler_('Group Add Emails');
   const groupAddEmails = [...bulkGroupFiddler.getData(), ...newMembers];
   bulkGroupFiddler.setData(groupAddEmails).dumpValues();
 
   transactionsFiddler.setData(transactions.length > 1 ? transactions : transactionsHeaderRow).dumpValues();
-  
+
   membershipFiddler.setData(membershipData).dumpValues();
-  
+
   actionScheduleFiddler.setData(actionSchedule).dumpValues();
 
 }
 
-function addMembersToGroups(){
+function addMembersToGroups() {
   const bulkGroupFiddler = getFiddler_('Bulk Add Groups');
-  bulkGroupFiddler.mapRows(row => {addMemberToGroup(row['Group Email [Required]'], row['Member Email']); return row;}).filterRows(_ => false).dumpValues();
+  bulkGroupFiddler.mapRows(row => { addMemberToGroup(row['Group Email [Required]'], row['Member Email']); return row; }).filterRows(_ => false).dumpValues();
 }
 
 function removeMembersFromGroups() {
   const bulkGroupFiddler = getFiddler_('Bulk Remove Groups');
-  bulkGroupFiddler.mapRows(row => {removeMemberFromGroup(row['Group Email [Required]'], row['Member Email']); return row;}).filterRows(_ => false).dumpValues();
+  bulkGroupFiddler.mapRows(row => { removeMemberFromGroup(row['Group Email [Required]'], row['Member Email']); return row; }).filterRows(_ => false).dumpValues();
 }
 
 function sendEmails_(emails) {
@@ -80,6 +98,7 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('Membership Management')
     .addItem('Process Transactions', processTransactions.name)
+    .addItem('Do Action Schedule', doActionSchedule.name)
     .addItem('Send Emails', executeScheduledActions.name)
     .addToUi();
 }
@@ -144,6 +163,6 @@ function convertLinks_(sheetName) {
  * @returns {Fiddler} - The fiddler.
  */
 function getFiddler_(sheetName, createIfMissing = true) {
-  return bmPreFiddler.PreFiddler().getFiddler({sheetName, createIfMissing}).needFormulas();
+  return bmPreFiddler.PreFiddler().getFiddler({ sheetName, createIfMissing }).needFormulas();
 }
 
