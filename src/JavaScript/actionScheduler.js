@@ -19,8 +19,8 @@ function processActionSchedule(actionSchedule) {
     const as = actionSchedule[i];
     const today = today_();
     if (as.Date <= today) {
-      if (as.Type === ActionType.Expiry) {
-        result.expiredMembersQueue.push(as);
+      if (as.Type === ActionType.Expiry4) {
+        result.expiredMembersQueue.push({Email: as.Email});
       } else {
         delete as.Date
         result.emailQueue.push(as);

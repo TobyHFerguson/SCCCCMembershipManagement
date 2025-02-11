@@ -23,7 +23,9 @@ const ActionType = {
 
 
 function today_(date = new Date()) {
-  return new Date().setHours(12, 0, 0, 0);
+  const d =  new Date(date)
+  d.setHours(12, 0, 0, 0);
+  return d;
 }
 
 

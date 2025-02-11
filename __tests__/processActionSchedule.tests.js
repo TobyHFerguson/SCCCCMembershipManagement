@@ -37,16 +37,16 @@ describe('processActionSchedule', () => {
         });
         test('should process action schedule correctly with valid input', () => {
             const actionSchedule = [
-                { Date: new Date('2050-01-01'), Type: tr.ActionType.Expiry1, Email: "leaveMe1" },
+                { Date: new Date('2050-01-01'), Type: tr.ActionType.Expiry1, Email: "leaveMe" },
                 { Date: new Date('2021-01-01'), Type: tr.ActionType.Join, Email: "removeMe" },
-                { Date: new Date('2045-01-01'), Type: tr.ActionType.Expiry1, Email: "leaveMe2" },
-                { Date: new Date('2045-01-01'), Type: tr.ActionType.Expiry4, Email: "gone" }
+                { Date: new Date('2045-01-01'), Type: tr.ActionType.Expiry1, Email: "leaveMe" },
+                { Date: new Date('2021-01-01'), Type: tr.ActionType.Expiry4, Email: "gone" }
             ];
             const expectedResult = {
                 emailQueue: actionSchedule.filter(as => as.Email == "removeMe"),
-                expiredMembersQueue: actionSchedule.filter(as => as.Email == "gone"),
+                expiredMembersQueue: actionSchedule.map(as => {if (as.Email == "gone") return {Email: as.Email}; else return null;}).filter(as => as != null),
             }
-            const resultingActionSchedule = actionSchedule.filter(as => as.Email != "removeMe");
+            const resultingActionSchedule = actionSchedule.filter(as => as.Email == "leaveMe");
             const result = processActionSchedule(actionSchedule);
             expect(result).toEqual(expectedResult)
             expect(actionSchedule).toEqual(resultingActionSchedule);
