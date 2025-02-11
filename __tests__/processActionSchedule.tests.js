@@ -23,13 +23,36 @@ describe('processActionSchedule', () => {
             expect(() => processActionSchedule(input)).toThrow(Error);
         });
     });
-    describe('emailQueue tests', () => {
-        const actionSchedule = {Date: '2021-01-01', Type: tr.ActionType.Join};
-        const expectedOutput = { emailQueue: [{Date: '2021-01-01', Type: tr.ActionType.Join}], expiredMembersQueue: [] };
+    describe('output tests', () => {
         test('should process action schedule correctly with valid input', () => {
-            const result = processActionSchedule([actionSchedule]);
+            const actionSchedule = [{ Date: new Date('2021-01-01'), Type: tr.ActionType.Join, Email: "a@b.com" }];
+            const expectedOutput = 
+                {
+                    emailQueue: [{ Type: tr.ActionType.Join, Email: "a@b.com" },],
+                    expiredMembersQueue: []
+                };
+            const result = processActionSchedule(actionSchedule);
             expect(result).toEqual(expectedOutput);
+            expect(actionSchedule).toEqual([]);
         });
+        test('should process action schedule correctly with valid input', () => {
+            const actionSchedule = [
+                { Date: new Date('2050-01-01'), Type: tr.ActionType.Expiry1, Email: "leaveMe1" },
+                { Date: new Date('2021-01-01'), Type: tr.ActionType.Join, Email: "removeMe" },
+                { Date: new Date('2045-01-01'), Type: tr.ActionType.Expiry1, Email: "leaveMe2" },
+                { Date: new Date('2045-01-01'), Type: tr.ActionType.Expiry4, Email: "gone" }
+            ];
+            const expectedResult = {
+                emailQueue: actionSchedule.filter(as => as.Email == "removeMe"),
+                expiredMembersQueue: actionSchedule.filter(as => as.Email == "gone"),
+            }
+            const resultingActionSchedule = actionSchedule.filter(as => as.Email != "removeMe");
+            const result = processActionSchedule(actionSchedule);
+            expect(result).toEqual(expectedResult)
+            expect(actionSchedule).toEqual(resultingActionSchedule);
+        });
+        
+
     });
 
     // Add more tests as needed
