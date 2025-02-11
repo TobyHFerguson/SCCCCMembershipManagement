@@ -1,6 +1,6 @@
 
 
-function sendEmails_(emailQueue, senderFun, actionSpecs, members) {
+function sendEmails(emailQueue, senderFun, actionSpecs, members) {
   const membersByEmail = members.reduce((acc, member) => { acc[member.Email] = member; return acc; }, {});
   if (!emailQueue || emailQueue.length === 0) { 
     return;
@@ -114,6 +114,6 @@ function testSendEmail() {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    sendEmails_
+    sendEmails_: sendEmails
   };
 }
