@@ -57,29 +57,29 @@ const Manager = (function () {
         groupEmails.forEach(group => groupRemoveFun(group.Email, member.Email));
         message = {
           to: member.Email,
-          subject: expandTemplate_(expiry4Spec.Subject, member),
-          htmlBody: expandTemplate_(expiry4Spec.Body, member)
+          subject: expandTemplate(expiry4Spec.Subject, member),
+          htmlBody: expandTemplate(expiry4Spec.Body, member)
         }
       } else if (tdy >= expiry3Date) {
         const expiry3Spec = _actionSpec.Expiry3;
         message = {
           to: member.Email,
-          subject: expandTemplate_(expiry3Spec.Subject, member),
-          htmlBody: expandTemplate_(expiry3Spec.Body, member)
+          subject: expandTemplate(expiry3Spec.Subject, member),
+          htmlBody: expandTemplate(expiry3Spec.Body, member)
         }
       } else if (tdy >= expiry2Date) {
         const expiry2Spec = _actionSpec.Expiry2;
         message = {
           to: member.Email,
-          subject: expandTemplate_(expiry2Spec.Subject, member),
-          htmlBody: expandTemplate_(expiry2Spec.Body, member)
+          subject: expandTemplate(expiry2Spec.Subject, member),
+          htmlBody: expandTemplate(expiry2Spec.Body, member)
         }
       } else if (tdy >= expiry1Date) {
         const expiry1Spec = _actionSpec.Expiry1;
         message = {
           to: member.Email,
-          subject: expandTemplate_(expiry1Spec.Subject, member),
-          htmlBody: expandTemplate_(expiry1Spec.Body, member)
+          subject: expandTemplate(expiry1Spec.Subject, member),
+          htmlBody: expandTemplate(expiry1Spec.Body, member)
         }
       }
       if (message) {
@@ -102,25 +102,38 @@ const Manager = (function () {
    * @returns {Array<Object>} return.processedRows - Array of processed transaction rows.
    * @returns {Array<Object>} return.result - Array of updated transactions.
    */
-  function processPaidTransactions(transactions, membershipData, groupAddFun, sendEmailFun) {
+  function processPaidTransactions(transactions, membershipData, groupAddFun, sendEmailFun, actionSpecs) {
+    if (!transactions || !transactions.length || !Array.isArray(actionSpecs)) return;
 
-  const emailToMemberMap = new Map(membershipData.map((member, index) => [member.Email, index]));
+    let _actionSpec = Object.fromEntries(actionSpecs.map(spec => [spec.Type, spec]));
+
+  const emailToMemberMap = membershipData.length ? Object.fromEntries(membershipData.map((member, index) => [member.Email, index])) : {};
   transactions.forEach(txn => {
     if (!txn.Processed && txn["Payable Status"].toLowerCase().startsWith("paid")) {
-      const matchIndex = emailToMemberMap.get(txn["Email Address"]);
-      if (matchIndex !== undefined) {
+      const matchIndex = emailToMemberMap[txn["Email Address"]];
+      let message
+      if (matchIndex !== undefined) { // a renewing member
         const member = membershipData[matchIndex];
         const years = getPeriod_(txn);
         renewMember_(member, years);
-        sendEmailFun({ Email: member.Email, Type: ActionType.Renew });
-      } else {
+        message = {
+          to: member.Email,
+          subject: expandTemplate(_actionSpec.Renew.Subject, member),
+          htmlBody: expandTemplate(_actionSpec.Renew.Body, member)
+        }
+      } else { // a joining member
         const newMember = getNewMember(txn)
         membershipData.push(newMember);
         groupAddFun(newMember.Email)
-        sendEmailFun({ Email: newMember.Email, Type: ActionType.Join });
+        message = {
+          to: newMember.Email,
+          subject: expandTemplate(_actionSpec.Join.Subject, newMember),
+          htmlBody: expandTemplate(_actionSpec.Join.Body, newMember)
+        }
       }
       txn.Timestamp = today();
       txn.Processed = today();
+      sendEmailFun(message);
     }
   })
 
@@ -136,7 +149,7 @@ const Manager = (function () {
  * @param {Object} row - The object containing values to replace placeholders.
  * @returns {string} - The expanded template string with placeholders replaced by corresponding values.
  */
-function expandTemplate_(template, row) {
+function expandTemplate(template, row) {
   const dateFields = ["Scheduled On", "Expires", "Joined", "Renewed On"]; // Add the names of fields that should be treated as dates
   return template.replace(/{([^}]+)}/g, (_, key) => {
     let value = row[key];
@@ -199,7 +212,7 @@ function calculateExpirationDate_(period, expires) {
     return getDateString(futureDate);
   }
 
-  const expirationDate = new Date(expires + 'T00:00:00Z'); // Ensure UTC
+  const expirationDate = new Date(Date.parse(expires + 'T00:00:00Z') || expires); // Ensure UTC
   const futureExpirationDate = new Date(expirationDate);
   futureExpirationDate.setUTCFullYear(futureExpirationDate.getUTCFullYear() + period);
 
@@ -219,6 +232,17 @@ function addDaysToDate_(date, days = 0) {
   return result;
 }
 
+/**
+ * Returns a new date with years added to it.
+ * @param {Date} date 
+ * @param {number} years 
+ * @returns {Date}
+ */
+function addYearsToDate(date, years = 0) {
+  const result = new Date(date); // Ensure UTC
+  result.setUTCFullYear(result.getUTCFullYear() + years);
+  return result;
+}
 
 
 
@@ -227,10 +251,12 @@ return {
   ActionType,
   today,
   addDaysToDate_,
+  addYearsToDate,
   calculateExpirationDate_,
   setToday,
   processExpirations,
   setGroupEmails,
+  expandTemplate
 };
 }) ()
 

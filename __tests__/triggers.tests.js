@@ -41,7 +41,7 @@ const actionSpec = [
 
 describe('trigger tests', () => {
   const actionSpecByType = new Map(actionSpec.map(as => [as.Type, as]));
-  const today = new Date('2025-01-10' + 'T00:00:00Z' )
+  const today = new Date('2025-01-10' + 'T00:00:00Z')
   let groupAddFun;
   let groupRemoveFun;
   let sendEmailFun;
@@ -53,7 +53,7 @@ describe('trigger tests', () => {
     sendEmailFun = jest.fn();
     groupRemoveFun = jest.fn();
   });
-  describe.only('processExpirations', () => {
+  describe('processExpirations', () => {
     let activeMembers, expiredMembers;
     beforeEach(() => {
       activeMembers = []
@@ -109,7 +109,7 @@ describe('trigger tests', () => {
       expect(sendEmailFun).toHaveBeenCalledTimes(1);
       expect(sendEmailFun).toHaveBeenCalledWith({ to: activeMembers[0].Email, subject: actionSpecByType.get('Expiry3').Subject, htmlBody: actionSpecByType.get('Expiry3').Body.replace('{First}', activeMembers[0].First).replace('{Last}', activeMembers[0].Last) })
     })
-    
+
   })
 
   describe('processPaidTransactions_', () => {
@@ -127,25 +127,31 @@ describe('trigger tests', () => {
           { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Joined: today, Expires: "2027-01-10", "Renewed On": "" },
           { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Joined: today, Expires: "2028-01-10", "Renewed On": "" }]
 
-        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun);
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec);
+        members.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
+        expectedMembers.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expect(members.length).toEqual(3)
         expect(members).toEqual(expectedMembers);
       });
       it('should handle membership renewals', () => {
+        const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" },
+        ]
         const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "" },]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: getDateString(), Expires: triggers.addDaysToDate_(new Date(), 365), "Renewed On": triggers.today() },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: triggers.addYearsToDate("2025-03-10", 1), "Renewed On": triggers.today() },
         ]
-        triggers.processPaidTransactions(transactionsFixture.paid, members, groupAddFun, sendEmailFun);
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec);
         members.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expectedMembers.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
+        expect(members.length).toEqual(1)
+        expect(members).toEqual(expectedMembers);
       });
     });
     describe('group addition tests', () => {
       it('should add a member to a group when the member is added', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         const members = []
-        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun);
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec);
         expect(groupAddFun).toHaveBeenCalledWith('test1@example.com');
         triggers.processPaidTransactions(txns, members, groupAddFun);
         expect(groupAddFun).toHaveBeenCalledTimes(1);
@@ -153,7 +159,7 @@ describe('trigger tests', () => {
       it('should not add a member to a group when the member is renewed', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "" },]
-        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun);
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec);
         triggers.processPaidTransactions(txns, members, groupAddFun);
         expect(groupAddFun).toHaveBeenCalledTimes(0);
       });
@@ -162,15 +168,23 @@ describe('trigger tests', () => {
       it('should send an email when a member is added', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         const members = []
-        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun);
-        expect(sendEmailFun).toHaveBeenCalledWith({ Email: 'test1@example.com', Type: triggers.ActionType.Join })
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec);
+        expect(sendEmailFun).toHaveBeenCalledWith({
+          to: members[0].Email,
+          subject: triggers.expandTemplate(actionSpecByType.get('Join').Subject, members[0]),
+          htmlBody: triggers.expandTemplate(actionSpecByType.get('Join').Body, members[0])
+        });
         expect(sendEmailFun).toHaveBeenCalledTimes(1);
       });
       it('should send an email when the member is renewed', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "" },]
-        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun);
-        expect(sendEmailFun).toHaveBeenCalledWith({ Email: 'test1@example.com', Type: triggers.ActionType.Renew })
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec) ;
+        expect(sendEmailFun).toHaveBeenCalledWith({
+          to: members[0].Email,
+          subject: triggers.expandTemplate(actionSpecByType.get('Renew').Subject, members[0]),
+          htmlBody: triggers.expandTemplate(actionSpecByType.get('Renew').Body, members[0])
+        });
         expect(sendEmailFun).toHaveBeenCalledTimes(1);
       });
     })
@@ -201,14 +215,14 @@ describe('trigger tests', () => {
         { Email: "test2@example.com", Period: 1, first: "Jane", last: "Smith", },
         { Email: "test3@example.com", Period: 3, first: "Not", last: "Member" }
         ];
-        triggers.processPaidTransactions(transactionsFixture.differentTerms, members, groupAddFun, sendEmailFun);
+        triggers.processPaidTransactions(transactionsFixture.differentTerms, members, groupAddFun, sendEmailFun, actionSpec);
         expect(members.map(m => m.Period)).toEqual(expectedMembers.map(m => m.Period));
 
       });
 
       it('should return period as 1 if payment term is not specified', () => {
         const members = []
-        triggers.processPaidTransactions(transactionsFixture.noTerm, members, groupAddFun, sendEmailFun);
+        triggers.processPaidTransactions(transactionsFixture.noTerm, members, groupAddFun, sendEmailFun, actionSpec);
         expect(members.map(m => m.Period)).toEqual([1, 1, 1])
       });
     })
