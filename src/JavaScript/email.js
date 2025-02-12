@@ -13,7 +13,7 @@ function sendEmails(emailQueue, senderFun, actionSpecs, members) {
       senderFun({
         to: email.Email,
         subject: expandTemplate_(spec.Subject, member),
-        htmlBody: expandTemplate_(spec.Body, member)
+        htmlBody: expir(spec.Body, member)
       });
       emailQueue.splice(i, 1);
     }

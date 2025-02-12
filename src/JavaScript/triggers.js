@@ -30,8 +30,36 @@ const Manager = (function () {
   function today() {
     return _today;
   }
+  let _groupEmails;
+  function setGroupEmails(groupEmails) {
+    _groupEmails = groupEmails;
+  }
 
 
+
+  function processExpirations(activeMembers, expiredMembers, actionSpecs, groupRemoveFun, sendEmailFun, groupEmails) {
+    let _actionSpec = Object.fromEntries(actionSpecs.map(spec => [spec.Type, spec]));
+
+    let numProcessed = 0;
+    for (let i = activeMembers.length - 1; i >= 0; i--) {
+      const member = activeMembers[i];
+      expiry4Spec = _actionSpec.Expiry4;
+      if (new Date(member.Expires) <= new Date(addDaysToDate_(today(), expiry4Spec.Offset))) {
+        expiredMembers.push(member);
+        groupEmails.forEach(group => groupRemoveFun(group.Email, member.Email));
+        const message = {
+          to: member.Email,
+          subject: expandTemplate_(expiry4Spec.Subject, member),
+          htmlBody: expandTemplate_(expiry4Spec.Body, member)
+        }
+        sendEmailFun(message);
+
+        activeMembers.splice(i, 1);
+        numProcessed++
+      }
+    }
+    return numProcessed
+  }
   // Pure JavaScript functions
   /**
    * Processes transaction data by updating membership information and handling email schedules. Always returns one empty row, thus ensuring that the headers aren't removed from the source spreadsheet
@@ -70,7 +98,26 @@ const Manager = (function () {
 
   }
 
-
+  /**
+   * Expands a template string by replacing placeholders with corresponding values from a row object.
+   * Placeholders are in the format {key}, where key is a property name in the row object.
+   * Date fields specified in the dateFields array are converted to local date strings.
+   *
+   * @param {string} template - The template string containing placeholders.
+   * @param {Object} row - The object containing values to replace placeholders.
+   * @returns {string} - The expanded template string with placeholders replaced by corresponding values.
+   */
+  function expandTemplate_(template, row) {
+    const dateFields = ["Scheduled On", "Expires", "Joined", "Renewed On"]; // Add the names of fields that should be treated as dates
+    return template.replace(/{([^}]+)}/g, (_, key) => {
+      let value = row[key];
+      if (dateFields.includes(key)) {
+        value = new Date(value); // Convert to Date object if it's a date field
+        return value.toLocaleDateString(); // Convert Date objects to local date string
+      }
+      return value || "";
+    });
+  };
 
   function getPeriod_(txn) {
     if (!txn.Payment) { return 1; }
@@ -89,7 +136,7 @@ const Manager = (function () {
       Expires: calculateExpirationDate_(getPeriod_(txn)),
       "Renewed On": '',
     };
-    
+
     return newMember
   }
 
@@ -127,7 +174,7 @@ const Manager = (function () {
     const futureExpirationDate = new Date(expirationDate);
     futureExpirationDate.setFullYear(futureExpirationDate.getFullYear() + period);
 
-    const result =  futureDate > futureExpirationDate ? futureDate : futureExpirationDate;
+    const result = futureDate > futureExpirationDate ? futureDate : futureExpirationDate;
     return getDateString(result);
   }
 
@@ -144,15 +191,18 @@ const Manager = (function () {
   }
 
 
-  
-  
+
+
   return {
     processPaidTransactions,
     ActionType,
     today,
     addDaysToDate_,
     calculateExpirationDate_,
-    setToday  };
+    setToday,
+    processExpirations,
+    setGroupEmails,
+  };
 })()
 
 if (typeof module !== 'undefined' && module.exports) {
