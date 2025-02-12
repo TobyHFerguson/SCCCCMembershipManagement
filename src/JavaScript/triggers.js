@@ -102,7 +102,7 @@ const Manager = (function () {
    * @returns {Array<Object>} return.processedRows - Array of processed transaction rows.
    * @returns {Array<Object>} return.result - Array of updated transactions.
    */
-  function processPaidTransactions(transactions, membershipData, groupAddFun, sendEmailFun, actionSpecs) {
+  function processPaidTransactions(transactions, membershipData, groupAddFun, sendEmailFun, actionSpecs, groupEmails) {
     if (!transactions || !transactions.length || !Array.isArray(actionSpecs)) return;
 
     let _actionSpec = Object.fromEntries(actionSpecs.map(spec => [spec.Type, spec]));
@@ -124,7 +124,7 @@ const Manager = (function () {
       } else { // a joining member
         const newMember = getNewMember(txn)
         membershipData.push(newMember);
-        groupAddFun(newMember.Email)
+        groupEmails.forEach(g => groupAddFun(newMember.Email, g.Email));
         message = {
           to: newMember.Email,
           subject: expandTemplate(_actionSpec.Join.Subject, newMember),
