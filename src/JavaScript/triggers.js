@@ -47,21 +47,19 @@ const Manager = (function () {
    * @returns {Array<Object>} return.processedRows - Array of processed transaction rows.
    * @returns {Array<Object>} return.result - Array of updated transactions.
    */
-  function processPaidTransactions(transactions, membershipData, actionSchedule, actionSpecs) {
+  function processPaidTransactions(transactions, membershipData) {
 
     const emailToMemberMap = new Map(membershipData.map((member, index) => [member.Email, index]));
-    const newMembers = [];
     transactions.forEach(txn => {
       if (!txn.Processed && txn["Payable Status"].toLowerCase().startsWith("paid")) {
         const matchIndex = emailToMemberMap.get(txn["Email Address"]);
         if (matchIndex !== undefined) {
           const member = membershipData[matchIndex];
           const years = getPeriod_(txn);
-          renewMember_(member, years, actionSchedule, actionSpecs);
+          renewMember_(member, years);
         } else {
-          const newMember = addNewMember_(txn, actionSchedule, actionSpecs, membershipData)
+          const newMember = addNewMember_(txn)
           membershipData.push(newMember);
-          newMembers.push({ Email: newMember.Email });
         }
         txn.Timestamp = today();
         txn.Processed = today();
@@ -69,7 +67,6 @@ const Manager = (function () {
     })
 
 
-    return newMembers;
   }
 
 
@@ -81,7 +78,7 @@ const Manager = (function () {
     return years;
   }
 
-  function addNewMember_(txn, actionSchedule, actionSpecs, membershipData) {
+  function addNewMember_(txn) {
     const newMember = {
       Email: txn["Email Address"],
       First: txn["First Name"],
@@ -91,47 +88,8 @@ const Manager = (function () {
       Expires: calculateExpirationDate_(getPeriod_(txn)),
       "Renewed On": '',
     };
-    addNewMemberToActionSchedule_(newMember, actionSchedule, actionSpecs);
+    
     return newMember
-  }
-
-  function addNewMemberToActionSchedule_(member, actionSchedule, actionSpecs) {
-    const scheduleEntries = createScheduleEntries_(member, ActionType.Join, actionSpecs);
-    actionSchedule.push(...scheduleEntries);
-  }
-
-  function addRenewedMemberToActionSchedule_(member, actionSchedule, actionSpecs) {
-    const email = member.Email;
-    removeEmails_(email, actionSchedule);
-    const scheduleEntries = createScheduleEntries_(member, ActionType.Renew, actionSpecs);
-    actionSchedule.push(...scheduleEntries);
-  }
-
-  /**
-   * Removes all objects from the data & formula arrays whose Email property matches the given email address.
-   * @param {string} email - The email address to match.
-   * @param {Array} actionSchedule - The array of objects.
-   */
-  function removeEmails_(email, actionSchedule) {
-    for (let i = actionSchedule.length - 1; i >= 0; i--) {
-      if (actionSchedule[i].Email === email) {
-        actionSchedule.splice(i, 1);
-      }
-    }
-  }
-
-
-  function createScheduleEntries_(member, type, actionSpecs) {
-    const scheduleEntries = [];
-    switch (type) {
-      case ActionType.Join:
-      case ActionType.Renew:
-        scheduleEntries.push({ Date: today(), Type: type, Email: member.Email });
-      case 'Migration':
-        break;
-    }
-    actionSpecs.filter(spec => spec.Type.startsWith('Expiry')).forEach((spec) => scheduleEntries.push({ Date: addDaysToDate_(member.Expires, spec.Offset), Type: spec.Type, Email: member.Email }));
-    return scheduleEntries;
   }
 
 
@@ -141,11 +99,11 @@ const Manager = (function () {
    * @param {number} period 
    * @param {} actionSchedule 
    */
-  function renewMember_(member, period, actionSchedule, actionSpecs) {
+  function renewMember_(member, period) {
     member.Period = period;
     member["Renewed On"] = today();
     member.Expires = calculateExpirationDate_(period, member.Expires);
-    addRenewedMemberToActionSchedule_(member, actionSchedule, actionSpecs);
+
   }
 
   /**
@@ -184,52 +142,16 @@ const Manager = (function () {
     return result;
   }
 
-  function sortArraysByValue(arr1, arr2, compareFn) {
-    if (arr1.length !== arr2.length) {
-      throw new Error("Both arrays must have the same length");
-    }
-    const combined = arr1.map((value, index) => ({ value, index }));
-    combined.sort((a, b) => compareFn(a.value !== undefined ? a.value : a, b.value !== undefined ? b.value : b));
-    const sortedArr1 = combined.map(item => item.value);
-    const sortedArr2 = combined.map(item => arr2[item.index]);
-    arr1.splice(0, arr1.length, ...sortedArr1);
-    arr2.splice(0, arr2.length, ...sortedArr2);
-  }
 
-  /**
-   * Combines two arrays of objects by merging the properties of objects at the same index.
-   * If a property in the first array's object is an empty string or undefined, the property from the second array's object is used.
-   * 
-   * @param {Array<Object>} arr1 - The first array of objects.
-   * @param {Array<Object>} arr2 - The second array of objects.
-   * @returns {Array<Object>} A new array of objects with combined properties.
-   * @throws {Error} If the lengths of the two arrays are not equal.
-   */
-  function combineArrays(arr1, arr2) {
-    if (arr1.length !== arr2.length) {
-      throw new Error("Both arrays must have the same length");
-    }
 
-    return arr1.map((item, index) => {
-      const combinedItem = { ...arr2[index] };
-      for (const key in item) {
-        if (item[key] !== "" && item[key] !== undefined) {
-          combinedItem[key] = item[key];
-        }
-      }
-      return combinedItem;
-    });
-  }
+  
   return {
     processPaidTransactions,
-    createScheduleEntries_,
     ActionType,
     today,
     addDaysToDate_,
-    addRenewedMemberToActionSchedule_,
     calculateExpirationDate_,
     setToday,
-
   };
 })()
 
