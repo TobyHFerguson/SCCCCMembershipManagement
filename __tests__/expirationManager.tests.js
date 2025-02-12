@@ -31,28 +31,37 @@ describe('ExpirationManager', () => {
     });
     test('it should log an error if a member is not found in membershipData', () => {
         const expiringMembers = [{ Email: 3 }];
-        const expectedExpireMembers = [{ Email: 3 }];
+        const expectedExpireMembers = [];
+        const members = [];
+        const expectedMembers = [];
         const groupRemoveList = [];
+        const expectedGroupRemoveList = [{ Email: 3 }];
         const emailSendList = [];
+        const expectedEmailSendList = [{ Email: 3, Type: 'Expiry4' }];
         const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
         const numProcessed = ExpirationManager.expireMembers(expiringMembers, members, groupRemoveList, emailSendList);
-        expect(numProcessed).toEqual(0);
+        expect(numProcessed).toEqual(1);
         expect(consoleSpy).toHaveBeenCalledWith('Member 3 is supposed to be expiring but they\'re not found in membership data');
         consoleSpy.mockRestore();
         expect(expiringMembers).toEqual(expectedExpireMembers);
+        expect(members).toEqual(expectedMembers);
+        expect(groupRemoveList).toEqual(expectedGroupRemoveList);
+        expect(emailSendList).toEqual(expectedEmailSendList);
     });
     test('it should not remove members from membershipData if they are not found in membershipData', () => {
         const expiringMembers = [{ Email: 3 }];
         const members = [{ Email: 1 }, { Email: 2 }];
         const expectedMembers = [{ Email: 1 }, { Email: 2 }];
-        const groupRemoveList = [];
+        const groupRemoveList = [{ Email: 1 }, { Email: 2 }];
+        const expectedGroupRemoveList = [{ Email: 1 }, { Email: 2 },{ Email: 3 }, ];
         const emailSendList = [];
+        const expectedEmailSendList = [{ Email: 3, Type: 'Expiry4' }];
         const numProcessed = ExpirationManager.expireMembers(expiringMembers, members, groupRemoveList, emailSendList);
-
-        expect(expiringMembers).toEqual([{ Email: 3 }]);
+        expect(numProcessed).toEqual(1);
+        expect(expiringMembers).toEqual([]);
         expect(members).toEqual(expectedMembers);
-        expect(groupRemoveList).toEqual([]);
-        expect(emailSendList).toEqual([]);
+        expect(groupRemoveList).toEqual(expectedGroupRemoveList);
+        expect(emailSendList).toEqual(expectedEmailSendList);
     });
     test('it should add members to groupRemoveList and emailSendList even if those lists arent empty', () => {
         const expiringMembers = [{ Email: 1 }, { Email: 2 }];

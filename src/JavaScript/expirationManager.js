@@ -13,12 +13,11 @@ const ExpirationManager = (function () {
             const memberIndex = membershipData.findIndex(m => m.Email === member.Email);
             if (memberIndex === -1) {
                 console.log(`Member ${member.Email} is supposed to be expiring but they're not found in membership data`);
-                continue;
+            } else {
+                membershipData.splice(memberIndex, 1);
             }
-            const memberData = membershipData[memberIndex];
-            membershipData.splice(memberIndex, 1);
-            groupRemoveList.push(memberData);
-            emailSendList.push({ Email: memberData.Email, Type: ActionType.Expiry4 });
+            groupRemoveList.push(member);
+            emailSendList.push({ Email: member.Email, Type: ActionType.Expiry4 });
             expiringMembersQueue.splice(i, 1);
             numProcessed += 1;
         }
