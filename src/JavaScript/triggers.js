@@ -32,8 +32,6 @@ const Manager = (function () {
   }
 
 
-
-
   // Pure JavaScript functions
   /**
    * Processes transaction data by updating membership information and handling email schedules. Always returns one empty row, thus ensuring that the headers aren't removed from the source spreadsheet
@@ -47,7 +45,7 @@ const Manager = (function () {
    * @returns {Array<Object>} return.processedRows - Array of processed transaction rows.
    * @returns {Array<Object>} return.result - Array of updated transactions.
    */
-  function processPaidTransactions(transactions, membershipData) {
+  function processPaidTransactions(transactions, membershipData, groupAddFun, sendEmailFun) {
 
     const emailToMemberMap = new Map(membershipData.map((member, index) => [member.Email, index]));
     transactions.forEach(txn => {
@@ -58,8 +56,10 @@ const Manager = (function () {
           const years = getPeriod_(txn);
           renewMember_(member, years);
         } else {
-          const newMember = addNewMember_(txn)
+          const newMember = getNewMember(txn)
           membershipData.push(newMember);
+          groupAddFun(newMember.Email)
+          sendEmailFun({ Email: newMember.Email, Type: ActionType.Join });
         }
         txn.Timestamp = today();
         txn.Processed = today();
@@ -78,7 +78,7 @@ const Manager = (function () {
     return years;
   }
 
-  function addNewMember_(txn) {
+  function getNewMember(txn) {
     const newMember = {
       Email: txn["Email Address"],
       First: txn["First Name"],
@@ -143,7 +143,7 @@ const Manager = (function () {
   }
 
 
-
+  
   
   return {
     processPaidTransactions,
@@ -151,8 +151,7 @@ const Manager = (function () {
     today,
     addDaysToDate_,
     calculateExpirationDate_,
-    setToday,
-  };
+    setToday  };
 })()
 
 if (typeof module !== 'undefined' && module.exports) {
