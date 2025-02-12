@@ -38,11 +38,12 @@ describe('trigger tests', () => {
   let sendEmailFun;
   beforeEach(() => {
     triggers.setToday(today)
-    groupAddFun = jest.fn();
-    sendEmailFun = jest.fn();
   });
   describe('processPaidTransactions_', () => {
-
+    beforeEach(() => {
+      groupAddFun = jest.fn();
+      sendEmailFun = jest.fn();
+    });
 
     describe('basic tests', () => {
       it('should create the new members', () => {
@@ -120,26 +121,26 @@ describe('trigger tests', () => {
         expectedMembers.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
       });
     })
+    describe('period calculation', () => {
+      it('should return correct period for transactions with different payment terms', () => {
+        const members = [];
+        const expectedMembers = [{ Email: "test1@example.com", Period: 3, first: "John", last: "Doe" },
+        { Email: "test2@example.com", Period: 1, first: "Jane", last: "Smith", },
+        { Email: "test3@example.com", Period: 3, first: "Not", last: "Member" }
+        ];
+        triggers.processPaidTransactions(transactionsFixture.differentTerms, members, groupAddFun, sendEmailFun);
+        expect(members.map(m => m.Period)).toEqual(expectedMembers.map(m => m.Period));
+
+      });
+
+      it('should return period as 1 if payment term is not specified', () => {
+        const members = []
+        triggers.processPaidTransactions(transactionsFixture.noTerm, members, groupAddFun, sendEmailFun);
+        expect(members.map(m => m.Period)).toEqual([1, 1, 1])
+      });
+    })
   });
 
-  describe('period calculation', () => {
-    it('should return correct period for transactions with different payment terms', () => {
-      const members = [];
-      const expectedMembers = [{ Email: "test1@example.com", Period: 3, first: "John", last: "Doe" },
-      { Email: "test2@example.com", Period: 1, first: "Jane", last: "Smith", },
-      { Email: "test3@example.com", Period: 3, first: "Not", last: "Member" }
-      ];
-      triggers.processPaidTransactions(transactionsFixture.differentTerms, members, groupAddFun, sendEmailFun);
-      expect(members.map(m => m.Period)).toEqual(expectedMembers.map(m => m.Period));
-
-    });
-
-    it('should return period as 1 if payment term is not specified', () => {
-      const members = []
-      triggers.processPaidTransactions(transactionsFixture.noTerm, members, groupAddFun, sendEmailFun);
-      expect(members.map(m => m.Period)).toEqual([1, 1, 1])
-    });
-  })
 
 
   function getDateString(date = new Date) {
