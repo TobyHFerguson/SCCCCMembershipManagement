@@ -3,7 +3,7 @@ if (typeof require !== 'undefined') {
 }
 
 const ExpirationManager = (function () {
-    function expireMembers(expiringMembersQueue, membershipData, groupRemoveList, emailSendList) {
+    function expireMembers(expiringMembersQueue,  membershipData, expiredMembers, groupRemoveList, emailSendList) {
         let numProcessed = 0;
         if (!expiringMembersQueue || expiringMembersQueue.length === 0) {
             return numProcessed;
@@ -16,7 +16,8 @@ const ExpirationManager = (function () {
             } else {
                 membershipData.splice(memberIndex, 1);
             }
-            groupRemoveList.push(member);
+            expiredMembers.push({ Email: member.Email });
+            groupRemoveList.push({Email: member.Email});
             emailSendList.push({ Email: member.Email, Type: ActionType.Expiry4 });
             expiringMembersQueue.splice(i, 1);
             numProcessed += 1;
