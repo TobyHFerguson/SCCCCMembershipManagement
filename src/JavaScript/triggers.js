@@ -55,6 +55,7 @@ const Manager = (function () {
           const member = membershipData[matchIndex];
           const years = getPeriod_(txn);
           renewMember_(member, years);
+          sendEmailFun({ Email: member.Email, Type: ActionType.Renew });
         } else {
           const newMember = getNewMember(txn)
           membershipData.push(newMember);
