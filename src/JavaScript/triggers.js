@@ -20,13 +20,14 @@ const Manager = (function () {
     Expiry3: 'Expiry3',
     Expiry4: 'Expiry4'
   };
-
-
-  function today_(date = new Date()) {
-    const d = new Date(date)
-    d.setHours(12, 0, 0, 0);
-    return d;
+  let today = new Date();
+  function setToday(date) {
+    today = new Date(date);
   }
+  function today_() {
+    return today;
+  }
+
 
 
 
@@ -223,7 +224,9 @@ const Manager = (function () {
     today_,
     addDaysToDate_,
     addRenewedMemberToActionSchedule_,
-    calculateExpirationDate_
+    calculateExpirationDate_,
+    setToday,
+
   };
 })()
 
