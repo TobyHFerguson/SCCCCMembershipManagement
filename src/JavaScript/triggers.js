@@ -20,12 +20,15 @@ const Manager = (function () {
     Expiry3: 'Expiry3',
     Expiry4: 'Expiry4'
   };
-  let today = new Date();
-  function setToday(date) {
-    today = new Date(date);
+  function getDateString(date = new Date()) {
+    return new Date(date).toISOString().split('T')[0];
   }
-  function today_() {
-    return today;
+  let _today = getDateString();
+  function setToday(date) {
+    _today = getDateString(date);
+  }
+  function today() {
+    return _today;
   }
 
 
@@ -57,10 +60,11 @@ const Manager = (function () {
           renewMember_(member, years, actionSchedule, actionSpecs);
         } else {
           const newMember = addNewMember_(txn, actionSchedule, actionSpecs, membershipData)
+          membershipData.push(newMember);
           newMembers.push({ Email: newMember.Email });
         }
-        txn.Timestamp = new Date();
-        txn.Processed = true;
+        txn.Timestamp = today();
+        txn.Processed = today();
       }
     })
 
@@ -82,12 +86,11 @@ const Manager = (function () {
       Email: txn["Email Address"],
       First: txn["First Name"],
       Last: txn["Last Name"],
-      Joined: new Date(),
+      Joined: today(),
       Period: getPeriod_(txn),
       Expires: calculateExpirationDate_(getPeriod_(txn)),
       "Renewed On": '',
     };
-    membershipData.push(newMember);
     addNewMemberToActionSchedule_(newMember, actionSchedule, actionSpecs);
     return newMember
   }
@@ -123,7 +126,7 @@ const Manager = (function () {
     switch (type) {
       case ActionType.Join:
       case ActionType.Renew:
-        scheduleEntries.push({ Date: today_(), Type: type, Email: member.Email });
+        scheduleEntries.push({ Date: today(), Type: type, Email: member.Email });
       case 'Migration':
         break;
     }
@@ -140,7 +143,7 @@ const Manager = (function () {
    */
   function renewMember_(member, period, actionSchedule, actionSpecs) {
     member.Period = period;
-    member["Renewed On"] = new Date();
+    member["Renewed On"] = today();
     member.Expires = calculateExpirationDate_(period, member.Expires);
     addRenewedMemberToActionSchedule_(member, actionSchedule, actionSpecs);
   }
@@ -154,19 +157,19 @@ const Manager = (function () {
    * @returns {Date} - The expiration date
    */
   function calculateExpirationDate_(period, expires) {
-    const today = new Date();
-    const futureDate = new Date(today);
+    const futureDate = new Date(today());
     futureDate.setFullYear(futureDate.getFullYear() + period);
 
     if (!expires) {
-      return futureDate;
+      return getDateString(futureDate);
     }
 
     const expirationDate = new Date(expires);
     const futureExpirationDate = new Date(expirationDate);
     futureExpirationDate.setFullYear(futureExpirationDate.getFullYear() + period);
 
-    return futureDate > futureExpirationDate ? futureDate : futureExpirationDate;
+    const result =  futureDate > futureExpirationDate ? futureDate : futureExpirationDate;
+    return getDateString(result);
   }
 
   /**
@@ -221,7 +224,7 @@ const Manager = (function () {
     processPaidTransactions,
     createScheduleEntries_,
     ActionType,
-    today_,
+    today,
     addDaysToDate_,
     addRenewedMemberToActionSchedule_,
     calculateExpirationDate_,
