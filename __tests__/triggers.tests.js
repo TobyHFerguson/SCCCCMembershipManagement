@@ -76,6 +76,13 @@ describe('trigger tests', () => {
         triggers.processPaidTransactions(txns, members, groupAddFun);
         expect(groupAddFun).toHaveBeenCalledTimes(1);
       })
+      it('should not add a member to a group when the member is renewed', () => {
+        const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
+        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "" },]
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun);
+        triggers.processPaidTransactions(txns, members, groupAddFun);
+        expect(groupAddFun).toHaveBeenCalledTimes(0);
+      });
     });
     describe('sending emails', () => {
       it('should send an email when a member is added', () => {
@@ -83,7 +90,15 @@ describe('trigger tests', () => {
         const members = []
         triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun);
         expect(sendEmailFun).toHaveBeenCalledWith({ Email: 'test1@example.com', Type: triggers.ActionType.Join })
-      })
+        expect(sendEmailFun).toHaveBeenCalledTimes(1);
+      });
+      it('should send an email when the member is renewed', () => {
+        const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
+        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "" },]
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun);
+        expect(sendEmailFun).toHaveBeenCalledWith({ Email: 'test1@example.com', Type: triggers.ActionType.Renew })
+        expect(sendEmailFun).toHaveBeenCalledTimes(1);
+      });
     })
     describe('membership expiry period tests', () => {
       it('if renewal is before expiry then new expiry is  old expiry + period', () => {
@@ -125,92 +140,91 @@ describe('trigger tests', () => {
       expect(members.map(m => m.Period)).toEqual([1, 1, 1])
     });
   })
-});
 
 
-function getDateString(date = new Date) {
-  return new Date(date).toISOString().split('T')[0];
-}
+  function getDateString(date = new Date) {
+    return new Date(date).toISOString().split('T')[0];
+  }
 
-describe('test the getDateString function', () => {
-  it('should return a date string in the format yyyy-mm-dd', () => {
-    const date = new Date('2021-01-01');
-    const result = getDateString(date);
-    expect(result).toEqual('2021-01-01');
-  });
-  it('should work with date objects', () => {
-    const date = new Date('2021-01-01');
-    const result = getDateString(date);
-    expect(result).toEqual('2021-01-01');
-  });
-});
-
-describe('addDaysToDate_  ', () => {
-  it('should add a number of days to a date', () => {
-    const date = '2021-01-01';
-    const result = triggers.addDaysToDate_(date, 2);
-    expect(result).toEqual(new Date('2021-01-03'));
-  });
-  it('shoud work with negative numbers', () => {
-    const date = new Date('2021-01-01');
-    const result = triggers.addDaysToDate_(date, -2);
-    expect(result).toEqual(new Date('2020-12-30'));
-  });
-  it('should work with zero', () => {
-    const date = new Date('2021-01-01');
-    const result = triggers.addDaysToDate_(date, 0);
-    expect(result).toEqual(new Date('2021-01-01'));
-  });
-  it('should work with a string date', () => {
-    const date = '2021-01-01';
-    const result = triggers.addDaysToDate_(date, 2);
-    expect(result).toEqual(new Date('2021-01-03'));
-  });
-})
-
-
-
-
-describe('calculateExpirationDate_', () => {
-  test('should calculate expiration date based on period in years from today if no existing expiration date is provided', () => {
-    const period = 2;
-    const result = triggers.calculateExpirationDate_(period);
-    const expectedDate = new Date(today);
-    expectedDate.setFullYear(expectedDate.getFullYear() + period);
-    expect(getDateString(result)).toEqual(getDateString(expectedDate));
+  describe('test the getDateString function', () => {
+    it('should return a date string in the format yyyy-mm-dd', () => {
+      const date = new Date('2021-01-01');
+      const result = getDateString(date);
+      expect(result).toEqual('2021-01-01');
+    });
+    it('should work with date objects', () => {
+      const date = new Date('2021-01-01');
+      const result = getDateString(date);
+      expect(result).toEqual('2021-01-01');
+    });
   });
 
-  test('should calculate expiration date based on period in years from existing expiration date if provided', () => {
-    const period = 3;
-    const existingExpirationDate = new Date('2030-01-01');
-    const result = triggers.calculateExpirationDate_(period, existingExpirationDate);
-    const expectedDate = new Date('2033-01-01');
-    expect(getDateString(result)).toEqual(getDateString(expectedDate));
-  });
-  test('should return the greater of period added to today or the existing expiration date', () => {
-    const period = 1;
-    const existingExpirationDate = new Date();
-    existingExpirationDate.setFullYear(existingExpirationDate.getFullYear() + 2);
-    const result = triggers.calculateExpirationDate_(period, existingExpirationDate);
-    const expectedDate = new Date();
-    expectedDate.setFullYear(expectedDate.getFullYear() + period + 2);
-    expect(getDateString(result)).toEqual(getDateString(expectedDate));
-  });
+  describe('addDaysToDate_  ', () => {
+    it('should add a number of days to a date', () => {
+      const date = '2021-01-01';
+      const result = triggers.addDaysToDate_(date, 2);
+      expect(result).toEqual(new Date('2021-01-03'));
+    });
+    it('shoud work with negative numbers', () => {
+      const date = new Date('2021-01-01');
+      const result = triggers.addDaysToDate_(date, -2);
+      expect(result).toEqual(new Date('2020-12-30'));
+    });
+    it('should work with zero', () => {
+      const date = new Date('2021-01-01');
+      const result = triggers.addDaysToDate_(date, 0);
+      expect(result).toEqual(new Date('2021-01-01'));
+    });
+    it('should work with a string date', () => {
+      const date = '2021-01-01';
+      const result = triggers.addDaysToDate_(date, 2);
+      expect(result).toEqual(new Date('2021-01-03'));
+    });
+  })
 
-  test('should handle leap years correctly', () => {
-    const period = 1;
-    const existingExpirationDate = new Date('2052-02-29');
-    const result = triggers.calculateExpirationDate_(period, existingExpirationDate);
-    const expectedDate = new Date('2053-03-01')
-    expect(getDateString(result)).toEqual(getDateString(expectedDate));
-  });
 
-  test('should handle negative periods correctly', () => {
-    const period = -1;
-    const existingExpirationDate = new Date('2050-01-01');
-    const result = triggers.calculateExpirationDate_(period, existingExpirationDate);
-    const expectedDate = new Date('2049-01-01');
-    expect(getDateString(result)).toEqual(getDateString(expectedDate));
+
+
+  describe('calculateExpirationDate_', () => {
+    test('should calculate expiration date based on period in years from today if no existing expiration date is provided', () => {
+      const period = 2;
+      const result = triggers.calculateExpirationDate_(period);
+      const expectedDate = new Date(today);
+      expectedDate.setFullYear(expectedDate.getFullYear() + period);
+      expect(getDateString(result)).toEqual(getDateString(expectedDate));
+    });
+
+    test('should calculate expiration date based on period in years from existing expiration date if provided', () => {
+      const period = 3;
+      const existingExpirationDate = new Date('2030-01-01');
+      const result = triggers.calculateExpirationDate_(period, existingExpirationDate);
+      const expectedDate = new Date('2033-01-01');
+      expect(getDateString(result)).toEqual(getDateString(expectedDate));
+    });
+    test('should return the greater of period added to today or the existing expiration date', () => {
+      const period = 1;
+      const existingExpirationDate = new Date();
+      existingExpirationDate.setFullYear(existingExpirationDate.getFullYear() + 2);
+      const result = triggers.calculateExpirationDate_(period, existingExpirationDate);
+      const expectedDate = new Date();
+      expectedDate.setFullYear(expectedDate.getFullYear() + period + 2);
+      expect(getDateString(result)).toEqual(getDateString(expectedDate));
+    });
+
+    test('should handle leap years correctly', () => {
+      const period = 1;
+      const existingExpirationDate = new Date('2052-02-29');
+      const result = triggers.calculateExpirationDate_(period, existingExpirationDate);
+      const expectedDate = new Date('2053-03-01')
+      expect(getDateString(result)).toEqual(getDateString(expectedDate));
+    });
+
+    test('should handle negative periods correctly', () => {
+      const period = -1;
+      const existingExpirationDate = new Date('2050-01-01');
+      const result = triggers.calculateExpirationDate_(period, existingExpirationDate);
+      const expectedDate = new Date('2049-01-01');
+      expect(getDateString(result)).toEqual(getDateString(expectedDate));
+    });
   });
-});
 });
