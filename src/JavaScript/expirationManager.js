@@ -1,5 +1,5 @@
 if (typeof require !== 'undefined') {
-    var {ActionType }= require('./triggers');
+    ({ ActionType } = require('./triggers'));
 }
 
 const ExpirationManager = (function () {

@@ -16,9 +16,10 @@ function processExpiringMembers() {
 
   if (numProcessed === 0) return;
 
-  expiredMembersQueueFiddler.setData(expiredMembersQueue.length > 0 ? expiredMembersQueue : {Email: ''}).dumpValues();
+  const d = expiredMembersQueue.length > 0 ? expiredMembersQueue : [{Email: ''}]
+  expiredMembersQueueFiddler.setData(d).dumpValues();
   membershipFiddler.setData(membershipData).dumpValues();
-  groupRemoveFiddler.setData(groupRemoveList.length).dumpValues();
+  groupRemoveFiddler.setData(groupRemoveList).dumpValues();
   emailSendFiddler.setData(emailSendList).dumpValues();
 
 }
