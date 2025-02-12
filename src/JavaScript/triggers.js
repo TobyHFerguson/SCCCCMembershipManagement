@@ -83,7 +83,7 @@ function addNewMember_(txn, actionSchedule, actionSpecs, membershipData) {
     Last: txn["Last Name"],
     Joined: new Date(),
     Period: getPeriod_(txn),
-    Expires: calculateExpirationDate_(getPeriod_(txn)),
+    Expires: calculateExpirationDate(getPeriod_(txn)),
     "Renewed On": '',
   };
   membershipData.push(newMember);
@@ -140,33 +140,11 @@ function createScheduleEntries_(member, type, actionSpecs) {
 function renewMember_(member, period, actionSchedule, actionSpecs) {
   member.Period = period;
   member["Renewed On"] = new Date();
-  member.Expires = calculateExpirationDate_(period, member.Expires);
+  member.Expires = calculateExpirationDate(period, member.Expires);
   addRenewedMemberToActionSchedule_(member, actionSchedule, actionSpecs);
 }
 
-/**
- * Calculates an expiration date based on a period in years and an optional existing expiration date.
- * 
- * The value returned is the greater of period added to today or the existing expiration date.
- * @param {number} period - The period in years.
- * @param {Date} [expires] - the existing expiration date, if any
- * @returns {Date} - The expiration date
- */
-function calculateExpirationDate_(period, expires) {
-  const today = new Date();
-  const futureDate = new Date(today);
-  futureDate.setFullYear(futureDate.getFullYear() + period);
 
-  if (!expires) {
-    return futureDate;
-  }
-
-  const expirationDate = new Date(expires);
-  const futureExpirationDate = new Date(expirationDate);
-  futureExpirationDate.setFullYear(futureExpirationDate.getFullYear() + period);
-
-  return futureDate > futureExpirationDate ? futureDate : futureExpirationDate;
-}
 
 /**
  * Returns a new date with days added to it.
@@ -225,6 +203,6 @@ if (typeof module !== 'undefined' && module.exports) {
     today_,
     addDaysToDate_,
     addRenewedMemberToActionSchedule_,
-    calculateExpirationDate_
+    calculateExpirationDate
   };
 }
