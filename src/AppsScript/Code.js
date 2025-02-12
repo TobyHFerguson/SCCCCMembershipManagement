@@ -18,42 +18,8 @@ function processExpirations() {
 
 }
   
-function doGroupRemove() {
-  const groupAddFiddler = getFiddler_('Group Remove List');
-  const members = groupAddFiddler.getData();
-  const groupEmails = getFiddler_('Group Email Addresses', createIfMissing = false).getData();
-  const groupRemover = getGroupRemover_();
 
-  try {
-    GroupManager.removeMembersFromGroups(members, groupEmails, groupRemover);
-  } catch (error) {
-    if (error instanceof AggregateError) {
-      error.errors.forEach(err => log(`Error: ${err.message}`));
-    } else {
-      log(`Error: ${error.message}`);
-    }
-  }
-  // Preserve the header row if all the members have been processed.
-  groupAddFiddler.setData(members.length > 0 ? members : [{ Email: '' }]).dumpValues();
-}
-function doGroupAdds() {
-  const groupAddFiddler = getFiddler_('Group Add List');
-  const members = groupAddFiddler.getData();
-  const groupEmails = getFiddler_('Group Email Addresses', createIfMissing = false).getData();
-  const groupAdder = getGroupAdder_();
 
-  try {
-    GroupManager.addMembersToGroups(members, groupEmails, groupAdder);
-  } catch (error) {
-    if (error instanceof AggregateError) {
-      error.errors.forEach(err => log(`Error: ${err.message}`));
-    } else {
-      log(`Error: ${error.message}`);
-    }
-  }
-  // Preserve the header row if all the members have been processed.
-  groupAddFiddler.setData(members.length > 1 ? members : [{ Email: '' }]).dumpValues();
-}
 
 function getGroupAdder_() {
   if (PropertiesService.getScriptProperties().getProperty('testGroupAdds') === 'true') {
@@ -158,16 +124,6 @@ function processTransactions() {
 
   actionScheduleFiddler.setData(actionSchedule).dumpValues();
 
-}
-
-function addMembersToGroups() {
-  const bulkGroupFiddler = getFiddler_('Bulk Add Groups');
-  bulkGroupFiddler.mapRows(row => { addMemberToGroup_(row['Group Email [Required]'], row['Member Email']); return row; }).filterRows(_ => false).dumpValues();
-}
-
-function removeMembersFromGroups() {
-  const bulkGroupFiddler = getFiddler_('Bulk Remove Groups');
-  bulkGroupFiddler.mapRows(row => { removeMemberFromGroup_(row['Group Email [Required]'], row['Member Email']); return row; }).filterRows(_ => false).dumpValues();
 }
 
 function sendEmails_(emails) {
