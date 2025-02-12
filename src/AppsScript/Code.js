@@ -1,26 +1,20 @@
 /**
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
-function processExpiringMembers() {
-  const expiredMembersQueueFiddler = getFiddler_('Expired Members Queue');
-  const expiredMembersQueue = expiredMembersQueueFiddler.getData();
-  if (expiredMembersQueue.length === 0) { return; }
-  const membershipFiddler = getFiddler_('Membership');
+function processExpirations() {
+  const membershipFiddler = getFiddler_('Active Members');
   const membershipData = membershipFiddler.getData();
-  const groupRemoveFiddler = getFiddler_('Group Remove List');
-  const groupRemoveList = groupRemoveFiddler.getData();
-  const emailSendFiddler = getFiddler_('Email Queue');
-  const emailSendList = emailSendFiddler.getData();
+  const expiredMembersFiddler = getFiddler_('Expired Members');
+  const expiredMembersData = expiredMembersFiddler.getData();
+  const actionSpecs= getFiddler_('Action Specs').getData();
+  const groupEmails = getFiddler_('Group Email Addresses').getData();
   
-  const numProcessed = ExpirationManager.expireMembers(expiredMembersQueue, membershipData, groupRemoveList, emailSendList);
+  const numProcessed = Manager.processExpirations(membershipData, expiredMembersData, actionSpecs, getGroupRemover_(), getEmailSender_(), groupEmails);
 
   if (numProcessed === 0) return;
 
-  const d = expiredMembersQueue.length > 0 ? expiredMembersQueue : [{Email: ''}]
-  expiredMembersQueueFiddler.setData(d).dumpValues();
+  expiredMembersQueueFiddler.setData(expiredMembersData).dumpValues();
   membershipFiddler.setData(membershipData).dumpValues();
-  groupRemoveFiddler.setData(groupRemoveList).dumpValues();
-  emailSendFiddler.setData(emailSendList).dumpValues();
 
 }
   
@@ -119,19 +113,7 @@ function removeMemberFromGroup_(memberEmail, groupEmail) {
   }
 }
 
-function processEmailQueue() {
-  const emailQueueFiddler = getFiddler_('Email Queue');
-  const emailQueue = emailQueueFiddler.getData();
-  const actionSpecsFiddler = getFiddler_('Action Specs');
-  const actionSpecs = actionSpecsFiddler.getData();
-  const membersFiddler = getFiddler_('Membership');
-  const members = membersFiddler.getData();
-  const sendFun = getEmailSender_();
 
-  sendEmails(emailQueue, sendFun, actionSpecs, members);
-
-  emailQueueFiddler.setData(emailQueue).dumpValues();
-}
 function getEmailSender_() {
   const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails') === 'true';
   if (testEmails) {
@@ -141,27 +123,7 @@ function getEmailSender_() {
   }
 }
 
-function doActionSchedule() {
-  const actionScheduleFiddler = getFiddler_('Action Schedule')
-  const actionSchedule = actionScheduleFiddler.getData()
-  const numActionsBefore = actionSchedule.length;
-  const { emailQueue, expiredMembersQueue } = processActionSchedule(actionSchedule);
-  if (numActionsBefore == actionSchedule.length) {
-    return;
-  }
-  // Get here because queues have changed.
-  if (emailQueue) {
-    const emailQueueFiddler = getFiddler_('Email Queue');
-    const emailQueueData = [...emailQueueFiddler.getData(), ...emailQueue]
-    emailQueueFiddler.setData(emailQueueData).dumpValues();
-  }
-  if (expiredMembersQueue) {
-    const expiredMembersQueueFiddler = getFiddler_('Expired Members Queue');
-    const expiredMembersQueueData = [...expiredMembersQueueFiddler.getData(), ...expiredMembersQueue]
-    expiredMembersQueueFiddler.setData(expiredMembersQueueData).dumpValues();
-  }
-  actionScheduleFiddler.setData(actionSchedule).dumpValues();
-}
+
 
 
 function processTransactions() {
