@@ -59,61 +59,35 @@ describe('trigger tests', () => {
     groupAddFun = jest.fn();
   });
   describe('processExpirations', () => {
-    let activeMembers, expiredMembers;
+    let activeMembers, expiredMembers, actionSchedule
     beforeEach(() => {
       activeMembers = []
       expiredMembers = []
+      actionSchedule = [
+        { Date: new Date('2050-01-01'), Type: triggers.ActionType.Expiry1, Email: "test1@example.com" },
+        { Date: today, Type: triggers.ActionType.Expiry2, Email: "test1@example.com" },
+        { Date: new Date('2045-01-01'), Type: triggers.ActionType.Expiry1, Email: "test1@example.com" },
+        { Date: today, Type: triggers.ActionType.Expiry4, Email: "test1@example.com" }
+    ];
     })
     it('should do nothing if there are no members to expire', () => {
-      numProcessed = triggers.processExpirations(activeMembers, expiredMembers, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
-      expect(numProcessed).toEqual(0);
+      numProcessed = triggers.processExpirations(activeMembers, expiredMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
+      expect(numProcessed).toEqual(2);
     });
     it('should expire a member if they are fully expired', () => {
       activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },]
       expectedExpiredMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },]
-      numProcessed = triggers.processExpirations(activeMembers, expiredMembers, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
-      expect(numProcessed).toEqual(1);
+      numProcessed = triggers.processExpirations(activeMembers, expiredMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
+      expect(numProcessed).toEqual(2);
       expect(activeMembers.length).toEqual(0);
       expect(expiredMembers.length).toEqual(1);
       expect(expiredMembers).toEqual(expectedExpiredMembers);
       expect(groupRemoveFun).toHaveBeenCalledTimes(1);
       expect(groupRemoveFun).toHaveBeenCalledWith(groupEmails[0].Email, expectedExpiredMembers[0].Email)
-      expect(sendEmailFun).toHaveBeenCalledTimes(1);
+      expect(sendEmailFun).toHaveBeenCalledTimes(2);
       expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedExpiredMembers[0].Email, subject: actionSpecByType.get('Expiry4').Subject, htmlBody: actionSpecByType.get('Expiry4').Body.replace('{First}', expectedExpiredMembers[0].First).replace('{Last}', expectedExpiredMembers[0].Last) })
+      expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedExpiredMembers[0].Email, subject: actionSpecByType.get('Expiry2').Subject, htmlBody: actionSpecByType.get('Expiry2').Body.replace('{First}', expectedExpiredMembers[0].First).replace('{Last}', expectedExpiredMembers[0].Last) })
     });
-    it('should only send out the expiry1 email at that time', () => {
-      activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2025-01-20", "Renewed On": "" },]
-      numProcessed = triggers.processExpirations(activeMembers, expiredMembers, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
-      expect(numProcessed).toEqual(1);
-      expect(activeMembers.length).toEqual(1);
-      expect(expiredMembers.length).toEqual(0);
-      expect(expiredMembers).toEqual([]);
-      expect(groupRemoveFun).toHaveBeenCalledTimes(0);
-      expect(sendEmailFun).toHaveBeenCalledTimes(1);
-      expect(sendEmailFun).toHaveBeenCalledWith({ to: activeMembers[0].Email, subject: actionSpecByType.get('Expiry1').Subject, htmlBody: actionSpecByType.get('Expiry1').Body.replace('{First}', activeMembers[0].First).replace('{Last}', activeMembers[0].Last) })
-    })
-    it('should only send out the expiry2 email at that time', () => {
-      activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2025-01-15", "Renewed On": "" },]
-      numProcessed = triggers.processExpirations(activeMembers, expiredMembers, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
-      expect(numProcessed).toEqual(1);
-      expect(activeMembers.length).toEqual(1);
-      expect(expiredMembers.length).toEqual(0);
-      expect(expiredMembers).toEqual([]);
-      expect(groupRemoveFun).toHaveBeenCalledTimes(0);
-      expect(sendEmailFun).toHaveBeenCalledTimes(1);
-      expect(sendEmailFun).toHaveBeenCalledWith({ to: activeMembers[0].Email, subject: actionSpecByType.get('Expiry2').Subject, htmlBody: actionSpecByType.get('Expiry2').Body.replace('{First}', activeMembers[0].First).replace('{Last}', activeMembers[0].Last) })
-    })
-    it('should only send out the expiry3 email at that time', () => {
-      activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2025-01-10", "Renewed On": "" },]
-      numProcessed = triggers.processExpirations(activeMembers, expiredMembers, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
-      expect(numProcessed).toEqual(1);
-      expect(activeMembers.length).toEqual(1);
-      expect(expiredMembers.length).toEqual(0);
-      expect(expiredMembers).toEqual([]);
-      expect(groupRemoveFun).toHaveBeenCalledTimes(0);
-      expect(sendEmailFun).toHaveBeenCalledTimes(1);
-      expect(sendEmailFun).toHaveBeenCalledWith({ to: activeMembers[0].Email, subject: actionSpecByType.get('Expiry3').Subject, htmlBody: actionSpecByType.get('Expiry3').Body.replace('{First}', activeMembers[0].First).replace('{Last}', activeMembers[0].Last) })
-    })
 
   })
 
