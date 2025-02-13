@@ -27,17 +27,17 @@ function processExpirations() {
 
 function getGroupAdder_() {
   if (PropertiesService.getScriptProperties().getProperty('testGroupAdds') === 'true') {
-    return (member, group) => log(`Group Add: `, member, ' to ', group);
+    return (memberEmail, groupEmail) => log(`Group Add: `, memberEmail, ' to ', groupEmail);
   } else {
-    return (member, group) => addMemberToGroup_(member.Email, group.Email);
+    return (memberEmail, groupEmail) => addMemberToGroup_(memberEmail, groupEmail);
   }
 }
 
 function getGroupRemover_() {
   if (PropertiesService.getScriptProperties().getProperty('testGroupRemoves') === 'true') {
-    return (member, group) => log(`Group Remove: `, member, ' from ', group);
+    return (memberEmail, groupEmail) => log(`Group Remove: `, memberEmail, ' from ', groupEmail);
   } else {
-    return (member, group) => removeMemberFromGroup_(member.Email, group.Email);
+    return (memberEmail, groupEmail) => removeMemberFromGroup_(memberEmail, groupEmail);
   }
 }
 
@@ -101,32 +101,26 @@ function processTransactions() {
   const transactionsFiddler = getFiddler_('Transactions').needFormulas();
   const transactions = getDataWithFormulas_(transactionsFiddler);
   if (transactions.length === 0) { return; }
-  const transactionsHeaderRow = Object.keys(transactions[0]).reduce((acc, key) => {
-    acc[key] = '';
-    return acc;
-  }, {});
-
-  const actionScheduleFiddler = getFiddler_('Action Schedule');
-  const actionSchedule = actionScheduleFiddler.getData();
 
 
-  const membershipFiddler = getFiddler_('Membership');
+  const membershipFiddler = getFiddler_('Active Members');
   const membershipData = membershipFiddler.getData();
-
 
   const actionSpecs = getFiddler_('Action Specs').getData();
 
-  const newMembers = processPaidTransactions(transactions, membershipData, actionSchedule, actionSpecs);
+  const actionScheduleFiddler = getFiddler_('Action Schedule')
+  const actionScheduleData = actionScheduleFiddler.getData();
 
-  const bulkGroupFiddler = getFiddler_('Group Add Emails');
-  const groupAddEmails = [...bulkGroupFiddler.getData(), ...newMembers];
-  bulkGroupFiddler.setData(groupAddEmails).dumpValues();
+  const groupEmails = getFiddler_('Group Email Addresses').getData();
+ Manager.processPaidTransactions(transactions, membershipData, getGroupAdder_(), getEmailSender_(), actionSpecs, actionScheduleData, groupEmails);
 
-  transactionsFiddler.setData(transactions.length > 1 ? transactions : transactionsHeaderRow).dumpValues();
+
+
+  transactionsFiddler.setData(transactions).dumpValues();
 
   membershipFiddler.setData(membershipData).dumpValues();
 
-  actionScheduleFiddler.setData(actionSchedule).dumpValues();
+  actionScheduleFiddler.setData(actionScheduleData).dumpValues();
 
 }
 
@@ -171,7 +165,30 @@ function getDataWithFormulas_(fiddler) {
   fiddler.needFormulas();
   return combineArrays(fiddler.getFormulaData(), fiddler.getData());
 }
+/**
+   * Combines two arrays of objects by merging the properties of objects at the same index.
+   * If a property in the first array's object is an empty string or undefined, the property from the second array's object is used.
+   * 
+   * @param {Array<Object>} arr1 - The first array of objects.
+   * @param {Array<Object>} arr2 - The second array of objects.
+   * @returns {Array<Object>} A new array of objects with combined properties.
+   * @throws {Error} If the lengths of the two arrays are not equal.
+   */
+function combineArrays(arr1, arr2) {
+  if (arr1.length !== arr2.length) {
+    throw new Error("Both arrays must have the same length");
+  }
 
+  return arr1.map((item, index) => {
+    const combinedItem = { ...arr2[index] };
+    for (const key in item) {
+      if (item[key] !== "" && item[key] !== undefined) {
+        combinedItem[key] = item[key];
+      }
+    }
+    return combinedItem;
+  });
+}
 /**
  * Converts links in a sheet to hyperlinks.
  * @param {String} sheetName - The name of the sheet.
