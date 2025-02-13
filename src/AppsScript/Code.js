@@ -8,13 +8,17 @@ function processExpirations() {
   const expiredMembersData = expiredMembersFiddler.getData();
   const actionSpecs= getFiddler_('Action Specs').getData();
   const groupEmails = getFiddler_('Group Email Addresses').getData();
+
+  const actionScheduleFiddler = getFiddler_('Action Schedule');
+  const actionSchedule = actionScheduleFiddler.getData();
   
-  const numProcessed = Manager.processExpirations(membershipData, expiredMembersData, actionSpecs, getGroupRemover_(), getEmailSender_(), groupEmails);
+  const numProcessed = Manager.processExpirations(membershipData, expiredMembersData, actionSchedule, actionSpecs, getGroupRemover_(), getEmailSender_(), groupEmails);
 
   if (numProcessed === 0) return;
 
   expiredMembersQueueFiddler.setData(expiredMembersData).dumpValues();
   membershipFiddler.setData(membershipData).dumpValues();
+  actionScheduleFiddler.setData(actionSchedule).dumpValues();
 
 }
   
