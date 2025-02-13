@@ -26,11 +26,11 @@ describe('processActionSchedule', () => {
     describe('output tests', () => {
         test('should process action schedule correctly with valid input', () => {
             const actionSchedule = [{ Date: new Date('2021-01-01'), Type: tr.ActionType.Join, Email: "a@b.com" }];
-            const expectedOutput = 
-                {
-                    emailQueue: [{ Type: tr.ActionType.Join, Email: "a@b.com" },],
-                    expiredMembersQueue: []
-                };
+            const expectedOutput =
+            {
+                emailQueue: [{ Type: tr.ActionType.Join, Email: "a@b.com" },],
+                expiredMembersQueue: []
+            };
             const result = processActionSchedule(actionSchedule);
             expect(result).toEqual(expectedOutput);
             expect(actionSchedule).toEqual([]);
@@ -44,14 +44,14 @@ describe('processActionSchedule', () => {
             ];
             const expectedResult = {
                 emailQueue: actionSchedule.filter(as => as.Email == "removeMe"),
-                expiredMembersQueue: actionSchedule.map(as => {if (as.Email == "gone") return {Email: as.Email}; else return null;}).filter(as => as != null),
+                expiredMembersQueue: actionSchedule.map(as => { if (as.Email == "gone") return { Email: as.Email }; else return null; }).filter(as => as != null),
             }
             const resultingActionSchedule = actionSchedule.filter(as => as.Email == "leaveMe");
             const result = processActionSchedule(actionSchedule);
             expect(result).toEqual(expectedResult)
             expect(actionSchedule).toEqual(resultingActionSchedule);
         });
-        
+
 
     });
 
