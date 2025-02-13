@@ -41,6 +41,10 @@ const actionSpec = [
 
 describe('trigger tests', () => {
   const actionSpecByType = new Map(actionSpec.map(as => [as.Type, as]));
+  const O1 = actionSpecByType.get('Expiry1').Offset;
+  const O2 = actionSpecByType.get('Expiry2').Offset;
+  const O3 = actionSpecByType.get('Expiry3').Offset;
+  const O4 = actionSpecByType.get('Expiry4').Offset;
   const today = new Date('2025-01-10' + 'T00:00:00Z')
   let groupAddFun;
   let groupRemoveFun;
@@ -52,6 +56,7 @@ describe('trigger tests', () => {
     triggers.setToday(today)
     sendEmailFun = jest.fn();
     groupRemoveFun = jest.fn();
+    groupAddFun = jest.fn();
   });
   describe('processExpirations', () => {
     let activeMembers, expiredMembers;
@@ -127,7 +132,7 @@ describe('trigger tests', () => {
           { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Joined: today, Expires: "2027-01-10", "Renewed On": "" },
           { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Joined: today, Expires: "2028-01-10", "Renewed On": "" }]
 
-        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec);
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, []);
         members.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expectedMembers.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expect(members.length).toEqual(3)
@@ -140,7 +145,7 @@ describe('trigger tests', () => {
         const expectedMembers = [
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: triggers.addYearsToDate("2025-03-10", 1), "Renewed On": triggers.today() },
         ]
-        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec);
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, []);
         members.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expectedMembers.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expect(members.length).toEqual(1)
@@ -151,7 +156,7 @@ describe('trigger tests', () => {
       it('should add a member to a group when the member is added', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         const members = []
-        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec);
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, []);
         expect(groupAddFun).toHaveBeenCalledWith('test1@example.com');
         triggers.processPaidTransactions(txns, members, groupAddFun);
         expect(groupAddFun).toHaveBeenCalledTimes(1);
@@ -159,7 +164,7 @@ describe('trigger tests', () => {
       it('should not add a member to a group when the member is renewed', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "" },]
-        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec);
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, []);
         triggers.processPaidTransactions(txns, members, groupAddFun);
         expect(groupAddFun).toHaveBeenCalledTimes(0);
       });
@@ -168,7 +173,7 @@ describe('trigger tests', () => {
       it('should send an email when a member is added', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         const members = []
-        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec);
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, []);
         expect(sendEmailFun).toHaveBeenCalledWith({
           to: members[0].Email,
           subject: triggers.expandTemplate(actionSpecByType.get('Join').Subject, members[0]),
@@ -179,7 +184,7 @@ describe('trigger tests', () => {
       it('should send an email when the member is renewed', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "" },]
-        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec) ;
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, []);
         expect(sendEmailFun).toHaveBeenCalledWith({
           to: members[0].Email,
           subject: triggers.expandTemplate(actionSpecByType.get('Renew').Subject, members[0]),
@@ -190,18 +195,18 @@ describe('trigger tests', () => {
     })
     describe('membership expiry period tests', () => {
       it('if renewal is before expiry then new expiry is  old expiry + period', () => {
-        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: triggers.today(), Expires: triggers.addDaysToDate_(triggers.today(), 10), "Renewed On": "" },]
+        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: triggers.today(), Expires: triggers.addDaysToDate(triggers.today(), 10), "Renewed On": "" },]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: getDateString(), Expires: triggers.addDaysToDate_(new Date(), 365 + 10), "Renewed On": triggers.today() },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: getDateString(), Expires: triggers.addDaysToDate(new Date(), 365 + 10), "Renewed On": triggers.today() },
         ]
         triggers.processPaidTransactions(transactionsFixture.paid, members);
         members.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expectedMembers.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
       });
       it('if renewal is after expiry then new expiry is today + period', () => {
-        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: triggers.today(), Expires: triggers.addDaysToDate_(triggers.today(), -10), "Renewed On": "" },]
+        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: triggers.today(), Expires: triggers.addDaysToDate(triggers.today(), -10), "Renewed On": "" },]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: getDateString(), Expires: triggers.addDaysToDate_(new Date(), 365), "Renewed On": triggers.today() },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: getDateString(), Expires: triggers.addDaysToDate(new Date(), 365), "Renewed On": triggers.today() },
         ]
         triggers.processPaidTransactions(transactionsFixture.paid, members);
         members.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
@@ -215,14 +220,14 @@ describe('trigger tests', () => {
         { Email: "test2@example.com", Period: 1, first: "Jane", last: "Smith", },
         { Email: "test3@example.com", Period: 3, first: "Not", last: "Member" }
         ];
-        triggers.processPaidTransactions(transactionsFixture.differentTerms, members, groupAddFun, sendEmailFun, actionSpec);
+        triggers.processPaidTransactions(transactionsFixture.differentTerms, members, groupAddFun, sendEmailFun, actionSpec, []);
         expect(members.map(m => m.Period)).toEqual(expectedMembers.map(m => m.Period));
 
       });
 
       it('should return period as 1 if payment term is not specified', () => {
         const members = []
-        triggers.processPaidTransactions(transactionsFixture.noTerm, members, groupAddFun, sendEmailFun, actionSpec);
+        triggers.processPaidTransactions(transactionsFixture.noTerm, members, groupAddFun, sendEmailFun, actionSpec, []);
         expect(members.map(m => m.Period)).toEqual([1, 1, 1])
       });
     })
@@ -247,25 +252,25 @@ describe('trigger tests', () => {
     });
   });
 
-  describe('addDaysToDate_  ', () => {
+  describe('addDaysToDate  ', () => {
     it('should add a number of days to a date', () => {
       const date = '2021-01-01';
-      const result = triggers.addDaysToDate_(date, 2);
+      const result = triggers.addDaysToDate(date, 2);
       expect(result).toEqual(new Date('2021-01-03'));
     });
     it('shoud work with negative numbers', () => {
       const date = new Date('2021-01-01');
-      const result = triggers.addDaysToDate_(date, -2);
+      const result = triggers.addDaysToDate(date, -2);
       expect(result).toEqual(new Date('2020-12-30'));
     });
     it('should work with zero', () => {
       const date = new Date('2021-01-01');
-      const result = triggers.addDaysToDate_(date, 0);
+      const result = triggers.addDaysToDate(date, 0);
       expect(result).toEqual(new Date('2021-01-01'));
     });
     it('should work with a string date', () => {
       const date = '2021-01-01';
-      const result = triggers.addDaysToDate_(date, 2);
+      const result = triggers.addDaysToDate(date, 2);
       expect(result).toEqual(new Date('2021-01-03'));
     });
   })
@@ -304,10 +309,10 @@ describe('trigger tests', () => {
     // })
   });
 
-  describe('calculateExpirationDate_', () => {
+  describe('calculateExpirationDate', () => {
     test('should calculate expiration date based on period in years from today if no existing expiration date is provided', () => {
       const period = 2;
-      const result = triggers.calculateExpirationDate_(period);
+      const result = triggers.calculateExpirationDate(period);
       const expectedDate = new Date(today);
       expectedDate.setFullYear(expectedDate.getFullYear() + period);
       expect(getDateString(result)).toEqual(getDateString(expectedDate));
@@ -316,7 +321,7 @@ describe('trigger tests', () => {
     test('should calculate expiration date based on period in years from existing expiration date if provided', () => {
       const period = 3;
       const existingExpirationDate = new Date('2030-01-01');
-      const result = triggers.calculateExpirationDate_(period, existingExpirationDate);
+      const result = triggers.calculateExpirationDate(period, existingExpirationDate);
       const expectedDate = new Date('2033-01-01');
       expect(getDateString(result)).toEqual(getDateString(expectedDate));
     });
@@ -324,7 +329,7 @@ describe('trigger tests', () => {
       const period = 1;
       const existingExpirationDate = new Date();
       existingExpirationDate.setFullYear(existingExpirationDate.getFullYear() + 2);
-      const result = triggers.calculateExpirationDate_(period, existingExpirationDate);
+      const result = triggers.calculateExpirationDate(period, existingExpirationDate);
       const expectedDate = new Date();
       expectedDate.setFullYear(expectedDate.getFullYear() + period + 2);
       expect(getDateString(result)).toEqual(getDateString(expectedDate));
@@ -333,7 +338,7 @@ describe('trigger tests', () => {
     test('should handle leap years correctly', () => {
       const period = 1;
       const existingExpirationDate = new Date('2052-02-29');
-      const result = triggers.calculateExpirationDate_(period, existingExpirationDate);
+      const result = triggers.calculateExpirationDate(period, existingExpirationDate);
       const expectedDate = new Date('2053-03-01')
       expect(getDateString(result)).toEqual(getDateString(expectedDate));
     });
@@ -341,9 +346,110 @@ describe('trigger tests', () => {
     test('should handle negative periods correctly', () => {
       const period = -1;
       const existingExpirationDate = new Date('2050-01-01');
-      const result = triggers.calculateExpirationDate_(period, existingExpirationDate);
+      const result = triggers.calculateExpirationDate(period, existingExpirationDate);
       const expectedDate = new Date('2049-01-01');
       expect(getDateString(result)).toEqual(getDateString(expectedDate));
     });
   });
-});
+
+  describe('actionSchedule', () => {
+    it('should create an actionSchedule', () => {
+      const txn = { "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }
+      const actionSchedule = []
+      const expected = [
+        { Email: txn["Email Address"], Type: triggers.ActionType.Join, Date: today, },
+        { Email: txn["Email Address"], Type: triggers.ActionType.Expiry1, Date: triggers.addDaysToDate(today, 365 + O1) },
+        { Email: txn["Email Address"], Type: triggers.ActionType.Expiry2, Date: triggers.addDaysToDate(today, 365 + O2) },
+        { Email: txn["Email Address"], Type: triggers.ActionType.Expiry3, Date: triggers.addDaysToDate(today, 365 + O3), },
+        { Email: txn["Email Address"], Type: triggers.ActionType.Expiry4, Date: triggers.addDaysToDate(today, 365 + O4), }
+      ];
+      expected.forEach(e => { console.log(e); e.Date = getDateString(e.Date) });
+      triggers.processPaidTransactions([txn], [], groupAddFun, sendEmailFun,  actionSpec, actionSchedule);
+      actionSchedule.forEach(a => a.Date = getDateString(a.Date));
+      expect(actionSchedule).toEqual(expected);
+    })
+    it('should update an existing actionSchedule', () => {
+      const members = [{ Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: '2021-01-01', Expires: triggers.addDaysToDate(today, 365) }];
+      const actionSchedule = [
+        { Email: "test1@example.com", Type: triggers.ActionType.Join, Date: today, },
+        { Email: "test1@example.com", Type: triggers.ActionType.Expiry1, Date: triggers.addDaysToDate(today, 365 - O1) },
+        { Email: "test1@example.com", Type: triggers.ActionType.Expiry2, Date: triggers.addDaysToDate(today, 365 - O2) },
+        { Email: "test1@example.com", Type: triggers.ActionType.Expiry3, Date: triggers.addDaysToDate(today, 365 - O3), },
+        { Email: "test1@example.com", Type: triggers.ActionType.Expiry4, Date: triggers.addDaysToDate(today, 365 + 1), }
+      ].map(e => { e.Date = getDateString(e.Date); return e; });
+      const txns = [
+        { "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" },
+        { "Payable Status": "paid", "Email Address": "test2@example.com", "First Name": "Jane", "Last Name": "Smith", "Payment": "3 years" }
+      ]
+      const expected = [
+        { Email: "test1@example.com", Type: triggers.ActionType.Renew, Date: today, },
+        { Email: "test1@example.com", Type: triggers.ActionType.Expiry1, Date: triggers.addDaysToDate(today, (2 * 365) +O1) },
+        { Email: "test1@example.com", Type: triggers.ActionType.Expiry2, Date: triggers.addDaysToDate(today, (2 * 365) +O2) },
+        { Email: "test1@example.com", Type: triggers.ActionType.Expiry3, Date: triggers.addDaysToDate(today, (2 * 365) +O3), },
+        { Email: "test1@example.com", Type: triggers.ActionType.Expiry4, Date: triggers.addDaysToDate(today, (2 * 365) +O4), },
+        { Email: "test2@example.com", Type: triggers.ActionType.Join, Date: today, },
+        { Email: "test2@example.com", Type: triggers.ActionType.Expiry1, Date: triggers.addDaysToDate(today, (3 * 365) +O1) },
+        { Email: "test2@example.com", Type: triggers.ActionType.Expiry2, Date: triggers.addDaysToDate(today, (3 * 365) +O2) },
+        { Email: "test2@example.com", Type: triggers.ActionType.Expiry3, Date: triggers.addDaysToDate(today, (3 * 365) +O3), },
+        { Email: "test2@example.com", Type: triggers.ActionType.Expiry4, Date: triggers.addDaysToDate(today, (3 * 365) +O4), },
+      ].map(e => { e.Date = getDateString(e.Date); return e; });
+      triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun,  actionSpec, actionSchedule);
+      actionSchedule.forEach(a => a.Date = getDateString(a.Date));
+      expect(actionSchedule).toEqual(expected);
+    });
+  });
+
+  describe('addRenewedMemberToActionSchedule', () => {
+    let actionSchedule;
+    let emailSpecs;
+    let member;
+
+    beforeEach(() => {
+      actionSchedule = [
+        { Date: new Date('2023-01-01'), Email: 'test@example.com', Type: triggers.ActionType.Expiry1 },
+        { Date: new Date('2023-02-01'), Email: 'test@example.com', Type: triggers.ActionType.Expiry2 }
+      ];
+      emailSpecs = actionSpec
+      member = {
+        Email: 'test@example1.com',
+        First: 'John',
+        Last: 'Doe',
+        Joined: new Date('2022-01-01'),
+        Period: 1,
+        Expires: new Date('2023-01-01'),
+        "Renewed On": new Date('2023-01-01')
+      };
+    });
+
+    it('should remove existing action schedule entries for the member', () => {
+      const member = { Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: getDateString('2021-01-01'), Expires: getDateString('2022-01-10') };
+      const expected = [{ Email: member.Email, Date: today, Type: triggers.ActionType.Renew },
+      { Email: member.Email, Type: triggers.ActionType.Expiry1, Date: triggers.addDaysToDate('2022-01-10',  O1),  },
+      { Email: member.Email, Type: triggers.ActionType.Expiry2, Date: triggers.addDaysToDate('2022-01-10',  O2), },
+      { Email: member.Email, Type: triggers.ActionType.Expiry3, Date: triggers.addDaysToDate('2022-01-10',  O3), },
+      { Email: member.Email, Type: triggers.ActionType.Expiry4, Date: triggers.addDaysToDate('2022-01-10',  O4), }
+      ].map(e => { e.Date = getDateString(e.Date); return e; });
+      actionSchedule = [{ Email: member.Email, Type: triggers.ActionType.Expiry3, Date: getDateString('2021-01-10'), },
+      ]
+      triggers.addRenewedMemberToActionSchedule_(member, actionSchedule, emailSpecs);
+      actionSchedule.forEach(e => e.Date = getDateString(e.Date));
+      expect(actionSchedule).toEqual(expected);
+
+    });
+
+    it('should add new action schedule entries for the renewed member', () => {
+      const member = { Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: new Date('2021-01-01'), Expires: new Date('2022-01-10') };
+      const expected = [{ Email: member.Email, Date: today, Type: triggers.ActionType.Renew },
+        { Email: member.Email, Type: triggers.ActionType.Expiry1, Date: triggers.addDaysToDate('2022-01-10',  O1),  },
+        { Email: member.Email, Type: triggers.ActionType.Expiry2, Date: triggers.addDaysToDate('2022-01-10',  O2), },
+        { Email: member.Email, Type: triggers.ActionType.Expiry3, Date: triggers.addDaysToDate('2022-01-10',  O3), },
+        { Email: member.Email, Type: triggers.ActionType.Expiry4, Date: triggers.addDaysToDate('2022-01-10',  O4), }
+      ].map(e => { e.Date = getDateString(e.Date); return e; });;
+      actionSchedule = []
+      triggers.addRenewedMemberToActionSchedule_(member, actionSchedule, emailSpecs);
+      actionSchedule.forEach(e => e.Date = getDateString(e.Date));
+      expect(actionSchedule).toEqual(expected);
+    });
+
+  });
+})
