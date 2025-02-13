@@ -331,14 +331,13 @@ describe('trigger tests', () => {
       const txn = { "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }
       const actionSchedule = []
       const expected = [
-        { Email: txn["Email Address"], Type: triggers.ActionType.Join, Date: today, },
         { Email: txn["Email Address"], Type: triggers.ActionType.Expiry1, Date: triggers.addDaysToDate(today, 365 + O1) },
         { Email: txn["Email Address"], Type: triggers.ActionType.Expiry2, Date: triggers.addDaysToDate(today, 365 + O2) },
         { Email: txn["Email Address"], Type: triggers.ActionType.Expiry3, Date: triggers.addDaysToDate(today, 365 + O3), },
         { Email: txn["Email Address"], Type: triggers.ActionType.Expiry4, Date: triggers.addDaysToDate(today, 365 + O4), }
       ];
       expected.forEach(e => { console.log(e); e.Date = getDateString(e.Date) });
-      triggers.processPaidTransactions([txn], [], groupAddFun, sendEmailFun,  actionSpec, actionSchedule);
+      triggers.processPaidTransactions([txn], [], groupAddFun, sendEmailFun,  actionSpec, actionSchedule, []);
       actionSchedule.forEach(a => a.Date = getDateString(a.Date));
       expect(actionSchedule).toEqual(expected);
     })

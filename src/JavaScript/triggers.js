@@ -170,19 +170,12 @@ const Manager = (function () {
   function addRenewedMemberToActionSchedule_(member, actionSchedule, actionSpecs) {
     const email = member.Email;
     removeEmails_(email, actionSchedule);
-    const scheduleEntries = createScheduleEntries_(member, ActionType.Renew, actionSpecs);
+    const scheduleEntries = createScheduleEntries_(member, actionSpecs);
     actionSchedule.push(...scheduleEntries);
   }
 
-  function createScheduleEntries_(member, type, actionSpecs) {
+  function createScheduleEntries_(member, actionSpecs) {
     const scheduleEntries = [];
-    switch (type) {
-      case ActionType.Join:
-      case ActionType.Renew:
-        scheduleEntries.push({ Date: today(), Type: type, Email: member.Email });
-      case 'Migration':
-        break;
-    }
     actionSpecs.filter(spec => spec.Type.startsWith('Expiry')).forEach((spec) => scheduleEntries.push({ Date: addDaysToDate(member.Expires, spec.Offset), Type: spec.Type, Email: member.Email }));
     return scheduleEntries;
   }
@@ -238,7 +231,7 @@ const Manager = (function () {
   }
 
   function addNewMemberToActionSchedule_(member, actionSchedule, actionSpecs) {
-    const scheduleEntries = createScheduleEntries_(member, ActionType.Join, actionSpecs);
+    const scheduleEntries = createScheduleEntries_(member, actionSpecs);
     actionSchedule.push(...scheduleEntries);
   }
   /**
