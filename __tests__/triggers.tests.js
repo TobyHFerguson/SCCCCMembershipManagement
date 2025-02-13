@@ -130,10 +130,10 @@ describe('trigger tests', () => {
       it('should add a member to a group when the member is added', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         const members = []
-        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, []);
-        expect(groupAddFun).toHaveBeenCalledWith('test1@example.com');
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, [], [{Email: "group@email.com"}]);
         triggers.processPaidTransactions(txns, members, groupAddFun);
         expect(groupAddFun).toHaveBeenCalledTimes(1);
+        expect(groupAddFun).toHaveBeenCalledWith("test1@example.com", "group@email.com")
       })
       it('should not add a member to a group when the member is renewed', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
