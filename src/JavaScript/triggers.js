@@ -45,10 +45,10 @@ const Manager = (function () {
       const member = activeMembers[i];
       const expires = new Date(member.Expires + 'T00:00:00Z'); // Ensure UTC
       expiry4Spec = _actionSpec.Expiry4;
-      const expiry1Date = addDaysToDate_(expires, +_actionSpec.Expiry1.Offset);
-      const expiry2Date = addDaysToDate_(expires, +_actionSpec.Expiry2.Offset);
-      const expiry3Date = addDaysToDate_(expires, +_actionSpec.Expiry3.Offset);
-      const expiry4Date = addDaysToDate_(expires, +_actionSpec.Expiry4.Offset);
+      const expiry1Date = addDaysToDate(expires, +_actionSpec.Expiry1.Offset);
+      const expiry2Date = addDaysToDate(expires, +_actionSpec.Expiry2.Offset);
+      const expiry3Date = addDaysToDate(expires, +_actionSpec.Expiry3.Offset);
+      const expiry4Date = addDaysToDate(expires, +_actionSpec.Expiry4.Offset);
       const tdy = new Date(today())
       let message;
       if (tdy >= new Date(expiry4Date)) {
@@ -102,7 +102,7 @@ const Manager = (function () {
    * @returns {Array<Object>} return.processedRows - Array of processed transaction rows.
    * @returns {Array<Object>} return.result - Array of updated transactions.
    */
-  function processPaidTransactions(transactions, membershipData, groupAddFun, sendEmailFun, actionSpecs) {
+  function processPaidTransactions(transactions, membershipData, groupAddFun, sendEmailFun, actionSpecs, actionSchedule) {
     if (!transactions || !transactions.length || !Array.isArray(actionSpecs)) return;
 
     let _actionSpec = Object.fromEntries(actionSpecs.map(spec => [spec.Type, spec]));
@@ -115,15 +115,14 @@ const Manager = (function () {
       if (matchIndex !== undefined) { // a renewing member
         const member = membershipData[matchIndex];
         const years = getPeriod_(txn);
-        renewMember_(member, years);
+        renewMember_(member, years, actionSchedule, actionSpecs);
         message = {
           to: member.Email,
           subject: expandTemplate(_actionSpec.Renew.Subject, member),
           htmlBody: expandTemplate(_actionSpec.Renew.Body, member)
         }
       } else { // a joining member
-        const newMember = getNewMember(txn)
-        membershipData.push(newMember);
+        const newMember = addNewMember_(txn, actionSchedule, actionSpecs, membershipData)
         groupAddFun(newMember.Email)
         message = {
           to: newMember.Email,
@@ -168,19 +167,7 @@ function getPeriod_(txn) {
   return years;
 }
 
-function getNewMember(txn) {
-  const newMember = {
-    Email: txn["Email Address"],
-    First: txn["First Name"],
-    Last: txn["Last Name"],
-    Joined: today(),
-    Period: getPeriod_(txn),
-    Expires: calculateExpirationDate_(getPeriod_(txn)),
-    "Renewed On": '',
-  };
 
-  return newMember
-}
 
 
 /**
@@ -189,13 +176,44 @@ function getNewMember(txn) {
  * @param {number} period 
  * @param {} actionSchedule 
  */
-function renewMember_(member, period) {
+function renewMember_(member, period, actionSchedule, actionSpecs) {
   member.Period = period;
   member["Renewed On"] = today();
-  member.Expires = calculateExpirationDate_(period, member.Expires);
-
+  member.Expires = calculateExpirationDate(period, member.Expires);
+  addRenewedMemberToActionSchedule_(member, actionSchedule, actionSpecs);
 }
 
+function addRenewedMemberToActionSchedule_(member, actionSchedule, actionSpecs) {
+  const email = member.Email;
+  removeEmails_(email, actionSchedule);
+  const scheduleEntries = createScheduleEntries_(member, ActionType.Renew, actionSpecs);
+  actionSchedule.push(...scheduleEntries);
+}
+
+function createScheduleEntries_(member, type, actionSpecs) {
+  const scheduleEntries = [];
+  switch (type) {
+    case ActionType.Join:
+    case ActionType.Renew:
+      scheduleEntries.push({ Date: today(), Type: type, Email: member.Email });
+    case 'Migration':
+      break;
+  }
+  actionSpecs.filter(spec => spec.Type.startsWith('Expiry')).forEach((spec) => scheduleEntries.push({ Date: addDaysToDate(member.Expires, spec.Offset), Type: spec.Type, Email: member.Email }));
+  return scheduleEntries;
+}
+/**
+ * Removes all objects from the data & formula arrays whose Email property matches the given email address.
+ * @param {string} email - The email address to match.
+ * @param {Array} actionSchedule - The array of objects.
+ */
+function removeEmails_(email, actionSchedule) {
+  for (let i = actionSchedule.length - 1; i >= 0; i--) {
+    if (actionSchedule[i].Email === email) {
+      actionSchedule.splice(i, 1);
+    }
+  }
+}
 /**
  * Calculates an expiration date based on a period in years and an optional existing expiration date.
  * 
@@ -204,7 +222,7 @@ function renewMember_(member, period) {
  * @param {Date} [expires] - the existing expiration date, if any
  * @returns {Date} - The expiration date
  */
-function calculateExpirationDate_(period, expires) {
+function calculateExpirationDate(period, expires) {
   const futureDate = new Date(today() + 'T00:00:00Z'); // Ensure UTC
   futureDate.setUTCFullYear(futureDate.getUTCFullYear() + period);
 
@@ -220,13 +238,32 @@ function calculateExpirationDate_(period, expires) {
   return getDateString(result);
 }
 
+function addNewMember_(txn, actionSchedule, actionSpecs, membershipData) {
+  const newMember = {
+    Email: txn["Email Address"],
+    First: txn["First Name"],
+    Last: txn["Last Name"],
+    Joined: today(),
+    Period: getPeriod_(txn),
+    Expires: calculateExpirationDate(getPeriod_(txn)),
+    "Renewed On": '',
+  };
+  membershipData.push(newMember);
+  addNewMemberToActionSchedule_(newMember, actionSchedule, actionSpecs);
+  return newMember
+}
+
+function addNewMemberToActionSchedule_(member, actionSchedule, actionSpecs) {
+  const scheduleEntries = createScheduleEntries_(member, ActionType.Join, actionSpecs) ;
+  actionSchedule.push(...scheduleEntries);
+}
 /**
  * Returns a new date with days added to it.
  * @param {Date} date 
  * @param {number} days 
  * @returns {Date}
  */
-function addDaysToDate_(date, days = 0) {
+function addDaysToDate(date, days = 0) {
   const result = new Date(date); // Ensure UTC
   result.setUTCDate(result.getUTCDate() + days);
   return result;
@@ -250,13 +287,14 @@ return {
   processPaidTransactions,
   ActionType,
   today,
-  addDaysToDate_,
+  addDaysToDate,
   addYearsToDate,
-  calculateExpirationDate_,
+  calculateExpirationDate,
   setToday,
   processExpirations,
   setGroupEmails,
-  expandTemplate
+  expandTemplate,
+  addRenewedMemberToActionSchedule_
 };
 }) ()
 
