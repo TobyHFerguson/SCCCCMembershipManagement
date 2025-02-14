@@ -16,7 +16,7 @@ function processExpirations() {
 
   if (numProcessed === 0) return;
 
-  expiredMembersQueueFiddler.setData(expiredMembersData).dumpValues();
+  expiredMembersFiddler.setData(expiredMembersData).dumpValues();
   membershipFiddler.setData(membershipData).dumpValues();
   actionScheduleFiddler.setData(actionSchedule).dumpValues();
 
