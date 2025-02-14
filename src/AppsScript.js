@@ -112,9 +112,18 @@ function processTransactions() {
   const actionScheduleData = actionScheduleFiddler.getData();
 
   const groupEmails = getFiddler_('Group Email Addresses').getData();
- Manager.processPaidTransactions(transactions, membershipData, getGroupAdder_(), getEmailSender_(), actionSpecs, actionScheduleData, groupEmails);
 
-
+  const groupAddFun = getGroupAdder_();
+  const emailSendFun = getEmailSender_();
+  try {
+    Manager.processPaidTransactions(transactions, membershipData, groupAddFun, emailSendFun, actionSpecs, actionScheduleData, groupEmails);
+  } catch (error) {
+    if (error instanceof AggregateError) {
+      error.errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}`));
+    } else {
+      console.log(error);
+    }
+  }
 
   transactionsFiddler.setData(transactions).dumpValues();
 

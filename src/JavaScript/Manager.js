@@ -118,9 +118,9 @@ const Manager = (function () {
               htmlBody: expandTemplate(_actionSpec.Join.Body, newMember)
             };
           }
+          sendEmailFun(message);
           txn.Timestamp = today();
           txn.Processed = today();
-          sendEmailFun(message);
         }
       } catch (error) {
         error.txnNum = i + 2;
