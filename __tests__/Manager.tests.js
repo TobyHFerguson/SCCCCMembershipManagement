@@ -175,6 +175,17 @@ describe('Manager tests', () => {
       expect(consoleSpy).toHaveBeenCalledWith('Migrating a@b.com, row 2');
       expect(consoleSpy).toHaveBeenCalledWith('Migrated a@b.com, row 2');
     })
+    it('should continue even when there are errors', () => {
+      groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
+      try {
+        Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails);
+      } catch (error) {
+        expect(error).toBeInstanceOf(AggregateError);
+        expect(error.errors.length).toEqual(1);
+        expect(error.errors[0].rowNum).toBe(2);
+        expect(error.errors[0].email).toBe("a@b.com")
+      }
+    })
   });
   describe('processPaidTransactions_', () => {
     beforeEach(() => {
