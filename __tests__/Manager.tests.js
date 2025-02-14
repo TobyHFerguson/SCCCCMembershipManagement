@@ -44,7 +44,7 @@ describe('Manager tests', () => {
   const O2 = actionSpecByType.get('Expiry2').Offset;
   const O3 = actionSpecByType.get('Expiry3').Offset;
   const O4 = actionSpecByType.get('Expiry4').Offset;
-  today = new Date('2025-01-10' + 'T00:00:00Z')
+  today = '2025-01-10'
   let activeMembers;
   let expiredMembers;
   let actionSchedule;
@@ -109,10 +109,7 @@ describe('Manager tests', () => {
     })
   });
   describe('processExpirations', () => {
-    let activeMembers, expiredMembers, actionSchedule
     beforeEach(() => {
-      activeMembers = []
-      expiredMembers = []
       actionSchedule = [
         { Date: new Date('2050-01-01'), Type: Manager.ActionType.Expiry1, Email: "test1@example.com" },
         { Date: today, Type: Manager.ActionType.Expiry2, Email: "test1@example.com" },
@@ -122,7 +119,7 @@ describe('Manager tests', () => {
     })
     it('should do nothing if there are no members to expire', () => {
       numProcessed = Manager.processExpirations(activeMembers, expiredMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
-      expect(numProcessed).toEqual(2);
+      expect(numProcessed).toEqual(0);
     });
     it('should expire a member if they are fully expired', () => {
       activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },]
@@ -140,7 +137,19 @@ describe('Manager tests', () => {
     });
 
   })
-
+  describe('migrations', () => {
+    let migrators;
+    beforeEach(() => {
+       migrators = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10" }]
+    })
+    it('should migrate members and record the date of migration', () => {
+      const expectedMigrators = [{...migrators[0], "Migrated": today}]
+      const expectedMembers = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: '2020-03-10', Expires: '2021-01-10', "Migrated": today }]
+      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
+      expect(activeMembers).toEqual(expectedMembers);
+      expect(migrators).toEqual(expectedMigrators);
+  })
+});
   describe('processPaidTransactions_', () => {
     beforeEach(() => {
       groupAddFun = jest.fn();
