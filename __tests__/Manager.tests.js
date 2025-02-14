@@ -5,7 +5,7 @@ const transactionsFixture = {
     { "Payable Status": "pending", "Email Address": "test2@example.com" }
   ],
   paid: [
-    { "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" },
+    { "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year", Phone: "(408) 386-9343" },
     { "Payable Status": "paid", "Email Address": "test2@example.com", "First Name": "Jane", "Last Name": "Smith", "Payment": "2 years" },
     { "Payable Status": "paid", "Email Address": "test3@example.com", "First Name": "Not", "Last Name": "Member", "Payment": "3 year" },
 
@@ -152,9 +152,9 @@ describe('Manager tests', () => {
         const txns = transactionsFixture.paid
         const members = []
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: today, Expires: "2026-01-10", "Renewed On": "" },
-          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Joined: today, Expires: "2027-01-10", "Renewed On": "" },
-          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Joined: today, Expires: "2028-01-10", "Renewed On": "" }]
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: "2026-01-10", "Renewed On": "" },
+          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '', Joined: today, Expires: "2027-01-10", "Renewed On": "" },
+          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '', Joined: today, Expires: "2028-01-10", "Renewed On": "" }]
 
         Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, [], []);
         members.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
