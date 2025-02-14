@@ -72,13 +72,20 @@ const Manager = (function () {
     return numProcessed
   }
 
-  function migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupAddFun, sendEmailFun, groupEmails) {
+  function migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails) {
+    const actionSpec = actionSpecs.find(as => as.Type === ActionType.Migrate)
     migrators.forEach(m => {
       if (!m.Migrated) {
         m.Migrated = today()
         activeMembers.push(m)
-        actionSchedule.push(...createScheduleEntries_(m, actionSpec))
+        actionSchedule.push(...createScheduleEntries_(m, actionSpecs))
         groupEmails.forEach(g => groupAddFun(g.Email, m.Email))
+        let message = {
+          to: m.Email,
+          subject: expandTemplate(actionSpec.Subject, m),
+          htmlBody: expandTemplate(actionSpec.Body, m)
+        }
+        sendEmailFun(message)
       }
     })
   }

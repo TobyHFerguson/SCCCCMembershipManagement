@@ -29,7 +29,7 @@ const transactionsFixture = {
 
   ]
 };
-const actionSpec = [
+const actionSpecs = [
   { Type: 'Migrate', Subject: 'Migrate', Body: 'Migrate' },
   { Type: 'Join', Subject: 'Welcome to the club', Body: 'Welcome to the club, {First} {Last}!' },
   { Type: 'Renew', Subject: 'Renewal', Body: 'Thank you for renewing, {First} {Last}!' },
@@ -40,7 +40,7 @@ const actionSpec = [
 ]
 
 describe('Manager tests', () => {
-  const actionSpecByType = new Map(actionSpec.map(as => [as.Type, as]));
+  const actionSpecByType = new Map(actionSpecs.map(as => [as.Type, as]));
   const O1 = actionSpecByType.get('Expiry1').Offset;
   const O2 = actionSpecByType.get('Expiry2').Offset;
   const O3 = actionSpecByType.get('Expiry3').Offset;
@@ -79,7 +79,7 @@ describe('Manager tests', () => {
       const txns = [{ ...transactionsFixture.paid[0] }, { ...transactionsFixture.paid[1] }];
       activeMembers = [{ Email: "test2@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },]
 
-      Manager.processPaidTransactions(txns, activeMembers, groupAddFun, sendEmailFun, actionSpec, actionSchedule, groupEmails);
+      Manager.processPaidTransactions(txns, activeMembers, groupAddFun, sendEmailFun, actionSpecs, actionSchedule, groupEmails);
       // console.log('transaction #1 test1@example.com being processed')
       expect(consoleSpy).toHaveBeenCalledWith('transaction on row 3 test2@example.com is a renewing member');
       expect(consoleSpy).toHaveBeenCalledWith('transaction on row 2 test1@example.com is a new member');
@@ -100,7 +100,7 @@ describe('Manager tests', () => {
         { Email: "test2@example.com", Period: 1, First: "Jane", Last: "Smith", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },
       ]
       try {
-        Manager.processExpirations(activeMembers, expiredMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
+        Manager.processExpirations(activeMembers, expiredMembers, actionSchedule, actionSpecs, groupRemoveFun, sendEmailFun, groupEmails);
 
       } catch (error) {
         expect(error).toBeInstanceOf(AggregateError);
@@ -119,13 +119,13 @@ describe('Manager tests', () => {
       ];
     })
     it('should do nothing if there are no members to expire', () => {
-      numProcessed = Manager.processExpirations(activeMembers, expiredMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
+      numProcessed = Manager.processExpirations(activeMembers, expiredMembers, actionSchedule, actionSpecs, groupRemoveFun, sendEmailFun, groupEmails);
       expect(numProcessed).toEqual(0);
     });
     it('should expire a member if they are fully expired', () => {
       activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },]
       expectedExpiredMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },]
-      numProcessed = Manager.processExpirations(activeMembers, expiredMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
+      numProcessed = Manager.processExpirations(activeMembers, expiredMembers, actionSchedule, actionSpecs, groupRemoveFun, sendEmailFun, groupEmails);
       expect(numProcessed).toEqual(2);
       expect(activeMembers.length).toEqual(0);
       expect(expiredMembers.length).toEqual(1);
@@ -144,25 +144,30 @@ describe('Manager tests', () => {
       migrators = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10" }]
     })
     it('should migrate members and record the date of migration', () => {
-      const expectedMigrators = [{ ...migrators[0] }]
+      const expectedMigrators = [{ ...migrators[0], Migrated: today }]
       const expectedMembers = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: '2020-03-10', Expires: '2021-01-10', "Migrated": today }]
-      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupAddFun, sendEmailFun, groupEmails);
+      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails);
       expect(activeMembers).toEqual(expectedMembers);
       expect(migrators).toEqual(expectedMigrators);
     })
     it('shiouldnt migrate members that have already been migrated', () => {
       migrators = [{ ...migrators[0], Migrated: today }]
-      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupAddFun, sendEmailFun, groupEmails);
+      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails);
       expect(activeMembers).toEqual([]);
     })
     it('should create an action schedule for the migrated member', () => {
-      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupAddFun, sendEmailFun, groupEmails);
+      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails);
       expect(actionSchedule.length).toEqual(4);
     })
     it('should add migrated members to the groups', () => {
-      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupAddFun, sendEmailFun, groupEmails);
+      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails);
       expect(groupAddFun).toHaveBeenCalledTimes(1);
       expect(groupAddFun).toHaveBeenCalledWith(migrators[0].Email, groupEmails[0].Email);
+    })
+    it('should send emails to the members', () => {
+      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails);
+      expect(sendEmailFun).toHaveBeenCalledTimes(1);
+      expect(sendEmailFun).toHaveBeenCalledWith({ to: migrators[0].Email, subject: actionSpecByType.get('Migrate').Subject, htmlBody: actionSpecByType.get('Migrate').Body.replace('{First}', migrators[0].First).replace('{Last}', migrators[0].Last) })
     })
   });
   describe('processPaidTransactions_', () => {
@@ -180,7 +185,7 @@ describe('Manager tests', () => {
           { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '', Joined: today, Expires: "2027-01-10", "Renewed On": "" },
           { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '', Joined: today, Expires: "2028-01-10", "Renewed On": "" }]
 
-        Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, [], []);
+        Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpecs, [], []);
         members.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expectedMembers.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expect(members.length).toEqual(3)
@@ -193,7 +198,7 @@ describe('Manager tests', () => {
         const expectedMembers = [
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: Manager.addYearsToDate("2025-03-10", 1), "Renewed On": Manager.today() },
         ]
-        Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, []);
+        Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpecs, []);
         members.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expectedMembers.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expect(members.length).toEqual(1)
@@ -204,7 +209,7 @@ describe('Manager tests', () => {
       it('should add a member to a group when the member is added', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         const members = []
-        Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, [], [{ Email: "group@email.com" }]);
+        Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpecs, [], [{ Email: "group@email.com" }]);
         Manager.processPaidTransactions(txns, members, groupAddFun);
         expect(groupAddFun).toHaveBeenCalledTimes(1);
         expect(groupAddFun).toHaveBeenCalledWith("test1@example.com", "group@email.com")
@@ -212,7 +217,7 @@ describe('Manager tests', () => {
       it('should not add a member to a group when the member is renewed', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "" },]
-        Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, []);
+        Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpecs, []);
         Manager.processPaidTransactions(txns, members, groupAddFun);
         expect(groupAddFun).toHaveBeenCalledTimes(0);
       });
@@ -221,7 +226,7 @@ describe('Manager tests', () => {
       it('should send an email when a member is added', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         const members = []
-        Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, [], []);
+        Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpecs, [], []);
         expect(sendEmailFun).toHaveBeenCalledWith({
           to: members[0].Email,
           subject: Manager.expandTemplate(actionSpecByType.get('Join').Subject, members[0]),
@@ -232,7 +237,7 @@ describe('Manager tests', () => {
       it('should send an email when the member is renewed', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "" },]
-        Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, []);
+        Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpecs, []);
         expect(sendEmailFun).toHaveBeenCalledWith({
           to: members[0].Email,
           subject: Manager.expandTemplate(actionSpecByType.get('Renew').Subject, members[0]),
@@ -268,14 +273,14 @@ describe('Manager tests', () => {
         { Email: "test2@example.com", Period: 1, first: "Jane", last: "Smith", },
         { Email: "test3@example.com", Period: 3, first: "Not", last: "Member" }
         ];
-        Manager.processPaidTransactions(transactionsFixture.differentTerms, members, groupAddFun, sendEmailFun, actionSpec, [], []);
+        Manager.processPaidTransactions(transactionsFixture.differentTerms, members, groupAddFun, sendEmailFun, actionSpecs, [], []);
         expect(members.map(m => m.Period)).toEqual(expectedMembers.map(m => m.Period));
 
       });
 
       it('should return period as 1 if payment term is not specified', () => {
         const members = []
-        Manager.processPaidTransactions(transactionsFixture.noTerm, members, groupAddFun, sendEmailFun, actionSpec, [], []);
+        Manager.processPaidTransactions(transactionsFixture.noTerm, members, groupAddFun, sendEmailFun, actionSpecs, [], []);
         expect(members.map(m => m.Period)).toEqual([1, 1, 1])
       });
     })
@@ -411,7 +416,7 @@ describe('Manager tests', () => {
         { Email: txn["Email Address"], Type: Manager.ActionType.Expiry4, Date: Manager.addDaysToDate(today, 365 + O4), }
       ];
       expected.forEach(e => { console.log(e); e.Date = getDateString(e.Date) });
-      Manager.processPaidTransactions([txn], [], groupAddFun, sendEmailFun, actionSpec, actionSchedule, []);
+      Manager.processPaidTransactions([txn], [], groupAddFun, sendEmailFun, actionSpecs, actionSchedule, []);
       actionSchedule.forEach(a => a.Date = getDateString(a.Date));
       expect(actionSchedule).toEqual(expected);
     })
@@ -438,7 +443,7 @@ describe('Manager tests', () => {
         { Email: "test2@example.com", Type: Manager.ActionType.Expiry3, Date: Manager.addDaysToDate(today, (3 * 365) + O3), },
         { Email: "test2@example.com", Type: Manager.ActionType.Expiry4, Date: Manager.addDaysToDate(today, (3 * 365) + O4), },
       ].map(e => { e.Date = getDateString(e.Date); return e; });
-      Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, actionSchedule, []);
+      Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpecs, actionSchedule, []);
       actionSchedule.forEach(a => a.Date = getDateString(a.Date));
       expect(actionSchedule).toEqual(expected);
     });
@@ -454,7 +459,7 @@ describe('Manager tests', () => {
         { Date: new Date('2023-01-01'), Email: 'test@example.com', Type: Manager.ActionType.Expiry1 },
         { Date: new Date('2023-02-01'), Email: 'test@example.com', Type: Manager.ActionType.Expiry2 }
       ];
-      emailSpecs = actionSpec
+      emailSpecs = actionSpecs
       member = {
         Email: 'test@example1.com',
         First: 'John',
