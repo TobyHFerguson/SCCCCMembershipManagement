@@ -75,7 +75,7 @@ describe('Manager tests', () => {
       consoleSpy.mockRestore();
     });
     it('should produce interesting logs when processing transactions', () => {
-      const txns = [{...transactionsFixture.paid[0]}, {...transactionsFixture.paid[1]}];
+      const txns = [{ ...transactionsFixture.paid[0] }, { ...transactionsFixture.paid[1] }];
       activeMembers = [{ Email: "test2@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },]
 
       Manager.processPaidTransactions(txns, activeMembers, groupAddFun, sendEmailFun, actionSpec, actionSchedule, groupEmails);
@@ -140,16 +140,21 @@ describe('Manager tests', () => {
   describe('migrations', () => {
     let migrators;
     beforeEach(() => {
-       migrators = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10" }]
+      migrators = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10" }]
     })
     it('should migrate members and record the date of migration', () => {
-      const expectedMigrators = [{...migrators[0], "Migrated": today}]
+      const expectedMigrators = [{ ...migrators[0] }]
       const expectedMembers = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: '2020-03-10', Expires: '2021-01-10', "Migrated": today }]
       Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
       expect(activeMembers).toEqual(expectedMembers);
       expect(migrators).toEqual(expectedMigrators);
-  })
-});
+    })
+    it('shiouldnt migrate members that have already been migrated', () => {
+      migrators = [{ ...migrators[0], Migrated: today }]
+      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
+      expect(activeMembers).toEqual([]);
+    })
+  });
   describe('processPaidTransactions_', () => {
     beforeEach(() => {
       groupAddFun = jest.fn();
