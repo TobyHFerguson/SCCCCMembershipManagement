@@ -76,19 +76,30 @@ const Manager = (function () {
     const actionSpec = actionSpecs.find(as => as.Type === ActionType.Migrate)
 
     migrators.forEach((m, i) => {
+      const rowNum = i+ 2;
+      const errors = []
       if (!m.Migrated) {
-        console.log(`Migrating ${m.Email}, row ${i+2}`)
-        m.Migrated = today()
-        activeMembers.push(m)
-        actionSchedule.push(...createScheduleEntries_(m, actionSpecs))
-        groupEmails.forEach(g => groupAddFun(g.Email, m.Email))
-        let message = {
-          to: m.Email,
-          subject: expandTemplate(actionSpec.Subject, m),
-          htmlBody: expandTemplate(actionSpec.Body, m)
+        try {
+          console.log(`Migrating ${m.Email}, row ${rowNum}`)
+          m.Migrated = today()
+          activeMembers.push(m)
+          actionSchedule.push(...createScheduleEntries_(m, actionSpecs))
+          groupEmails.forEach(g => groupAddFun(g.Email, m.Email))
+          let message = {
+            to: m.Email,
+            subject: expandTemplate(actionSpec.Subject, m),
+            htmlBody: expandTemplate(actionSpec.Body, m)
+          }
+          sendEmailFun(message)
+          console.log(`Migrated ${m.Email}, row ${rowNum}`)
+        } catch (error) {
+          error.rowNum = rowNum;
+          error.email = m.Email
+          errors.push(error)
         }
-        sendEmailFun(message)
-        console.log(`Migrated ${m.Email}, row ${i+2}`)
+      }
+      if (errors.length > 0) {
+        throw new AggregateError(errors, 'Errors occurred while migrating members')
       }
     })
   }
