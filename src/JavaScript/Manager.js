@@ -74,8 +74,10 @@ const Manager = (function () {
 
   function migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails) {
     migrators.forEach(m => {
-      m.Migrated = today()
-      activeMembers.push(m)
+      if (!m.Migrated) {
+        m.Migrated = today()
+        activeMembers.push(m)
+      }
     })
   }
   // Pure JavaScript functions
