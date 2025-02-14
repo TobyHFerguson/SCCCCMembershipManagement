@@ -1,5 +1,4 @@
 const Manager = require('../src/JavaScript/Manager');
-
 const transactionsFixture = {
   unpaid: [
     { "Payable Status": "unpaid", "Email Address": "test1@example.com" },
@@ -39,24 +38,53 @@ const actionSpec = [
   { Type: 'Expiry4', Subject: 'Final Expiry', Body: 'Your membership has expired, {First} {Last}!', Offset: 10 },
 ]
 
-describe('trigger tests', () => {
+describe('Manager tests', () => {
   const actionSpecByType = new Map(actionSpec.map(as => [as.Type, as]));
   const O1 = actionSpecByType.get('Expiry1').Offset;
   const O2 = actionSpecByType.get('Expiry2').Offset;
   const O3 = actionSpecByType.get('Expiry3').Offset;
   const O4 = actionSpecByType.get('Expiry4').Offset;
-  const today = new Date('2025-01-10' + 'T00:00:00Z')
+  today = new Date('2025-01-10' + 'T00:00:00Z')
+  let activeMembers;
+  let expiredMembers;
+  let actionSchedule;
   let groupAddFun;
   let groupRemoveFun;
   let sendEmailFun;
+  let groupEmails;
   let numProcessed;
-  const groupEmails = [{ Email: "a@b.com" }]
   beforeEach(() => {
-    numProcessed = 0;
     Manager.setToday(today)
-    sendEmailFun = jest.fn();
+    activeMembers = [];
+    expiredMembers = [];
+    actionSchedule = [];
+    numProcessed = 0;
     groupRemoveFun = jest.fn();
     groupAddFun = jest.fn();
+    sendEmailFun = jest.fn();
+    groupEmails = [{ Email: "a@b.com" }]
+  });
+  describe('Aggregated Error tests', () => {
+    beforeEach(() => {
+      const errorFunction = jest.fn(() => {
+        throw new Error('This is a test error');
+      });
+      sendEmailFun = errorFunction;
+      groupRemoveFun = errorFunction;
+    });
+    it('should throw an aggregated error if there are errors', () => {
+      activeMembers = [
+        { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },
+        { Email: "test2@example.com", Period: 1, First: "Jane", Last: "Smith", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },
+      ]
+      try {
+        Manager.processExpirations(activeMembers, expiredMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
+
+      } catch (error) {
+        expect(error).toBeInstanceOf(AggregateError);
+        expect(error.errors.length).toEqual(2);
+      }
+    })
   });
   describe('processExpirations', () => {
     let activeMembers, expiredMembers, actionSchedule
@@ -68,7 +96,7 @@ describe('trigger tests', () => {
         { Date: today, Type: Manager.ActionType.Expiry2, Email: "test1@example.com" },
         { Date: new Date('2045-01-01'), Type: Manager.ActionType.Expiry1, Email: "test1@example.com" },
         { Date: today, Type: Manager.ActionType.Expiry4, Email: "test1@example.com" }
-    ];
+      ];
     })
     it('should do nothing if there are no members to expire', () => {
       numProcessed = Manager.processExpirations(activeMembers, expiredMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
@@ -130,7 +158,7 @@ describe('trigger tests', () => {
       it('should add a member to a group when the member is added', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         const members = []
-        Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, [], [{Email: "group@email.com"}]);
+        Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, [], [{ Email: "group@email.com" }]);
         Manager.processPaidTransactions(txns, members, groupAddFun);
         expect(groupAddFun).toHaveBeenCalledTimes(1);
         expect(groupAddFun).toHaveBeenCalledWith("test1@example.com", "group@email.com")
@@ -337,7 +365,7 @@ describe('trigger tests', () => {
         { Email: txn["Email Address"], Type: Manager.ActionType.Expiry4, Date: Manager.addDaysToDate(today, 365 + O4), }
       ];
       expected.forEach(e => { console.log(e); e.Date = getDateString(e.Date) });
-      Manager.processPaidTransactions([txn], [], groupAddFun, sendEmailFun,  actionSpec, actionSchedule, []);
+      Manager.processPaidTransactions([txn], [], groupAddFun, sendEmailFun, actionSpec, actionSchedule, []);
       actionSchedule.forEach(a => a.Date = getDateString(a.Date));
       expect(actionSchedule).toEqual(expected);
     })
@@ -355,14 +383,14 @@ describe('trigger tests', () => {
         { "Payable Status": "paid", "Email Address": "test2@example.com", "First Name": "Jane", "Last Name": "Smith", "Payment": "3 years" }
       ]
       const expected = [
-        { Email: "test1@example.com", Type: Manager.ActionType.Expiry1, Date: Manager.addDaysToDate(today, (2 * 365) +O1) },
-        { Email: "test1@example.com", Type: Manager.ActionType.Expiry2, Date: Manager.addDaysToDate(today, (2 * 365) +O2) },
-        { Email: "test1@example.com", Type: Manager.ActionType.Expiry3, Date: Manager.addDaysToDate(today, (2 * 365) +O3), },
-        { Email: "test1@example.com", Type: Manager.ActionType.Expiry4, Date: Manager.addDaysToDate(today, (2 * 365) +O4), },
-        { Email: "test2@example.com", Type: Manager.ActionType.Expiry1, Date: Manager.addDaysToDate(today, (3 * 365) +O1) },
-        { Email: "test2@example.com", Type: Manager.ActionType.Expiry2, Date: Manager.addDaysToDate(today, (3 * 365) +O2) },
-        { Email: "test2@example.com", Type: Manager.ActionType.Expiry3, Date: Manager.addDaysToDate(today, (3 * 365) +O3), },
-        { Email: "test2@example.com", Type: Manager.ActionType.Expiry4, Date: Manager.addDaysToDate(today, (3 * 365) +O4), },
+        { Email: "test1@example.com", Type: Manager.ActionType.Expiry1, Date: Manager.addDaysToDate(today, (2 * 365) + O1) },
+        { Email: "test1@example.com", Type: Manager.ActionType.Expiry2, Date: Manager.addDaysToDate(today, (2 * 365) + O2) },
+        { Email: "test1@example.com", Type: Manager.ActionType.Expiry3, Date: Manager.addDaysToDate(today, (2 * 365) + O3), },
+        { Email: "test1@example.com", Type: Manager.ActionType.Expiry4, Date: Manager.addDaysToDate(today, (2 * 365) + O4), },
+        { Email: "test2@example.com", Type: Manager.ActionType.Expiry1, Date: Manager.addDaysToDate(today, (3 * 365) + O1) },
+        { Email: "test2@example.com", Type: Manager.ActionType.Expiry2, Date: Manager.addDaysToDate(today, (3 * 365) + O2) },
+        { Email: "test2@example.com", Type: Manager.ActionType.Expiry3, Date: Manager.addDaysToDate(today, (3 * 365) + O3), },
+        { Email: "test2@example.com", Type: Manager.ActionType.Expiry4, Date: Manager.addDaysToDate(today, (3 * 365) + O4), },
       ].map(e => { e.Date = getDateString(e.Date); return e; });
       Manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, actionSchedule, []);
       actionSchedule.forEach(a => a.Date = getDateString(a.Date));
@@ -395,10 +423,10 @@ describe('trigger tests', () => {
     it('should remove existing action schedule entries for the member', () => {
       const member = { Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: getDateString('2021-01-01'), Expires: getDateString('2022-01-10') };
       const expected = [
-      { Email: member.Email, Type: Manager.ActionType.Expiry1, Date: Manager.addDaysToDate('2022-01-10',  O1),  },
-      { Email: member.Email, Type: Manager.ActionType.Expiry2, Date: Manager.addDaysToDate('2022-01-10',  O2), },
-      { Email: member.Email, Type: Manager.ActionType.Expiry3, Date: Manager.addDaysToDate('2022-01-10',  O3), },
-      { Email: member.Email, Type: Manager.ActionType.Expiry4, Date: Manager.addDaysToDate('2022-01-10',  O4), }
+        { Email: member.Email, Type: Manager.ActionType.Expiry1, Date: Manager.addDaysToDate('2022-01-10', O1), },
+        { Email: member.Email, Type: Manager.ActionType.Expiry2, Date: Manager.addDaysToDate('2022-01-10', O2), },
+        { Email: member.Email, Type: Manager.ActionType.Expiry3, Date: Manager.addDaysToDate('2022-01-10', O3), },
+        { Email: member.Email, Type: Manager.ActionType.Expiry4, Date: Manager.addDaysToDate('2022-01-10', O4), }
       ].map(e => { e.Date = getDateString(e.Date); return e; });
       actionSchedule = [{ Email: member.Email, Type: Manager.ActionType.Expiry3, Date: getDateString('2021-01-10'), },
       ]
@@ -411,10 +439,10 @@ describe('trigger tests', () => {
     it('should add new action schedule entries for the renewed member', () => {
       const member = { Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: new Date('2021-01-01'), Expires: new Date('2022-01-10') };
       const expected = [
-        { Email: member.Email, Type: Manager.ActionType.Expiry1, Date: Manager.addDaysToDate('2022-01-10',  O1),  },
-        { Email: member.Email, Type: Manager.ActionType.Expiry2, Date: Manager.addDaysToDate('2022-01-10',  O2), },
-        { Email: member.Email, Type: Manager.ActionType.Expiry3, Date: Manager.addDaysToDate('2022-01-10',  O3), },
-        { Email: member.Email, Type: Manager.ActionType.Expiry4, Date: Manager.addDaysToDate('2022-01-10',  O4), }
+        { Email: member.Email, Type: Manager.ActionType.Expiry1, Date: Manager.addDaysToDate('2022-01-10', O1), },
+        { Email: member.Email, Type: Manager.ActionType.Expiry2, Date: Manager.addDaysToDate('2022-01-10', O2), },
+        { Email: member.Email, Type: Manager.ActionType.Expiry3, Date: Manager.addDaysToDate('2022-01-10', O3), },
+        { Email: member.Email, Type: Manager.ActionType.Expiry4, Date: Manager.addDaysToDate('2022-01-10', O4), }
       ].map(e => { e.Date = getDateString(e.Date); return e; });;
       actionSchedule = []
       Manager.addRenewedMemberToActionSchedule_(member, actionSchedule, emailSpecs);

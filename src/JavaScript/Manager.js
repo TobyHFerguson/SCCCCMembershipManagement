@@ -93,9 +93,12 @@ const Manager = (function () {
 
     const emailToMemberMap = membershipData.length ? Object.fromEntries(membershipData.map((member, index) => [member.Email, index])) : {};
     transactions.forEach(txn => {
-      if (!txn.Processed && txn["Payable Status"].toLowerCase().startsWith("paid")) {
+      const errors = [];
+      transactions.forEach(txn => {
+        try {
+          if (!txn.Processed && txn["Payable Status"].toLowerCase().startsWith("paid")) {
         const matchIndex = emailToMemberMap[txn["Email Address"]];
-        let message
+        let message;
         if (matchIndex !== undefined) { // a renewing member
           const member = membershipData[matchIndex];
           const years = getPeriod_(txn);
@@ -104,19 +107,28 @@ const Manager = (function () {
             to: member.Email,
             subject: expandTemplate(_actionSpec.Renew.Subject, member),
             htmlBody: expandTemplate(_actionSpec.Renew.Body, member)
-          }
+          };
         } else { // a joining member
-          const newMember = addNewMember_(txn, actionSchedule, actionSpecs, membershipData)
-          groupEmails.forEach(g => groupAddFun(newMember.Email, g.Email))
+          const newMember = addNewMember_(txn, actionSchedule, actionSpecs, membershipData);
+          groupEmails.forEach(g => groupAddFun(newMember.Email, g.Email));
           message = {
             to: newMember.Email,
             subject: expandTemplate(_actionSpec.Join.Subject, newMember),
             htmlBody: expandTemplate(_actionSpec.Join.Body, newMember)
-          }
+          };
         }
         txn.Timestamp = today();
         txn.Processed = today();
         sendEmailFun(message);
+          }
+        } catch (error) {
+          error.email = txn["Email Address"];
+          errors.push(error);
+        }
+      });
+
+      if (errors.length > 0) {
+        throw new AggregateError(errors, 'Errors occurred while processing transactions');
       }
     })
 
