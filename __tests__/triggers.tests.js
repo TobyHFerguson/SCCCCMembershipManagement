@@ -106,7 +106,7 @@ describe('trigger tests', () => {
           { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Joined: today, Expires: "2027-01-10", "Renewed On": "" },
           { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Joined: today, Expires: "2028-01-10", "Renewed On": "" }]
 
-        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, []);
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, [], []);
         members.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expectedMembers.forEach(e => { e.Joined = getDateString(e.Joined); e.Expires = getDateString(e.Expires) });
         expect(members.length).toEqual(3)
