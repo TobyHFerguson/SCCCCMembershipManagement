@@ -74,10 +74,10 @@ const Manager = (function () {
 
   function migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails) {
     const actionSpec = actionSpecs.find(as => as.Type === ActionType.Migrate)
-
+    let numMigrations = 0;
+    const errors = []
     migrators.forEach((m, i) => {
       const rowNum = i+ 2;
-      const errors = []
       if (!m.Migrated) {
         try {
           console.log(`Migrating ${m.Email}, row ${rowNum}`)
@@ -91,6 +91,7 @@ const Manager = (function () {
             htmlBody: expandTemplate(actionSpec.Body, m)
           }
           sendEmailFun(message)
+          numMigrations++
           console.log(`Migrated ${m.Email}, row ${rowNum}`)
         } catch (error) {
           error.rowNum = rowNum;
@@ -102,6 +103,7 @@ const Manager = (function () {
         throw new AggregateError(errors, 'Errors occurred while migrating members')
       }
     })
+    return numMigrations;
   }
   // Pure JavaScript functions
   /**
