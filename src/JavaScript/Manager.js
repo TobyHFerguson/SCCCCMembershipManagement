@@ -233,6 +233,7 @@ const Manager = (function () {
       Email: txn["Email Address"],
       First: txn["First Name"],
       Last: txn["Last Name"],
+      Phone: txn.Phone || '',
       Joined: today(),
       Period: getPeriod_(txn),
       Expires: calculateExpirationDate(getPeriod_(txn)),
