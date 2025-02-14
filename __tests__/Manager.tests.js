@@ -169,6 +169,12 @@ describe('Manager tests', () => {
       expect(sendEmailFun).toHaveBeenCalledTimes(1);
       expect(sendEmailFun).toHaveBeenCalledWith({ to: migrators[0].Email, subject: actionSpecByType.get('Migrate').Subject, htmlBody: actionSpecByType.get('Migrate').Body.replace('{First}', migrators[0].First).replace('{Last}', migrators[0].Last) })
     })
+    it('should provide logging information', () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails);
+      expect(consoleSpy).toHaveBeenCalledWith('Migrating a@b.com, row 2');
+      expect(consoleSpy).toHaveBeenCalledWith('Migrated a@b.com, row 2');
+    })
   });
   describe('processPaidTransactions_', () => {
     beforeEach(() => {

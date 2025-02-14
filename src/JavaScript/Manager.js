@@ -74,8 +74,10 @@ const Manager = (function () {
 
   function migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails) {
     const actionSpec = actionSpecs.find(as => as.Type === ActionType.Migrate)
-    migrators.forEach(m => {
+
+    migrators.forEach((m, i) => {
       if (!m.Migrated) {
+        console.log(`Migrating ${m.Email}, row ${i+2}`)
         m.Migrated = today()
         activeMembers.push(m)
         actionSchedule.push(...createScheduleEntries_(m, actionSpecs))
@@ -86,6 +88,7 @@ const Manager = (function () {
           htmlBody: expandTemplate(actionSpec.Body, m)
         }
         sendEmailFun(message)
+        console.log(`Migrated ${m.Email}, row ${i+2}`)
       }
     })
   }
