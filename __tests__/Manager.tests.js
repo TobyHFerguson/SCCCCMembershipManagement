@@ -186,6 +186,10 @@ describe('Manager tests', () => {
         expect(error.errors[0].email).toBe("a@b.com")
       }
     })
+    it('should indicate how many members were successfully migrated', () => {
+        const numMigrations = Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails);
+        expect(numMigrations).toBe(1);
+    })
   });
   describe('processPaidTransactions_', () => {
     beforeEach(() => {
