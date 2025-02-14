@@ -147,7 +147,7 @@ describe('trigger tests', () => {
       it('should send an email when a member is added', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         const members = []
-        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, []);
+        triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpec, [], []);
         expect(sendEmailFun).toHaveBeenCalledWith({
           to: members[0].Email,
           subject: triggers.expandTemplate(actionSpecByType.get('Join').Subject, members[0]),
