@@ -194,14 +194,14 @@ describe('trigger tests', () => {
         { Email: "test2@example.com", Period: 1, first: "Jane", last: "Smith", },
         { Email: "test3@example.com", Period: 3, first: "Not", last: "Member" }
         ];
-        triggers.processPaidTransactions(transactionsFixture.differentTerms, members, groupAddFun, sendEmailFun, actionSpec, []);
+        triggers.processPaidTransactions(transactionsFixture.differentTerms, members, groupAddFun, sendEmailFun, actionSpec, [], []);
         expect(members.map(m => m.Period)).toEqual(expectedMembers.map(m => m.Period));
 
       });
 
       it('should return period as 1 if payment term is not specified', () => {
         const members = []
-        triggers.processPaidTransactions(transactionsFixture.noTerm, members, groupAddFun, sendEmailFun, actionSpec, []);
+        triggers.processPaidTransactions(transactionsFixture.noTerm, members, groupAddFun, sendEmailFun, actionSpec, [], []);
         expect(members.map(m => m.Period)).toEqual([1, 1, 1])
       });
     })
@@ -355,18 +355,16 @@ describe('trigger tests', () => {
         { "Payable Status": "paid", "Email Address": "test2@example.com", "First Name": "Jane", "Last Name": "Smith", "Payment": "3 years" }
       ]
       const expected = [
-        { Email: "test1@example.com", Type: triggers.ActionType.Renew, Date: today, },
         { Email: "test1@example.com", Type: triggers.ActionType.Expiry1, Date: triggers.addDaysToDate(today, (2 * 365) +O1) },
         { Email: "test1@example.com", Type: triggers.ActionType.Expiry2, Date: triggers.addDaysToDate(today, (2 * 365) +O2) },
         { Email: "test1@example.com", Type: triggers.ActionType.Expiry3, Date: triggers.addDaysToDate(today, (2 * 365) +O3), },
         { Email: "test1@example.com", Type: triggers.ActionType.Expiry4, Date: triggers.addDaysToDate(today, (2 * 365) +O4), },
-        { Email: "test2@example.com", Type: triggers.ActionType.Join, Date: today, },
         { Email: "test2@example.com", Type: triggers.ActionType.Expiry1, Date: triggers.addDaysToDate(today, (3 * 365) +O1) },
         { Email: "test2@example.com", Type: triggers.ActionType.Expiry2, Date: triggers.addDaysToDate(today, (3 * 365) +O2) },
         { Email: "test2@example.com", Type: triggers.ActionType.Expiry3, Date: triggers.addDaysToDate(today, (3 * 365) +O3), },
         { Email: "test2@example.com", Type: triggers.ActionType.Expiry4, Date: triggers.addDaysToDate(today, (3 * 365) +O4), },
       ].map(e => { e.Date = getDateString(e.Date); return e; });
-      triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun,  actionSpec, actionSchedule);
+      triggers.processPaidTransactions(txns, members, groupAddFun, sendEmailFun,  actionSpec, actionSchedule, []);
       actionSchedule.forEach(a => a.Date = getDateString(a.Date));
       expect(actionSchedule).toEqual(expected);
     });
