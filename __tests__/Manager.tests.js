@@ -64,6 +64,27 @@ describe('Manager tests', () => {
     sendEmailFun = jest.fn();
     groupEmails = [{ Email: "a@b.com" }]
   });
+  describe('logging tests', () => {
+    let consoleSpy;
+
+    beforeEach(() => {
+      consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    });
+
+    afterEach(() => {
+      consoleSpy.mockRestore();
+    });
+    it('should produce interesting logs when processing transactions', () => {
+      const txns = [{...transactionsFixture.paid[0]}, {...transactionsFixture.paid[1]}];
+      activeMembers = [{ Email: "test2@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },]
+
+      Manager.processPaidTransactions(txns, activeMembers, groupAddFun, sendEmailFun, actionSpec, actionSchedule, groupEmails);
+      // console.log('transaction #1 test1@example.com being processed')
+      expect(consoleSpy).toHaveBeenCalledWith('transaction on row 3 test2@example.com is a renewing member');
+      expect(consoleSpy).toHaveBeenCalledWith('transaction on row 2 test1@example.com is a new member');
+
+    })
+  });
   describe('Aggregated Error tests', () => {
     beforeEach(() => {
       const errorFunction = jest.fn(() => {
@@ -83,6 +104,7 @@ describe('Manager tests', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(AggregateError);
         expect(error.errors.length).toEqual(2);
+        expect(error.errors[0].txnNum).toEqual(1)
       }
     })
   });
