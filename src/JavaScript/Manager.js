@@ -49,7 +49,7 @@ const Manager = (function () {
       const tdy = new Date(today());
       if (sched.Date <= tdy) {
         let idx = activeMembers.findIndex(member => member.Email === sched.Email);
-        if (idx != -1 ) {
+        if (idx != -1) {
           let member = activeMembers[idx];
           if (sched.Type === ActionType.Expiry4) {
             expiredMembers.push(member);
@@ -92,48 +92,49 @@ const Manager = (function () {
     let _actionSpec = Object.fromEntries(actionSpecs.map(spec => [spec.Type, spec]));
 
     const emailToMemberMap = membershipData.length ? Object.fromEntries(membershipData.map((member, index) => [member.Email, index])) : {};
-    transactions.forEach(txn => {
-      const errors = [];
-      transactions.forEach(txn => {
-        try {
-          if (!txn.Processed && txn["Payable Status"].toLowerCase().startsWith("paid")) {
-        const matchIndex = emailToMemberMap[txn["Email Address"]];
-        let message;
-        if (matchIndex !== undefined) { // a renewing member
-          const member = membershipData[matchIndex];
-          const years = getPeriod_(txn);
-          renewMember_(member, years, actionSchedule, actionSpecs);
-          message = {
-            to: member.Email,
-            subject: expandTemplate(_actionSpec.Renew.Subject, member),
-            htmlBody: expandTemplate(_actionSpec.Renew.Body, member)
-          };
-        } else { // a joining member
-          const newMember = addNewMember_(txn, actionSchedule, actionSpecs, membershipData);
-          groupEmails.forEach(g => groupAddFun(newMember.Email, g.Email));
-          message = {
-            to: newMember.Email,
-            subject: expandTemplate(_actionSpec.Join.Subject, newMember),
-            htmlBody: expandTemplate(_actionSpec.Join.Body, newMember)
-          };
-        }
-        txn.Timestamp = today();
-        txn.Processed = today();
-        sendEmailFun(message);
+    const errors = [];
+    transactions.forEach((txn, i) => {
+      try {
+        if (!txn.Processed && txn["Payable Status"].toLowerCase().startsWith("paid")) {
+          const matchIndex = emailToMemberMap[txn["Email Address"]];
+          let message;
+          if (matchIndex !== undefined) { // a renewing member
+            console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a renewing member`)
+            const member = membershipData[matchIndex];
+            const years = getPeriod_(txn);
+            renewMember_(member, years, actionSchedule, actionSpecs);
+            message = {
+              to: member.Email,
+              subject: expandTemplate(_actionSpec.Renew.Subject, member),
+              htmlBody: expandTemplate(_actionSpec.Renew.Body, member)
+            };
+          } else { // a joining member
+            console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a new member`)
+            const newMember = addNewMember_(txn, actionSchedule, actionSpecs, membershipData);
+            groupEmails.forEach(g => groupAddFun(newMember.Email, g.Email));
+            message = {
+              to: newMember.Email,
+              subject: expandTemplate(_actionSpec.Join.Subject, newMember),
+              htmlBody: expandTemplate(_actionSpec.Join.Body, newMember)
+            };
           }
-        } catch (error) {
-          error.email = txn["Email Address"];
-          errors.push(error);
+          txn.Timestamp = today();
+          txn.Processed = today();
+          sendEmailFun(message);
         }
-      });
-
-      if (errors.length > 0) {
-        throw new AggregateError(errors, 'Errors occurred while processing transactions');
+      } catch (error) {
+        error.txnNum = i + 2;
+        error.email = txn["Email Address"];
+        errors.push(error);
       }
-    })
+    });
 
-
+    if (errors.length > 0) {
+      throw new AggregateError(errors, 'Errors occurred while processing transactions');
+    }
   }
+
+
 
   /**
    * Expands a template string by replacing placeholders with corresponding values from a row object.
@@ -270,9 +271,16 @@ const Manager = (function () {
     return result;
   }
 
-
+  function fun(arg) {
+    if (arg === 'help') {
+      console.log('help');
+    } else if (arg === 'other') {
+      console.log('other');
+    }
+  }
 
   return {
+    fun,
     processPaidTransactions,
     ActionType,
     today,
