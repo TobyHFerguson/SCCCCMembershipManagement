@@ -39,15 +39,16 @@ const Manager = (function () {
   function processExpirations(activeMembers, expiredMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails) {
     const actionSpecByType = Object.fromEntries(actionSpec.map(spec => [spec.Type, spec]));
     if (!actionSchedule || !Array.isArray(actionSchedule)) {
-      return { emailQueue: [], expiredMembersQueue: [] };
+      return 0;
     }
     let numProcessed = 0
     let membersToBeRemoved = []
     for (i = actionSchedule.length - 1; i >= 0; i--) {
       const sched = actionSchedule[i];
       const spec = actionSpecByType[sched.Type];
-      const tdy = new Date(today());
-      if (sched.Date <= tdy) {
+      const tdy = today();
+      const schedDate = getDateString(sched.Date);
+      if (schedDate <= tdy) {
         let idx = activeMembers.findIndex(member => member.Email === sched.Email);
         if (idx != -1) {
           let member = activeMembers[idx];
@@ -55,24 +56,28 @@ const Manager = (function () {
             expiredMembers.push(member);
             membersToBeRemoved.push(idx);
             groupEmails.forEach(group => groupRemoveFun(group.Email, member.Email));
-
           }
           let message = {
             to: member.Email,
             subject: expandTemplate(spec.Subject, member),
             htmlBody: expandTemplate(spec.Body, member)
           }
+          actionSchedule.splice(i, 1);
           sendEmailFun(message);
+          numProcessed++;
         }
-        actionSchedule.splice(i, 1);
-        numProcessed++;
       }
     }
     membersToBeRemoved.sort((a, b) => b - a).forEach(idx => activeMembers.splice(idx, 1));
     return numProcessed
   }
 
-
+  function migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails) {
+    migrators.forEach(m => {
+      m.Migrated = today()
+      activeMembers.push(m)
+    })
+  }
   // Pure JavaScript functions
   /**
    * Processes transaction data by updating membership information and handling email schedules. Always returns one empty row, thus ensuring that the headers aren't removed from the source spreadsheet
@@ -280,7 +285,9 @@ const Manager = (function () {
     }
   }
 
+
   return {
+    migrateCEMembers,
     fun,
     processPaidTransactions,
     ActionType,
