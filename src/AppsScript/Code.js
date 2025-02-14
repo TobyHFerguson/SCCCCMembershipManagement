@@ -142,8 +142,7 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('Membership Management')
     .addItem('Process Transactions', processTransactions.name)
-    .addItem('Do Action Schedule', doActionSchedule.name)
-    .addItem('Send Emails', executeScheduledActions.name)
+    .addItem('Process Expirations', processExpirations.name)
     .addToUi();
 }
 
