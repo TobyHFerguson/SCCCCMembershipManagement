@@ -30,6 +30,7 @@ const transactionsFixture = {
   ]
 };
 const actionSpec = [
+  { Type: 'Migrate', Subject: 'Migrate', Body: 'Migrate' },
   { Type: 'Join', Subject: 'Welcome to the club', Body: 'Welcome to the club, {First} {Last}!' },
   { Type: 'Renew', Subject: 'Renewal', Body: 'Thank you for renewing, {First} {Last}!' },
   { Type: 'Expiry1', Subject: 'First Expiry', Body: 'Your membership is expiring soon, {First} {Last}!', Offset: -10 },
@@ -154,6 +155,11 @@ describe('Manager tests', () => {
       Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
       expect(activeMembers).toEqual([]);
     })
+    it('should create an action schedule for the migrated member', () => {
+      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
+      expect(actionSchedule.length).toEqual(4);
+    })
+
   });
   describe('processPaidTransactions_', () => {
     beforeEach(() => {

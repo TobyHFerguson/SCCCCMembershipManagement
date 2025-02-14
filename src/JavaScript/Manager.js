@@ -77,6 +77,7 @@ const Manager = (function () {
       if (!m.Migrated) {
         m.Migrated = today()
         activeMembers.push(m)
+        actionSchedule.push(...createScheduleEntries_(m, actionSpec))
       }
     })
   }
