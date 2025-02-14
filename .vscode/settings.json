@@ -1,0 +1,19 @@
+{
+  "githubPullRequests.ignoredPullRequestBranches": [
+    "main"
+  ],
+  "githubIssues.queries": [
+    {
+      "label": "My Issues",
+      "query": "assignee:@me is:open"
+    },
+    {
+      "label": "Created by Me",
+      "query": "author:@me is:open"
+    },
+    {
+      "label": "All Issues",
+      "query": "is:open"
+    }
+  ]
+}
