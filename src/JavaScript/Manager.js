@@ -72,12 +72,13 @@ const Manager = (function () {
     return numProcessed
   }
 
-  function migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails) {
+  function migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupAddFun, sendEmailFun, groupEmails) {
     migrators.forEach(m => {
       if (!m.Migrated) {
         m.Migrated = today()
         activeMembers.push(m)
         actionSchedule.push(...createScheduleEntries_(m, actionSpec))
+        groupEmails.forEach(g => groupAddFun(g.Email, m.Email))
       }
     })
   }
