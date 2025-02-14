@@ -146,20 +146,24 @@ describe('Manager tests', () => {
     it('should migrate members and record the date of migration', () => {
       const expectedMigrators = [{ ...migrators[0] }]
       const expectedMembers = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: '2020-03-10', Expires: '2021-01-10', "Migrated": today }]
-      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
+      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupAddFun, sendEmailFun, groupEmails);
       expect(activeMembers).toEqual(expectedMembers);
       expect(migrators).toEqual(expectedMigrators);
     })
     it('shiouldnt migrate members that have already been migrated', () => {
       migrators = [{ ...migrators[0], Migrated: today }]
-      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
+      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupAddFun, sendEmailFun, groupEmails);
       expect(activeMembers).toEqual([]);
     })
     it('should create an action schedule for the migrated member', () => {
-      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails);
+      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupAddFun, sendEmailFun, groupEmails);
       expect(actionSchedule.length).toEqual(4);
     })
-
+    it('should add migrated members to the groups', () => {
+      Manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpec, groupAddFun, sendEmailFun, groupEmails);
+      expect(groupAddFun).toHaveBeenCalledTimes(1);
+      expect(groupAddFun).toHaveBeenCalledWith(migrators[0].Email, groupEmails[0].Email);
+    })
   });
   describe('processPaidTransactions_', () => {
     beforeEach(() => {
