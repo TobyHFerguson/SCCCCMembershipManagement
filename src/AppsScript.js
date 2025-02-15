@@ -1,19 +1,31 @@
 /**
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
+
+const SheetNames = {
+  TRANSACTIONS: 'Transactions',
+  ACTIVE_MEMBERS: 'Active Members',
+  EXPIRY_SCHEDULE: 'Expiry Schedule',
+  CE_MEMBERS: 'CE Members',
+  EXPIRED_MEMBERS: 'Expired Members',
+  ACTION_SPECS: 'Action Specs',
+  GROUP_EMAIL_ADDRESSES: 'Group Email Addresses',
+  EMAIL_LOG: 'Email Log'
+};
+
 function processTransactions() {
-  convertLinks_('Transactions');
-  const transactionsFiddler = getFiddler_('Transactions').needFormulas();
+  convertLinks_(SheetNames.TRANSACTIONS);
+  const transactionsFiddler = getFiddler_(SheetNames.TRANSACTIONS).needFormulas();
   const transactions = getDataWithFormulas_(transactionsFiddler);
   if (transactions.length === 0) { return; }
 
-  const membershipFiddler = getFiddler_('Active Members');
-  const actionScheduleFiddler = getFiddler_('Action Schedule');
+  const membershipFiddler = getFiddler_(SheetNames.ACTIVE_MEMBERS);
+  const expiryScheduleFiddler = getFiddler_(SheetNames.EXPIRY_SCHEDULE);
 
-  const { manager, membershipData, actionScheduleData } = initializeManagerData_(membershipFiddler, actionScheduleFiddler);
+  const { manager, membershipData, expirySchedule } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
   try {
-    manager.processPaidTransactions(transactions, membershipData, actionScheduleData);
+    manager.processPaidTransactions(transactions, membershipData, expirySchedule);
   } catch (error) {
     if (error instanceof AggregateError) {
       error.errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack}`));
@@ -24,21 +36,21 @@ function processTransactions() {
 
   transactionsFiddler.setData(transactions).dumpValues();
   membershipFiddler.setData(membershipData).dumpValues();
-  actionScheduleFiddler.setData(actionScheduleData).dumpValues();
+  expiryScheduleFiddler.setData(expirySchedule).dumpValues();
 }
 
 function processMigrations() {
-  const ceMembersFiddler = getFiddler_('CE Members').needFormulas();
+  const ceMembersFiddler = getFiddler_(SheetNames.CE_MEMBERS).needFormulas();
   const ceMembers = getDataWithFormulas_(ceMembersFiddler);
   if (ceMembers.length === 0) { return; }
 
-  const membershipFiddler = getFiddler_('Active Members');
-  const actionScheduleFiddler = getFiddler_('Action Schedule');
+  const membershipFiddler = getFiddler_(SheetNames.ACTIVE_MEMBERS);
+  const expiryScheduleFiddler = getFiddler_(SheetNames.EXPIRY_SCHEDULE);
 
-  const { manager, membershipData, actionScheduleData } = initializeManagerData_(membershipFiddler, actionScheduleFiddler);
+  const { manager, membershipData, expirySchedule } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
   try {
-    manager.migrateCEMembers(ceMembers, membershipData, actionScheduleData);
+    manager.migrateCEMembers(ceMembers, membershipData, expirySchedule);
   } catch (error) {
     if (error instanceof AggregateError) {
       error.errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack}`));
@@ -49,35 +61,35 @@ function processMigrations() {
 
   ceMembersFiddler.setData(ceMembers).dumpValues();
   membershipFiddler.setData(membershipData).dumpValues();
-  actionScheduleFiddler.setData(actionScheduleData).dumpValues();
+  expiryScheduleFiddler.setData(expirySchedule).dumpValues();
 }
 
 function processExpirations() {
-  const membershipFiddler = getFiddler_('Active Members');
-  const expiredMembersFiddler = getFiddler_('Expired Members');
-  const actionScheduleFiddler = getFiddler_('Action Schedule');
+  const membershipFiddler = getFiddler_(SheetNames.ACTIVE_MEMBERS);
+  const expiredMembersFiddler = getFiddler_(SheetNames.EXPIRED_MEMBERS);
+  const expiryScheduleFiddler = getFiddler_(SheetNames.EXPIRY_SCHEDULE);
 
-  const { manager, membershipData, expiredMembersData, actionScheduleData } = initializeManagerData_(membershipFiddler, actionScheduleFiddler, expiredMembersFiddler);
+  const { manager, membershipData, expiredMembersData, expirySchedule } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler, expiredMembersFiddler);
 
-  const numProcessed = manager.processExpirations(membershipData, expiredMembersData, actionScheduleData);
+  const numProcessed = manager.processExpirations(membershipData, expiredMembersData, expirySchedule);
 
   if (numProcessed === 0) return;
 
   expiredMembersFiddler.setData(expiredMembersData).dumpValues();
   membershipFiddler.setData(membershipData).dumpValues();
-  actionScheduleFiddler.setData(actionScheduleData).dumpValues();
+  expiryScheduleFiddler.setData(expirySchedule).dumpValues();
 }
 
-function initializeManagerData_(membershipFiddler, actionScheduleFiddler, expiredMembersFiddler = null) {
+function initializeManagerData_(membershipFiddler, expiryScheduleFiddler, expiredMembersFiddler = null) {
   const membershipData = membershipFiddler.getData();
   const expiredMembersData = expiredMembersFiddler ? expiredMembersFiddler.getData() : null;
-  const actionSpecs = getFiddler_('Action Specs').getData();
-  const groupEmails = getFiddler_('Group Email Addresses').getData();
-  const actionScheduleData = actionScheduleFiddler.getData();
+  const actionSpecs = getFiddler_(SheetNames.ACTION_SPECS).getData();
+  const groupEmails = getFiddler_(SheetNames.GROUP_EMAIL_ADDRESSES).getData();
+  const expirySchedule = expiryScheduleFiddler.getData();
 
   const manager = new Manager(actionSpecs, groupEmails, getGroupAdder_(), getGroupRemover_(), getEmailSender_());
 
-  return { manager, membershipData, expiredMembersData, actionScheduleData };
+  return { manager, membershipData, expiredMembersData, expirySchedule };
 }
 
 function getGroupAdder_() {
@@ -149,7 +161,7 @@ function getEmailSender_() {
 
 function sendEmails_(emails) {
   utils.log(`Number of emails to be sent: ${emails.length}`);
-  const emailLogFiddler = getFiddler_('Email Log');
+  const emailLogFiddler = getFiddler_(SheetNames.EMAIL_LOG);
   const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
   if (testEmails === 'true') { // Use test path only if testEmails is explicitly set to true
     emails.forEach(email => utils.log(`Email not sent due to testEmails property: To=${email.to}, Subject=${email.subject}, htmlBody=${email.htmlBody}`));
@@ -240,9 +252,8 @@ function convertLinks_(sheetName) {
 /**
  * Gets a fiddler based on the sheet name.
  * @param {String} sheetName - the name of the sheet.
- * @returns {Fiddler} - The fiddler.
+ * @returns {Fiddler} - The fiddler. 
  */
 function getFiddler_(sheetName, createIfMissing = true) {
   return bmPreFiddler.PreFiddler().getFiddler({ sheetName, createIfMissing }).needFormulas();
 }
-
