@@ -1,4 +1,3 @@
-
 if (typeof require !== 'undefined') {
   (utils = require('./utils.js'));
 }
@@ -40,7 +39,7 @@ class Manager {
           if (sched.Type === utils.ActionType.Expiry4) {
             expiredMembers.push(member);
             membersToBeRemoved.push(idx);
-            this._groupEmails.forEach(group => this._groupRemoveFun(group.Email, member.Email));
+            this._groupEmails.forEach(group => this._groupRemoveFun(member.Email, group.Email));
           }
           let message = {
             to: member.Email,
