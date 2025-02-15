@@ -165,10 +165,13 @@ describe('Manager tests', () => {
       expect(activeMembers).toEqual([]);
     });
 
-    it('should create an action schedule for the migrated member', () => {
-      manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
-      expect(actionSchedule.length).toEqual(4);
-    });
+    describe('expiry Schedule ', () => {
+      it('should create an action schedule for the migrated member for events after today', () => {
+        migrators = [{...migrators[0], Expires: utils.addDaysToDate(today, 1)}]; // expiry 2 is today, so only expiry 3 & 4 expected
+        manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
+        expect(actionSchedule.length).toEqual(2);
+      });
+    })
 
     it('should add migrated members to the groups', () => {
       manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
@@ -515,12 +518,12 @@ describe('Manager tests', () => {
     });
 
     it('should remove existing action schedule entries for the member', () => {
-      const member = { Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: utils.getDateString('2021-01-01'), Expires: utils.getDateString('2022-01-10') };
+      const member = { Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: utils.getDateString('2021-01-01'), Expires: utils.addYearsToDate(today, 1), "Renewed On": today };
       const expected = [
-        { Email: member.Email, Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate('2022-01-10', O1), },
-        { Email: member.Email, Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate('2022-01-10', O2), },
-        { Email: member.Email, Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate('2022-01-10', O3), },
-        { Email: member.Email, Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate('2022-01-10', O4), }
+        { Email: member.Email, Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(member.Expires, O1), },
+        { Email: member.Email, Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(member.Expires, O2), },
+        { Email: member.Email, Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(member.Expires, O3), },
+        { Email: member.Email, Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(member.Expires, O4), }
       ].map(e => { e.Date = utils.getDateString(e.Date); return e; });
       actionSchedule = [{ Email: member.Email, Type: utils.ActionType.Expiry3, Date: utils.getDateString('2021-01-10'), },
       ]
@@ -531,12 +534,12 @@ describe('Manager tests', () => {
     });
 
     it('should add new action schedule entries for the renewed member', () => {
-      const member = { Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: new Date('2021-01-01'), Expires: new Date('2022-01-10') };
+      const member = { Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: utils.getDateString('2021-01-01'), Expires: utils.addYearsToDate(today, 1), "Renewed On": today };
       const expected = [
-        { Email: member.Email, Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate('2022-01-10', O1), },
-        { Email: member.Email, Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate('2022-01-10', O2), },
-        { Email: member.Email, Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate('2022-01-10', O3), },
-        { Email: member.Email, Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate('2022-01-10', O4), }
+        { Email: member.Email, Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(member.Expires, O1), },
+        { Email: member.Email, Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(member.Expires, O2), },
+        { Email: member.Email, Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(member.Expires, O3), },
+        { Email: member.Email, Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(member.Expires, O4), }
       ].map(e => { e.Date = utils.getDateString(e.Date); return e; });;
       actionSchedule = []
       manager.addRenewedMemberToActionSchedule_(member, actionSchedule, emailSpecs);
