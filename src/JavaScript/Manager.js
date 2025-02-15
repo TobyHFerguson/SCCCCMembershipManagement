@@ -169,21 +169,8 @@ class Manager {
     }
   }
 
-   calculateExpirationDate(period, expires) {
-    const todayDate = new Date(Date.parse(this._today + 'T00:00:00Z')); // Ensure UTC
-    const futureDate = new Date(todayDate); // Copy the date
-    futureDate.setUTCFullYear(futureDate.getUTCFullYear() + period);
-
-    if (!expires) {
-      return utils.getDateString(futureDate);
-    }
-
-    const expirationDate = new Date(Date.parse(expires + 'T00:00:00Z') || expires); // Ensure UTC
-    const futureExpirationDate = new Date(expirationDate);
-    futureExpirationDate.setUTCFullYear(futureExpirationDate.getUTCFullYear() + period);
-
-    const result = futureDate > futureExpirationDate ? futureDate : futureExpirationDate;
-    return utils.getDateString(result);
+   calculateExpirationDate(period, expires=this._today) {
+    return utils.getDateString(utils.addYearsToDate(expires, period));
   }
 
   addNewMember_(txn, actionSchedule, actionSpecs, membershipData) {
