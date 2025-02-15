@@ -3,9 +3,16 @@ if (typeof require !== 'undefined') {
   (utils = require('./utils.js'));
 }
 class Manager {
-  constructor(today = utils.getDateString()) {
-    this._today = today;
-    this._groupEmails = [];
+  constructor(actionSpecs, groupEmails, groupRemoveFun, sendEmailFun, today) {
+    if (!actionSpecs || actionSpecs.length === 0) {
+      throw new Error('Manager requires a non-empty array of action specs');
+    }
+    if (!groupEmails || groupEmails.length === 0) { throw new Error('Manager requires a non-empty array of group emails'); }
+    this._actionSpecByType = Object.fromEntries(actionSpecs.map(spec => [spec.Type, spec]));
+    this._groupEmails = groupEmails;
+    this._groupRemoveFun = groupRemoveFun || (() => { });
+    this._sendEmailFun = sendEmailFun || (() => { });
+    this._today = today || utils.getDateString()
   }
 
   today() {
@@ -16,18 +23,15 @@ class Manager {
     this._groupEmails = groupEmails;
   }
 
-  processExpirations(activeMembers, expiredMembers, actionSchedule, actionSpec, groupRemoveFun, sendEmailFun, groupEmails) {
-    const actionSpecByType = Object.fromEntries(actionSpec.map(spec => [spec.Type, spec]));
-    if (!actionSchedule || !Array.isArray(actionSchedule)) {
-      return 0;
-    }
+  processExpirations(activeMembers, expiredMembers, actionSchedule) {
+    if (!activeMembers || !activeMembers.length ) return 0;
     let numProcessed = 0;
     let membersToBeRemoved = [];
     for (let i = actionSchedule.length - 1; i >= 0; i--) {
       const sched = actionSchedule[i];
-      const spec = actionSpecByType[sched.Type];
-      const tdy = this._today;
-      const schedDate = utils.getDateString(sched.Date);
+      const spec = this._actionSpecByType[sched.Type];
+      const tdy = new Date(this._today)
+      const schedDate = new Date(utils.getDateString(sched.Date));
       if (schedDate <= tdy) {
         let idx = activeMembers.findIndex(member => member.Email === sched.Email);
         if (idx != -1) {
@@ -35,7 +39,7 @@ class Manager {
           if (sched.Type === utils.ActionType.Expiry4) {
             expiredMembers.push(member);
             membersToBeRemoved.push(idx);
-            groupEmails.forEach(group => groupRemoveFun(group.Email, member.Email));
+            this._groupEmails.forEach(group => this._groupRemoveFun(group.Email, member.Email));
           }
           let message = {
             to: member.Email,
@@ -43,7 +47,7 @@ class Manager {
             htmlBody: utils.expandTemplate(spec.Body, member)
           };
           actionSchedule.splice(i, 1);
-          sendEmailFun(message);
+          this._sendEmailFun(message);
           numProcessed++;
         }
       }
@@ -171,7 +175,7 @@ class Manager {
     }
   }
 
-   calculateExpirationDate(period, expires=this._today) {
+  calculateExpirationDate(period, expires = this._today) {
     return utils.getDateString(utils.addYearsToDate(expires, period));
   }
 

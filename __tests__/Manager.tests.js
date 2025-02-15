@@ -58,15 +58,15 @@ describe('Manager tests', () => {
   let numProcessed;
 
   beforeEach(() => {
-    manager = new Manager(today);
-    activeMembers = [];
-    expiredMembers = [];
-    actionSchedule = [];
-    numProcessed = 0;
     groupRemoveFun = jest.fn();
     groupAddFun = jest.fn();
     sendEmailFun = jest.fn();
     groupEmails = [{ Email: "a@b.com" }];
+    manager = new Manager(actionSpecs, groupEmails, groupRemoveFun, sendEmailFun, today);
+    activeMembers = [];
+    expiredMembers = [];
+    actionSchedule = [];
+    numProcessed = 0;
   });
 
   describe('logging tests', () => {
@@ -105,7 +105,7 @@ describe('Manager tests', () => {
         { Email: "test2@example.com", Period: 1, First: "Jane", Last: "Smith", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },
       ];
       try {
-        manager.processExpirations(activeMembers, expiredMembers, actionSchedule, actionSpecs, groupRemoveFun, sendEmailFun, groupEmails);
+        manager.processExpirations(activeMembers, expiredMembers, actionSchedule);
       } catch (error) {
         expect(error).toBeInstanceOf(AggregateError);
         expect(error.errors.length).toEqual(2);
@@ -125,14 +125,14 @@ describe('Manager tests', () => {
     });
 
     it('should do nothing if there are no members to expire', () => {
-      numProcessed = manager.processExpirations(activeMembers, expiredMembers, actionSchedule, actionSpecs, groupRemoveFun, sendEmailFun, groupEmails);
+      numProcessed = manager.processExpirations(activeMembers, expiredMembers, actionSchedule);
       expect(numProcessed).toEqual(0);
     });
 
     it('should expire a member if they are fully expired', () => {
       activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" }];
       const expectedExpiredMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" }];
-      numProcessed = manager.processExpirations(activeMembers, expiredMembers, actionSchedule, actionSpecs, groupRemoveFun, sendEmailFun, groupEmails);
+      numProcessed = manager.processExpirations(activeMembers, expiredMembers, actionSchedule);
       expect(numProcessed).toEqual(2);
       expect(activeMembers.length).toEqual(0);
       expect(expiredMembers.length).toEqual(1);
