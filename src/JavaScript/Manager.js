@@ -8,9 +8,11 @@ class Manager {
     this._groupEmails = [];
   }
 
-  static
+  today() {
+    return this._today;
+  }
 
-    setGroupEmails(groupEmails) {
+  setGroupEmails(groupEmails) {
     this._groupEmails = groupEmails;
   }
 

@@ -291,9 +291,9 @@ describe('Manager tests', () => {
 
     describe('membership expiry period tests', () => {
       it('if renewal is before expiry then new expiry is  old expiry + period', () => {
-        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: utils.today(), Expires: utils.addDaysToDate(utils.today(), 10), "Renewed On": "" },]
+        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: manager.today(), Expires: utils.addDaysToDate(manager.today(), 10), "Renewed On": "" },]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: utils.getDateString(), Expires: utils.addDaysToDate(new Date(), 365 + 10), "Renewed On": utils.today() },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: utils.getDateString(), Expires: utils.addDaysToDate(new Date(), 365 + 10), "Renewed On": manager.today() },
         ]
         manager.processPaidTransactions(transactionsFixture.paid, members);
         members.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
@@ -301,9 +301,9 @@ describe('Manager tests', () => {
       });
 
       it('if renewal is after expiry then new expiry is today + period', () => {
-        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: utils.today(), Expires: utils.addDaysToDate(utils.today(), -10), "Renewed On": "" },]
+        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: manager.today(), Expires: utils.addDaysToDate(manager.today(), -10), "Renewed On": "" },]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: utils.getDateString(), Expires: utils.addDaysToDate(new Date(), 365), "Renewed On": utils.today() },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: utils.getDateString(), Expires: utils.addDaysToDate(new Date(), 365), "Renewed On": manager.today() },
         ]
         manager.processPaidTransactions(transactionsFixture.paid, members);
         members.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
