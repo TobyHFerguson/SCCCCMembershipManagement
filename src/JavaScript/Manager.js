@@ -68,7 +68,7 @@ class Manager {
           m.Migrated = this._today;
           activeMembers.push(m);
           actionSchedule.push(...this.createScheduleEntries_(m));
-          this._groupEmails.forEach(g => this._groupAddFun(g.Email, m.Email));
+          this._groupEmails.forEach(g => this._groupAddFun(m.Email, g.Email));
           let message = {
             to: m.Email,
             subject: utils.expandTemplate(actionSpec.Subject, m),

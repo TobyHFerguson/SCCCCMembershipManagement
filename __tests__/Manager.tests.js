@@ -148,12 +148,12 @@ describe('Manager tests', () => {
   describe('migrations', () => {
     let migrators;
     beforeEach(() => {
-      migrators = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10" }];
+      migrators = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true }];
     });
 
     it('should migrate members and record the date of migration', () => {
       const expectedMigrators = [{ ...migrators[0], Migrated: today }];
-      const expectedMembers = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: '2020-03-10', Expires: '2021-01-10', "Migrated": today }];
+      const expectedMembers = [{ ...migrators[0], Migrated: today }];
       manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       expect(activeMembers).toEqual(expectedMembers);
       expect(migrators).toEqual(expectedMigrators);

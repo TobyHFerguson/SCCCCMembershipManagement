@@ -27,6 +27,31 @@ function processTransactions() {
   actionScheduleFiddler.setData(actionScheduleData).dumpValues();
 }
 
+function processMigrations() {
+  const ceMembersFiddler = getFiddler_('CE Members').needFormulas();
+  const ceMembers = getDataWithFormulas_(ceMembersFiddler);
+  if (ceMembers.length === 0) { return; }
+
+  const membershipFiddler = getFiddler_('Active Members');
+  const actionScheduleFiddler = getFiddler_('Action Schedule');
+
+  const { manager, membershipData, actionScheduleData } = initializeManagerData_(membershipFiddler, actionScheduleFiddler);
+
+  try {
+    manager.migrateCEMembers(ceMembers, membershipData, actionScheduleData);
+  } catch (error) {
+    if (error instanceof AggregateError) {
+      error.errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack}`));
+    } else {
+      console.error(`Error: ${error.message}\nStack trace: ${error.stack}`);
+    }
+  }
+
+  ceMembersFiddler.setData(ceMembers).dumpValues();
+  membershipFiddler.setData(membershipData).dumpValues();
+  actionScheduleFiddler.setData(actionScheduleData).dumpValues();
+}
+
 function processExpirations() {
   const membershipFiddler = getFiddler_('Active Members');
   const expiredMembersFiddler = getFiddler_('Expired Members');
@@ -140,6 +165,7 @@ function onOpen() {
   ui.createMenu('Membership Management')
     .addItem('Process Transactions', processTransactions.name)
     .addItem('Process Expirations', processExpirations.name)
+    .addItem('Process Migrations', processMigrations.name)
     .addToUi();
 }
 
@@ -160,7 +186,7 @@ function sendSingleEmail_(email, emailLog) {
  */
 function getDataWithFormulas_(fiddler) {
   fiddler.needFormulas();
-  return combineArrays(fiddler.getFormulaData(), fiddler.getData());
+  return combineArrays_(fiddler.getFormulaData(), fiddler.getData());
 }
 
 /**
@@ -172,7 +198,7 @@ function getDataWithFormulas_(fiddler) {
  * @returns {Array<Object>} A new array of objects with combined properties.
  * @throws {Error} If the lengths of the two arrays are not equal.
  */
-function combineArrays(arr1, arr2) {
+function combineArrays_(arr1, arr2) {
   if (arr1.length !== arr2.length) {
     throw new Error("Both arrays must have the same length");
   }
