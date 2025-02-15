@@ -67,7 +67,7 @@ class Manager {
           console.log(`Migrating ${m.Email}, row ${rowNum}`);
           m.Migrated = this._today;
           activeMembers.push(m);
-          actionSchedule.push(...this.createScheduleEntries_(m));
+          actionSchedule.push(...this.createScheduleEntries_(m.Email, m.Expires));
           this._groupEmails.forEach(g => this._groupAddFun(m.Email, g.Email));
           let message = {
             to: m.Email,
@@ -153,15 +153,18 @@ class Manager {
   addRenewedMemberToActionSchedule_(member, actionSchedule) {
     const email = member.Email;
     Manager.removeEmails_(email, actionSchedule);
-    const scheduleEntries = this.createScheduleEntries_(member);
+    const scheduleEntries = this.createScheduleEntries_(email, member.Expires);
     actionSchedule.push(...scheduleEntries);
   }
 
-  createScheduleEntries_(member) {
+  createScheduleEntries_(email, expiryDate) {
     const scheduleEntries = [];
     Object.keys(this._actionSpecByType).filter(type => type.startsWith('Expiry')).forEach((type) => {
       const spec = this._actionSpecByType[type];
-      scheduleEntries.push({ Date: utils.addDaysToDate(member.Expires, spec.Offset), Type: spec.Type, Email: member.Email });
+      const scheduleDate = utils.addDaysToDate(expiryDate, spec.Offset);
+      const tdy = new Date(this._today);
+      if (tdy >= scheduleDate) { return; }
+      scheduleEntries.push({ Date: scheduleDate, Type: spec.Type, Email: email });
     });
     return scheduleEntries;
   }
@@ -195,7 +198,7 @@ class Manager {
   }
 
   addNewMemberToActionSchedule_(member, actionSchedule) {
-    const scheduleEntries = this.createScheduleEntries_(member);
+    const scheduleEntries = this.createScheduleEntries_(member.Email, member.Expires);
     actionSchedule.push(...scheduleEntries);
   }
 
