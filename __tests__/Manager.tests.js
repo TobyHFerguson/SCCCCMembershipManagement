@@ -138,7 +138,7 @@ describe('Manager tests', () => {
       expect(expiredMembers.length).toEqual(1);
       expect(expiredMembers).toEqual(expectedExpiredMembers);
       expect(groupRemoveFun).toHaveBeenCalledTimes(1);
-      expect(groupRemoveFun).toHaveBeenCalledWith(groupEmails[0].Email, expectedExpiredMembers[0].Email);
+      expect(groupRemoveFun).toHaveBeenCalledWith(expectedExpiredMembers[0].Email, groupEmails[0].Email);
       expect(sendEmailFun).toHaveBeenCalledTimes(2);
       expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedExpiredMembers[0].Email, subject: actionSpecByType.get('Expiry4').Subject, htmlBody: actionSpecByType.get('Expiry4').Body.replace('{First}', expectedExpiredMembers[0].First).replace('{Last}', expectedExpiredMembers[0].Last) });
       expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedExpiredMembers[0].Email, subject: actionSpecByType.get('Expiry2').Subject, htmlBody: actionSpecByType.get('Expiry2').Body.replace('{First}', expectedExpiredMembers[0].First).replace('{Last}', expectedExpiredMembers[0].Last) });
