@@ -3,13 +3,14 @@ if (typeof require !== 'undefined') {
   (utils = require('./utils.js'));
 }
 class Manager {
-  constructor(actionSpecs, groupEmails, groupRemoveFun, sendEmailFun, today) {
+  constructor(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today) {
     if (!actionSpecs || actionSpecs.length === 0) {
       throw new Error('Manager requires a non-empty array of action specs');
     }
     if (!groupEmails || groupEmails.length === 0) { throw new Error('Manager requires a non-empty array of group emails'); }
     this._actionSpecByType = Object.fromEntries(actionSpecs.map(spec => [spec.Type, spec]));
     this._groupEmails = groupEmails;
+    this._groupAddFun = groupAddFun || (() => { });
     this._groupRemoveFun = groupRemoveFun || (() => { });
     this._sendEmailFun = sendEmailFun || (() => { });
     this._today = today || utils.getDateString()
@@ -90,11 +91,7 @@ class Manager {
     return numMigrations;
   }
 
-  processPaidTransactions(transactions, membershipData, groupAddFun, sendEmailFun, actionSpecs, actionSchedule, groupEmails) {
-    if (!transactions || !transactions.length || !Array.isArray(actionSpecs)) return;
-
-    let _actionSpec = Object.fromEntries(actionSpecs.map(spec => [spec.Type, spec]));
-
+  processPaidTransactions(transactions, membershipData, actionSchedule) { 
     const emailToMemberMap = membershipData.length ? Object.fromEntries(membershipData.map((member, index) => [member.Email, index])) : {};
     const errors = [];
     transactions.forEach((txn, i) => {
@@ -106,23 +103,23 @@ class Manager {
             console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a renewing member`);
             const member = membershipData[matchIndex];
             const years = Manager.getPeriod_(txn);
-            this.renewMember_(member, years, actionSchedule, actionSpecs);
+            this.renewMember_(member, years, actionSchedule);
             message = {
               to: member.Email,
-              subject: utils.expandTemplate(_actionSpec.Renew.Subject, member),
-              htmlBody: utils.expandTemplate(_actionSpec.Renew.Body, member)
+              subject: utils.expandTemplate(this._actionSpecByType.Renew.Subject, member),
+              htmlBody: utils.expandTemplate(this._actionSpecByType.Renew.Body, member)
             };
           } else { // a joining member
             console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a new member`);
-            const newMember = this.addNewMember_(txn, actionSchedule, actionSpecs, membershipData);
-            groupEmails.forEach(g => groupAddFun(newMember.Email, g.Email));
+            const newMember = this.addNewMember_(txn, actionSchedule, membershipData);
+            this._groupEmails.forEach(g => this._groupAddFun(newMember.Email, g.Email));
             message = {
               to: newMember.Email,
-              subject: utils.expandTemplate(_actionSpec.Join.Subject, newMember),
-              htmlBody: utils.expandTemplate(_actionSpec.Join.Body, newMember)
+              subject: utils.expandTemplate(this._actionSpecByType.Join.Subject, newMember),
+              htmlBody: utils.expandTemplate(this._actionSpecByType.Join.Body, newMember)
             };
           }
-          sendEmailFun(message);
+          this._sendEmailFun(message);
           txn.Timestamp = this._today;
           txn.Processed = this._today;
         }
@@ -147,23 +144,26 @@ class Manager {
     return years;
   }
 
-  renewMember_(member, period, actionSchedule, actionSpecs) {
+  renewMember_(member, period, actionSchedule,) {
     member.Period = period;
     member["Renewed On"] = this._today;
     member.Expires = this.calculateExpirationDate(period, member.Expires);
-    this.addRenewedMemberToActionSchedule_(member, actionSchedule, actionSpecs);
+    this.addRenewedMemberToActionSchedule_(member, actionSchedule);
   }
 
-  addRenewedMemberToActionSchedule_(member, actionSchedule, actionSpecs) {
+  addRenewedMemberToActionSchedule_(member, actionSchedule) {
     const email = member.Email;
     Manager.removeEmails_(email, actionSchedule);
-    const scheduleEntries = this.createScheduleEntries_(member, actionSpecs);
+    const scheduleEntries = this.createScheduleEntries_(member);
     actionSchedule.push(...scheduleEntries);
   }
 
-  createScheduleEntries_(member, actionSpecs) {
+  createScheduleEntries_(member) {
     const scheduleEntries = [];
-    actionSpecs.filter(spec => spec.Type.startsWith('Expiry')).forEach((spec) => scheduleEntries.push({ Date: utils.addDaysToDate(member.Expires, spec.Offset), Type: spec.Type, Email: member.Email }));
+    Object.keys(this._actionSpecByType).filter(type => type.startsWith('Expiry')).forEach((type) => {
+      const spec = this._actionSpecByType[type];
+      scheduleEntries.push({ Date: utils.addDaysToDate(member.Expires, spec.Offset), Type: spec.Type, Email: member.Email });
+    });
     return scheduleEntries;
   }
 
@@ -179,7 +179,7 @@ class Manager {
     return utils.getDateString(utils.addYearsToDate(expires, period));
   }
 
-  addNewMember_(txn, actionSchedule, actionSpecs, membershipData) {
+  addNewMember_(txn, actionSchedule, membershipData) {
     const newMember = {
       Email: txn["Email Address"],
       First: txn["First Name"],
@@ -191,12 +191,12 @@ class Manager {
       "Renewed On": '',
     };
     membershipData.push(newMember);
-    this.addNewMemberToActionSchedule_(newMember, actionSchedule, actionSpecs);
+    this.addNewMemberToActionSchedule_(newMember, actionSchedule);
     return newMember;
   }
 
-  addNewMemberToActionSchedule_(member, actionSchedule, actionSpecs) {
-    const scheduleEntries = this.createScheduleEntries_(member, actionSpecs);
+  addNewMemberToActionSchedule_(member, actionSchedule) {
+    const scheduleEntries = this.createScheduleEntries_(member);
     actionSchedule.push(...scheduleEntries);
   }
 
