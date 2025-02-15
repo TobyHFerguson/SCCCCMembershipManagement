@@ -57,8 +57,8 @@ class Manager {
     return numProcessed;
   }
 
-  migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails) {
-    const actionSpec = actionSpecs.find(as => as.Type === utils.ActionType.Migrate);
+  migrateCEMembers(migrators, activeMembers, actionSchedule) { //, actionSpecs, groupAddFun, sendEmailFun, groupEmails) {
+    const actionSpec = this._actionSpecByType[utils.ActionType.Migrate];
     let numMigrations = 0;
     const errors = [];
     migrators.forEach((m, i) => {
@@ -68,14 +68,14 @@ class Manager {
           console.log(`Migrating ${m.Email}, row ${rowNum}`);
           m.Migrated = this._today;
           activeMembers.push(m);
-          actionSchedule.push(...this.createScheduleEntries_(m, actionSpecs));
-          groupEmails.forEach(g => groupAddFun(g.Email, m.Email));
+          actionSchedule.push(...this.createScheduleEntries_(m));
+          this._groupEmails.forEach(g => this._groupAddFun(g.Email, m.Email));
           let message = {
             to: m.Email,
             subject: utils.expandTemplate(actionSpec.Subject, m),
             htmlBody: utils.expandTemplate(actionSpec.Body, m)
           };
-          sendEmailFun(message);
+          this._sendEmailFun(message);
           numMigrations++;
           console.log(`Migrated ${m.Email}, row ${rowNum}`);
         } catch (error) {

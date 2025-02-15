@@ -154,37 +154,37 @@ describe('Manager tests', () => {
     it('should migrate members and record the date of migration', () => {
       const expectedMigrators = [{ ...migrators[0], Migrated: today }];
       const expectedMembers = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: '2020-03-10', Expires: '2021-01-10', "Migrated": today }];
-      manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails);
+      manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       expect(activeMembers).toEqual(expectedMembers);
       expect(migrators).toEqual(expectedMigrators);
     });
 
     it('should not migrate members that have already been migrated', () => {
       migrators = [{ ...migrators[0], Migrated: today }];
-      manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails);
+      manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       expect(activeMembers).toEqual([]);
     });
 
     it('should create an action schedule for the migrated member', () => {
-      manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails);
+      manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       expect(actionSchedule.length).toEqual(4);
     });
 
     it('should add migrated members to the groups', () => {
-      manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails);
+      manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       expect(groupAddFun).toHaveBeenCalledTimes(1);
       expect(groupAddFun).toHaveBeenCalledWith(migrators[0].Email, groupEmails[0].Email);
     });
 
     it('should send emails to the members', () => {
-      manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails);
+      manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       expect(sendEmailFun).toHaveBeenCalledTimes(1);
       expect(sendEmailFun).toHaveBeenCalledWith({ to: migrators[0].Email, subject: actionSpecByType.get('Migrate').Subject, htmlBody: actionSpecByType.get('Migrate').Body.replace('{First}', migrators[0].First).replace('{Last}', migrators[0].Last) });
     });
 
     it('should provide logging information', () => {
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
-      manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails);
+      manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       expect(consoleSpy).toHaveBeenCalledWith('Migrating a@b.com, row 2');
       expect(consoleSpy).toHaveBeenCalledWith('Migrated a@b.com, row 2');
     });
@@ -192,7 +192,7 @@ describe('Manager tests', () => {
     it('should continue even when there are errors', () => {
       groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
       try {
-        manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails);
+        manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       } catch (error) {
         expect(error).toBeInstanceOf(AggregateError);
         expect(error.errors.length).toEqual(1);
