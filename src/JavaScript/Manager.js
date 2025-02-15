@@ -32,7 +32,7 @@ class Manager {
         let idx = activeMembers.findIndex(member => member.Email === sched.Email);
         if (idx != -1) {
           let member = activeMembers[idx];
-          if (sched.Type === Manager.ActionType.Expiry4) {
+          if (sched.Type === utils.ActionType.Expiry4) {
             expiredMembers.push(member);
             membersToBeRemoved.push(idx);
             groupEmails.forEach(group => groupRemoveFun(group.Email, member.Email));
@@ -53,7 +53,7 @@ class Manager {
   }
 
   migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails) {
-    const actionSpec = actionSpecs.find(as => as.Type === Manager.ActionType.Migrate);
+    const actionSpec = actionSpecs.find(as => as.Type === utils.ActionType.Migrate);
     let numMigrations = 0;
     const errors = [];
     migrators.forEach((m, i) => {
