@@ -218,9 +218,9 @@ describe('Manager tests', () => {
         const txns = transactionsFixture.paid
         const members = []
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: "2026-01-10", "Renewed On": "" },
-          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '', Joined: today, Expires: "2027-01-10", "Renewed On": "" },
-          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '', Joined: today, Expires: "2028-01-10", "Renewed On": "" }]
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: "2026-06-15", "Renewed On": "" },
+          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '', Joined: today, Expires: "2027-06-15", "Renewed On": "" },
+          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '', Joined: today, Expires: "2028-06-15", "Renewed On": "" }]
 
         manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpecs, [], []);
         members.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
