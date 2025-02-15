@@ -454,10 +454,10 @@ describe('Manager tests', () => {
       const txn = { "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }
       const actionSchedule = []
       const expected = [
-        { Email: txn["Email Address"], Type: utils.ActionType.Expiry1, Date: manager.addDaysToDate(today, 365 + O1) },
-        { Email: txn["Email Address"], Type: utils.ActionType.Expiry2, Date: manager.addDaysToDate(today, 365 + O2) },
-        { Email: txn["Email Address"], Type: utils.ActionType.Expiry3, Date: manager.addDaysToDate(today, 365 + O3), },
-        { Email: txn["Email Address"], Type: utils.ActionType.Expiry4, Date: manager.addDaysToDate(today, 365 + O4), }
+        { Email: txn["Email Address"], Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(today, 365 + O1) },
+        { Email: txn["Email Address"], Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(today, 365 + O2) },
+        { Email: txn["Email Address"], Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(today, 365 + O3), },
+        { Email: txn["Email Address"], Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(today, 365 + O4), }
       ];
       expected.forEach(e => { console.log(e); e.Date = utils.getDateString(e.Date) });
       manager.processPaidTransactions([txn], [], groupAddFun, sendEmailFun, actionSpecs, actionSchedule, []);
@@ -469,24 +469,24 @@ describe('Manager tests', () => {
       const members = [{ Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: utils.getDateString('2021-01-01'), Expires: utils.getDateString('2022-01-10') }];
       const actionSchedule = [
         { Email: "test1@example.com", Type: utils.ActionType.Join, Date: today, },
-        { Email: "test1@example.com", Type: utils.ActionType.Expiry1, Date: manager.addDaysToDate(today, 365 - O1) },
-        { Email: "test1@example.com", Type: utils.ActionType.Expiry2, Date: manager.addDaysToDate(today, 365 - O2) },
-        { Email: "test1@example.com", Type: utils.ActionType.Expiry3, Date: manager.addDaysToDate(today, 365 - O3), },
-        { Email: "test1@example.com", Type: utils.ActionType.Expiry4, Date: manager.addDaysToDate(today, 365 + 1), }
+        { Email: "test1@example.com", Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(today, 365 - O1) },
+        { Email: "test1@example.com", Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(today, 365 - O2) },
+        { Email: "test1@example.com", Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(today, 365 - O3), },
+        { Email: "test1@example.com", Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(today, 365 + 1), }
       ].map(e => { e.Date = utils.getDateString(e.Date); return e; });
       const txns = [
         { "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" },
         { "Payable Status": "paid", "Email Address": "test2@example.com", "First Name": "Jane", "Last Name": "Smith", "Payment": "3 years" }
       ]
       const expected = [
-        { Email: "test1@example.com", Type: utils.ActionType.Expiry1, Date: manager.addDaysToDate(today, (2 * 365) + O1) },
-        { Email: "test1@example.com", Type: utils.ActionType.Expiry2, Date: manager.addDaysToDate(today, (2 * 365) + O2) },
-        { Email: "test1@example.com", Type: utils.ActionType.Expiry3, Date: manager.addDaysToDate(today, (2 * 365) + O3), },
-        { Email: "test1@example.com", Type: utils.ActionType.Expiry4, Date: manager.addDaysToDate(today, (2 * 365) + O4), },
-        { Email: "test2@example.com", Type: utils.ActionType.Expiry1, Date: manager.addDaysToDate(today, (3 * 365) + O1) },
-        { Email: "test2@example.com", Type: utils.ActionType.Expiry2, Date: manager.addDaysToDate(today, (3 * 365) + O2) },
-        { Email: "test2@example.com", Type: utils.ActionType.Expiry3, Date: manager.addDaysToDate(today, (3 * 365) + O3), },
-        { Email: "test2@example.com", Type: utils.ActionType.Expiry4, Date: manager.addDaysToDate(today, (3 * 365) + O4), },
+        { Email: "test1@example.com", Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(today, (2 * 365) + O1) },
+        { Email: "test1@example.com", Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(today, (2 * 365) + O2) },
+        { Email: "test1@example.com", Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(today, (2 * 365) + O3), },
+        { Email: "test1@example.com", Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(today, (2 * 365) + O4), },
+        { Email: "test2@example.com", Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(today, (3 * 365) + O1) },
+        { Email: "test2@example.com", Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(today, (3 * 365) + O2) },
+        { Email: "test2@example.com", Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(today, (3 * 365) + O3), },
+        { Email: "test2@example.com", Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(today, (3 * 365) + O4), },
       ].map(e => { e.Date = utils.getDateString(e.Date); return e; });
       manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpecs, actionSchedule, []);
       actionSchedule.forEach(a => a.Date = utils.getDateString(a.Date));
@@ -519,10 +519,10 @@ describe('Manager tests', () => {
     it('should remove existing action schedule entries for the member', () => {
       const member = { Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: utils.getDateString('2021-01-01'), Expires: utils.getDateString('2022-01-10') };
       const expected = [
-        { Email: member.Email, Type: utils.ActionType.Expiry1, Date: manager.addDaysToDate('2022-01-10', O1), },
-        { Email: member.Email, Type: utils.ActionType.Expiry2, Date: manager.addDaysToDate('2022-01-10', O2), },
-        { Email: member.Email, Type: utils.ActionType.Expiry3, Date: manager.addDaysToDate('2022-01-10', O3), },
-        { Email: member.Email, Type: utils.ActionType.Expiry4, Date: manager.addDaysToDate('2022-01-10', O4), }
+        { Email: member.Email, Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate('2022-01-10', O1), },
+        { Email: member.Email, Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate('2022-01-10', O2), },
+        { Email: member.Email, Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate('2022-01-10', O3), },
+        { Email: member.Email, Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate('2022-01-10', O4), }
       ].map(e => { e.Date = utils.getDateString(e.Date); return e; });
       actionSchedule = [{ Email: member.Email, Type: utils.ActionType.Expiry3, Date: utils.getDateString('2021-01-10'), },
       ]
@@ -535,10 +535,10 @@ describe('Manager tests', () => {
     it('should add new action schedule entries for the renewed member', () => {
       const member = { Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: new Date('2021-01-01'), Expires: new Date('2022-01-10') };
       const expected = [
-        { Email: member.Email, Type: utils.ActionType.Expiry1, Date: manager.addDaysToDate('2022-01-10', O1), },
-        { Email: member.Email, Type: utils.ActionType.Expiry2, Date: manager.addDaysToDate('2022-01-10', O2), },
-        { Email: member.Email, Type: utils.ActionType.Expiry3, Date: manager.addDaysToDate('2022-01-10', O3), },
-        { Email: member.Email, Type: utils.ActionType.Expiry4, Date: manager.addDaysToDate('2022-01-10', O4), }
+        { Email: member.Email, Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate('2022-01-10', O1), },
+        { Email: member.Email, Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate('2022-01-10', O2), },
+        { Email: member.Email, Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate('2022-01-10', O3), },
+        { Email: member.Email, Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate('2022-01-10', O4), }
       ].map(e => { e.Date = utils.getDateString(e.Date); return e; });;
       actionSchedule = []
       manager.addRenewedMemberToActionSchedule_(member, actionSchedule, emailSpecs);
