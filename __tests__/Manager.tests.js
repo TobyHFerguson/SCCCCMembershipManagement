@@ -46,7 +46,7 @@ describe('Manager tests', () => {
   const O2 = actionSpecByType.get('Expiry2').Offset;
   const O3 = actionSpecByType.get('Expiry3').Offset;
   const O4 = actionSpecByType.get('Expiry4').Offset;
-  const today = '2025-01-10';
+  const today = '2025-06-15';
   let manager;
   let activeMembers;
   let expiredMembers;
@@ -466,27 +466,30 @@ describe('Manager tests', () => {
     })
 
     it('should update an existing actionSchedule', () => {
-      const members = [{ Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: utils.getDateString('2021-01-01'), Expires: utils.getDateString('2022-01-10') }];
+      const exp = utils.getDateString(utils.addDaysToDate(today, 60))
+      const members = [{ Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: utils.getDateString('2021-01-01'), Expires: exp }];
       const actionSchedule = [
         { Email: "test1@example.com", Type: utils.ActionType.Join, Date: today, },
-        { Email: "test1@example.com", Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(today, 365 - O1) },
-        { Email: "test1@example.com", Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(today, 365 - O2) },
-        { Email: "test1@example.com", Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(today, 365 - O3), },
-        { Email: "test1@example.com", Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(today, 365 + 1), }
+        { Email: "test1@example.com", Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(today, 365 + O1) },
+        { Email: "test1@example.com", Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(today, 365 +O2) },
+        { Email: "test1@example.com", Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(today, 365 + O3), },
+        { Email: "test1@example.com", Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(today, 365 + O4), }
       ].map(e => { e.Date = utils.getDateString(e.Date); return e; });
       const txns = [
         { "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" },
         { "Payable Status": "paid", "Email Address": "test2@example.com", "First Name": "Jane", "Last Name": "Smith", "Payment": "3 years" }
       ]
+      const exp1 = manager.calculateExpirationDate(1, exp)
+      const exp3 = manager.calculateExpirationDate(3)
       const expected = [
-        { Email: "test1@example.com", Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(today, (2 * 365) + O1) },
-        { Email: "test1@example.com", Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(today, (2 * 365) + O2) },
-        { Email: "test1@example.com", Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(today, (2 * 365) + O3), },
-        { Email: "test1@example.com", Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(today, (2 * 365) + O4), },
-        { Email: "test2@example.com", Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(today, (3 * 365) + O1) },
-        { Email: "test2@example.com", Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(today, (3 * 365) + O2) },
-        { Email: "test2@example.com", Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(today, (3 * 365) + O3), },
-        { Email: "test2@example.com", Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(today, (3 * 365) + O4), },
+        { Email: "test1@example.com", Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(exp1,  O1) },
+        { Email: "test1@example.com", Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(exp1, O2) },
+        { Email: "test1@example.com", Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(exp1,  O3),},
+        { Email: "test1@example.com", Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(exp1, O4), },
+        { Email: "test2@example.com", Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(exp3, O1) },
+        { Email: "test2@example.com", Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(exp3, O2) },
+        { Email: "test2@example.com", Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(exp3,  O3), },
+        { Email: "test2@example.com", Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(exp3,  O4), },
       ].map(e => { e.Date = utils.getDateString(e.Date); return e; });
       manager.processPaidTransactions(txns, members, groupAddFun, sendEmailFun, actionSpecs, actionSchedule, []);
       actionSchedule.forEach(a => a.Date = utils.getDateString(a.Date));
