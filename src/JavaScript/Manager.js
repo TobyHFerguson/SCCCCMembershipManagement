@@ -62,7 +62,7 @@ class Manager {
     const errors = [];
     migrators.forEach((m, i) => {
       const rowNum = i + 2;
-      if (!m.Migrated) {
+      if (m["Migrate Me"] && !m.Migrated) {
         try {
           console.log(`Migrating ${m.Email}, row ${rowNum}`);
           m.Migrated = this._today;
