@@ -154,7 +154,7 @@ describe('Manager tests', () => {
     });
     it('should migrate only marked members, record the date of migration and removing any unused keys', () => {
       const expectedMigrators = [{ ...migrators[0], Migrated: today }, {...migrators[1]}];
-      const m = {...migrators[0], Migrated: today};
+      const m = {...migrators[0], Migrated: today, Directory: 'Yes'};
       delete m["Migrate Me"];
       const expectedMembers = [m];
       manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
