@@ -56,30 +56,37 @@ class Manager {
     return numProcessed;
   }
 
-  migrateCEMembers(migrators, activeMembers, actionSchedule) { //, actionSpecs, groupAddFun, sendEmailFun, groupEmails) {
+  migrateCEMembers(migrators, activeMembers, actionSchedule) { 
     const actionSpec = this._actionSpecByType[utils.ActionType.Migrate];
+    const requiredKeys = ['Email', 'First', 'Last', 'Phone', 'Joined', 'Period', 'Expires', 'Renewed On', 'Directory', 'Migrated'];
+  
     let numMigrations = 0;
     const errors = [];
-    migrators.forEach((m, i) => {
+    migrators.forEach((mi, i) => {
       const rowNum = i + 2;
-      if (m["Migrate Me"] && !m.Migrated) {
+      if (mi["Migrate Me"] && !mi.Migrated) {
+        mi.Migrated = this._today;
+        const newMember = { ...mi, Directory: mi.Directory ? 'Yes' : 'No' };
+        // Delete unwanted keys
+        Object.keys(newMember).forEach(key => {
+          if (!requiredKeys.includes(key)) delete newMember[key];
+        });
         try {
-          console.log(`Migrating ${m.Email}, row ${rowNum}`);
-          m.Migrated = this._today;
-          activeMembers.push(m);
-          actionSchedule.push(...this.createScheduleEntries_(m.Email, m.Expires));
-          this._groupEmails.forEach(g => this._groupAddFun(m.Email, g.Email));
+          console.log(`Migrating ${newMember.Email}, row ${rowNum}`);
+          activeMembers.push(newMember);
+          actionSchedule.push(...this.createScheduleEntries_(newMember.Email, newMember.Expires));
+          this._groupEmails.forEach(g => this._groupAddFun(newMember.Email, g.Email));
           let message = {
-            to: m.Email,
-            subject: utils.expandTemplate(actionSpec.Subject, m),
-            htmlBody: utils.expandTemplate(actionSpec.Body, m)
+            to: newMember.Email,
+            subject: utils.expandTemplate(actionSpec.Subject, newMember),
+            htmlBody: utils.expandTemplate(actionSpec.Body, newMember)
           };
           this._sendEmailFun(message);
           numMigrations++;
-          console.log(`Migrated ${m.Email}, row ${rowNum}`);
+          console.log(`Migrated ${newMember.Email}, row ${rowNum}`);
         } catch (error) {
           error.rowNum = rowNum;
-          error.email = m.Email;
+          error.email = mi.Email;
           errors.push(error);
         }
       }

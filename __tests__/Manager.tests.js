@@ -31,7 +31,7 @@ const transactionsFixture = {
   ]
 };
 const actionSpecs = [
-  { Type: 'Migrate', Subject: 'Migrate', Body: 'Migrate' },
+  { Type: 'Migrate', Subject: 'Migrate', Body: '{Email} {Last} {Directory}' },
   { Type: 'Join', Subject: 'Welcome to the club', Body: 'Welcome to the club, {First} {Last}!' },
   { Type: 'Renew', Subject: 'Renewal', Body: 'Thank you for renewing, {First} {Last}!' },
   { Type: 'Expiry1', Subject: 'First Expiry', Body: 'Your membership is expiring soon, {First} {Last}!', Offset: -10 },
@@ -152,10 +152,11 @@ describe('Manager tests', () => {
         { Email: "a@b.com", Period: 1, First: "Not", Last: "Me", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true }
       ];
     });
-
-    it('should migrate only marked members and record the date of migration', () => {
+    it('should migrate only marked members, record the date of migration and removing any unused keys', () => {
       const expectedMigrators = [{ ...migrators[0], Migrated: today }, {...migrators[1]}];
-      const expectedMembers = [{ ...migrators[0], Migrated: today }];
+      const m = {...migrators[0], Migrated: today};
+      delete m["Migrate Me"];
+      const expectedMembers = [m];
       manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       expect(activeMembers).toEqual(expectedMembers);
       expect(migrators).toEqual(expectedMigrators);
@@ -184,7 +185,8 @@ describe('Manager tests', () => {
     it('should send emails to the members', () => {
       manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       expect(sendEmailFun).toHaveBeenCalledTimes(1);
-      expect(sendEmailFun).toHaveBeenCalledWith({ to: migrators[0].Email, subject: actionSpecByType.get('Migrate').Subject, htmlBody: actionSpecByType.get('Migrate').Body.replace('{First}', migrators[0].First).replace('{Last}', migrators[0].Last) });
+      const m = {...migrators[0], Directory: migrators[0].Directory ? 'Yes' : 'No'};
+      expect(sendEmailFun).toHaveBeenCalledWith({ to: m.Email, subject: utils.expandTemplate(actionSpecByType.get('Migrate').Subject, m), htmlBody: utils.expandTemplate(actionSpecByType.get('Migrate').Body, m) });
     });
 
     it('should provide logging information', () => {

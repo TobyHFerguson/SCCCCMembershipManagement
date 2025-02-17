@@ -17,14 +17,14 @@ const utils = (function() {
   }
 
   function addDaysToDate(date, days = 0) {
-    const result = new Date(date); // Ensure UTC
-    result.setUTCDate(result.getUTCDate() + days);
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
     return result;
   }
 
   function addYearsToDate(date, years = 0) {
-    const result = new Date(date); // Ensure UTC
-    result.setUTCFullYear(result.getUTCFullYear() + years);
+    const result = new Date(date);
+    result.setFullYear(result.getFullYear() + years);
     return result;
   }
   const ActionType = {
@@ -51,12 +51,16 @@ const utils = (function() {
     return template.replace(/{([^}]+)}/g, (_, key) => {
       let value = row[key];
       if (dateFields.includes(key)) {
-        value = new Date(value); // Convert to Date object if it's a date field
-        return value.toLocaleDateString(); // Convert Date objects to local date string
+        value = new Date(value+"T00:00:00"); // Convert to Date object if it's a date field
+        return value.toLocaleDateString(); // Convert Date objects to local date and time string
       }
       return value || "";
     });
   };
+
+  function toLocaleDateString(date) {
+    return new Date(date).toLocaleDateString()
+  }
 
   
   return {
@@ -65,7 +69,8 @@ const utils = (function() {
     ActionType,
     addDaysToDate,
     addYearsToDate,
-    expandTemplate
+    expandTemplate,
+    toLocaleDateString
   };
   
 })();
