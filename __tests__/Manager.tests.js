@@ -167,6 +167,20 @@ describe('Manager tests', () => {
       manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       expect(activeMembers).toEqual([]);
     });
+    it('should not migrate members that already exist, and log the fact', () => {
+      const m = { ...migrators[0]}
+      migrators = [m];
+      expectedMigrators = [{...m}];
+      const am = { ...m};
+      delete am["Migrate Me"];
+      activeMembers = [am];
+      expectedActiveMembers = [{...am}];
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+      manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
+      expect(migrators).toEqual(expectedMigrators);
+      expect(activeMembers).toEqual(expectedActiveMembers);
+      expect(consoleSpy).toHaveBeenCalledWith(`Skipping ${m.Email} on row 2, already an active member`);
+    });
 
     describe('expiry Schedule ', () => {
       it('should create an action schedule for the migrated member for events after today', () => {
