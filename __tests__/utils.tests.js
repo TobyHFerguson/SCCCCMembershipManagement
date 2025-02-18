@@ -35,6 +35,17 @@ describe('utils', () => {
       console.log(new Date(row.Joined))
       expect(expandTemplate(template, row)).toBe('Hello, Alice! You joined on 1/1/2021');
     });
+    test('should take US style dates', () => {
+      const template = 'Hello, {name}! You joined on {Joined}';
+      const row = { name: 'Alice', Joined: '1/1/2021' };
+      console.log(new Date(row.Joined))
+      expect(expandTemplate(template, row)).toBe('Hello, Alice! You joined on 1/1/2021');
+    });
+    test('should convert date fields to local date strings', () => {
+      const template = 'Your membership expires on {Expires}';
+      const row = { Expires: new Date('2021-01-01') };
+      expect(expandTemplate(template, row)).toBe('Your membership expires on 1/1/2021');
+    });
   });
   describe('toLocaleDateString', () => {
     test('should return a local date string', () => {
