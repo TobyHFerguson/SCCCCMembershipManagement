@@ -77,8 +77,6 @@ class Manager {
         });
         try {
           console.log(`Migrating ${newMember.Email}, row ${rowNum}`);
-          activeMembers.push(newMember);
-          actionSchedule.push(...this.createScheduleEntries_(newMember.Email, newMember.Expires));
           this._groupEmails.forEach(g => this._groupAddFun(newMember.Email, g.Email));
           let message = {
             to: newMember.Email,
@@ -86,8 +84,10 @@ class Manager {
             htmlBody: utils.expandTemplate(actionSpec.Body, newMember)
           };
           this._sendEmailFun(message);
-          numMigrations++;
+          activeMembers.push(newMember);
+          actionSchedule.push(...this.createScheduleEntries_(newMember.Email, newMember.Expires));
           console.log(`Migrated ${newMember.Email}, row ${rowNum}`);
+          numMigrations++;
         } catch (error) {
           error.rowNum = rowNum;
           error.email = mi.Email;
