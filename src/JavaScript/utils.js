@@ -1,5 +1,5 @@
 
-const utils = (function() {
+const utils = (function () {
 
   /**
    * Logs messages to the console if the script property 'logging' is true.
@@ -51,18 +51,22 @@ const utils = (function() {
     return template.replace(/{([^}]+)}/g, (_, key) => {
       let value = row[key];
       if (dateFields.includes(key)) {
-        value = new Date(value+"T00:00:00"); // Convert to Date object if it's a date field
+        if (typeof value === 'string') {
+          value = new Date(Date.parse(value));
+        }
+
+        value = new Date(value.toISOString().split('T')[0] + "T00:00:00");
         return value.toLocaleDateString(); // Convert Date objects to local date and time string
       }
       return value || "";
     });
-  };
+  }
 
   function toLocaleDateString(date) {
     return new Date(date).toLocaleDateString()
   }
 
-  
+
   return {
     log,
     getDateString,
@@ -72,7 +76,7 @@ const utils = (function() {
     expandTemplate,
     toLocaleDateString
   };
-  
+
 })();
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = utils

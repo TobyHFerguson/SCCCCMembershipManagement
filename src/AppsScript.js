@@ -140,25 +140,17 @@ function removeMemberFromGroup_(memberEmail, groupEmail) {
 
 function getEmailSender_() {
   const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails') === 'true';
-  if (testEmails) {
-    return (email) => utils.log(`Email not sent due to testEmails property: To=${email.to}, Subject=${email.subject}, htmlBody=${email.htmlBody}`);
-  } else {
-    return (email) => sendSingleEmail_(email);
-  }
+  const domain = PropertiesService.getScriptProperties().getProperty('domain') || 'santacruzcountycycling.club';
+  return (email) => {
+    email.replyTo = `membership@${domain}`;
+    if (testEmails) {
+      utils.log('testEmails is set to true - logging only: ', email);
+    } else {
+      sendSingleEmail_(email);
+    }
+  };
 }
 
-function sendEmails_(emails) {
-  utils.log(`Number of emails to be sent: ${emails.length}`);
-  const emailLogFiddler = getFiddler_('Email Log');
-  const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails');
-  if (testEmails === 'true') { // Use test path only if testEmails is explicitly set to true
-    emails.forEach(email => utils.log(`Email not sent due to testEmails property: To=${email.to}, Subject=${email.subject}, htmlBody=${email.htmlBody}`));
-  } else {
-    const emailsSent = emails.map(email => sendSingleEmail_(email));
-    const emailLog = [...emailLogFiddler.getData(), ...emailsSent];
-    emailLogFiddler.setData(emailLog).dumpValues();
-  }
-}
 
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
@@ -169,7 +161,7 @@ function onOpen() {
     .addToUi();
 }
 
-function sendSingleEmail_(email, emailLog) {
+function sendSingleEmail_(email) {
   utils.log(`Email Sent: :`, email);
   try {
     MailApp.sendEmail(email);
