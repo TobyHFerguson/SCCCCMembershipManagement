@@ -149,32 +149,41 @@ describe('Manager tests', () => {
     let migrators;
     beforeEach(() => {
       migrators = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, "Migrate Me": true },
-        { Email: "a@b.com", Period: 1, First: "Not", Last: "Me", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true }
+      { Email: "a@b.com", Period: 1, First: "Not", Last: "Me", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true }
       ];
     });
     it('should migrate only marked members, record the date of migration and removing any unused keys', () => {
-      const expectedMigrators = [{ ...migrators[0], Migrated: today }, {...migrators[1]}];
-      const m = {...migrators[0], Migrated: today, Directory: 'Yes'};
+      const expectedMigrators = [{ ...migrators[0], Migrated: today }, { ...migrators[1] }];
+      const m = { ...migrators[0], Migrated: today, Directory: 'Yes' };
       delete m["Migrate Me"];
       const expectedMembers = [m];
       manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       expect(activeMembers).toEqual(expectedMembers);
       expect(migrators).toEqual(expectedMigrators);
     });
-
+    it('should not migrate members if an error is thrown', () => {
+      groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
+      manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+      try {
+        manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
+        fail('Expected error not thrown');
+      } catch (error) {
+        expect(activeMembers).toEqual([]);
+      }
+    });
     it('should not migrate members that have already been migrated', () => {
       migrators = [{ ...migrators[0], Migrated: today }];
       manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       expect(activeMembers).toEqual([]);
     });
     it('should not migrate members that already exist, and log the fact', () => {
-      const m = { ...migrators[0]}
+      const m = { ...migrators[0] }
       migrators = [m];
-      expectedMigrators = [{...m}];
-      const am = { ...m};
+      expectedMigrators = [{ ...m }];
+      const am = { ...m };
       delete am["Migrate Me"];
       activeMembers = [am];
-      expectedActiveMembers = [{...am}];
+      expectedActiveMembers = [{ ...am }];
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
       manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       expect(migrators).toEqual(expectedMigrators);
@@ -184,7 +193,7 @@ describe('Manager tests', () => {
 
     describe('expiry Schedule ', () => {
       it('should create an action schedule for the migrated member for events after today', () => {
-        migrators = [{...migrators[0], Expires: utils.addDaysToDate(today, 1)}]; // expiry 2 is today, so only expiry 3 & 4 expected
+        migrators = [{ ...migrators[0], Expires: utils.addDaysToDate(today, 1) }]; // expiry 2 is today, so only expiry 3 & 4 expected
         manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
         expect(actionSchedule.length).toEqual(2);
       });
@@ -199,7 +208,7 @@ describe('Manager tests', () => {
     it('should send emails to the members', () => {
       manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       expect(sendEmailFun).toHaveBeenCalledTimes(1);
-      const m = {...migrators[0], Directory: migrators[0].Directory ? 'Yes' : 'No'};
+      const m = { ...migrators[0], Directory: migrators[0].Directory ? 'Yes' : 'No' };
       expect(sendEmailFun).toHaveBeenCalledWith({ to: m.Email, subject: utils.expandTemplate(actionSpecByType.get('Migrate').Subject, m), htmlBody: utils.expandTemplate(actionSpecByType.get('Migrate').Body, m) });
     });
 
@@ -212,13 +221,16 @@ describe('Manager tests', () => {
 
     it('should continue even when there are errors', () => {
       groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
+      manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
       try {
         manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
+        fail('Expected error not thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(AggregateError);
         expect(error.errors.length).toEqual(1);
+        expect(error.errors[0].message).toBe('This is a test error');
         expect(error.errors[0].rowNum).toBe(2);
-        expect(error.errors[0].email).toBe("a@b.com")
+        expect(error.errors[0].email).toBe("a@b.com");
       }
     });
 
@@ -269,7 +281,7 @@ describe('Manager tests', () => {
 
       it('should not add a member to a group when the member is renewed', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
-         activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "" },]
+        activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "" },]
         manager.processPaidTransactions(txns, activeMembers, actionSchedule,);
         expect(groupAddFun).toHaveBeenCalledTimes(0);
       });
@@ -303,7 +315,7 @@ describe('Manager tests', () => {
     describe('membership expiry period tests', () => {
       let txns;
       beforeEach(() => {
-         txns = transactionsFixture.paid.filter(t => true) // clone the array
+        txns = transactionsFixture.paid.filter(t => true) // clone the array
       })
       it('if renewal is before expiry then new expiry is  old expiry + period', () => {
         activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: manager.today(), Expires: utils.addDaysToDate(manager.today(), 10), "Renewed On": "" },]
