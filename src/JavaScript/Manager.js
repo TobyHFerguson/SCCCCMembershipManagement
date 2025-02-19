@@ -64,6 +64,10 @@ class Manager {
     const errors = [];
     migrators.forEach((mi, i) => {
       const rowNum = i + 2;
+      if(!mi.Email) {
+        console.log(`Skipping row ${rowNum}, no email address`);
+        return;
+      }
       if (activeMembers.some(activeMember => activeMember.Email === mi.Email)) {
         console.log(`Skipping ${mi.Email} on row ${rowNum}, already an active member`);
         return;

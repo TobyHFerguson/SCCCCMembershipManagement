@@ -176,6 +176,18 @@ describe('Manager tests', () => {
       manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       expect(activeMembers).toEqual([]);
     });
+    it('should not migrate members who have no email address, & log that fact', () => {
+      const m = {...migrators[0]};
+      delete m.Email
+      migratorsPre = [{...m}];
+      migratorsPost=[{...m}]
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+      manager.migrateCEMembers(migratorsPre, activeMembers, actionSchedule);
+      expect(migratorsPost).toEqual(migratorsPre)
+      expect(activeMembers).toEqual([]);
+      expect(actionSchedule).toEqual([]);
+      expect(consoleSpy).toHaveBeenCalledWith(`Skipping row 2, no email address`);
+    });
     it('should not migrate members that already exist, and log the fact', () => {
       const m = { ...migrators[0] }
       migrators = [m];
