@@ -206,7 +206,7 @@ function sendEmail(form) {
   console.log('form: ', form);
   var emailAddress = form.emailAddress;
   console.log('selectedKeys', form.selectedKeys);
-  var selectedKeys = form.selectedKeys; // Array of selected keys
+  var selectedKeys = Array.isArray(form.selectedKeys) ? form.selectedKeys : [form.selectedKeys]; // Ensure selectedKeys is always an array
   var actionSpecs = getActionSpecs(); // Assuming this function returns the ActionSpecs object
 
   selectedKeys.forEach(function (key) {
