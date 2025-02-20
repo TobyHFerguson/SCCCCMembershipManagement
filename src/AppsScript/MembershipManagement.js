@@ -8,12 +8,12 @@
   if (transactions.length === 0) { return; }
 
   const membershipFiddler = getFiddler_('Active Members');
-  const actionScheduleFiddler = getFiddler_('Action Schedule');
+  const expiryScheduleFiddler = getFiddler_('Expiry Schedule');
 
-  const { manager, membershipData, actionScheduleData } = initializeManagerData_(membershipFiddler, actionScheduleFiddler);
+  const { manager, membershipData, expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
   try {
-    manager.processPaidTransactions(transactions, membershipData, actionScheduleData);
+    manager.processPaidTransactions(transactions, membershipData, expiryScheduleData);
   } catch (error) {
     if (error instanceof AggregateError) {
       error.errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack}`));
@@ -24,7 +24,7 @@
 
   transactionsFiddler.setData(transactions).dumpValues();
   membershipFiddler.setData(membershipData).dumpValues();
-  actionScheduleFiddler.setData(actionScheduleData).dumpValues();
+  expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
 }
 
 function processMigrations() {
@@ -33,12 +33,12 @@ function processMigrations() {
   if (ceMembers.length === 0) { return; }
 
   const membershipFiddler = getFiddler_('Active Members');
-  const actionScheduleFiddler = getFiddler_('Action Schedule');
+  const expiryScheduleFiddler = getFiddler_('Expiry Schedule');
 
-  const { manager, membershipData, actionScheduleData } = initializeManagerData_(membershipFiddler, actionScheduleFiddler);
+  const { manager, membershipData, expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
   try {
-    manager.migrateCEMembers(ceMembers, membershipData, actionScheduleData);
+    manager.migrateCEMembers(ceMembers, membershipData, expiryScheduleData);
   } catch (error) {
     if (error instanceof AggregateError) {
       error.errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack}`));
@@ -49,33 +49,33 @@ function processMigrations() {
 
   ceMembersFiddler.setData(ceMembers).dumpValues();
   membershipFiddler.setData(membershipData).dumpValues();
-  actionScheduleFiddler.setData(actionScheduleData).dumpValues();
+  expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
 }
 
 function processExpirations() {
   const membershipFiddler = getFiddler_('Active Members');
   const expiredMembersFiddler = getFiddler_('Expired Members');
-  const actionScheduleFiddler = getFiddler_('Action Schedule');
+  const expiryScheduleFiddler = getFiddler_('Expiry Schedule');
 
-  const { manager, membershipData, expiredMembersData, actionScheduleData } = initializeManagerData_(membershipFiddler, actionScheduleFiddler, expiredMembersFiddler);
+  const { manager, membershipData, expiredMembersData, expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler, expiredMembersFiddler);
 
-  const numProcessed = manager.processExpirations(membershipData, expiredMembersData, actionScheduleData);
+  const numProcessed = manager.processExpirations(membershipData, expiredMembersData, expiryScheduleData);
 
   if (numProcessed === 0) return;
 
   expiredMembersFiddler.setData(expiredMembersData).dumpValues();
   membershipFiddler.setData(membershipData).dumpValues();
-  actionScheduleFiddler.setData(actionScheduleData).dumpValues();
+  expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
 }
 
-function initializeManagerData_(membershipFiddler, actionScheduleFiddler, expiredMembersFiddler = null) {
+function initializeManagerData_(membershipFiddler, expiryScheduleFiddler, expiredMembersFiddler = null) {
   const membershipData = membershipFiddler.getData();
   const expiredMembersData = expiredMembersFiddler ? expiredMembersFiddler.getData() : null;
-  const actionScheduleData = actionScheduleFiddler.getData();
+  const expiryScheduleData = expiryScheduleFiddler.getData();
 
   const manager = new Manager(ConfigurationManager.getActionSpecs(), ConfigurationManager.getGroupEmails(), getGroupAdder_(), getGroupRemover_(), getEmailSender_());
 
-  return { manager, membershipData, expiredMembersData, actionScheduleData };
+  return { manager, membershipData, expiredMembersData, expiryScheduleData };
 }
 
 function getGroupAdder_() {
