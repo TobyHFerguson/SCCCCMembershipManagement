@@ -196,7 +196,10 @@ function handleUserInput(form) {
 }
 
 function showEmailDialog() {
-  var html = HtmlService.createHtmlOutputFromFile('EmailDialog')
+  var actionSpecTypes = getActionSpecTypes();
+  var template = HtmlService.createTemplateFromFile('EmailDialog');
+  template.actionSpecTypes = actionSpecTypes;
+  var html = template.evaluate()
     .setWidth(400)
     .setHeight(300);
   SpreadsheetApp.getUi().showModalDialog(html, 'Send Email');
