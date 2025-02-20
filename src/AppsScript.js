@@ -176,11 +176,23 @@ function onOpen() {
 }
 
 function initializeConfigurationData() {
+  convertLinks_('Action Specs');
   // We use getDataWithFormulas_ because the Body of an ActionSpec may contain formulas with a URL.
   const actionSpecsAsArray = getDataWithFormulas_(getFiddler_('Action Specs'))
   console.log('Action Specs as Array:', actionSpecsAsArray);
   const actionSpecs = Object.fromEntries(actionSpecsAsArray.map(spec => [spec.Type, spec]));
   console.log('Action Specs:', actionSpecs);
+  for (const actionSpec of Object.values(actionSpecs)) {
+    console.log('Action Spec:', actionSpec);
+    let match = actionSpec.Body.match(/=hyperlink\("(https:\/\/docs.google.com\/document\/d\/[^"]+)"/);
+    if (match) {
+      console.log('Match:', match);
+      let url = match[1];
+      actionSpec.Body = DocsService.convertDocToHtml(url);
+    } else {
+      console.log('No Match: ', actionSpec.Body);
+    }
+  }
   PropertiesService.getScriptProperties().setProperties({
     'ActionSpecs': JSON.stringify(actionSpecs),
     'GroupEmailAddresses': JSON.stringify(getFiddler_('Group Email Addresses').getData())
