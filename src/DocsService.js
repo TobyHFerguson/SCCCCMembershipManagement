@@ -176,7 +176,7 @@ function testConvert() {
 }
 
 function showConversionDialog() {
-  var html = HtmlService.createHtmlOutputFromFile('ConversionDialog')
+  var html = HtmlService.createHtmlOutputFromFile('Html/ConversionDialog')
     .setWidth(400)
     .setHeight(200);
   SpreadsheetApp.getUi().showModalDialog(html, 'Enter Document URL');
@@ -197,7 +197,7 @@ function handleUserInput(form) {
 
 function showEmailDialog() {
   var actionSpecTypes = getActionSpecTypes();
-  var template = HtmlService.createTemplateFromFile('EmailDialog');
+  var template = HtmlService.createTemplateFromFile('Html/EmailDialog');
   template.actionSpecTypes = actionSpecTypes;
   var html = template.evaluate()
     .setWidth(400)
