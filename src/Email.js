@@ -1,11 +1,12 @@
-function convertDocToHtml_(docId) {
-  var doc = DocumentApp.openById(docId);
+function convertDocToHtml_(docURL) {
+  var doc = DocumentApp.openByUrl(docURL);
   var body = doc.getBody();
   var html = '<html><body>';
 
   html += processElement_(body);
 
   html += '</body></html>';
+  html.replace(/></g, ">\n<");
   return html;
 }
 
@@ -81,14 +82,14 @@ function processText_(element) {
   var attributeIndices = element.getTextAttributeIndices();
 
   if (attributeIndices.length === 0) {
-    return text; // No formatting, just return the text
+    return encodeHtmlEntities_(text); // No formatting, just return the text
   }
 
   var lastIndex = 0;
 
   for (var i = 0; i < attributeIndices.length; i++) {
     var index = attributeIndices[i];
-    var segmentText = text.substring(lastIndex, index);
+    var segmentText = encodeHtmlEntities_(text.substring(lastIndex, index));
 
     if (segmentText) {
       var linkUrl = element.getLinkUrl(lastIndex);
@@ -147,8 +148,23 @@ function applyTextAttributes_(text, attributes) {
   return html;
 }
 
+function encodeHtmlEntities_(text) {
+  return text.replace(/[&'’"]/g, function(c) {
+    switch (c) {
+      case '&': return '&amp;';
+      case "'": return '&#39;';
+      case '’': return '&rsquo;';
+      case '"': return '&quot;';
+      default: return c;
+    }
+  });
+}
+
 function testConvert() {
-  var docId = '1XztZiA4cwMMl6je3dXrKaS7VlO9ugXf2G33ms0bZzjw';
-  var html = convertDocToHtml_(docId);
-  Logger.log(html);
+  var docURL = 'https://docs.google.com/document/d/1Pi-7YpzC4WDofRYwkPiMtUjFFLkspUtszhaN9kKzwI4/edit?usp=sharing';
+  var htmlContent = convertDocToHtml_(docURL);
+  var htmlOutput = HtmlService.createHtmlOutput(htmlContent)
+      .setWidth(600)
+      .setHeight(400);
+  SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Converted HTML');
 }
