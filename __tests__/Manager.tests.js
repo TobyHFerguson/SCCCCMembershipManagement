@@ -62,7 +62,7 @@ describe('Manager tests', () => {
     groupAddFun = jest.fn();
     sendEmailFun = jest.fn();
     groupEmails = [{ Email: "a@b.com" }];
-    manager = new Manager(actionSpecsArray, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+    manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
     activeMembers = [];
     expiredMembers = [];
     actionSchedule = [];
@@ -164,7 +164,7 @@ describe('Manager tests', () => {
     });
     it('should not migrate members if an error is thrown', () => {
       groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
-      manager = new Manager(actionSpecsArray, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+      manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
       try {
         manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
         fail('Expected error not thrown');
@@ -234,7 +234,7 @@ describe('Manager tests', () => {
 
     it('should continue even when there are errors', () => {
       groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
-      manager = new Manager(actionSpecsArray, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+      manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
       try {
         manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
         fail('Expected error not thrown');

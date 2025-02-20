@@ -2,12 +2,9 @@ if (typeof require !== 'undefined') {
   (utils = require('./utils.js'));
 }
 class Manager {
-  constructor(actionSpecsArray, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today) {
-    if (!actionSpecsArray || actionSpecsArray.length === 0) {
-      throw new Error('Manager requires a non-empty array of action specs');
-    }
+  constructor(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today) {
     if (!groupEmails || groupEmails.length === 0) { throw new Error('Manager requires a non-empty array of group emails'); }
-    this._actionSpecs = Object.fromEntries(actionSpecsArray.map(spec => [spec.Type, spec]));
+    this._actionSpecs = actionSpecs;
     this._groupEmails = groupEmails;
     this._groupAddFun = groupAddFun || (() => { });
     this._groupRemoveFun = groupRemoveFun || (() => { });
