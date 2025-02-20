@@ -71,11 +71,9 @@ function processExpirations() {
 function initializeManagerData_(membershipFiddler, actionScheduleFiddler, expiredMembersFiddler = null) {
   const membershipData = membershipFiddler.getData();
   const expiredMembersData = expiredMembersFiddler ? expiredMembersFiddler.getData() : null;
-  const actionSpecs = getFiddler_('Action Specs').getData();
-  const groupEmails = getFiddler_('Group Email Addresses').getData();
   const actionScheduleData = actionScheduleFiddler.getData();
 
-  const manager = new Manager(actionSpecs, groupEmails, getGroupAdder_(), getGroupRemover_(), getEmailSender_());
+  const manager = new Manager(getActionSpecs(), getGroupEmails(), getGroupAdder_(), getGroupRemover_(), getEmailSender_());
 
   return { manager, membershipData, expiredMembersData, actionScheduleData };
 }
@@ -151,6 +149,16 @@ function getEmailSender_() {
   };
 }
 
+function getActionSpecs() {
+  const actionSpecs = JSON.parse(PropertiesService.getScriptProperties().getProperty('ActionSpecs'));
+  console.log('getActionSpecs: ', actionSpecs);
+  return actionSpecs;
+}
+
+function getGroupEmails() {
+  const groupEmails = PropertiesService.getScriptProperties().getProperty('GroupEmailAddresses');
+  return JSON.parse(groupEmails);
+}
 
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
@@ -159,10 +167,24 @@ function onOpen() {
     .addItem('Process Expirations', processExpirations.name)
     .addItem('Process Migrations', processMigrations.name)
     .addToUi();
-    ui.createMenu('Utilities')
+  ui.createMenu('Utilities')
     .addItem('testConvert', 'testConvert')
     .addItem('Convert Google Doc to HTML', 'showConversionDialog')
+    .addItem('Send Email', 'showEmailDialog')
     .addToUi();
+  initializeConfigurationData
+}
+
+function initializeConfigurationData() {
+  // We use getDataWithFormulas_ because the Body of an ActionSpec may contain formulas with a URL.
+  const actionSpecsAsArray = getDataWithFormulas_(getFiddler_('Action Specs'))
+  console.log('Action Specs as Array:', actionSpecsAsArray);
+  const actionSpecs = Object.fromEntries(actionSpecsAsArray.map(spec => [spec.Type, spec]));
+  console.log('Action Specs:', actionSpecs);
+  PropertiesService.getScriptProperties().setProperties({
+    'ActionSpecs': JSON.stringify(actionSpecs),
+    'GroupEmailAddresses': JSON.stringify(getFiddler_('Group Email Addresses').getData())
+  });
 }
 
 function sendSingleEmail_(email) {

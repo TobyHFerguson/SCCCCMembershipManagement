@@ -30,7 +30,7 @@ const transactionsFixture = {
 
   ]
 };
-const actionSpecs = [
+const actionSpecsArray = [
   { Type: 'Migrate', Subject: 'Migrate', Body: '{Email} {Last} {Directory}' },
   { Type: 'Join', Subject: 'Welcome to the club', Body: 'Welcome to the club, {First} {Last}!' },
   { Type: 'Renew', Subject: 'Renewal', Body: 'Thank you for renewing, {First} {Last}!' },
@@ -41,11 +41,11 @@ const actionSpecs = [
 ]
 
 describe('Manager tests', () => {
-  const actionSpecByType = new Map(actionSpecs.map(as => [as.Type, as]));
-  const O1 = actionSpecByType.get('Expiry1').Offset;
-  const O2 = actionSpecByType.get('Expiry2').Offset;
-  const O3 = actionSpecByType.get('Expiry3').Offset;
-  const O4 = actionSpecByType.get('Expiry4').Offset;
+  const actionSpecs = Object.fromEntries(actionSpecsArray.map(spec => [spec.Type, spec]));
+  const O1 = actionSpecs.Expiry1.Offset;
+  const O2 = actionSpecs.Expiry2.Offset;
+  const O3 = actionSpecs.Expiry3.Offset;
+  const O4 = actionSpecs.Expiry4.Offset;
   const today = '2025-06-15';
   let manager;
   let activeMembers;
@@ -62,7 +62,7 @@ describe('Manager tests', () => {
     groupAddFun = jest.fn();
     sendEmailFun = jest.fn();
     groupEmails = [{ Email: "a@b.com" }];
-    manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+    manager = new Manager(actionSpecsArray, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
     activeMembers = [];
     expiredMembers = [];
     actionSchedule = [];
@@ -136,12 +136,13 @@ describe('Manager tests', () => {
       expect(numProcessed).toEqual(2);
       expect(activeMembers.length).toEqual(0);
       expect(expiredMembers.length).toEqual(1);
+      expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedExpiredMembers[0].Email, subject: actionSpecs.Expiry2.Subject, htmlBody: actionSpecs.Expiry2.Body.replace('{First}', expectedExpiredMembers[0].First).replace('{Last}', expectedExpiredMembers[0].Last) });
       expect(expiredMembers).toEqual(expectedExpiredMembers);
       expect(groupRemoveFun).toHaveBeenCalledTimes(1);
       expect(groupRemoveFun).toHaveBeenCalledWith(expectedExpiredMembers[0].Email, groupEmails[0].Email);
       expect(sendEmailFun).toHaveBeenCalledTimes(2);
-      expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedExpiredMembers[0].Email, subject: actionSpecByType.get('Expiry4').Subject, htmlBody: actionSpecByType.get('Expiry4').Body.replace('{First}', expectedExpiredMembers[0].First).replace('{Last}', expectedExpiredMembers[0].Last) });
-      expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedExpiredMembers[0].Email, subject: actionSpecByType.get('Expiry2').Subject, htmlBody: actionSpecByType.get('Expiry2').Body.replace('{First}', expectedExpiredMembers[0].First).replace('{Last}', expectedExpiredMembers[0].Last) });
+      expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedExpiredMembers[0].Email, subject: actionSpecs.Expiry4.Subject, htmlBody: actionSpecs.Expiry4.Body.replace('{First}', expectedExpiredMembers[0].First).replace('{Last}', expectedExpiredMembers[0].Last) });
+      expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedExpiredMembers[0].Email, subject: actionSpecs.Expiry2.Subject, htmlBody: actionSpecs.Expiry2.Body.replace('{First}', expectedExpiredMembers[0].First).replace('{Last}', expectedExpiredMembers[0].Last) });
     });
   });
 
@@ -163,7 +164,7 @@ describe('Manager tests', () => {
     });
     it('should not migrate members if an error is thrown', () => {
       groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
-      manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+      manager = new Manager(actionSpecsArray, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
       try {
         manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
         fail('Expected error not thrown');
@@ -221,7 +222,7 @@ describe('Manager tests', () => {
       manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
       expect(sendEmailFun).toHaveBeenCalledTimes(1);
       const m = { ...migrators[0], Directory: migrators[0].Directory ? 'Yes' : 'No' };
-      expect(sendEmailFun).toHaveBeenCalledWith({ to: m.Email, subject: utils.expandTemplate(actionSpecByType.get('Migrate').Subject, m), htmlBody: utils.expandTemplate(actionSpecByType.get('Migrate').Body, m) });
+      expect(sendEmailFun).toHaveBeenCalledWith({ to: m.Email, subject: utils.expandTemplate(actionSpecs.Migrate.Subject, m), htmlBody: utils.expandTemplate(actionSpecs.Migrate.Body, m) });
     });
 
     it('should provide logging information', () => {
@@ -233,7 +234,7 @@ describe('Manager tests', () => {
 
     it('should continue even when there are errors', () => {
       groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
-      manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+      manager = new Manager(actionSpecsArray, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
       try {
         manager.migrateCEMembers(migrators, activeMembers, actionSchedule);
         fail('Expected error not thrown');
@@ -247,7 +248,7 @@ describe('Manager tests', () => {
     });
 
     it('should indicate how many members were successfully migrated', () => {
-      const numMigrations = manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecs, groupAddFun, sendEmailFun, groupEmails);
+      const numMigrations = manager.migrateCEMembers(migrators, activeMembers, actionSchedule, actionSpecsArray, groupAddFun, sendEmailFun, groupEmails);
       expect(numMigrations).toBe(1);
     });
   });
@@ -306,8 +307,8 @@ describe('Manager tests', () => {
         expect(sendEmailFun).toHaveBeenCalledTimes(1);
         expect(sendEmailFun).toHaveBeenCalledWith({
           to: activeMembers[0].Email,
-          subject: utils.expandTemplate(actionSpecByType.get('Join').Subject, activeMembers[0]),
-          htmlBody: utils.expandTemplate(actionSpecByType.get('Join').Body, activeMembers[0])
+          subject: utils.expandTemplate(actionSpecs.Join.Subject, activeMembers[0]),
+          htmlBody: utils.expandTemplate(actionSpecs.Join.Body, activeMembers[0])
         });
       });
 
@@ -317,8 +318,8 @@ describe('Manager tests', () => {
         manager.processPaidTransactions(txns, activeMembers, actionSchedule,);
         expect(sendEmailFun).toHaveBeenCalledWith({
           to: activeMembers[0].Email,
-          subject: utils.expandTemplate(actionSpecByType.get('Renew').Subject, activeMembers[0]),
-          htmlBody: utils.expandTemplate(actionSpecByType.get('Renew').Body, activeMembers[0])
+          subject: utils.expandTemplate(actionSpecs.Renew.Subject, activeMembers[0]),
+          htmlBody: utils.expandTemplate(actionSpecs.Renew.Body, activeMembers[0])
         });
         expect(sendEmailFun).toHaveBeenCalledTimes(1);
       });
@@ -547,7 +548,7 @@ describe('Manager tests', () => {
         { Date: new Date('2023-01-01'), Email: 'test@example.com', Type: utils.ActionType.Expiry1 },
         { Date: new Date('2023-02-01'), Email: 'test@example.com', Type: utils.ActionType.Expiry2 }
       ];
-      emailSpecs = actionSpecs
+      emailSpecs = actionSpecsArray
       member = {
         Email: 'test@example1.com',
         First: 'John',

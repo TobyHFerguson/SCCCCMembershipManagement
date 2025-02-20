@@ -1,4 +1,4 @@
-const TemplateService = (function() {
+const DocsService = (function() {
   function convertDocToHtml_(docURL) {
     var doc = DocumentApp.openByUrl(docURL);
     var body = doc.getBody();
@@ -168,7 +168,7 @@ const TemplateService = (function() {
 
 function testConvert() {
   var docURL = 'https://docs.google.com/document/d/1Pi-7YpzC4WDofRYwkPiMtUjFFLkspUtszhaN9kKzwI4/edit?usp=sharing';
-  var htmlContent = TemplateService. convertDocToHtml(docURL);
+  var htmlContent = DocsService.convertDocToHtml(docURL);
   var htmlOutput = HtmlService.createHtmlOutput(htmlContent)
       .setWidth(600)
       .setHeight(400);
@@ -183,7 +183,7 @@ function showConversionDialog() {
 }
 
 function convertAndShowHtml(docURL) {
-  var htmlContent = TemplateService.convertDocToHtml(docURL);
+  var htmlContent = DocsService.convertDocToHtml(docURL);
   var htmlOutput = HtmlService.createHtmlOutput(htmlContent)
       .setWidth(600)
       .setHeight(400);
@@ -193,4 +193,30 @@ function convertAndShowHtml(docURL) {
 function handleUserInput(form) {
   var docURL = form.docURL;
   convertAndShowHtml(docURL);
+}
+
+function showEmailDialog() {
+  var html = HtmlService.createHtmlOutputFromFile('EmailDialog')
+      .setWidth(400)
+      .setHeight(300);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Send Email');
+}
+
+function sendEmail(form) {
+  var emailAddress = form.emailAddress;
+  var selectedKeys = form.selectedKeys; // Array of selected keys
+  var actionSpecs = getActionSpecs(); // Assuming this function returns the ActionSpecs object
+
+  selectedKeys.forEach(function(key) {
+    if (actionSpecs[key]) {
+      MailApp.sendEmail(emailAddress, 'Action Spec: ' + key, actionSpecs[key]);
+    }
+  });
+}
+
+function getActionSpecTypes() {
+  var actionSpecs = getActionSpecs();
+  const result = Object.keys(actionSpecs);
+  console.log('getActionSpecTypes', result);
+  return result;
 }
