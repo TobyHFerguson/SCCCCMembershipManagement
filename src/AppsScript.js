@@ -159,7 +159,10 @@ function onOpen() {
     .addItem('Process Expirations', processExpirations.name)
     .addItem('Process Migrations', processMigrations.name)
     .addToUi();
-    ui.createMenu('Utilities').addItem('testConvert', 'testConvert').addToUi();
+    ui.createMenu('Utilities')
+    .addItem('testConvert', 'testConvert')
+    .addItem('Convert Google Doc to HTML', 'showConversionDialog')
+    .addToUi();
 }
 
 function sendSingleEmail_(email) {
