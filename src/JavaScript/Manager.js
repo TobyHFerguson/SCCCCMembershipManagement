@@ -20,12 +20,12 @@ class Manager {
     this._groupEmails = groupEmails;
   }
 
-  processExpirations(activeMembers, expiredMembers, actionSchedule) {
+  processExpirations(activeMembers, expiredMembers, expirySchedule) {
     if (!activeMembers || !activeMembers.length ) return 0;
     let numProcessed = 0;
     let membersToBeRemoved = [];
-    for (let i = actionSchedule.length - 1; i >= 0; i--) {
-      const sched = actionSchedule[i];
+    for (let i = expirySchedule.length - 1; i >= 0; i--) {
+      const sched = expirySchedule[i];
       const spec = this._actionSpecs[sched.Type];
       const tdy = new Date(this._today)
       const schedDate = new Date(utils.getDateString(sched.Date));
@@ -43,7 +43,7 @@ class Manager {
             subject: utils.expandTemplate(spec.Subject, member),
             htmlBody: utils.expandTemplate(spec.Body, member)
           };
-          actionSchedule.splice(i, 1);
+          expirySchedule.splice(i, 1);
           this._sendEmailFun(message);
           numProcessed++;
         }
@@ -53,7 +53,7 @@ class Manager {
     return numProcessed;
   }
 
-  migrateCEMembers(migrators, activeMembers, actionSchedule) { 
+  migrateCEMembers(migrators, activeMembers, expirySchedule) { 
     const actionSpec = this._actionSpecs[utils.ActionType.Migrate];
     const requiredKeys = ['Email', 'First', 'Last', 'Phone', 'Joined', 'Period', 'Expires', 'Renewed On', 'Directory', 'Migrated'];
   
@@ -86,7 +86,7 @@ class Manager {
           };
           this._sendEmailFun(message);
           activeMembers.push(newMember);
-          actionSchedule.push(...this.createScheduleEntries_(newMember.Email, newMember.Expires));
+          expirySchedule.push(...this.createScheduleEntries_(newMember.Email, newMember.Expires));
           console.log(`Migrated ${newMember.Email}, row ${rowNum}`);
           numMigrations++;
         } catch (error) {
@@ -102,7 +102,7 @@ class Manager {
     return numMigrations;
   }
 
-  processPaidTransactions(transactions, membershipData, actionSchedule) { 
+  processPaidTransactions(transactions, membershipData, expirySchedule) { 
     const emailToMemberMap = membershipData.length ? Object.fromEntries(membershipData.map((member, index) => [member.Email, index])) : {};
     const errors = [];
     transactions.forEach((txn, i) => {
@@ -114,7 +114,7 @@ class Manager {
             console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a renewing member`);
             const member = membershipData[matchIndex];
             const years = Manager.getPeriod_(txn);
-            this.renewMember_(member, years, actionSchedule);
+            this.renewMember_(member, years, expirySchedule);
             message = {
               to: member.Email,
               subject: utils.expandTemplate(this._actionSpecs.Renew.Subject, member),
@@ -122,7 +122,7 @@ class Manager {
             };
           } else { // a joining member
             console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a new member`);
-            const newMember = this.addNewMember_(txn, actionSchedule, membershipData);
+            const newMember = this.addNewMember_(txn, expirySchedule, membershipData);
             this._groupEmails.forEach(g => this._groupAddFun(newMember.Email, g.Email));
             message = {
               to: newMember.Email,
@@ -155,18 +155,18 @@ class Manager {
     return years;
   }
 
-  renewMember_(member, period, actionSchedule,) {
+  renewMember_(member, period, expirySchedule,) {
     member.Period = period;
     member["Renewed On"] = this._today;
     member.Expires = this.calculateExpirationDate(period, member.Expires);
-    this.addRenewedMemberToActionSchedule_(member, actionSchedule);
+    this.addRenewedMemberToActionSchedule_(member, expirySchedule);
   }
 
-  addRenewedMemberToActionSchedule_(member, actionSchedule) {
+  addRenewedMemberToActionSchedule_(member, expirySchedule) {
     const email = member.Email;
-    Manager.removeEmails_(email, actionSchedule);
+    Manager.removeEmails_(email, expirySchedule);
     const scheduleEntries = this.createScheduleEntries_(email, member.Expires);
-    actionSchedule.push(...scheduleEntries);
+    expirySchedule.push(...scheduleEntries);
   }
 
   createScheduleEntries_(email, expiryDate) {
@@ -181,10 +181,10 @@ class Manager {
     return scheduleEntries;
   }
 
-  static removeEmails_(email, actionSchedule) {
-    for (let i = actionSchedule.length - 1; i >= 0; i--) {
-      if (actionSchedule[i].Email === email) {
-        actionSchedule.splice(i, 1);
+  static removeEmails_(email, expirySchedule) {
+    for (let i = expirySchedule.length - 1; i >= 0; i--) {
+      if (expirySchedule[i].Email === email) {
+        expirySchedule.splice(i, 1);
       }
     }
   }
@@ -193,7 +193,7 @@ class Manager {
     return utils.getDateString(utils.addYearsToDate(expires, period));
   }
 
-  addNewMember_(txn, actionSchedule, membershipData) {
+  addNewMember_(txn, expirySchedule, membershipData) {
     const newMember = {
       Email: txn["Email Address"],
       First: txn["First Name"],
@@ -205,13 +205,13 @@ class Manager {
       "Renewed On": '',
     };
     membershipData.push(newMember);
-    this.addNewMemberToActionSchedule_(newMember, actionSchedule);
+    this.addNewMemberToActionSchedule_(newMember, expirySchedule);
     return newMember;
   }
 
-  addNewMemberToActionSchedule_(member, actionSchedule) {
+  addNewMemberToActionSchedule_(member, expirySchedule) {
     const scheduleEntries = this.createScheduleEntries_(member.Email, member.Expires);
-    actionSchedule.push(...scheduleEntries);
+    expirySchedule.push(...scheduleEntries);
   }
 
 
