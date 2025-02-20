@@ -28,7 +28,7 @@
 }
 
 function processMigrations() {
-  const ceMembersFiddler = getFiddler_('CE Members').needFormulas();
+  const ceMembersFiddler = bmPreFiddler.PreFiddler().getFiddler({sheetName: 'Conditioned CEMembers', id: '1FiYgaNP-RK6WoiHkak8CCK8mjP7zbQ6hVrG3azqPftM', createIfMissing: false});
   const ceMembers = getDataWithFormulas_(ceMembersFiddler);
   if (ceMembers.length === 0) { return; }
 
