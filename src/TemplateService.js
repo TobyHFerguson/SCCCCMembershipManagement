@@ -1,4 +1,4 @@
-var EmailService = (function() {
+const TemplateService = (function() {
   function convertDocToHtml_(docURL) {
     var doc = DocumentApp.openByUrl(docURL);
     var body = doc.getBody();
@@ -168,7 +168,7 @@ var EmailService = (function() {
 
 function testConvert() {
   var docURL = 'https://docs.google.com/document/d/1Pi-7YpzC4WDofRYwkPiMtUjFFLkspUtszhaN9kKzwI4/edit?usp=sharing';
-  var htmlContent = EmailService. convertDocToHtml(docURL);
+  var htmlContent = TemplateService. convertDocToHtml(docURL);
   var htmlOutput = HtmlService.createHtmlOutput(htmlContent)
       .setWidth(600)
       .setHeight(400);
@@ -183,7 +183,7 @@ function showConversionDialog() {
 }
 
 function convertAndShowHtml(docURL) {
-  var htmlContent = EmailService.convertDocToHtml(docURL);
+  var htmlContent = TemplateService.convertDocToHtml(docURL);
   var htmlOutput = HtmlService.createHtmlOutput(htmlContent)
       .setWidth(600)
       .setHeight(400);
