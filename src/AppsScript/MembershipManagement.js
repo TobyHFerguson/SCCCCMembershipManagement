@@ -1,7 +1,7 @@
 /**
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
-function processTransactions() {
+ function processTransactions() {
   convertLinks_('Transactions');
   const transactionsFiddler = getFiddler_('Transactions').needFormulas();
   const transactions = getDataWithFormulas_(transactionsFiddler);
@@ -73,7 +73,7 @@ function initializeManagerData_(membershipFiddler, actionScheduleFiddler, expire
   const expiredMembersData = expiredMembersFiddler ? expiredMembersFiddler.getData() : null;
   const actionScheduleData = actionScheduleFiddler.getData();
 
-  const manager = new Manager(getActionSpecs(), getGroupEmails(), getGroupAdder_(), getGroupRemover_(), getEmailSender_());
+  const manager = new Manager(ConfigurationManager.getActionSpecs(), ConfigurationManager.getGroupEmails(), getGroupAdder_(), getGroupRemover_(), getEmailSender_());
 
   return { manager, membershipData, expiredMembersData, actionScheduleData };
 }
@@ -149,55 +149,8 @@ function getEmailSender_() {
   };
 }
 
-function getActionSpecs() {
-  const actionSpecs = JSON.parse(PropertiesService.getScriptProperties().getProperty('ActionSpecs'));
-  console.log('getActionSpecs: ', actionSpecs);
-  return actionSpecs;
-}
 
-function getGroupEmails() {
-  const groupEmails = PropertiesService.getScriptProperties().getProperty('GroupEmailAddresses');
-  return JSON.parse(groupEmails);
-}
 
-function onOpen() {
-  const ui = SpreadsheetApp.getUi();
-  ui.createMenu('Membership Management')
-    .addItem('Process Transactions', processTransactions.name)
-    .addItem('Process Expirations', processExpirations.name)
-    .addItem('Process Migrations', processMigrations.name)
-    .addToUi();
-  ui.createMenu('Utilities')
-    .addItem('testConvert', 'testConvert')
-    .addItem('Convert Google Doc to HTML', 'showConversionDialog')
-    .addItem('Send Email', 'showEmailDialog')
-    .addToUi();
-  initializeConfigurationData
-}
-
-function initializeConfigurationData() {
-  convertLinks_('Action Specs');
-  // We use getDataWithFormulas_ because the Body of an ActionSpec may contain formulas with a URL.
-  const actionSpecsAsArray = getDataWithFormulas_(getFiddler_('Action Specs'))
-  console.log('Action Specs as Array:', actionSpecsAsArray);
-  const actionSpecs = Object.fromEntries(actionSpecsAsArray.map(spec => [spec.Type, spec]));
-  console.log('Action Specs:', actionSpecs);
-  for (const actionSpec of Object.values(actionSpecs)) {
-    console.log('Action Spec:', actionSpec);
-    let match = actionSpec.Body.match(/=hyperlink\("(https:\/\/docs.google.com\/document\/d\/[^"]+)"/);
-    if (match) {
-      console.log('Match:', match);
-      let url = match[1];
-      actionSpec.Body = DocsService.convertDocToHtml(url);
-    } else {
-      console.log('No Match: ', actionSpec.Body);
-    }
-  }
-  PropertiesService.getScriptProperties().setProperties({
-    'ActionSpecs': JSON.stringify(actionSpecs),
-    'GroupEmailAddresses': JSON.stringify(getFiddler_('Group Email Addresses').getData())
-  });
-}
 
 function sendSingleEmail_(email) {
   utils.log(`Email Sent: :`, email);
