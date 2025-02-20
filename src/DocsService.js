@@ -1,4 +1,4 @@
-const DocsService = (function() {
+const DocsService = (function () {
   function convertDocToHtml_(docURL) {
     var doc = DocumentApp.openByUrl(docURL);
     var body = doc.getBody();
@@ -150,7 +150,7 @@ const DocsService = (function() {
   }
 
   function encodeHtmlEntities_(text) {
-    return text.replace(/[&'’"]/g, function(c) {
+    return text.replace(/[&'’"]/g, function (c) {
       switch (c) {
         case '&': return '&amp;';
         case "'": return '&#39;';
@@ -170,23 +170,23 @@ function testConvert() {
   var docURL = 'https://docs.google.com/document/d/1Pi-7YpzC4WDofRYwkPiMtUjFFLkspUtszhaN9kKzwI4/edit?usp=sharing';
   var htmlContent = DocsService.convertDocToHtml(docURL);
   var htmlOutput = HtmlService.createHtmlOutput(htmlContent)
-      .setWidth(600)
-      .setHeight(400);
+    .setWidth(600)
+    .setHeight(400);
   SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Converted HTML');
 }
 
 function showConversionDialog() {
   var html = HtmlService.createHtmlOutputFromFile('ConversionDialog')
-      .setWidth(400)
-      .setHeight(200);
+    .setWidth(400)
+    .setHeight(200);
   SpreadsheetApp.getUi().showModalDialog(html, 'Enter Document URL');
 }
 
 function convertAndShowHtml(docURL) {
   var htmlContent = DocsService.convertDocToHtml(docURL);
   var htmlOutput = HtmlService.createHtmlOutput(htmlContent)
-      .setWidth(600)
-      .setHeight(400);
+    .setWidth(600)
+    .setHeight(400);
   SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Converted HTML');
 }
 
@@ -197,22 +197,45 @@ function handleUserInput(form) {
 
 function showEmailDialog() {
   var html = HtmlService.createHtmlOutputFromFile('EmailDialog')
-      .setWidth(400)
-      .setHeight(300);
+    .setWidth(400)
+    .setHeight(300);
   SpreadsheetApp.getUi().showModalDialog(html, 'Send Email');
 }
 
 function sendEmail(form) {
+  console.log('form: ', form);
   var emailAddress = form.emailAddress;
+  console.log('selectedKeys', form.selectedKeys);
   var selectedKeys = form.selectedKeys; // Array of selected keys
   var actionSpecs = getActionSpecs(); // Assuming this function returns the ActionSpecs object
 
-  selectedKeys.forEach(function(key) {
-    if (actionSpecs[key]) {
-      MailApp.sendEmail(emailAddress, 'Action Spec: ' + key, actionSpecs[key]);
+  selectedKeys.forEach(function (key) {
+    spec = actionSpecs[key];
+    if (spec) {
+      const member = {
+        First: 'John',
+        Last: 'Doe',
+        Joined: '2020-01-01',
+        Expires: '2021-01-01',
+        Period: 1,
+        Directory: 'Yes',
+        Phone: '123-456-7890',
+        'Renewed On': '2020-12-31',
+        Migrated: '2020-01-01',
+        Email: emailAddress
+      }
+
+      const message = {
+        to: member.Email,
+        subject: utils.expandTemplate(spec.Subject, member),
+        htmlBody: utils.expandTemplate(spec.Body, member)
+      };
+      console.log(message)
+      MailApp.sendEmail(message)
     }
   });
 }
+
 
 function getActionSpecTypes() {
   var actionSpecs = getActionSpecs();
