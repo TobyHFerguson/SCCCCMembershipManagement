@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+  </head>
+  <body>
+    <form id="emailForm">
+      <label for="emailAddress">Email Address:</label>
+      <input type="email" id="emailAddress" name="emailAddress" required>
+      <div id="checkboxContainer"></div>
+      <button type="button" onclick="submitForm()">Send</button>
+    </form>
+    <script>
+      function submitForm() {
+        var form = document.getElementById('emailForm');
+        google.script.run.withSuccessHandler(google.script.host.close).sendEmail(form);
+      }
+
+      function populateCheckboxes(actionSpecs) {
+        var container = document.getElementById('checkboxContainer');
+        actionSpecs.forEach(function(spec) {
+          var checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.name = 'selectedKeys';
+          checkbox.value = spec;
+          checkbox.id = spec;
+
+          var label = document.createElement('label');
+          label.htmlFor = spec;
+          label.appendChild(document.createTextNode(spec));
+
+          container.appendChild(checkbox);
+          container.appendChild(label);
+          container.appendChild(document.createElement('br'));
+        });
+      }
+
+      google.script.run.withSuccessHandler(populateCheckboxes).getActionSpecTypes();
+    </script>
+  </body>
+</html>
