@@ -159,6 +159,7 @@ function onOpen() {
     .addItem('Process Expirations', processExpirations.name)
     .addItem('Process Migrations', processMigrations.name)
     .addToUi();
+    ui.createMenu('Utilities').addItem('testConvert', 'testConvert').addToUi();
 }
 
 function sendSingleEmail_(email) {
