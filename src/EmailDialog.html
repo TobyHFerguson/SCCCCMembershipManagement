@@ -7,7 +7,12 @@
     <form id="emailForm">
       <label for="emailAddress">Email Address:</label>
       <input type="email" id="emailAddress" name="emailAddress" required oninput="validateEmail()">
-      <div id="checkboxContainer"></div>
+      <div id="checkboxContainer">
+        <? for (var i = 0; i < actionSpecTypes.length; i++) { ?>
+          <input type="checkbox" name="selectedKeys" value="<?= actionSpecTypes[i] ?>" id="<?= actionSpecTypes[i] ?>">
+          <label for="<?= actionSpecTypes[i] ?>"><?= actionSpecTypes[i] ?></label><br>
+        <? } ?>
+      </div>
       <button type="button" onclick="submitForm()" disabled>Send</button>
     </form>
     <script>
@@ -21,27 +26,6 @@
         var form = document.getElementById('emailForm');
         google.script.run.withSuccessHandler(google.script.host.close).sendEmail(form);
       }
-
-      function populateCheckboxes(actionSpecs) {
-        var container = document.getElementById('checkboxContainer');
-        actionSpecs.forEach(function(spec) {
-          var checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.name = 'selectedKeys';
-          checkbox.value = spec;
-          checkbox.id = spec;
-
-          var label = document.createElement('label');
-          label.htmlFor = spec;
-          label.appendChild(document.createTextNode(spec));
-
-          container.appendChild(checkbox);
-          container.appendChild(label);
-          container.appendChild(document.createElement('br'));
-        });
-      }
-
-      google.script.run.withSuccessHandler(populateCheckboxes).getActionSpecTypes();
     </script>
   </body>
 </html>
