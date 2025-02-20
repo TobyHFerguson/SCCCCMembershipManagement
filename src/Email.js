@@ -13,14 +13,28 @@ function processElement_(element) {
   var html = "";
   switch (element.getType()) {
     case DocumentApp.ElementType.PARAGRAPH:
-    case DocumentApp.ElementType.LIST_ITEM:
-    case DocumentApp.ElementType.TABLE_CELL:
-      html += "<" + element.getType().toString().toLowerCase() + ">";
+      html += "<p>";
       var numChildren = element.getNumChildren();
       for (var i = 0; i < numChildren; i++) {
         html += processElement_(element.getChild(i));
       }
-      html += "</" + element.getType().toString().toLowerCase() + ">";
+      html += "</p>";
+      break;
+    case DocumentApp.ElementType.LIST_ITEM:
+      html += "<li>";
+      var numChildren = element.getNumChildren();
+      for (var i = 0; i < numChildren; i++) {
+        html += processElement_(element.getChild(i));
+      }
+      html += "</li>";
+      break;
+    case DocumentApp.ElementType.TABLE_CELL:
+      html += "<td>";
+      var numChildren = element.getNumChildren();
+      for (var i = 0; i < numChildren; i++) {
+        html += processElement_(element.getChild(i));
+      }
+      html += "</td>";
       break;
     case DocumentApp.ElementType.TEXT:
       html += processText_(element);
@@ -134,7 +148,7 @@ function applyTextAttributes_(text, attributes) {
 }
 
 function testConvert() {
-  var docId = '1Pi-7YpzC4WDofRYwkPiMtUjFFLkspUtszhaN9kKzwI4';
+  var docId = '1XztZiA4cwMMl6je3dXrKaS7VlO9ugXf2G33ms0bZzjw';
   var html = convertDocToHtml_(docId);
   Logger.log(html);
 }
