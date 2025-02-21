@@ -3,12 +3,12 @@
  */
  function processTransactions() {
   convertLinks_('Transactions');
-  const transactionsFiddler = getFiddler_('Transactions').needFormulas();
+  const transactionsFiddler = ConfigurationManager.getFiddler('Transactions').needFormulas();
   const transactions = getDataWithFormulas_(transactionsFiddler);
   if (transactions.length === 0) { return; }
 
-  const membershipFiddler = getFiddler_('Active Members');
-  const expiryScheduleFiddler = getFiddler_('Expiry Schedule');
+  const membershipFiddler = ConfigurationManager.getFiddler('ActiveMembers');
+  const expiryScheduleFiddler = ConfigurationManager.getFiddler('ExpirySchedule');
 
   const { manager, membershipData, expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
@@ -28,17 +28,17 @@
 }
 
 function processMigrations() {
-  const ceMembersFiddler = bmPreFiddler.PreFiddler().getFiddler({sheetName: 'Conditioned CEMembers', id: '1FiYgaNP-RK6WoiHkak8CCK8mjP7zbQ6hVrG3azqPftM', createIfMissing: false});
-  const ceMembers = getDataWithFormulas_(ceMembersFiddler);
-  if (ceMembers.length === 0) { return; }
+  const migratingMembersFiddler = ConfigurationManager.getFiddler('MigratingMembers').needFormulas();
+  const migratingMembers = getDataWithFormulas_(migratingMembersFiddler);
+  if (migratingMembers.length === 0) { return; }
 
-  const membershipFiddler = getFiddler_('Active Members');
-  const expiryScheduleFiddler = getFiddler_('Expiry Schedule');
+  const membershipFiddler = ConfigurationManager.getFiddler('ActiveMembers');
+  const expiryScheduleFiddler = ConfigurationManager.getFiddler('ExpirySchedule');
 
   const { manager, membershipData, expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
   try {
-    manager.migrateCEMembers(ceMembers, membershipData, expiryScheduleData);
+    manager.migrateCEMembers(migratingMembers, membershipData, expiryScheduleData);
   } catch (error) {
     if (error instanceof AggregateError) {
       error.errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack}`));
@@ -47,15 +47,15 @@ function processMigrations() {
     }
   }
 
-  ceMembersFiddler.setData(ceMembers).dumpValues();
+  migratingMembersFiddler.setData(migratingMembers).dumpValues();
   membershipFiddler.setData(membershipData).dumpValues();
   expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
 }
 
 function processExpirations() {
-  const membershipFiddler = getFiddler_('Active Members');
-  const expiredMembersFiddler = getFiddler_('Expired Members');
-  const expiryScheduleFiddler = getFiddler_('Expiry Schedule');
+  const membershipFiddler = ConfigurationManager.getFiddler('ActiveMembers');
+  const expiredMembersFiddler = ConfigurationManager.getFiddler('ExpiredMembers');
+  const expiryScheduleFiddler = ConfigurationManager.getFiddler('ExpirySchedule');
 
   const { manager, membershipData, expiredMembersData, expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler, expiredMembersFiddler);
 
@@ -220,12 +220,4 @@ function convertLinks_(sheetName) {
   SpreadsheetApp.flush();
 }
 
-/**
- * Gets a fiddler based on the sheet name.
- * @param {String} sheetName - the name of the sheet.
- * @returns {Fiddler} - The fiddler.
- */
-function getFiddler_(sheetName, createIfMissing = true) {
-  return bmPreFiddler.PreFiddler().getFiddler({ sheetName, createIfMissing }).needFormulas();
-}
 
