@@ -21,7 +21,6 @@ class Manager {
   }
 
   processExpirations(activeMembers, expiredMembers, expirySchedule) {
-    if (!activeMembers || !activeMembers.length ) return 0;
     let numProcessed = 0;
     let membersToBeRemoved = [];
     for (let i = expirySchedule.length - 1; i >= 0; i--) {
@@ -46,6 +45,8 @@ class Manager {
           expirySchedule.splice(i, 1);
           this._sendEmailFun(message);
           numProcessed++;
+        } else {
+          console.log(`Member ${sched.Email} is not an active member - cannot expire them`);
         }
       }
     }

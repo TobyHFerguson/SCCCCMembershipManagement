@@ -144,6 +144,11 @@ describe('Manager tests', () => {
       expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedExpiredMembers[0].Email, subject: actionSpecs.Expiry4.Subject, htmlBody: actionSpecs.Expiry4.Body.replace('{First}', expectedExpiredMembers[0].First).replace('{Last}', expectedExpiredMembers[0].Last) });
       expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedExpiredMembers[0].Email, subject: actionSpecs.Expiry2.Subject, htmlBody: actionSpecs.Expiry2.Body.replace('{First}', expectedExpiredMembers[0].First).replace('{Last}', expectedExpiredMembers[0].Last) });
     });
+    it('should log if a member to be expired isnt active', () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+      manager.processExpirations(activeMembers, expiredMembers, expirySchedule);
+      expect(consoleSpy).toHaveBeenCalledWith('Member test1@example.com is not an active member - cannot expire them');
+    })
   });
 
   describe('migrations', () => {
