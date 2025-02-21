@@ -126,7 +126,7 @@ describe('Manager tests', () => {
 
     it('should do nothing if there are no members to expire', () => {
       numProcessed = manager.processExpirations(activeMembers, expiredMembers, expirySchedule);
-      expect(numProcessed).toEqual(0);
+      expect(numProcessed).toEqual(2);
     });
 
     it('should expire a member if they are fully expired', () => {
@@ -148,6 +148,15 @@ describe('Manager tests', () => {
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
       manager.processExpirations(activeMembers, expiredMembers, expirySchedule);
       expect(consoleSpy).toHaveBeenCalledWith('Member test1@example.com is not an active member - cannot expire them');
+    })
+    it('should remove the expiry schedule even if the member cannot be expired', () => {
+      const expectedExpirySchedule = expirySchedule.filter(e => e.Date > new Date(today));
+      manager.processExpirations(activeMembers, expiredMembers, expirySchedule);
+      expect(expirySchedule).toEqual(expectedExpirySchedule);
+    })
+    it('should return the number of schedules processed', () => {
+      numProcessed = manager.processExpirations(activeMembers, expiredMembers, expirySchedule);
+      expect(numProcessed).toEqual(2);
     })
   });
 

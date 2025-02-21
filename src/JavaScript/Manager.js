@@ -29,8 +29,12 @@ class Manager {
       const tdy = new Date(this._today)
       const schedDate = new Date(utils.getDateString(sched.Date));
       if (schedDate <= tdy) {
+        numProcessed++;
+        expirySchedule.splice(i, 1);
         let idx = activeMembers.findIndex(member => member.Email === sched.Email);
-        if (idx != -1) {
+        if (idx === -1) {
+          console.log(`Member ${sched.Email} is not an active member - cannot expire them`);
+        } else {
           let member = activeMembers[idx];
           if (sched.Type === utils.ActionType.Expiry4) {
             expiredMembers.push(member);
@@ -42,11 +46,7 @@ class Manager {
             subject: utils.expandTemplate(spec.Subject, member),
             htmlBody: utils.expandTemplate(spec.Body, member)
           };
-          expirySchedule.splice(i, 1);
           this._sendEmailFun(message);
-          numProcessed++;
-        } else {
-          console.log(`Member ${sched.Email} is not an active member - cannot expire them`);
         }
       }
     }
@@ -54,15 +54,15 @@ class Manager {
     return numProcessed;
   }
 
-  migrateCEMembers(migrators, activeMembers, expirySchedule) { 
+  migrateCEMembers(migrators, activeMembers, expirySchedule) {
     const actionSpec = this._actionSpecs[utils.ActionType.Migrate];
     const requiredKeys = ['Email', 'First', 'Last', 'Phone', 'Joined', 'Period', 'Expires', 'Renewed On', 'Directory', 'Migrated'];
-  
+
     let numMigrations = 0;
     const errors = [];
     migrators.forEach((mi, i) => {
       const rowNum = i + 2;
-      if(!mi.Email) {
+      if (!mi.Email) {
         console.log(`Skipping row ${rowNum}, no email address`);
         return;
       }
@@ -103,7 +103,7 @@ class Manager {
     return numMigrations;
   }
 
-  processPaidTransactions(transactions, membershipData, expirySchedule) { 
+  processPaidTransactions(transactions, membershipData, expirySchedule) {
     const emailToMemberMap = membershipData.length ? Object.fromEntries(membershipData.map((member, index) => [member.Email, index])) : {};
     const errors = [];
     transactions.forEach((txn, i) => {
