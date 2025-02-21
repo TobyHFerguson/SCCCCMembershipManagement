@@ -105,7 +105,7 @@ describe('Manager tests', () => {
         { Email: "test2@example.com", Period: 1, First: "Jane", Last: "Smith", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },
       ];
       try {
-        manager.processExpirations(activeMembers, expiredMembers, expirySchedule);
+        manager.processExpirations(activeMembers, expirySchedule);
       } catch (error) {
         expect(error).toBeInstanceOf(AggregateError);
         expect(error.errors.length).toEqual(2);
@@ -118,46 +118,82 @@ describe('Manager tests', () => {
     beforeEach(() => {
       expirySchedule = [
         { Date: new Date('2050-01-01'), Type: utils.ActionType.Expiry1, Email: "test1@example.com" },
-        { Date: today, Type: utils.ActionType.Expiry2, Email: "test1@example.com" },
-        { Date: new Date('2045-01-01'), Type: utils.ActionType.Expiry1, Email: "test1@example.com" },
-        { Date: today, Type: utils.ActionType.Expiry4, Email: "test1@example.com" }
+        { Date: today, Type: utils.ActionType.Expiry2, Email: "test4@example.com" },
+        { Date: new Date('2045-01-01'), Type: utils.ActionType.Expiry3, Email: "test3@example.com" },
+        { Date: today, Type: utils.ActionType.Expiry4, Email: "test4@example.com" }
       ];
     });
 
     it('should do nothing if there are no members to expire', () => {
-      numProcessed = manager.processExpirations(activeMembers, expiredMembers, expirySchedule);
+      numProcessed = manager.processExpirations(activeMembers, expirySchedule);
       expect(numProcessed).toEqual(2);
-    });
-
-    it('should expire a member if they are fully expired', () => {
-      activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" }];
-      const expectedExpiredMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" }];
-      numProcessed = manager.processExpirations(activeMembers, expiredMembers, expirySchedule);
-      expect(numProcessed).toEqual(2);
-      expect(activeMembers.length).toEqual(0);
-      expect(expiredMembers.length).toEqual(1);
-      expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedExpiredMembers[0].Email, subject: actionSpecs.Expiry2.Subject, htmlBody: actionSpecs.Expiry2.Body.replace('{First}', expectedExpiredMembers[0].First).replace('{Last}', expectedExpiredMembers[0].Last) });
-      expect(expiredMembers).toEqual(expectedExpiredMembers);
-      expect(groupRemoveFun).toHaveBeenCalledTimes(1);
-      expect(groupRemoveFun).toHaveBeenCalledWith(expectedExpiredMembers[0].Email, groupEmails[0].Email);
-      expect(sendEmailFun).toHaveBeenCalledTimes(2);
-      expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedExpiredMembers[0].Email, subject: actionSpecs.Expiry4.Subject, htmlBody: actionSpecs.Expiry4.Body.replace('{First}', expectedExpiredMembers[0].First).replace('{Last}', expectedExpiredMembers[0].Last) });
-      expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedExpiredMembers[0].Email, subject: actionSpecs.Expiry2.Subject, htmlBody: actionSpecs.Expiry2.Body.replace('{First}', expectedExpiredMembers[0].First).replace('{Last}', expectedExpiredMembers[0].Last) });
     });
     it('should log if a member to be expired isnt active', () => {
+      expirySchedule = [
+        { Date: today, Type: utils.ActionType.Expiry1, Email: "test1@example.com" },
+      ]
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
-      manager.processExpirations(activeMembers, expiredMembers, expirySchedule);
-      expect(consoleSpy).toHaveBeenCalledWith('Member test1@example.com is not an active member - cannot expire them');
+      manager.processExpirations(activeMembers, expirySchedule);
+      expect(consoleSpy).toHaveBeenCalledWith("Skipping member test1@example.com - they're not an active member");
     })
     it('should remove the expiry schedule even if the member cannot be expired', () => {
       const expectedExpirySchedule = expirySchedule.filter(e => e.Date > new Date(today));
-      manager.processExpirations(activeMembers, expiredMembers, expirySchedule);
+      manager.processExpirations(activeMembers, expirySchedule);
       expect(expirySchedule).toEqual(expectedExpirySchedule);
     })
     it('should return the number of schedules processed', () => {
-      numProcessed = manager.processExpirations(activeMembers, expiredMembers, expirySchedule);
+      numProcessed = manager.processExpirations(activeMembers, expirySchedule);
       expect(numProcessed).toEqual(2);
     })
+    describe('multiple expiry schedules on the same day for the same address', () => {
+      beforeEach(() => {
+        activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "", Status: 'Active' }];
+        expirySchedule = [
+          { Date: today, Type: utils.ActionType.Expiry2, Email: "test1@example.com" },
+          { Date: today, Type: utils.ActionType.Expiry4, Email: "test1@example.com" }
+        ];
+      })
+      it('should count both schedules as having been processed', () => {
+        numProcessed = manager.processExpirations(activeMembers, expirySchedule);
+        expect(numProcessed).toEqual(2);
+      })
+      it('should log the anomaly', () => {
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+        manager.processExpirations(activeMembers, expirySchedule);
+        expect(consoleSpy).toHaveBeenCalledWith("Skipping test1@example.com for Expiry2 - already processed");
+      })
+      it('should process only the latest expiry', () => {
+        expectedActiveMembers = [{ ...activeMembers[0], Status: 'Expired' }];
+        manager.processExpirations(activeMembers, expirySchedule);
+        expect(activeMembers).toEqual(expectedActiveMembers);
+        expect(groupRemoveFun).toHaveBeenCalledTimes(1);
+        expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groupEmails[0].Email);
+        expect(sendEmailFun).toHaveBeenCalledTimes(1);
+        expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedActiveMembers[0].Email, subject: actionSpecs.Expiry4.Subject, htmlBody: actionSpecs.Expiry4.Body.replace('{First}', expectedActiveMembers[0].First).replace('{Last}', expectedActiveMembers[0].Last) });
+      })
+    });
+    describe('Expiry4 processing', () => {
+      let expectedActiveMembers;
+      beforeEach(() => {
+        expirySchedule = [{ Date: today, Type: utils.ActionType.Expiry4, Email: "test1@example.com" }];
+        activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "", Status: 'Active' }];
+        expectedActiveMembers = [{ ...activeMembers[0], Status: 'Expired' }];
+      });
+      it('should set members status to Expired once Expiry4 has been met', () => {
+        manager.processExpirations(activeMembers, expirySchedule);
+        expect(activeMembers).toEqual(expectedActiveMembers);
+      })
+      it('should remove the member from all groups once Expiry4 has been met', () => {
+        manager.processExpirations(activeMembers, expirySchedule);
+        expect(groupRemoveFun).toHaveBeenCalledTimes(1);
+        expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groupEmails[0].Email);
+      })
+      it('should send an email to the member once Expiry4 has been met', () => {
+        manager.processExpirations(activeMembers, expirySchedule);
+        expect(sendEmailFun).toHaveBeenCalledTimes(1);
+        expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedActiveMembers[0].Email, subject: actionSpecs.Expiry4.Subject, htmlBody: actionSpecs.Expiry4.Body.replace('{First}', expectedActiveMembers[0].First).replace('{Last}', expectedActiveMembers[0].Last) });
+      })
+    });
   });
 
   describe('migrations', () => {
@@ -192,10 +228,10 @@ describe('Manager tests', () => {
       expect(activeMembers).toEqual([]);
     });
     it('should not migrate members who have no email address, & log that fact', () => {
-      const m = {...migrators[0]};
+      const m = { ...migrators[0] };
       delete m.Email
-      migratorsPre = [{...m}];
-      migratorsPost=[{...m}]
+      migratorsPre = [{ ...m }];
+      migratorsPost = [{ ...m }]
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
       manager.migrateCEMembers(migratorsPre, activeMembers, expirySchedule);
       expect(migratorsPost).toEqual(migratorsPre)
