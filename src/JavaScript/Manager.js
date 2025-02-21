@@ -20,38 +20,45 @@ class Manager {
     this._groupEmails = groupEmails;
   }
 
-  processExpirations(activeMembers, expiredMembers, expirySchedule) {
+  processExpirations(activeMembers, expirySchedule) {
+    expirySchedule.forEach(sched => {sched.Date = new Date(sched.Date)});
+    expirySchedule.sort((a, b) => {
+      if (b.Date - a.Date !== 0) {
+        return b.Date - a.Date;
+      }
+      return a.Type.localeCompare(b.Type);
+    });
+    const schedulesToBeProcessed = expirySchedule.reduce((acc, sched, i) => { if (sched.Date <= new Date(this._today)) acc.push(i); return acc; }, []);
+    schedulesToBeProcessed.sort((a, b) => b - a);
     let numProcessed = 0;
-    let membersToBeRemoved = [];
-    for (let i = expirySchedule.length - 1; i >= 0; i--) {
-      const sched = expirySchedule[i];
+    let emailsSeen = new Set();
+    for (let idx of schedulesToBeProcessed) {
+      const sched = expirySchedule[idx];
       const spec = this._actionSpecs[sched.Type];
-      const tdy = new Date(this._today)
-      const schedDate = new Date(utils.getDateString(sched.Date));
-      if (schedDate <= tdy) {
-        numProcessed++;
-        expirySchedule.splice(i, 1);
-        let idx = activeMembers.findIndex(member => member.Email === sched.Email);
-        if (idx === -1) {
-          console.log(`Member ${sched.Email} is not an active member - cannot expire them`);
-        } else {
-          let member = activeMembers[idx];
-          if (sched.Type === utils.ActionType.Expiry4) {
-            expiredMembers.push(member);
-            membersToBeRemoved.push(idx);
-            this._groupEmails.forEach(group => this._groupRemoveFun(member.Email, group.Email));
-          }
-          let message = {
-            to: member.Email,
-            subject: utils.expandTemplate(spec.Subject, member),
-            htmlBody: utils.expandTemplate(spec.Body, member)
-          };
-          this._sendEmailFun(message);
+      expirySchedule.splice(idx, 1);
+      if (emailsSeen.has(sched.Email)) {
+        console.log(`Skipping ${sched.Email} for ${sched.Type} - already processed`);
+        continue;
+      }
+      emailsSeen.add(sched.Email);
+      let memberIdx = activeMembers.findIndex(member => member.Email === sched.Email && member.Status !== 'Expired');
+      if (memberIdx === -1) {
+        console.log(`Skipping member ${sched.Email} - they're not an active member`);
+      } else {
+        let member = activeMembers[memberIdx];
+        if (sched.Type === utils.ActionType.Expiry4) {
+         member.Status = 'Expired'
+          this._groupEmails.forEach(group => this._groupRemoveFun(member.Email, group.Email));
         }
+        let message = {
+          to: member.Email,
+          subject: utils.expandTemplate(spec.Subject, member),
+          htmlBody: utils.expandTemplate(spec.Body, member)
+        };
+        this._sendEmailFun(message);
       }
     }
-    membersToBeRemoved.sort((a, b) => b - a).forEach(idx => activeMembers.splice(idx, 1));
-    return numProcessed;
+    return schedulesToBeProcessed.length;
   }
 
   migrateCEMembers(migrators, activeMembers, expirySchedule) {
