@@ -28,7 +28,6 @@ const ConfigurationManager = (function () {
     function initializeSheets() {
     const bootStrap = bmPreFiddler.PreFiddler().getFiddler({sheetName: 'Bootstrap', createIfMissing: false}).getData();
     sheets = Object.fromEntries(bootStrap.map(row => [row.Reference, row]));
-    console.log('Sheets:', sheets);
   }
   function getGroupEmails() {
     if (!groupEmails) {
@@ -41,19 +40,13 @@ const ConfigurationManager = (function () {
     convertLinks_('Action Specs');
     // We use getDataWithFormulas_ because the Body of an ActionSpec may contain formulas with a URL.
     const actionSpecsAsArray = getDataWithFormulas_(getFiddler('ActionSpecs'))
-    console.log('Action Specs as Array:', actionSpecsAsArray);
     actionSpecs = Object.fromEntries(actionSpecsAsArray.map(spec => [spec.Type, spec]));
-    console.log('Action Specs:', actionSpecs);
     for (const actionSpec of Object.values(actionSpecs)) {
-      console.log('Action Spec:', actionSpec);
       let match = actionSpec.Body.match(/=hyperlink\("(https:\/\/docs.google.com\/document\/d\/[^"]+)"/);
       if (match) {
-        console.log('Match:', match);
         let url = match[1];
         actionSpec.Body = DocsService.convertDocToHtml(url);
-      } else {
-        console.log('No Match: ', actionSpec.Body);
-      }
+      } 
     }
 
   }
