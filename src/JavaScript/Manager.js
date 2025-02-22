@@ -111,12 +111,13 @@ class Manager {
   }
 
   processPaidTransactions(transactions, membershipData, expirySchedule) {
-    const emailToMemberMap = membershipData.length ? Object.fromEntries(membershipData.map((member, index) => [member.Email, index])) : {};
+    const activeMembers = membershipData.reduce((acc, m, i) => {if (m.Status === 'Active') {acc.push([m.Email, i]); }return acc}, [])
+    const emailToActiveMemberIndexMap = Object.fromEntries(activeMembers);
     const errors = [];
     transactions.forEach((txn, i) => {
       try {
         if (!txn.Processed && txn["Payable Status"].toLowerCase().startsWith("paid")) {
-          const matchIndex = emailToMemberMap[txn["Email Address"]];
+          const matchIndex = emailToActiveMemberIndexMap[txn["Email Address"]];
           let message;
           if (matchIndex !== undefined) { // a renewing member
             console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a renewing member`);
@@ -211,6 +212,7 @@ class Manager {
       Period: Manager.getPeriod_(txn),
       Expires: this.calculateExpirationDate(Manager.getPeriod_(txn)),
       "Renewed On": '',
+      Status: "Active"
     };
     membershipData.push(newMember);
     this.addNewMemberToActionSchedule_(newMember, expirySchedule);
