@@ -54,28 +54,25 @@ function processMigrations() {
 
 function processExpirations() {
   const membershipFiddler = ConfigurationManager.getFiddler('ActiveMembers');
-  const expiredMembersFiddler = ConfigurationManager.getFiddler('ExpiredMembers');
   const expiryScheduleFiddler = ConfigurationManager.getFiddler('ExpirySchedule');
 
-  const { manager, membershipData, expiredMembersData, expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler, expiredMembersFiddler);
+  const { manager, membershipData,  expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
-  const numProcessed = manager.processExpirations(membershipData, expiredMembersData, expiryScheduleData);
+  const numProcessed = manager.processExpirations(membershipData, expiryScheduleData);
 
   if (numProcessed === 0) return;
 
-  expiredMembersFiddler.setData(expiredMembersData).dumpValues();
   membershipFiddler.setData(membershipData).dumpValues();
   expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
 }
 
-function initializeManagerData_(membershipFiddler, expiryScheduleFiddler, expiredMembersFiddler = null) {
+function initializeManagerData_(membershipFiddler, expiryScheduleFiddler,) {
   const membershipData = membershipFiddler.getData();
-  const expiredMembersData = expiredMembersFiddler ? expiredMembersFiddler.getData() : null;
   const expiryScheduleData = expiryScheduleFiddler.getData();
 
   const manager = new Manager(ConfigurationManager.getActionSpecs(), ConfigurationManager.getGroupEmails(), getGroupAdder_(), getGroupRemover_(), getEmailSender_());
 
-  return { manager, membershipData, expiredMembersData, expiryScheduleData };
+  return { manager, membershipData, expiryScheduleData };
 }
 
 function getGroupAdder_() {
