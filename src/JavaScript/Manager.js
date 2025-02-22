@@ -30,7 +30,7 @@ class Manager {
     });
     const schedulesToBeProcessed = expirySchedule.reduce((acc, sched, i) => { if (sched.Date <= new Date(this._today)) acc.push(i); return acc; }, []);
     schedulesToBeProcessed.sort((a, b) => b - a);
-    let numProcessed = 0;
+    let emailsExpired = new Set()
     let emailsSeen = new Set();
     for (let idx of schedulesToBeProcessed) {
       const sched = expirySchedule[idx];
@@ -56,6 +56,11 @@ class Manager {
           htmlBody: utils.expandTemplate(spec.Body, member)
         };
         this._sendEmailFun(message);
+      }
+    }
+    for (let i = expirySchedule.length - 1; i >= 0; i--) {
+      if (emailsSeen.has(expirySchedule[i].Email)) {
+        expirySchedule.splice(i, 1);
       }
     }
     return schedulesToBeProcessed.length;

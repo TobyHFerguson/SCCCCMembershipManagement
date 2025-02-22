@@ -171,6 +171,11 @@ describe('Manager tests', () => {
         expect(sendEmailFun).toHaveBeenCalledTimes(1);
         expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedActiveMembers[0].Email, subject: actionSpecs.Expiry4.Subject, htmlBody: actionSpecs.Expiry4.Body.replace('{First}', expectedActiveMembers[0].First).replace('{Last}', expectedActiveMembers[0].Last) });
       })
+      it('should remove all schedules for the expiring member', () => { 
+        expirySchedule.push({ Date: utils.addDaysToDate(today, +3), Type: utils.ActionType.Expiry2, Email: "test1@example.com" })     
+        manager.processExpirations(activeMembers, expirySchedule);
+        expect(expirySchedule).toEqual([]);
+      }) 
     });
     describe('Expiry4 processing', () => {
       let expectedActiveMembers;
