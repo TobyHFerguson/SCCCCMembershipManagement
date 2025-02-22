@@ -82,7 +82,7 @@ describe('Manager tests', () => {
 
     it('should produce interesting logs when processing transactions', () => {
       const txns = [{ ...transactionsFixture.paid[0] }, { ...transactionsFixture.paid[1] }];
-      activeMembers = [{ Email: "test2@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" }];
+      activeMembers = [{ Email: "test2@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "", Status: 'Active' }];
 
       manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
       expect(consoleSpy).toHaveBeenCalledWith('transaction on row 3 test2@example.com is a renewing member');
@@ -308,9 +308,9 @@ describe('Manager tests', () => {
       it('should create the new members', () => {
         const txns = transactionsFixture.paid.filter(t => true) // clone the array
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: "2026-06-15", "Renewed On": "" },
-          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '', Joined: today, Expires: "2027-06-15", "Renewed On": "" },
-          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '', Joined: today, Expires: "2028-06-15", "Renewed On": "" }]
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: "2026-06-15", "Renewed On": "", Status: "Active" },
+          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '', Joined: today, Expires: "2027-06-15", "Renewed On": "", Status: "Active" },
+          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '', Joined: today, Expires: "2028-06-15", "Renewed On": "", Status: "Active" }]
 
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         activeMembers.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
@@ -319,12 +319,12 @@ describe('Manager tests', () => {
         expect(activeMembers).toEqual(expectedMembers);
       });
 
-      it('should handle membership renewals', () => {
+      it('should handle membership renewals for active members', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" },
         ]
-        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "" },]
+        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Active" },]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: utils.addYearsToDate("2025-03-10", 1), "Renewed On": today },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: utils.addYearsToDate("2025-03-10", 1), "Renewed On": today, Status: "Active" },
         ]
         manager.processPaidTransactions(txns, members, expirySchedule,);
         members.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
@@ -332,7 +332,19 @@ describe('Manager tests', () => {
         expect(members.length).toEqual(1)
         expect(members).toEqual(expectedMembers);
       });
-    });
+      it('should treat a renewal for a member with an expired membership as a new member', () => {
+        const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" },
+        ]
+        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired" , Phone:''},]
+        const expectedMembers = [
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired" , Phone: ''},
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": "", Status: "Active" , Phone: ''},
+        ]
+        expectedMembers.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
+        manager.processPaidTransactions(txns, members, expirySchedule,);
+        expect(members).toEqual(expectedMembers);
+      })
+      });
 
     describe('group addition tests', () => {
       it('should add a member to a group when the member is added', () => {
@@ -344,7 +356,7 @@ describe('Manager tests', () => {
 
       it('should not add a member to a group when the member is renewed', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
-        activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "" },]
+        activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: 'Active' },]
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(groupAddFun).toHaveBeenCalledTimes(0);
       });
@@ -364,7 +376,7 @@ describe('Manager tests', () => {
 
       it('should send an email when the member is renewed', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
-        activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "" },]
+        activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: 'Active' },]
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(sendEmailFun).toHaveBeenCalledWith({
           to: activeMembers[0].Email,
@@ -558,7 +570,7 @@ describe('Manager tests', () => {
 
     it('should update an existing expirySchedule', () => {
       const exp = utils.getDateString(utils.addDaysToDate(today, 60))
-      const activeMembers = [{ Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: utils.getDateString('2021-01-01'), Expires: exp }];
+      const activeMembers = [{ Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: utils.getDateString('2021-01-01'), Expires: exp, Status: 'Active' }];
       const expirySchedule = [
         { Email: "test1@example.com", Type: utils.ActionType.Join, Date: today, },
         { Email: "test1@example.com", Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(today, 365 + O1) },
