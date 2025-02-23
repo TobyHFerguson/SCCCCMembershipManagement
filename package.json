@@ -5,10 +5,12 @@
   "main": "index.js",
   "scripts": {
     "test": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp push && clasp run test",
-    "push:watch": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp push -w",
-    "push": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp push",
-    "pull": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp pull",
-    "open": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp open",
+    "prod:push": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp push",
+    "prod:pull": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp pull",
+    "prod:open": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp open",
+    "dev:push": "npx clasp-env --folder . --scriptId 1vxnOkgujRS9wKml2m0qcykeUhHcqI1e7UUTLdngcoGGtx4lCnsDfSSKc && clasp push -w",
+    "dev:pull": "npx clasp-env --folder . --scriptId 1vxnOkgujRS9wKml2m0qcykeUhHcqI1e7UUTLdngcoGGtx4lCnsDfSSKc && clasp pull",
+    "dev:open": "npx clasp-env --folder . --scriptId 1vxnOkgujRS9wKml2m0qcykeUhHcqI1e7UUTLdngcoGGtx4lCnsDfSSKc && clasp open",
     "docs": "npx jsdoc -c jsdoc.json"
   },
   "repository": {
