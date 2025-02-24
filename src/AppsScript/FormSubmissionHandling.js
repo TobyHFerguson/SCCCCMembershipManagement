@@ -20,12 +20,12 @@ function checkPaymentStatus() {
       Logger.log("Backing off to hourly checks.");
       deletePaymentCheckTrigger();
       createTrigger('checkPaymentStatus', 60); // Hourly
-      PropertiesService.getScriptProperties().deleteProperty('paymentCheckStartTime'); // Reset start time for next backoff period
+      PropertiesService.getScriptProperties().deleteProperty('paymentCheckStartTime'); // Clear start time
     } else if (elapsedTime > 5 * 60 * 1000) { // 5 minutes - Back off to 5-min checks
       Logger.log("Backing off to 5-minute checks.");
       deletePaymentCheckTrigger();
       createTrigger('checkPaymentStatus', 5); // 5-minutely
-      PropertiesService.getScriptProperties().deleteProperty('paymentCheckStartTime'); // Reset start time for next backoff period
+      PropertiesService.getScriptProperties().setProperty('paymentCheckStartTime', new Date().getTime()); // Reset start time for next backoff period
     }
   } else { // All payments processed
     deletePaymentCheckTrigger();
