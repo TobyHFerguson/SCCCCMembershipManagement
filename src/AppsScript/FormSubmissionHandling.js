@@ -5,27 +5,13 @@ function onFormSubmit(e) {
 }
 
 function checkPaymentStatus() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("Payments");
-  const dataRange = sheet.getDataRange();
-  const data = dataRange.getValues();
-
-  let rowsRemaining = 0;
-
-  for (let i = 1; i < data.length; i++) { // Skip header row
-    const paymentStatus = data[i][2]; // Assuming the payment status is in the 3rd column
-    if (paymentStatus !== "Paid") {
-      rowsRemaining++;
-    }
-  }
-
   const now = new Date().getTime();
   let startTime = PropertiesService.getScriptProperties().getProperty('paymentCheckStartTime');
   startTime = startTime ? parseInt(startTime, 10) : now; // Initialize if it doesn't exist
 
   const elapsedTime = now - startTime;
 
-  if (rowsRemaining > 0) { // Still pending payments
+  if (hasPendingPayments()) { // Still pending payments
     if (elapsedTime > 15 * 60 * 1000) { // 15 minutes - Back off to hourly
       Logger.log("Backing off to hourly checks.");
       deletePaymentCheckTrigger();
@@ -41,6 +27,21 @@ function checkPaymentStatus() {
     deletePaymentCheckTrigger();
     PropertiesService.getScriptProperties().deleteProperty('paymentCheckStartTime'); // Clear start time
   }
+}
+
+function hasPendingPayments() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Payments");
+  const dataRange = sheet.getDataRange();
+  const data = dataRange.getValues();
+
+  for (let i = 1; i < data.length; i++) { // Skip header row
+    const paymentStatus = data[i][2]; // Assuming the payment status is in the 3rd column
+    if (paymentStatus !== "Paid") {
+      return true;
+    }
+  }
+  return false;
 }
 
 function ensureTrigger() {
