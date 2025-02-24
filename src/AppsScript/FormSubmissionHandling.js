@@ -1,53 +1,41 @@
 function onFormSubmit(e) {
-  const newRow = e.range.getRow();
-  let submissionRows = PropertiesService.getScriptProperties().getProperty('submissionRows');
-  submissionRows = submissionRows ? JSON.parse(submissionRows) : [];
-  submissionRows.push(newRow);
-  PropertiesService.getScriptProperties().setProperty('submissionRows', JSON.stringify(submissionRows));
-
   // Ensure a trigger exists (either high or low frequency)
   ensureTrigger();
-  Logger.log("New form submission on row: " + newRow);
+  Logger.log("New form submission on row: " + e.range.getRow());
 }
 
 function checkPaymentStatus() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName("Payments");
-  let submissionRows = PropertiesService.getScriptProperties().getProperty('submissionRows');
-  submissionRows = submissionRows ? JSON.parse(submissionRows) : [];
+  const dataRange = sheet.getDataRange();
+  const data = dataRange.getValues();
+
+  let rowsRemaining = 0;
+
+  for (let i = 1; i < data.length; i++) { // Skip header row
+    const paymentStatus = data[i][2]; // Assuming the payment status is in the 3rd column
+    if (paymentStatus !== "Paid") {
+      rowsRemaining++;
+    }
+  }
 
   const now = new Date().getTime();
   let startTime = PropertiesService.getScriptProperties().getProperty('paymentCheckStartTime');
   startTime = startTime ? parseInt(startTime, 10) : now; // Initialize if it doesn't exist
 
-  for (let i = 0; i < submissionRows.length; i++) {
-    const row = submissionRows[i];
-    const paymentStatus = sheet.getRange(row, 3).getValue();
-
-    if (paymentStatus === "Paid") {
-      Logger.log("Payment received for row: " + row);
-      submissionRows.splice(i, 1);
-      i--;
-    }
-  }
-
-  PropertiesService.getScriptProperties().setProperty('submissionRows', JSON.stringify(submissionRows));
-  PropertiesService.getScriptProperties().setProperty('paymentCheckStartTime', startTime); // Update start time
-
   const elapsedTime = now - startTime;
 
-  if (submissionRows.length > 0) { // Still pending payments
-
+  if (rowsRemaining > 0) { // Still pending payments
     if (elapsedTime > 15 * 60 * 1000) { // 15 minutes - Back off to hourly
       Logger.log("Backing off to hourly checks.");
       deletePaymentCheckTrigger();
       createTrigger('checkPaymentStatus', 60); // Hourly
       PropertiesService.getScriptProperties().deleteProperty('paymentCheckStartTime'); // Reset start time for next backoff period
     } else if (elapsedTime > 5 * 60 * 1000) { // 5 minutes - Back off to 5-min checks
-        Logger.log("Backing off to 5-minute checks.");
-        deletePaymentCheckTrigger();
-        createTrigger('checkPaymentStatus', 5); // 5-minutely
-        PropertiesService.getScriptProperties().deleteProperty('paymentCheckStartTime'); // Reset start time for next backoff period
+      Logger.log("Backing off to 5-minute checks.");
+      deletePaymentCheckTrigger();
+      createTrigger('checkPaymentStatus', 5); // 5-minutely
+      PropertiesService.getScriptProperties().deleteProperty('paymentCheckStartTime'); // Reset start time for next backoff period
     }
   } else { // All payments processed
     deletePaymentCheckTrigger();
