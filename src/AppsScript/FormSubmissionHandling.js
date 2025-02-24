@@ -1,7 +1,11 @@
 function onFormSubmit(e) {
-  // Ensure a trigger exists (either high or low frequency)
-  ensureTrigger();
   Logger.log("New form submission on row: " + e.range.getRow());
+
+  // Reset the payment check trigger to 1-minute and update the start time
+  deletePaymentCheckTrigger();
+  const triggerId = createTrigger('checkPaymentStatus', 1); // Initial 1-minute trigger
+  PropertiesService.getScriptProperties().setProperty('paymentCheckStartTime', new Date().getTime()); // Reset start time
+  PropertiesService.getScriptProperties().setProperty('paymentCheckTriggerId', triggerId);
 }
 
 function checkPaymentStatus() {
@@ -55,14 +59,6 @@ function checkPendingPaymentsInData(data, lastUpdateTime) {
   }
 
   return false;
-}
-
-function ensureTrigger() {
-  if (!PropertiesService.getScriptProperties().getProperty('paymentCheckTriggerId')) {
-    const triggerId = createTrigger('checkPaymentStatus', 1); // Initial 1-minute trigger
-    PropertiesService.getScriptProperties().setProperty('paymentCheckStartTime', new Date().getTime()); // Initialize start time
-    PropertiesService.getScriptProperties().setProperty('paymentCheckTriggerId', triggerId);
-  }
 }
 
 function createTrigger(functionName, minutes) {
