@@ -34,7 +34,7 @@ function hasPendingPayments() {
   const sheet = ss.getSheetByName("Payments");
   const lastUpdateTime = sheet.getLastUpdated();
   const lastProcessedTime = PropertiesService.getScriptProperties().getProperty('lastProcessedTime');
-  
+
   if (lastProcessedTime && lastUpdateTime <= parseInt(lastProcessedTime, 10)) {
     Logger.log("No updates since last check.");
     return true; // Spreadsheet not updated, assume pending payments
@@ -42,16 +42,18 @@ function hasPendingPayments() {
 
   const dataRange = sheet.getDataRange();
   const data = dataRange.getValues();
+  PropertiesService.getScriptProperties().setProperty('lastProcessedTime', lastUpdateTime);
+  return checkPendingPaymentsInData(data, lastUpdateTime);
+}
 
+function checkPendingPaymentsInData(data, lastUpdateTime) {
   for (let i = 1; i < data.length; i++) { // Skip header row
     const paymentStatus = data[i][2]; // Assuming the payment status is in the 3rd column
     if (paymentStatus !== "Paid") {
-      PropertiesService.getScriptProperties().setProperty('lastProcessedTime', lastUpdateTime);
       return true;
     }
   }
 
-  PropertiesService.getScriptProperties().setProperty('lastProcessedTime', lastUpdateTime);
   return false;
 }
 
