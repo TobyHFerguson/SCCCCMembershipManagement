@@ -1,6 +1,13 @@
 /**
  * @OnlyCurrentDoc - only edit this spreadsheet, and no other
  */
+function processTransactionsOnFormSubmitEvent(event) {
+  console.log('Processing Transactions on Form Submit Event');
+  console.log('event.range.getRow()', event.range.getRow())
+}
+function processTransactionsOnEditEvent(event) {
+  console.log('Processing Transactions on Edit Event', event);
+}
  function processTransactions() {
   convertLinks_('Transactions');
   const transactionsFiddler = ConfigurationManager.getFiddler('Transactions').needFormulas();
