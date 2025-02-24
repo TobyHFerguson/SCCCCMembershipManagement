@@ -56,9 +56,8 @@ function checkPaymentStatus() {
 }
 
 function ensureTrigger() {
-  if (!PropertiesService.getScriptProperties().getProperty('paymentCheckTriggerExists')) {
+  if (!PropertiesService.getScriptProperties().getProperty('paymentCheckTriggerId')) {
     const triggerId = createTrigger('checkPaymentStatus', 1); // Initial 1-minute trigger
-    PropertiesService.getScriptProperties().setProperty('paymentCheckTriggerExists', true);
     PropertiesService.getScriptProperties().setProperty('paymentCheckStartTime', new Date().getTime()); // Initialize start time
     PropertiesService.getScriptProperties().setProperty('paymentCheckTriggerId', triggerId);
   }
@@ -83,7 +82,6 @@ function deletePaymentCheckTrigger() {
         break;
       }
     }
-    PropertiesService.getScriptProperties().deleteProperty('paymentCheckTriggerExists');
     PropertiesService.getScriptProperties().deleteProperty('paymentCheckTriggerId');
   }
 }
