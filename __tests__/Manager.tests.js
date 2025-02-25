@@ -329,6 +329,12 @@ describe('Manager tests', () => {
         expect(recordsChanged).toBe(false);
         expect(hasPendingPayments).toBe(false);
       });
+      it('should return true if records and expiry schedule were changed', () => {
+        const txns = transactionsFixture.paid.filter(t => true) // clone the array
+        const {recordsChanged, hasPendingPayments} = manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
+        expect(recordsChanged).toBe(true);
+        expect(hasPendingPayments).toBe(false);
+      });
 
       it('should handle membership renewals for active members', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" },

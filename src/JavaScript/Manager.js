@@ -149,7 +149,7 @@ class Manager {
           this._sendEmailFun(message);
           txn.Timestamp = this._today;
           txn.Processed = this._today;
-          recordsChanged &= true;
+          recordsChanged = true;
         }
       } catch (error) {
         error.txnNum = i + 2;
