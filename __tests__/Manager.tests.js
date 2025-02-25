@@ -323,6 +323,12 @@ describe('Manager tests', () => {
         expect(activeMembers.length).toEqual(3)
         expect(activeMembers).toEqual(expectedMembers);
       });
+      it('should return whether changes were made to the transactions and expiration schedule, as well as whether unpaid transactions remain', () => {
+        const txns = [];
+        const {recordsChanged, hasPendingPayments} = manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
+        expect(recordsChanged).toBe(false);
+        expect(hasPendingPayments).toBe(false);
+      });
 
       it('should handle membership renewals for active members', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" },
