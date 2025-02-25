@@ -6,7 +6,7 @@ const transactionsFixture = {
     { "Payable Status": "pending", "Email Address": "test2@example.com" },
   ],
   paidAndProcessed: [
-  { "Payable Status": "paid", "Email Address": "test3@example.com", Processed: "2025-06-15" },
+    { "Payable Status": "paid", "Email Address": "test3@example.com", Processed: "2025-06-15" },
   ],
   paid: [
     { "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year", Phone: "(408) 386-9343" },
@@ -140,7 +140,7 @@ describe('Manager tests', () => {
       expect(consoleSpy).toHaveBeenCalledWith("Skipping member test1@example.com - they're not an active member");
     })
     it('should remove the expiry schedule even if the member cannot be expired', () => {
-      const expectedExpirySchedule = expirySchedule.filter(e => e.Date > new Date(today));
+      const expectedExpirySchedule = expirySchedule.filter(e => e.Date > new Date(today)).map(e => { return { ...e } });
       manager.processExpirations(activeMembers, expirySchedule);
       expect(expirySchedule).toEqual(expectedExpirySchedule);
     })
@@ -174,11 +174,11 @@ describe('Manager tests', () => {
         expect(sendEmailFun).toHaveBeenCalledTimes(1);
         expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedActiveMembers[0].Email, subject: actionSpecs.Expiry4.Subject, htmlBody: actionSpecs.Expiry4.Body.replace('{First}', expectedActiveMembers[0].First).replace('{Last}', expectedActiveMembers[0].Last) });
       })
-      it('should remove all schedules for the expiring member', () => { 
-        expirySchedule.push({ Date: utils.addDaysToDate(today, +3), Type: utils.ActionType.Expiry2, Email: "test1@example.com" })     
+      it('should remove all schedules for the expiring member', () => {
+        expirySchedule.push({ Date: utils.addDaysToDate(today, +3), Type: utils.ActionType.Expiry2, Email: "test1@example.com" })
         manager.processExpirations(activeMembers, expirySchedule);
         expect(expirySchedule).toEqual([]);
-      }) 
+      })
     });
     describe('Expiry4 processing', () => {
       let expectedActiveMembers;
@@ -314,7 +314,7 @@ describe('Manager tests', () => {
   describe('processPaidTransactions_', () => {
     describe('basic tests', () => {
       it('should create the new members', () => {
-        const txns = transactionsFixture.paid.map(t => {return {...t}}) // clone the array
+        const txns = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
         const expectedMembers = [
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: "2026-06-15", "Renewed On": "", Status: "Active" },
           { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '', Joined: today, Expires: "2027-06-15", "Renewed On": "", Status: "Active" },
@@ -328,25 +328,25 @@ describe('Manager tests', () => {
       });
       it('should return whether changes were made to the transactions and expiration schedule, as well as whether unpaid transactions remain', () => {
         const txns = [];
-        const {recordsChanged, hasPendingPayments} = manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
+        const { recordsChanged, hasPendingPayments } = manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(recordsChanged).toBe(false);
         expect(hasPendingPayments).toBe(false);
       });
       it('should return true if records and expiry schedule were changed', () => {
-        const txns = transactionsFixture.paid.map(t => {return {...t}}) // clone the array
-        const {recordsChanged, hasPendingPayments} = manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
+        const txns = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
+        const { recordsChanged, hasPendingPayments } = manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(recordsChanged).toBe(true);
         expect(hasPendingPayments).toBe(false);
       });
       it('should return true if there are unpaid transactions', () => {
-        const txns = transactionsFixture.unpaid.map(t => {return {...t}}) // clone the array
-        const {recordsChanged, hasPendingPayments} = manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
+        const txns = transactionsFixture.unpaid.map(t => { return { ...t } }) // clone the array
+        const { recordsChanged, hasPendingPayments } = manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(recordsChanged).toBe(false);
         expect(hasPendingPayments).toBe(true);
       });
       it('should return false when transactions are paid and processed', () => {
-        const txns = transactionsFixture.paidAndProcessed.map(t => {return {...t}}) // clone the array
-        const {recordsChanged, hasPendingPayments} = manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
+        const txns = transactionsFixture.paidAndProcessed.map(t => { return { ...t } }) // clone the array
+        const { recordsChanged, hasPendingPayments } = manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(recordsChanged).toBe(false);
         expect(hasPendingPayments).toBe(false);
       })
@@ -366,16 +366,16 @@ describe('Manager tests', () => {
       it('should treat a renewal for a member with an expired membership as a new member', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" },
         ]
-        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired" , Phone:''},]
+        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired", Phone: '' },]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired" , Phone: ''},
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": "", Status: "Active" , Phone: ''},
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired", Phone: '' },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": "", Status: "Active", Phone: '' },
         ]
         expectedMembers.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
         manager.processPaidTransactions(txns, members, expirySchedule,);
         expect(members).toEqual(expectedMembers);
       })
-      });
+    });
 
     describe('group addition tests', () => {
       it('should add a member to a group when the member is added', () => {
@@ -421,7 +421,7 @@ describe('Manager tests', () => {
     describe('membership expiry period tests', () => {
       let txns;
       beforeEach(() => {
-        txns = transactionsFixture.paid.filter(t => true) // clone the array
+        txns = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
       })
       it('if renewal is before expiry then new expiry is  old expiry + period', () => {
         activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: manager.today(), Expires: utils.addDaysToDate(manager.today(), 10), "Renewed On": "" },]
@@ -438,7 +438,7 @@ describe('Manager tests', () => {
         const expectedMembers = [
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: utils.getDateString(), Expires: utils.addDaysToDate(new Date(), 365), "Renewed On": manager.today() },
         ]
-        txns = transactionsFixture.paid.filter(_ => true);
+        txns = transactionsFixture.paid.map(t => { return { ...t } });
         manager.processPaidTransactions(txns, activeMembers, expirySchedule);
         activeMembers.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
         expectedMembers.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
@@ -451,14 +451,14 @@ describe('Manager tests', () => {
         { Email: "test2@example.com", Period: 1, first: "Jane", last: "Smith", },
         { Email: "test3@example.com", Period: 3, first: "Not", last: "Member" }
         ];
-        txns = transactionsFixture.differentTerms.filter(t => true) // clone the array
+        txns = transactionsFixture.differentTerms.map(t => { return { ...t } }) // clone the array
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(activeMembers.map(m => m.Period)).toEqual(expectedMembers.map(m => m.Period));
 
       });
 
       it('should return period as 1 if payment term is not specified', () => {
-        txns = transactionsFixture.noTerm.filter(t => true) // clone the array    
+        txns = transactionsFixture.noTerm.map(t => { return { ...t } }) // clone the array    
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(activeMembers.map(m => m.Period)).toEqual([1, 1, 1])
       });
