@@ -119,6 +119,8 @@ class Manager {
     const activeMembers = membershipData.reduce((acc, m, i) => {if (m.Status === 'Active') {acc.push([m.Email, i]); }return acc}, [])
     const emailToActiveMemberIndexMap = Object.fromEntries(activeMembers);
     const errors = [];
+    let recordsChanged = false;
+    let hasPendingPayments = false;
     transactions.forEach((txn, i) => {
       try {
         if (!txn.Processed && txn["Payable Status"].toLowerCase().startsWith("paid")) {
@@ -147,6 +149,7 @@ class Manager {
           this._sendEmailFun(message);
           txn.Timestamp = this._today;
           txn.Processed = this._today;
+          recordsChanged &= true;
         }
       } catch (error) {
         error.txnNum = i + 2;
@@ -158,6 +161,7 @@ class Manager {
     if (errors.length > 0) {
       throw new AggregateError(errors, 'Errors occurred while processing transactions');
     }
+    return { recordsChanged, hasPendingPayments };
   }
 
 
