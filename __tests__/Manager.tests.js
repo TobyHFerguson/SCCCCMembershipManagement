@@ -3,7 +3,10 @@ const Manager = require('../src/JavaScript/Manager');
 const transactionsFixture = {
   unpaid: [
     { "Payable Status": "unpaid", "Email Address": "test1@example.com" },
-    { "Payable Status": "pending", "Email Address": "test2@example.com" }
+    { "Payable Status": "pending", "Email Address": "test2@example.com" },
+  ],
+  paidAndProcessed: [
+  { "Payable Status": "paid", "Email Address": "test3@example.com", Processed: "2025-06-15" },
   ],
   paid: [
     { "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year", Phone: "(408) 386-9343" },
@@ -311,7 +314,7 @@ describe('Manager tests', () => {
   describe('processPaidTransactions_', () => {
     describe('basic tests', () => {
       it('should create the new members', () => {
-        const txns = transactionsFixture.paid.filter(t => true) // clone the array
+        const txns = transactionsFixture.paid.map(t => {return {...t}}) // clone the array
         const expectedMembers = [
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: "2026-06-15", "Renewed On": "", Status: "Active" },
           { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '', Joined: today, Expires: "2027-06-15", "Renewed On": "", Status: "Active" },
@@ -330,12 +333,23 @@ describe('Manager tests', () => {
         expect(hasPendingPayments).toBe(false);
       });
       it('should return true if records and expiry schedule were changed', () => {
-        const txns = transactionsFixture.paid.filter(t => true) // clone the array
+        const txns = transactionsFixture.paid.map(t => {return {...t}}) // clone the array
         const {recordsChanged, hasPendingPayments} = manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(recordsChanged).toBe(true);
         expect(hasPendingPayments).toBe(false);
       });
-
+      it('should return true if there are unpaid transactions', () => {
+        const txns = transactionsFixture.unpaid.map(t => {return {...t}}) // clone the array
+        const {recordsChanged, hasPendingPayments} = manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
+        expect(recordsChanged).toBe(false);
+        expect(hasPendingPayments).toBe(true);
+      });
+      it('should return false when transactions are paid and processed', () => {
+        const txns = transactionsFixture.paidAndProcessed.map(t => {return {...t}}) // clone the array
+        const {recordsChanged, hasPendingPayments} = manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
+        expect(recordsChanged).toBe(false);
+        expect(hasPendingPayments).toBe(false);
+      })
       it('should handle membership renewals for active members', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" },
         ]
