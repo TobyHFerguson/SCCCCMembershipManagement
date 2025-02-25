@@ -1,5 +1,5 @@
 const PAYMENT_STATUS_FUNCTION = 'checkPaymentStatus';
-const PAYMENT_SHEET_NAME = 'Payments';
+const PAYMENT_SHEET_NAME = 'Transactions';
 const PAYMENT_STATUS_COLUMN_INDEX = 2; // Assuming the payment status is in the 3rd column
 const PAID_STATUS = 'Paid';
 const NO_UPDATES_LOG = 'No updates since last check.';
@@ -9,97 +9,141 @@ const BACKING_OFF_5_MIN_LOG = 'Backing off to 5-minute checks.';
 const TRIGGER_DELETED_LOG = 'Payment check trigger deleted.';
 const TRIGGER_NOT_FOUND_LOG = 'Trigger not found, nothing to delete.';
 const ERROR_DELETING_TRIGGER_LOG = 'Error deleting trigger: ';
+const CHECK_PAYMENT_STATUS_LOG = 'Running checkPaymentStatus.';
+const PAYMENTS_PENDING_LOG = 'Payments are still pending.';
+const PAYMENTS_PROCESSED_LOG = 'All payments have been processed.';
+const SPREADSHEET_ID_PROPERTY = 'spreadsheetId';
+const ELAPSED_TIME_LOG = '[DEBUG] Elapsed time: ';
+const START_TIME_LOG = '[DEBUG] Start time: ';
+const CURRENT_TIME_LOG = '[DEBUG] Current time: ';
+const SET_START_TIME_LOG = '[DEBUG] Setting start time: ';
+const RETRIEVED_START_TIME_LOG = '[DEBUG] Retrieved start time: ';
+const DELETED_START_TIME_LOG = '[DEBUG] Deleted start time';
+const ERROR_GETTING_LAST_UPDATED_TIME_LOG = 'Error getting last updated time: ';
+const LAST_UPDATED_LOG = 'Last updated: ';
+const COULD_NOT_GET_LAST_UPDATED_TIME_LOG = 'Could not get last updated time.';
 
 function onFormSubmit(e) {
-  Logger.log(NEW_SUBMISSION_LOG + e.range.getRow());
+    console.log(NEW_SUBMISSION_LOG, e.range.getRow());
 
-  // Reset the payment check trigger to 1-minute and update the start time
-  deletePaymentCheckTrigger();
-  const triggerId = createTrigger(PAYMENT_STATUS_FUNCTION, 1); // Initial 1-minute trigger
-  PropertiesService.getScriptProperties().setProperty('paymentCheckStartTime', new Date().getTime()); // Reset start time
-  PropertiesService.getScriptProperties().setProperty('paymentCheckTriggerId', triggerId);
+    // Store the Spreadsheet ID
+    const spreadsheetId = e.source.getId();
+    PropertiesService.getScriptProperties().setProperty(SPREADSHEET_ID_PROPERTY, spreadsheetId);
+
+    // Reset the payment check trigger to 1-minute and update the start time
+    deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
+    createMinuteTrigger(PAYMENT_STATUS_FUNCTION, 1); // Initial 1-minute trigger
+    const startTime = new Date();
+    console.log(SET_START_TIME_LOG, startTime);
+    PropertiesService.getScriptProperties().setProperty('paymentCheckStartTime', startTime); // Reset start time
+    const st = PropertiesService.getScriptProperties().getProperty('paymentCheckStartTime');
+    console.log(RETRIEVED_START_TIME_LOG, st);
 }
 
 function checkPaymentStatus() {
-  const now = new Date().getTime();
-  let startTime = PropertiesService.getScriptProperties().getProperty('paymentCheckStartTime');
-  startTime = startTime ? parseInt(startTime, 10) : now; // Initialize if it doesn't exist
+    console.log(CHECK_PAYMENT_STATUS_LOG);
+    const now = new Date();
+    console.log(CURRENT_TIME_LOG, now);
+    const startTime = getTimeFromProperty('paymentCheckStartTime') || now;
+    console.log(START_TIME_LOG, startTime);
 
-  const elapsedTime = now - startTime;
+    const elapsedTime = now - startTime;
+    console.log(ELAPSED_TIME_LOG, elapsedTime);
 
-  if (hasPendingPayments()) { // Still pending payments
-    if (elapsedTime > 15 * 60 * 1000) { // 15 minutes - Back off to hourly
-      Logger.log(BACKING_OFF_HOURLY_LOG);
-      deletePaymentCheckTrigger();
-      createTrigger(PAYMENT_STATUS_FUNCTION, 60); // Hourly
-      PropertiesService.getScriptProperties().deleteProperty('paymentCheckStartTime'); // Clear start time
-    } else if (elapsedTime > 5 * 60 * 1000) { // 5 minutes - Back off to 5-min checks
-      Logger.log(BACKING_OFF_5_MIN_LOG);
-      deletePaymentCheckTrigger();
-      createTrigger(PAYMENT_STATUS_FUNCTION, 5); // 5-minutely
-      PropertiesService.getScriptProperties().setProperty('paymentCheckStartTime', new Date().getTime()); // Reset start time for next backoff period
+    if (hasPendingPayments()) { // Still pending payments
+        console.log(PAYMENTS_PENDING_LOG);
+        if (elapsedTime > 6 * 60 * 1000) { // 6 minutes - Back off to hourly
+            console.log(BACKING_OFF_HOURLY_LOG);
+            deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
+            createHourlyTrigger(PAYMENT_STATUS_FUNCTION, 1); // Hourly
+            PropertiesService.getScriptProperties().deleteProperty('paymentCheckStartTime'); // Clear start time
+            console.log(DELETED_START_TIME_LOG);
+        } else if (elapsedTime > 3 * 60 * 1000) { // 3 minutes - Back off to 5-min checks
+            console.log(BACKING_OFF_5_MIN_LOG);
+            deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
+            createMinuteTrigger(PAYMENT_STATUS_FUNCTION, 5); // 5-minutely
+        }
+    } else { // All payments processed
+        console.log(PAYMENTS_PROCESSED_LOG);
+        deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
+        PropertiesService.getScriptProperties().deleteProperty('paymentCheckStartTime'); // Clear start time
+        console.log(DELETED_START_TIME_LOG);
     }
-  } else { // All payments processed
-    deletePaymentCheckTrigger();
-    PropertiesService.getScriptProperties().deleteProperty('paymentCheckStartTime'); // Clear start time
-  }
+}
+
+function getTimeFromProperty(propertyName) {
+    const time = PropertiesService.getScriptProperties().getProperty(propertyName);
+    return time ? new Date(time) : null;
 }
 
 function hasPendingPayments() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(PAYMENT_SHEET_NAME);
-  const lastUpdateTime = sheet.getLastUpdated();
-  const lastProcessedTime = PropertiesService.getScriptProperties().getProperty('lastProcessedTime');
+    const spreadsheetId = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_ID_PROPERTY);
+    const ss = SpreadsheetApp.openById(spreadsheetId);
+    const sheet = ss.getSheetByName(PAYMENT_SHEET_NAME);
+    const lastUpdateTime = getLastSpreadsheetUpdateTime(spreadsheetId); // Use current time as last update time
+    const lastProcessedTime = getTimeFromProperty('lastProcessedTime');
 
-  if (lastProcessedTime && lastUpdateTime <= parseInt(lastProcessedTime, 10)) {
-    Logger.log(NO_UPDATES_LOG);
-    return true; // Spreadsheet not updated, assume pending payments
-  }
+    if (lastProcessedTime && lastUpdateTime <= lastProcessedTime) {
+        console.log(NO_UPDATES_LOG);
+        return true; // Spreadsheet not updated, assume pending payments
+    }
 
-  const dataRange = sheet.getDataRange();
-  const data = dataRange.getValues();
-  PropertiesService.getScriptProperties().setProperty('lastProcessedTime', lastUpdateTime);
-  return checkPendingPaymentsInData(data, lastUpdateTime);
+    const dataRange = sheet.getDataRange();
+    const data = dataRange.getValues();
+    PropertiesService.getScriptProperties().setProperty('lastProcessedTime', new Date());
+    return checkPendingPaymentsInData(data, lastUpdateTime);
 }
 
 function checkPendingPaymentsInData(data, lastUpdateTime) {
-  for (let i = 1; i < data.length; i++) { // Skip header row
-    const paymentStatus = data[i][PAYMENT_STATUS_COLUMN_INDEX];
-    if (paymentStatus !== PAID_STATUS) {
-      return true;
-    }
-  }
-
-  return false;
+    return PropertiesService.getScriptProperties().getProperty('pendingPayments') === 'true';
 }
 
-function createTrigger(functionName, minutes) {
-  const trigger = ScriptApp.newTrigger(functionName)
-      .timeBased()
-      .everyMinutes(minutes)
-      .create();
-  return trigger.getUniqueId();
+function createMinuteTrigger(functionName, minutes) {
+    deleteTriggersByFunctionName(functionName);
+    const trigger = ScriptApp.newTrigger(functionName)
+        .timeBased()
+        .everyMinutes(minutes)
+        .create();
+    return trigger.getUniqueId();
 }
 
-function deletePaymentCheckTrigger() {
-  const triggerId = PropertiesService.getScriptProperties().getProperty('paymentCheckTriggerId');
-  if (triggerId) {
+function createHourlyTrigger(functionName, hours) {
+    deleteTriggersByFunctionName(functionName);
+    const trigger = ScriptApp.newTrigger(functionName)
+        .timeBased()
+        .everyHours(hours)
+        .create();
+    return trigger.getUniqueId();
+}
+
+function deleteTriggersByFunctionName(functionName) {
     const triggers = ScriptApp.getProjectTriggers();
     for (const trigger of triggers) {
-      if (trigger.getUniqueId() === triggerId) {
-        try {
-          ScriptApp.deleteTrigger(trigger);
-          Logger.log(TRIGGER_DELETED_LOG);
-        } catch (e) {
-          if (e.message.includes('Trigger not found')) {
-            Logger.log(TRIGGER_NOT_FOUND_LOG);
-          } else {
-            Logger.log(ERROR_DELETING_TRIGGER_LOG + e.message);
-          }
+        if (trigger.getHandlerFunction() === functionName) {
+            ScriptApp.deleteTrigger(trigger);
+            console.log(TRIGGER_DELETED_LOG);
         }
-        break;
-      }
     }
-    PropertiesService.getScriptProperties().deleteProperty('paymentCheckTriggerId');
-  }
+}
+
+function getLastSpreadsheetUpdateTime(spreadsheetId) {
+    spreadsheetId = spreadsheetId || SpreadsheetApp.getActiveSpreadsheet().getId()
+    try {
+      var file = DriveApp.getFileById(spreadsheetId);
+      var lastUpdated = file.getLastUpdated();
+      return lastUpdated;
+    } catch (e) {
+      console.log(ERROR_GETTING_LAST_UPDATED_TIME_LOG, e.toString());
+      return null; // Return null if there's an error
+    }
+}
+  
+function testGetLastUpdateTime() {
+    var lastUpdated = getLastSpreadsheetUpdateTime();
+  
+    if (lastUpdated) {
+      console.log(LAST_UPDATED_LOG, lastUpdated);
+    } else {
+      console.log(COULD_NOT_GET_LAST_UPDATED_TIME_LOG);
+    }
 }
