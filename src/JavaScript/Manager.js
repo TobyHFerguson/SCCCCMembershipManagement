@@ -21,7 +21,7 @@ class Manager {
   }
 
   processExpirations(activeMembers, expirySchedule) {
-    expirySchedule.forEach(sched => {sched.Date = new Date(sched.Date)});
+    expirySchedule.forEach(sched => { sched.Date = new Date(sched.Date) });
     expirySchedule.sort((a, b) => {
       if (b.Date - a.Date !== 0) {
         return b.Date - a.Date;
@@ -47,7 +47,7 @@ class Manager {
       } else {
         let member = activeMembers[memberIdx];
         if (sched.Type === utils.ActionType.Expiry4) {
-         member.Status = 'Expired'
+          member.Status = 'Expired'
           this._groupEmails.forEach(group => this._groupRemoveFun(member.Email, group.Email));
         }
         let message = {
@@ -116,48 +116,53 @@ class Manager {
   }
 
   processPaidTransactions(transactions, membershipData, expirySchedule) {
-    const activeMembers = membershipData.reduce((acc, m, i) => {if (m.Status === 'Active') {acc.push([m.Email, i]); }return acc}, [])
+    const activeMembers = membershipData.reduce((acc, m, i) => { if (m.Status === 'Active') { acc.push([m.Email, i]); } return acc }, [])
     const emailToActiveMemberIndexMap = Object.fromEntries(activeMembers);
     const errors = [];
     let recordsChanged = false;
     let hasPendingPayments = false;
     transactions.forEach((txn, i) => {
+      if (txn.Processed) { // skip it if it's already been processed
+        return;
+      }
+      if (!txn["Payable Status"] || !txn["Payable Status"].toLowerCase().startsWith("paid")) {
+        hasPendingPayments = true; // if any transaction is not marked as paid, we have pending payments
+        return
+      }
+      // We get here with a transaction that is not processed but is marked as paid. Process it.
       try {
-        if (!txn.Processed && txn["Payable Status"].toLowerCase().startsWith("paid")) {
-          const matchIndex = emailToActiveMemberIndexMap[txn["Email Address"]];
-          let message;
-          if (matchIndex !== undefined) { // a renewing member
-            console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a renewing member`);
-            const member = membershipData[matchIndex];
-            const years = Manager.getPeriod_(txn);
-            this.renewMember_(member, years, expirySchedule);
-            message = {
-              to: member.Email,
-              subject: utils.expandTemplate(this._actionSpecs.Renew.Subject, member),
-              htmlBody: utils.expandTemplate(this._actionSpecs.Renew.Body, member)
-            };
-          } else { // a joining member
-            console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a new member`);
-            const newMember = this.addNewMember_(txn, expirySchedule, membershipData);
-            this._groupEmails.forEach(g => this._groupAddFun(newMember.Email, g.Email));
-            message = {
-              to: newMember.Email,
-              subject: utils.expandTemplate(this._actionSpecs.Join.Subject, newMember),
-              htmlBody: utils.expandTemplate(this._actionSpecs.Join.Body, newMember)
-            };
-          }
-          this._sendEmailFun(message);
-          txn.Timestamp = this._today;
-          txn.Processed = this._today;
-          recordsChanged = true;
+        const matchIndex = emailToActiveMemberIndexMap[txn["Email Address"]];
+        let message;
+        if (matchIndex !== undefined) { // a renewing member
+          console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a renewing member`);
+          const member = membershipData[matchIndex];
+          const years = Manager.getPeriod_(txn);
+          this.renewMember_(member, years, expirySchedule);
+          message = {
+            to: member.Email,
+            subject: utils.expandTemplate(this._actionSpecs.Renew.Subject, member),
+            htmlBody: utils.expandTemplate(this._actionSpecs.Renew.Body, member)
+          };
+        } else { // a joining member
+          console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a new member`);
+          const newMember = this.addNewMember_(txn, expirySchedule, membershipData);
+          this._groupEmails.forEach(g => this._groupAddFun(newMember.Email, g.Email));
+          message = {
+            to: newMember.Email,
+            subject: utils.expandTemplate(this._actionSpecs.Join.Subject, newMember),
+            htmlBody: utils.expandTemplate(this._actionSpecs.Join.Body, newMember)
+          };
         }
+        this._sendEmailFun(message);
+        txn.Timestamp = this._today;
+        txn.Processed = this._today;
+        recordsChanged = true;
       } catch (error) {
         error.txnNum = i + 2;
         error.email = txn["Email Address"];
         errors.push(error);
       }
     });
-
     if (errors.length > 0) {
       throw new AggregateError(errors, 'Errors occurred while processing transactions');
     }
