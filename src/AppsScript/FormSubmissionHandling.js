@@ -1,7 +1,5 @@
 const PAYMENT_STATUS_FUNCTION = 'checkPaymentStatus';
 const PAYMENT_SHEET_NAME = 'Transactions';
-const PAYMENT_STATUS_COLUMN_INDEX = 2; // Assuming the payment status is in the 3rd column
-const PAID_STATUS = 'Paid';
 const NO_UPDATES_LOG = 'No updates since last check.';
 const NEW_SUBMISSION_LOG = 'New form submission on row: ';
 const BACKING_OFF_HOURLY_LOG = 'Backing off to hourly checks.';
@@ -13,12 +11,6 @@ const CHECK_PAYMENT_STATUS_LOG = 'Running checkPaymentStatus.';
 const PAYMENTS_PENDING_LOG = 'Payments are still pending.';
 const PAYMENTS_PROCESSED_LOG = 'All payments have been processed.';
 const SPREADSHEET_ID_PROPERTY = 'spreadsheetId';
-const ELAPSED_TIME_LOG = '[DEBUG] Elapsed time: ';
-const START_TIME_LOG = '[DEBUG] Start time: ';
-const CURRENT_TIME_LOG = '[DEBUG] Current time: ';
-const SET_START_TIME_LOG = '[DEBUG] Setting start time: ';
-const RETRIEVED_START_TIME_LOG = '[DEBUG] Retrieved start time: ';
-const DELETED_START_TIME_LOG = '[DEBUG] Deleted start time';
 const ERROR_GETTING_LAST_UPDATED_TIME_LOG = 'Error getting last updated time: ';
 const LAST_UPDATED_LOG = 'Last updated: ';
 const COULD_NOT_GET_LAST_UPDATED_TIME_LOG = 'Could not get last updated time.';
@@ -34,21 +26,15 @@ function onFormSubmit(e) {
     deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
     createMinuteTrigger(PAYMENT_STATUS_FUNCTION, 1); // Initial 1-minute trigger
     const startTime = new Date();
-    console.log(SET_START_TIME_LOG, startTime);
     PropertiesService.getScriptProperties().setProperty('paymentCheckStartTime', startTime); // Reset start time
-    const st = PropertiesService.getScriptProperties().getProperty('paymentCheckStartTime');
-    console.log(RETRIEVED_START_TIME_LOG, st);
 }
 
 function checkPaymentStatus() {
     console.log(CHECK_PAYMENT_STATUS_LOG);
     const now = new Date();
-    console.log(CURRENT_TIME_LOG, now);
     const startTime = getTimeFromProperty('paymentCheckStartTime') || now;
-    console.log(START_TIME_LOG, startTime);
 
     const elapsedTime = now - startTime;
-    console.log(ELAPSED_TIME_LOG, elapsedTime);
 
     if (hasPendingPayments()) { // Still pending payments
         console.log(PAYMENTS_PENDING_LOG);
@@ -57,7 +43,6 @@ function checkPaymentStatus() {
             deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
             createHourlyTrigger(PAYMENT_STATUS_FUNCTION, 1); // Hourly
             PropertiesService.getScriptProperties().deleteProperty('paymentCheckStartTime'); // Clear start time
-            console.log(DELETED_START_TIME_LOG);
         } else if (elapsedTime > 3 * 60 * 1000) { // 3 minutes - Back off to 5-min checks
             console.log(BACKING_OFF_5_MIN_LOG);
             deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
@@ -67,7 +52,6 @@ function checkPaymentStatus() {
         console.log(PAYMENTS_PROCESSED_LOG);
         deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
         PropertiesService.getScriptProperties().deleteProperty('paymentCheckStartTime'); // Clear start time
-        console.log(DELETED_START_TIME_LOG);
     }
 }
 
