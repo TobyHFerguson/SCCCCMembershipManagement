@@ -135,7 +135,7 @@ function removeMemberFromGroup_(memberEmail, groupEmail) {
 
 function getEmailSender_() {
   const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails') === 'true';
-  const domain = PropertiesService.getScriptProperties().getProperty('domain') || 'santacruzcountycycling.club';
+  const domain = PropertiesService.getScriptProperties().getProperty('domain') || 'sc3.club';
   return (email) => {
     email.replyTo = `membership@${domain}`;
     if (testEmails) {
