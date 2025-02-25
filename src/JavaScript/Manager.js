@@ -163,10 +163,7 @@ class Manager {
         errors.push(error);
       }
     });
-    if (errors.length > 0) {
-      throw new AggregateError(errors, 'Errors occurred while processing transactions');
-    }
-    return { recordsChanged, hasPendingPayments };
+    return { recordsChanged, hasPendingPayments, errors };
   }
 
 

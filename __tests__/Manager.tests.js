@@ -462,6 +462,16 @@ describe('Manager tests', () => {
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(activeMembers.map(m => m.Period)).toEqual([1, 1, 1])
       });
+      describe('error handling', () => {
+        it('should return errors if there are any', () => {
+          const transactions = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
+          sendEmailFun = jest.fn(() => { throw new Error('This is a test error') });
+          manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+          const {_, __, errors} = manager.processPaidTransactions(transactions, activeMembers, expirySchedule,);
+          expect(errors.length).toEqual(3);
+          expect(errors[0].message).toEqual('This is a test error');
+        })
+      });
     })
   });
 
