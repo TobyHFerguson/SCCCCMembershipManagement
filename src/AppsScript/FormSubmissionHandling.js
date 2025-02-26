@@ -62,8 +62,6 @@ function getTimeFromProperty(propertyName) {
 
 function hasPendingPayments() {
     const spreadsheetId = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_ID_PROPERTY);
-    const ss = SpreadsheetApp.openById(spreadsheetId);
-    const sheet = ss.getSheetByName(PAYMENT_SHEET_NAME);
     const lastUpdateTime = getLastSpreadsheetUpdateTime(spreadsheetId); // Use current time as last update time
     const lastProcessedTime = getTimeFromProperty('lastProcessedTime');
 
@@ -72,17 +70,17 @@ function hasPendingPayments() {
         return true; // Spreadsheet not updated, assume pending payments
     }
 
-    const dataRange = sheet.getDataRange();
-    const data = dataRange.getValues();
     PropertiesService.getScriptProperties().setProperty('lastProcessedTime', new Date());
-    return checkPendingPaymentsInData(data, lastUpdateTime);
+    const { hasPendingPayments, errors } = processTransactions()
+    errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack
+    }`));
+    return hasPendingPayments
 }
 
-function checkPendingPaymentsInData(data, lastUpdateTime) {
-    return PropertiesService.getScriptProperties().getProperty('pendingPayments') === 'true';
-}
+
 
 function createMinuteTrigger(functionName, minutes) {
+    console.log('createMinuteTrigger', functionName, minutes);
     deleteTriggersByFunctionName(functionName);
     const trigger = ScriptApp.newTrigger(functionName)
         .timeBased()
@@ -92,6 +90,7 @@ function createMinuteTrigger(functionName, minutes) {
 }
 
 function createHourlyTrigger(functionName, hours) {
+    console.log('createHourlyTrigger', functionName, hours);
     deleteTriggersByFunctionName(functionName);
     const trigger = ScriptApp.newTrigger(functionName)
         .timeBased()
