@@ -328,9 +328,10 @@ describe('Manager tests', () => {
       });
       it('should return whether changes were made to the transactions and expiration schedule, as well as whether unpaid transactions remain', () => {
         const txns = [];
-        const { recordsChanged, hasPendingPayments } = manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
+        const { recordsChanged, hasPendingPayments, errors } = manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(recordsChanged).toBe(false);
         expect(hasPendingPayments).toBe(false);
+        expect(errors).toEqual([]);
       });
       it('should return true if records and expiry schedule were changed', () => {
         const txns = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
