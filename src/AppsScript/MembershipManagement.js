@@ -12,19 +12,14 @@ function processTransactions() {
 
   const { manager, membershipData, expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
-  try {
-    manager.processPaidTransactions(transactions, membershipData, expiryScheduleData);
-  } catch (error) {
-    if (error instanceof AggregateError) {
-      error.errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack}`));
-    } else {
-      console.error(`Error: ${error.message}\nStack trace: ${error.stack}`);
+  const { recordsChanged, hasPendingPayments, errors } = manager.processPaidTransactions(transactions, membershipData, expiryScheduleData);
+    if (recordsChanged) {
+      transactionsFiddler.setData(transactions).dumpValues();
+      membershipFiddler.setData(membershipData).dumpValues();
+      expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
     }
-  }
-
-  transactionsFiddler.setData(transactions).dumpValues();
-  membershipFiddler.setData(membershipData).dumpValues();
-  expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
+  errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack}`));
+  return {hasPendingPayments, errors};
 }
 
 function processMigrations() {
@@ -56,7 +51,7 @@ function processExpirations() {
   const membershipFiddler = ConfigurationManager.getFiddler('ActiveMembers');
   const expiryScheduleFiddler = ConfigurationManager.getFiddler('ExpirySchedule');
 
-  const { manager, membershipData,  expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
+  const { manager, membershipData, expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
   const numProcessed = manager.processExpirations(membershipData, expiryScheduleData);
 
