@@ -1,19 +1,19 @@
-const PAYMENT_STATUS_FUNCTION = 'checkPaymentStatus';
-const PAYMENT_SHEET_NAME = 'Transactions';
-const NO_UPDATES_LOG = 'No updates since last check.';
-const NEW_SUBMISSION_LOG = 'New form submission on row: ';
-const BACKING_OFF_HOURLY_LOG = 'Backing off to hourly checks.';
 const BACKING_OFF_5_MIN_LOG = 'Backing off to 5-minute checks.';
-const TRIGGER_DELETED_LOG = 'Payment check trigger deleted.';
-const TRIGGER_NOT_FOUND_LOG = 'Trigger not found, nothing to delete.';
-const ERROR_DELETING_TRIGGER_LOG = 'Error deleting trigger: ';
+const BACKING_OFF_HOURLY_LOG = 'Backing off to hourly checks.';
 const CHECK_PAYMENT_STATUS_LOG = 'Running checkPaymentStatus.';
-const PAYMENTS_PENDING_LOG = 'Payments are still pending.';
-const PAYMENTS_PROCESSED_LOG = 'All payments have been processed.';
-const SPREADSHEET_ID_PROPERTY = 'spreadsheetId';
+const COULD_NOT_GET_LAST_UPDATED_TIME_LOG = 'Could not get last updated time.';
+const ERROR_DELETING_TRIGGER_LOG = 'Error deleting trigger: ';
 const ERROR_GETTING_LAST_UPDATED_TIME_LOG = 'Error getting last updated time: ';
 const LAST_UPDATED_LOG = 'Last updated: ';
-const COULD_NOT_GET_LAST_UPDATED_TIME_LOG = 'Could not get last updated time.';
+const NEW_SUBMISSION_LOG = 'New form submission on row: ';
+const NO_UPDATES_LOG = 'No updates since last check.';
+const PAYMENTS_PENDING_LOG = 'Payments are still pending.';
+const PAYMENTS_PROCESSED_LOG = 'All payments have been processed.';
+const PAYMENT_SHEET_NAME = 'Transactions';
+const PAYMENT_STATUS_FUNCTION = 'checkPaymentStatus';
+const SPREADSHEET_ID_PROPERTY = 'spreadsheetId';
+const TRIGGER_DELETED_LOG = 'Payment check trigger deleted.';
+const TRIGGER_NOT_FOUND_LOG = 'Trigger not found, nothing to delete.';
 
 function onFormSubmit(e) {
     console.log(NEW_SUBMISSION_LOG, e.range.getRow());
