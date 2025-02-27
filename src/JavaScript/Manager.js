@@ -178,7 +178,7 @@ class Manager {
   renewMember_(member, period, expirySchedule,) {
     member.Period = period;
     member["Renewed On"] = this._today;
-    member.Expires = this.calculateExpirationDate(period, member.Expires);
+    member.Expires = utils.calculateExpirationDate(member.Expires, period);
     this.addRenewedMemberToActionSchedule_(member, expirySchedule);
   }
 
@@ -209,9 +209,6 @@ class Manager {
     }
   }
 
-  calculateExpirationDate(period, expires = this._today) {
-    return utils.getDateString(utils.addYearsToDate(expires, period));
-  }
 
   addNewMember_(txn, expirySchedule, membershipData) {
     const newMember = {
@@ -221,7 +218,7 @@ class Manager {
       Phone: txn.Phone || '',
       Joined: this._today,
       Period: Manager.getPeriod_(txn),
-      Expires: this.calculateExpirationDate(Manager.getPeriod_(txn)),
+      Expires: utils.calculateExpirationDate(this._today, Manager.getPeriod_(txn)),
       "Renewed On": '',
       Status: "Active"
     };

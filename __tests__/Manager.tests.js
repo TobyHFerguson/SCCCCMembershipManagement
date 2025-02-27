@@ -510,49 +510,7 @@ describe('Manager tests', () => {
     });
   })
 
-  describe('calculateExpirationDate', () => {
-    test('should calculate expiration date based on period in years from today if no existing expiration date is provided', () => {
-      const period = 2;
-      const result = manager.calculateExpirationDate(period);
-      const expectedDate = new Date(today);
-      expectedDate.setFullYear(expectedDate.getFullYear() + period);
-      expect(utils.getDateString(result)).toEqual(utils.getDateString(expectedDate));
-    });
 
-    test('should calculate expiration date based on period in years from existing expiration date if provided', () => {
-      const period = 3;
-      const existingExpirationDate = new Date('2030-01-01');
-      const result = manager.calculateExpirationDate(period, existingExpirationDate);
-      const expectedDate = new Date('2033-01-01');
-      expect(utils.getDateString(result)).toEqual(utils.getDateString(expectedDate));
-    });
-
-    test('should return the greater of period added to today or the existing expiration date', () => {
-      const period = 1;
-      const existingExpirationDate = new Date();
-      existingExpirationDate.setFullYear(existingExpirationDate.getFullYear() + 2);
-      const result = manager.calculateExpirationDate(period, existingExpirationDate);
-      const expectedDate = new Date();
-      expectedDate.setFullYear(expectedDate.getFullYear() + period + 2);
-      expect(utils.getDateString(result)).toEqual(utils.getDateString(expectedDate));
-    });
-
-    test('should handle leap years correctly', () => {
-      const period = 1;
-      const existingExpirationDate = new Date('2052-02-29');
-      const result = manager.calculateExpirationDate(period, existingExpirationDate);
-      const expectedDate = new Date('2053-03-01')
-      expect(utils.getDateString(result)).toEqual(utils.getDateString(expectedDate));
-    });
-
-    test('should handle negative periods correctly', () => {
-      const period = -1;
-      const existingExpirationDate = new Date('2050-01-01');
-      const result = manager.calculateExpirationDate(period, existingExpirationDate);
-      const expectedDate = new Date('2049-01-01');
-      expect(utils.getDateString(result)).toEqual(utils.getDateString(expectedDate));
-    });
-  });
 
   describe('expirySchedule', () => {
     it('should create an expirySchedule', () => {
@@ -584,8 +542,8 @@ describe('Manager tests', () => {
         { "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" },
         { "Payable Status": "paid", "Email Address": "test2@example.com", "First Name": "Jane", "Last Name": "Smith", "Payment": "3 years" }
       ]
-      const exp1 = manager.calculateExpirationDate(1, exp)
-      const exp3 = manager.calculateExpirationDate(3)
+      const exp1 = utils.calculateExpirationDate(exp, 1)
+      const exp3 = utils.calculateExpirationDate(today, 3)
       const expected = [
         { Email: "test1@example.com", Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(exp1, O1) },
         { Email: "test1@example.com", Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(exp1, O2) },

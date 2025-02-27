@@ -66,7 +66,10 @@ const utils = (function () {
     return new Date(date).toLocaleDateString()
   }
 
-
+  function calculateExpirationDate(expires, period = 1) {
+    if (!expires) throw new Error('No expiration date provided')
+    return utils.getDateString(utils.addYearsToDate(expires, period));
+  }
   return {
     log,
     getDateString,
@@ -74,7 +77,8 @@ const utils = (function () {
     addDaysToDate,
     addYearsToDate,
     expandTemplate,
-    toLocaleDateString
+    toLocaleDateString,
+    calculateExpirationDate
   };
 
 })();
