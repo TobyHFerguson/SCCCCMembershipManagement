@@ -510,39 +510,6 @@ describe('Manager tests', () => {
     });
   })
 
-  describe.skip('Action Spec tests', () => {
-
-    // it('should calculate windows', () => {
-    //     triggers.setActionSpec(actionSpec);
-    //     triggers.setToday('2000-03-10')
-    //     let date = '2000-03-07';
-    //     expect(triggers.inWindow(date, 'Expiry1')).toBeFalsy();
-    //     expect(triggers.inWindow(date, 'Expiry2')).toBeFalsy();
-    //     expect(triggers.inWindow(date, 'Expiry3')).toBeFalsy();
-    //     expect(triggers.inWindow(date, 'Expiry4')).toBeFalsy();
-    //     date = '2000-03-08';
-    //     expect(triggers.inWindow(date, 'Expiry1')).toBeTruthy();
-    //     expect(triggers.inWindow(date, 'Expiry2')).toBeFalsy();
-    //     expect(triggers.inWindow(date, 'Expiry3')).toBeFalsy();
-    //     expect(triggers.inWindow(date, 'Expiry4')).toBeFalsy();
-    //     date = '2000-03-09';
-    //     expect(triggers.inWindow(date, 'Expiry1')).toBeTruthy();
-    //     expect(triggers.inWindow(date, 'Expiry2')).toBeFalsy();
-    //     expect(triggers.inWindow(date, 'Expiry3')).toBeFalsy();
-    //     expect(triggers.inWindow(date, 'Expiry4')).toBeFalsy();
-    //     date = '2000-03-10';
-    //     expect(triggers.inWindow(date, 'Expiry1')).toBeTruthy();
-    //     expect(triggers.inWindow(date, 'Expiry2')).toBeTruthy();
-    //     expect(triggers.inWindow(date, 'Expiry3')).toBeTruthy();
-    //     expect(triggers.inWindow(date, 'Expiry4')).toBeFalsy();
-    //     date = '2000-03-11';
-    //     expect(triggers.inWindow(date, 'Expiry1')).toBeTruthy();
-    //     expect(triggers.inWindow(date, 'Expiry2')).toBeTruthy();
-    //     expect(triggers.inWindow(date, 'Expiry3')).toBeTruthy();
-    //     expect(triggers.inWindow(date, 'Expiry4')).toBeTruthy();
-    // })
-  });
-
   describe('calculateExpirationDate', () => {
     test('should calculate expiration date based on period in years from today if no existing expiration date is provided', () => {
       const period = 2;
