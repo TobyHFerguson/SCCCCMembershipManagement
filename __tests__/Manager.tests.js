@@ -72,51 +72,6 @@ describe('Manager tests', () => {
     numProcessed = 0;
   });
 
-  describe('logging tests', () => {
-    let consoleSpy;
-
-    beforeEach(() => {
-      consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
-    });
-
-    afterEach(() => {
-      consoleSpy.mockRestore();
-    });
-
-    it('should produce interesting logs when processing transactions', () => {
-      const txns = [{ ...transactionsFixture.paid[0] }, { ...transactionsFixture.paid[1] }];
-      activeMembers = [{ Email: "test2@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "", Status: 'Active' }];
-
-      manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
-      expect(consoleSpy).toHaveBeenCalledWith('transaction on row 3 test2@example.com is a renewing member');
-      expect(consoleSpy).toHaveBeenCalledWith('transaction on row 2 test1@example.com is a new member');
-    });
-  });
-
-  describe('Aggregated Error tests', () => {
-    beforeEach(() => {
-      const errorFunction = jest.fn(() => {
-        throw new Error('This is a test error');
-      });
-      sendEmailFun = errorFunction;
-      groupRemoveFun = errorFunction;
-    });
-
-    it('should throw an aggregated error if there are errors', () => {
-      activeMembers = [
-        { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },
-        { Email: "test2@example.com", Period: 1, First: "Jane", Last: "Smith", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },
-      ];
-      try {
-        manager.processExpirations(activeMembers, expirySchedule);
-      } catch (error) {
-        expect(error).toBeInstanceOf(AggregateError);
-        expect(error.errors.length).toEqual(2);
-        expect(error.errors[0].txnNum).toEqual(1);
-      }
-    });
-  });
-
   describe('processExpirations', () => {
     beforeEach(() => {
       expirySchedule = [
@@ -148,6 +103,24 @@ describe('Manager tests', () => {
       numProcessed = manager.processExpirations(activeMembers, expirySchedule);
       expect(numProcessed).toEqual(2);
     })
+    it('should throw an aggregated error if there are errors', () => {
+      const errorFunction = jest.fn(() => {
+        throw new Error('This is a test error');
+      });
+      sendEmailFun = errorFunction;
+      groupRemoveFun = errorFunction;
+      activeMembers = [
+        { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },
+        { Email: "test2@example.com", Period: 1, First: "Jane", Last: "Smith", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },
+      ];
+      try {
+        manager.processExpirations(activeMembers, expirySchedule);
+      } catch (error) {
+        expect(error).toBeInstanceOf(AggregateError);
+        expect(error.errors.length).toEqual(2);
+        expect(error.errors[0].txnNum).toEqual(1);
+      }
+    });
     describe('multiple expiry schedules on the same day for the same address', () => {
       beforeEach(() => {
         activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "", Status: 'Active' }];
@@ -419,6 +392,26 @@ describe('Manager tests', () => {
       });
     })
 
+    describe('logging tests', () => {
+      let consoleSpy;
+  
+      beforeEach(() => {
+        consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+      });
+  
+      afterEach(() => {
+        consoleSpy.mockRestore();
+      });
+  
+      it('should produce interesting logs when processing transactions', () => {
+        const txns = [{ ...transactionsFixture.paid[0] }, { ...transactionsFixture.paid[1] }];
+        activeMembers = [{ Email: "test2@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "", Status: 'Active' }];
+  
+        manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
+        expect(consoleSpy).toHaveBeenCalledWith('transaction on row 3 test2@example.com is a renewing member');
+        expect(consoleSpy).toHaveBeenCalledWith('transaction on row 2 test1@example.com is a new member');
+      });
+    });
     describe('membership expiry period tests', () => {
       let txns;
       beforeEach(() => {
@@ -468,7 +461,7 @@ describe('Manager tests', () => {
           const transactions = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
           sendEmailFun = jest.fn(() => { throw new Error('This is a test error') });
           manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
-          const {_, __, errors} = manager.processPaidTransactions(transactions, activeMembers, expirySchedule,);
+          const { _, __, errors } = manager.processPaidTransactions(transactions, activeMembers, expirySchedule,);
           expect(errors.length).toEqual(3);
           expect(errors[0].message).toEqual('This is a test error');
         })
