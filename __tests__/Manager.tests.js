@@ -59,7 +59,8 @@ describe('Manager tests', () => {
   let sendEmailFun;
   let groupEmails;
   let numProcessed;
-
+  let consoleSpy;
+  
   beforeEach(() => {
     groupRemoveFun = jest.fn();
     groupAddFun = jest.fn();
@@ -70,8 +71,12 @@ describe('Manager tests', () => {
     expiredMembers = [];
     expirySchedule = [];
     numProcessed = 0;
+    consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
   });
-
+  
+  afterEach(() => {
+    consoleSpy.mockRestore();
+  });
   describe('processExpirations', () => {
     beforeEach(() => {
       expirySchedule = [
@@ -90,7 +95,6 @@ describe('Manager tests', () => {
       expirySchedule = [
         { Date: today, Type: utils.ActionType.Expiry1, Email: "test1@example.com" },
       ]
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
       manager.processExpirations(activeMembers, expirySchedule);
       expect(consoleSpy).toHaveBeenCalledWith("Skipping member test1@example.com - they're not an active member");
     })
@@ -134,7 +138,6 @@ describe('Manager tests', () => {
         expect(numProcessed).toEqual(2);
       })
       it('should log the anomaly', () => {
-        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
         manager.processExpirations(activeMembers, expirySchedule);
         expect(consoleSpy).toHaveBeenCalledWith("Skipping test1@example.com for Expiry2 - already processed");
       })
@@ -213,7 +216,6 @@ describe('Manager tests', () => {
       delete m.Email
       migratorsPre = [{ ...m }];
       migratorsPost = [{ ...m }]
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
       manager.migrateCEMembers(migratorsPre, activeMembers, expirySchedule);
       expect(migratorsPost).toEqual(migratorsPre)
       expect(activeMembers).toEqual([]);
@@ -228,7 +230,6 @@ describe('Manager tests', () => {
       delete am["Migrate Me"];
       activeMembers = [am];
       expectedActiveMembers = [{ ...am }];
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
       manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
       expect(migrators).toEqual(expectedMigrators);
       expect(activeMembers).toEqual(expectedActiveMembers);
@@ -257,7 +258,6 @@ describe('Manager tests', () => {
     });
 
     it('should provide logging information', () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
       manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
       expect(consoleSpy).toHaveBeenCalledWith('Migrating a@b.com, row 2');
       expect(consoleSpy).toHaveBeenCalledWith('Migrated a@b.com, row 2');
@@ -393,15 +393,7 @@ describe('Manager tests', () => {
     })
 
     describe('logging tests', () => {
-      let consoleSpy;
-  
-      beforeEach(() => {
-        consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
-      });
-  
-      afterEach(() => {
-        consoleSpy.mockRestore();
-      });
+
   
       it('should produce interesting logs when processing transactions', () => {
         const txns = [{ ...transactionsFixture.paid[0] }, { ...transactionsFixture.paid[1] }];
