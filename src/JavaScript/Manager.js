@@ -48,7 +48,7 @@ class Manager {
         let member = activeMembers[memberIdx];
         if (sched.Type === utils.ActionType.Expiry4) {
           member.Status = 'Expired'
-          this._groupEmails.forEach(group => this._groupRemoveFun(member.Email, group.Email));
+          this._groupEmails.forEach(group => {this._groupRemoveFun(member.Email, group.Email); console.log(`Expiry4 - ${member.Email} removed from group ${group.Email}`)});
         }
         let message = {
           to: member.Email,
@@ -56,6 +56,7 @@ class Manager {
           htmlBody: utils.expandTemplate(spec.Body, member)
         };
         this._sendEmailFun(message);
+        console.log(`${sched.Type} - ${member.Email} - Email sent`);
       }
     }
     for (let i = expirySchedule.length - 1; i >= 0; i--) {

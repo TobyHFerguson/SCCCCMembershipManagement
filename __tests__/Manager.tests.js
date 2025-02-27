@@ -96,6 +96,7 @@ describe('Manager tests', () => {
       expect(consoleSpy).toHaveBeenCalledWith("Expiry4 - test4@example.com");
       expect(consoleSpy).toHaveBeenCalledWith("Expiry2 - test2@example.com");
     })
+    
     it('should log if a member to be expired isnt active', () => {
       expirySchedule = [
         { Date: today, Type: utils.ActionType.Expiry1, Email: "test1@example.com" },
@@ -130,6 +131,20 @@ describe('Manager tests', () => {
         expect(error.errors[0].txnNum).toEqual(1);
       }
     });
+    describe('Expiration processing for multiple members', () => { 
+      it('should log what it is doing', () => {
+        activeMembers = [
+          { Email: "test2@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },
+          { Email: "test4@example.com", Period: 1, First: "Jane", Last: "Smith", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },
+        ];
+        manager.processExpirations(activeMembers, expirySchedule);
+        expect(consoleSpy).toHaveBeenCalledWith(expect.anything())
+        expect(consoleSpy).toHaveBeenCalledWith(`Expiry4 - test4@example.com removed from group ${groupEmails[0].Email}`)
+        expect(consoleSpy).toHaveBeenCalledWith(`Expiry4 - test4@example.com - Email sent`)
+        expect(consoleSpy).toHaveBeenCalledWith(`Expiry2 - test2@example.com`)
+        expect(consoleSpy).toHaveBeenCalledWith(`Expiry2 - test2@example.com - Email sent`)
+      })
+    })
     describe('multiple expiry schedules on the same day for the same address', () => {
       beforeEach(() => {
         activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "", Status: 'Active' }];
