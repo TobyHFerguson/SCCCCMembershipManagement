@@ -30,11 +30,11 @@ class Manager {
     });
     const schedulesToBeProcessed = expirySchedule.reduce((acc, sched, i) => { if (sched.Date <= new Date(this._today)) acc.push(i); return acc; }, []);
     schedulesToBeProcessed.sort((a, b) => b - a);
-    let emailsExpired = new Set()
     let emailsSeen = new Set();
     for (let idx of schedulesToBeProcessed) {
       const sched = expirySchedule[idx];
       const spec = this._actionSpecs[sched.Type];
+      console.log(`${sched.Type} - ${sched.Email}`);
       expirySchedule.splice(idx, 1);
       if (emailsSeen.has(sched.Email)) {
         console.log(`Skipping ${sched.Email} for ${sched.Type} - already processed`);
