@@ -81,7 +81,7 @@ describe('Manager tests', () => {
     beforeEach(() => {
       expirySchedule = [
         { Date: new Date('2050-01-01'), Type: utils.ActionType.Expiry1, Email: "test1@example.com" },
-        { Date: today, Type: utils.ActionType.Expiry2, Email: "test4@example.com" },
+        { Date: today, Type: utils.ActionType.Expiry2, Email: "test2@example.com" },
         { Date: new Date('2045-01-01'), Type: utils.ActionType.Expiry3, Email: "test3@example.com" },
         { Date: today, Type: utils.ActionType.Expiry4, Email: "test4@example.com" }
       ];
@@ -91,6 +91,11 @@ describe('Manager tests', () => {
       numProcessed = manager.processExpirations(activeMembers, expirySchedule);
       expect(numProcessed).toEqual(2);
     });
+    it('should log what it is expecting to do', () => {  
+      manager.processExpirations(activeMembers, expirySchedule);
+      expect(consoleSpy).toHaveBeenCalledWith("Expiry4 - test4@example.com");
+      expect(consoleSpy).toHaveBeenCalledWith("Expiry2 - test2@example.com");
+    })
     it('should log if a member to be expired isnt active', () => {
       expirySchedule = [
         { Date: today, Type: utils.ActionType.Expiry1, Email: "test1@example.com" },
