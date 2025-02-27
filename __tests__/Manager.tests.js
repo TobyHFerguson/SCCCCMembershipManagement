@@ -177,7 +177,7 @@ describe('Manager tests', () => {
     });
   });
 
-  describe('migrations', () => {
+  describe('processMigrations', () => {
     let migrators;
     beforeEach(() => {
       migrators = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, "Migrate Me": true },
@@ -284,7 +284,7 @@ describe('Manager tests', () => {
     });
   });
 
-  describe('processPaidTransactions_', () => {
+  describe('processPaidTransactions', () => {
     describe('basic tests', () => {
       it('should create the new members', () => {
         const txns = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
