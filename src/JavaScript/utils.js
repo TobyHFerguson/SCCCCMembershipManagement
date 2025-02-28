@@ -12,10 +12,6 @@ const utils = (function () {
     }
   }
 
-  function getDateString(date = new Date()) {
-    return dateOnly(date).toISOString().split('T')[0];
-  }
-
   function addDaysToDate(date, days = 0) {
     const result = dateOnly(date);
     result.setDate(result.getDate() + days);
@@ -95,7 +91,6 @@ const utils = (function () {
   return {
     dateOnly,
     log,
-    getDateString,
     ActionType,
     addDaysToDate,
     addYearsToDate,

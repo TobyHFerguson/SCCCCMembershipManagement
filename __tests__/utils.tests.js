@@ -69,12 +69,6 @@ describe('utils', () => {
       expect(result).toEqual(expectedDate);
     });
   });
-  describe('getDateString', () => {
-    test('should return a string in the format YYYY-MM-DD', () => {
-      const date = new Date('2021-01-01');
-      expect(utils.getDateString(date)).toBe('2021-01-01');
-    });
-  });
 
   describe('addDaysToDate', () => {
     test('should return a new date with days added', () => {
