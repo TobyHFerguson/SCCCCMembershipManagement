@@ -9,7 +9,7 @@ class Manager {
     this._groupAddFun = groupAddFun || (() => { });
     this._groupRemoveFun = groupRemoveFun || (() => { });
     this._sendEmailFun = sendEmailFun || (() => { });
-    this._today = today || utils.getDateString()
+    this._today = utils.dateOnly(today)
   }
 
   today() {
@@ -179,7 +179,7 @@ class Manager {
   renewMember_(member, period, expirySchedule,) {
     member.Period = period;
     member["Renewed On"] = this._today;
-    member.Expires = utils.calculateExpirationDate(member.Expires, period);
+    member.Expires = utils.calculateExpirationDate(this._today, member.Expires, period);
     this.addRenewedMemberToActionSchedule_(member, expirySchedule);
   }
 
@@ -219,7 +219,7 @@ class Manager {
       Phone: txn.Phone || '',
       Joined: this._today,
       Period: Manager.getPeriod_(txn),
-      Expires: utils.calculateExpirationDate(this._today, Manager.getPeriod_(txn)),
+      Expires: utils.calculateExpirationDate(this._today, this._today, Manager.getPeriod_(txn)),
       "Renewed On": '',
       Status: "Active"
     };

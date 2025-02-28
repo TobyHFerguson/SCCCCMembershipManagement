@@ -13,17 +13,17 @@ const utils = (function () {
   }
 
   function getDateString(date = new Date()) {
-    return new Date(date).toISOString().split('T')[0];
+    return dateOnly(date).toISOString().split('T')[0];
   }
 
   function addDaysToDate(date, days = 0) {
-    const result = new Date(date);
+    const result = dateOnly(date);
     result.setDate(result.getDate() + days);
     return result;
   }
 
   function addYearsToDate(date, years = 0) {
-    const result = new Date(date);
+    const result = dateOnly(date);
     result.setFullYear(result.getFullYear() + years);
     return result;
   }
@@ -55,7 +55,7 @@ const utils = (function () {
           value = new Date(Date.parse(value));
         }
 
-        value = new Date(value.toISOString().split('T')[0] + "T00:00:00");
+        value = dateOnly(value);
         return value.toLocaleDateString(); // Convert Date objects to local date and time string
       }
       return value || "";
@@ -66,11 +66,34 @@ const utils = (function () {
     return new Date(date).toLocaleDateString()
   }
 
-  function calculateExpirationDate(expires, period = 1) {
+
+  /**
+   * Calculates the expiration date based on a reference date and an expiration period.
+   *
+   * @param {Date} referenceDate - The reference date to start from. (normaly set to today())
+   * @param {Date} expires - The expiration date to compare against.
+   * @param {number} [period=1] - The number of years to add to the later of the reference date or expiration date.
+   * @returns {Date} The calculated expiration date.
+   * @throws {Error} If no reference date or expiration date is provided.
+   */
+  function calculateExpirationDate(referenceDate, expires, period = 1) {
+    if (!referenceDate) throw new Error('No reference date provided')
     if (!expires) throw new Error('No expiration date provided')
-    return utils.getDateString(utils.addYearsToDate(expires, period));
+      referenceDate = utils.dateOnly(referenceDate)
+      expires = utils.dateOnly(expires)
+    const startDate = referenceDate < expires ? expires : referenceDate
+    const result = utils.addYearsToDate(startDate, period);
+    return result
+  }
+
+  function dateOnly(date) {
+    if (!date) date = new Date();
+    if (typeof date === 'string') date = new Date(date);
+    const dateOnly = new Date(date.toISOString().split('T')[0] + "T00:00:00");
+    return dateOnly;
   }
   return {
+    dateOnly,
     log,
     getDateString,
     ActionType,
