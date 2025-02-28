@@ -69,7 +69,7 @@ class Manager {
 
   migrateCEMembers(migrators, activeMembers, expirySchedule) {
     const actionSpec = this._actionSpecs[utils.ActionType.Migrate];
-    const requiredKeys = ['Email', 'First', 'Last', 'Phone', 'Joined', 'Period', 'Expires', 'Renewed On', 'Directory', 'Migrated'];
+    const requiredKeys = ['Email', 'First', 'Last', 'Phone', 'Joined', 'Period', 'Expires', 'Renewed On', 'Directory', 'Migrated', 'Status'];
 
     let numMigrations = 0;
     const errors = [];
