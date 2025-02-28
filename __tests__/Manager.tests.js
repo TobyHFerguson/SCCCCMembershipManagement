@@ -545,17 +545,16 @@ describe('Manager tests', () => {
     });
 
     it('should remove existing action schedule entries for the member', () => {
-      const member = { Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: utils.getDateString('2021-01-01'), Expires: utils.addYearsToDate(today, 1), "Renewed On": today };
+      const member = { Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: utils.dateOnly('2021-01-01'), Expires: utils.addYearsToDate(today, 1), "Renewed On": today };
       const expected = [
         { Email: member.Email, Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(member.Expires, O1), },
         { Email: member.Email, Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(member.Expires, O2), },
         { Email: member.Email, Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(member.Expires, O3), },
         { Email: member.Email, Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(member.Expires, O4), }
-      ].map(e => { e.Date = utils.getDateString(e.Date); return e; });
-      expirySchedule = [{ Email: member.Email, Type: utils.ActionType.Expiry3, Date: utils.getDateString('2021-01-10'), },
+      ]
+      expirySchedule = [{ Email: member.Email, Type: utils.ActionType.Expiry3, Date: utils.dateOnly('2021-01-10'), },
       ]
       manager.addRenewedMemberToActionSchedule_(member, expirySchedule, emailSpecs);
-      expirySchedule.forEach(e => e.Date = utils.getDateString(e.Date));
       expect(expirySchedule).toEqual(expected);
 
     });
