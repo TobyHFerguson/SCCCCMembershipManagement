@@ -487,9 +487,7 @@ describe('Manager tests', () => {
         { Email: txn["Email Address"], Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(today, 365 + O3), },
         { Email: txn["Email Address"], Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(today, 365 + O4), }
       ];
-      expected.forEach(e => { console.log(e); e.Date = utils.getDateString(e.Date) });
       manager.processPaidTransactions([txn], activeMembers, expirySchedule)
-      expirySchedule.forEach(a => a.Date = utils.getDateString(a.Date));
       expect(expirySchedule).toEqual(expected);
     })
 
