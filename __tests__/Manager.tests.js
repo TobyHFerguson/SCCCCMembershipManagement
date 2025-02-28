@@ -60,7 +60,7 @@ describe('Manager tests', () => {
   let groupEmails;
   let numProcessed;
   let consoleSpy;
-  
+
   beforeEach(() => {
     groupRemoveFun = jest.fn();
     groupAddFun = jest.fn();
@@ -73,7 +73,7 @@ describe('Manager tests', () => {
     numProcessed = 0;
     consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
   });
-  
+
   afterEach(() => {
     consoleSpy.mockRestore();
   });
@@ -91,12 +91,12 @@ describe('Manager tests', () => {
       numProcessed = manager.processExpirations(activeMembers, expirySchedule);
       expect(numProcessed).toEqual(2);
     });
-    it('should log what it is expecting to do', () => {  
+    it('should log what it is expecting to do', () => {
       manager.processExpirations(activeMembers, expirySchedule);
       expect(consoleSpy).toHaveBeenCalledWith("Expiry4 - test4@example.com");
       expect(consoleSpy).toHaveBeenCalledWith("Expiry2 - test2@example.com");
     })
-    
+
     it('should log if a member to be expired isnt active', () => {
       expirySchedule = [
         { Date: today, Type: utils.ActionType.Expiry1, Email: "test1@example.com" },
@@ -131,7 +131,7 @@ describe('Manager tests', () => {
         expect(error.errors[0].txnNum).toEqual(1);
       }
     });
-    describe('Expiration processing for multiple members', () => { 
+    describe('Expiration processing for multiple members', () => {
       it('should log what it is doing', () => {
         activeMembers = [
           { Email: "test2@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },
@@ -201,106 +201,152 @@ describe('Manager tests', () => {
   });
 
   describe('processMigrations', () => {
-    let migrators;
-    beforeEach(() => {
-      migrators = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, "Migrate Me": true, Status: "Active" },
-      { Email: "a@b.com", Period: 1, First: "Not", Last: "Me", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true }
-      ];
-    });
-    it('should migrate only marked members, record the date of migration and removing any unused keys', () => {
-      const expectedMigrators = [{ ...migrators[0], Migrated: today }, { ...migrators[1] }];
-      const m = { ...migrators[0], Migrated: today, Directory: 'Yes' };
-      delete m["Migrate Me"];
-      const expectedMembers = [m];
-      manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-      expect(activeMembers).toEqual(expectedMembers);
-      expect(migrators).toEqual(expectedMigrators);
-    });
-    it('should not migrate members if an error is thrown', () => {
-      groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
-      manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
-      try {
-        manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-        fail('Expected error not thrown');
-      } catch (error) {
-        expect(activeMembers).toEqual([]);
-      }
-    });
-    it('should not migrate members that have already been migrated', () => {
-      migrators = [{ ...migrators[0], Migrated: today }];
-      manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-      expect(activeMembers).toEqual([]);
-    });
-    it('should not migrate members who have no email address, & log that fact', () => {
-      const m = { ...migrators[0] };
-      delete m.Email
-      migratorsPre = [{ ...m }];
-      migratorsPost = [{ ...m }]
-      manager.migrateCEMembers(migratorsPre, activeMembers, expirySchedule);
-      expect(migratorsPost).toEqual(migratorsPre)
-      expect(activeMembers).toEqual([]);
-      expect(expirySchedule).toEqual([]);
-      expect(consoleSpy).toHaveBeenCalledWith(`Skipping row 2, no email address`);
-    });
-    it('should not migrate members that already exist, and log the fact', () => {
-      const m = { ...migrators[0] }
-      migrators = [m];
-      expectedMigrators = [{ ...m }];
-      const am = { ...m };
-      delete am["Migrate Me"];
-      activeMembers = [am];
-      expectedActiveMembers = [{ ...am }];
-      manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-      expect(migrators).toEqual(expectedMigrators);
-      expect(activeMembers).toEqual(expectedActiveMembers);
-      expect(consoleSpy).toHaveBeenCalledWith(`Skipping ${m.Email} on row 2, already an active member`);
-    });
-
-    describe('expiry Schedule ', () => {
-      it('should create an action schedule for the migrated member for events after today', () => {
-        migrators = [{ ...migrators[0], Expires: utils.addDaysToDate(today, 1) }]; // expiry 2 is today, so only expiry 3 & 4 expected
-        manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-        expect(expirySchedule.length).toEqual(2);
+    describe('Active Members only', () => {
+      let migrators;
+      beforeEach(() => {
+        migrators = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, "Migrate Me": true, Status: "Active" },
+        { Email: "a@b.com", Period: 1, First: "Not", Last: "Me", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, Status: "Active" }
+        ];
       });
-    })
-
-    it('should add migrated members to the groups', () => {
-      manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-      expect(groupAddFun).toHaveBeenCalledTimes(1);
-      expect(groupAddFun).toHaveBeenCalledWith(migrators[0].Email, groupEmails[0].Email);
-    });
-
-    it('should send emails to the members', () => {
-      manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-      expect(sendEmailFun).toHaveBeenCalledTimes(1);
-      const m = { ...migrators[0], Directory: migrators[0].Directory ? 'Yes' : 'No' };
-      expect(sendEmailFun).toHaveBeenCalledWith({ to: m.Email, subject: utils.expandTemplate(actionSpecs.Migrate.Subject, m), htmlBody: utils.expandTemplate(actionSpecs.Migrate.Body, m) });
-    });
-
-    it('should provide logging information', () => {
-      manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-      expect(consoleSpy).toHaveBeenCalledWith('Migrating a@b.com, row 2');
-      expect(consoleSpy).toHaveBeenCalledWith('Migrated a@b.com, row 2');
-    });
-
-    it('should continue even when there are errors', () => {
-      groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
-      manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
-      try {
+      it('should migrate only marked members, record the date of migration and removing any unused keys', () => {
+        const expectedMigrators = [{ ...migrators[0], Migrated: today }, { ...migrators[1] }];
+        const m = { ...migrators[0], Migrated: today, Directory: 'Yes' };
+        delete m["Migrate Me"];
+        const expectedMembers = [m];
         manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-        fail('Expected error not thrown');
-      } catch (error) {
-        expect(error).toBeInstanceOf(AggregateError);
-        expect(error.errors.length).toEqual(1);
-        expect(error.errors[0].message).toBe('This is a test error');
-        expect(error.errors[0].rowNum).toBe(2);
-        expect(error.errors[0].email).toBe("a@b.com");
-      }
-    });
+        expect(activeMembers).toEqual(expectedMembers);
+        expect(migrators).toEqual(expectedMigrators);
+      });
+      it('should not migrate members if an error is thrown', () => {
+        groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
+        manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+        try {
+          manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+          fail('Expected error not thrown');
+        } catch (error) {
+          expect(activeMembers).toEqual([]);
+        }
+      });
+      it('should not migrate members that have already been migrated', () => {
+        migrators = [{ ...migrators[0], Migrated: today }];
+        manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+        expect(activeMembers).toEqual([]);
+      });
+      it('should not migrate members who have no email address, & log that fact', () => {
+        const m = { ...migrators[0] };
+        delete m.Email
+        migratorsPre = [{ ...m }];
+        migratorsPost = [{ ...m }]
+        manager.migrateCEMembers(migratorsPre, activeMembers, expirySchedule);
+        expect(migratorsPost).toEqual(migratorsPre)
+        expect(activeMembers).toEqual([]);
+        expect(expirySchedule).toEqual([]);
+        expect(consoleSpy).toHaveBeenCalledWith(`Skipping row 2, no email address`);
+      });
+      it('should not migrate members that already exist, and log the fact', () => {
+        const m = { ...migrators[0] }
+        migrators = [m];
+        expectedMigrators = [{ ...m }];
+        const am = { ...m };
+        delete am["Migrate Me"];
+        activeMembers = [am];
+        expectedActiveMembers = [{ ...am }];
+        manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+        expect(migrators).toEqual(expectedMigrators);
+        expect(activeMembers).toEqual(expectedActiveMembers);
+        expect(consoleSpy).toHaveBeenCalledWith(`Skipping ${m.Email} on row 2, already an active member`);
+      });
 
-    it('should indicate how many members were successfully migrated', () => {
-      const numMigrations = manager.migrateCEMembers(migrators, activeMembers, expirySchedule, actionSpecsArray, groupAddFun, sendEmailFun, groupEmails);
-      expect(numMigrations).toBe(1);
+      describe('expiry Schedule ', () => {
+        it('should create an action schedule for the migrated member for events after today', () => {
+          migrators = [{ ...migrators[0], Expires: utils.addDaysToDate(today, 1) }]; // expiry 2 is today, so only expiry 3 & 4 expected
+          manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+          expect(expirySchedule.length).toEqual(2);
+        });
+      })
+
+      it('should add migrated members to the groups', () => {
+        manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+        expect(groupAddFun).toHaveBeenCalledTimes(1);
+        expect(groupAddFun).toHaveBeenCalledWith(migrators[0].Email, groupEmails[0].Email);
+      });
+
+      it('should send emails to the members', () => {
+        manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+        expect(sendEmailFun).toHaveBeenCalledTimes(1);
+        const m = { ...migrators[0], Directory: migrators[0].Directory ? 'Yes' : 'No' };
+        expect(sendEmailFun).toHaveBeenCalledWith({ to: m.Email, subject: utils.expandTemplate(actionSpecs.Migrate.Subject, m), htmlBody: utils.expandTemplate(actionSpecs.Migrate.Body, m) });
+      });
+
+      it('should provide logging information', () => {
+        manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+        expect(consoleSpy).toHaveBeenCalledWith('Migrating a@b.com, row 2');
+        expect(consoleSpy).toHaveBeenCalledWith('Migrated a@b.com, row 2');
+      });
+
+      it('should continue even when there are errors', () => {
+        groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
+        manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+        try {
+          manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+          fail('Expected error not thrown');
+        } catch (error) {
+          expect(error).toBeInstanceOf(AggregateError);
+          expect(error.errors.length).toEqual(1);
+          expect(error.errors[0].message).toBe('This is a test error');
+          expect(error.errors[0].rowNum).toBe(2);
+          expect(error.errors[0].email).toBe("a@b.com");
+        }
+      });
+
+      it('should indicate how many members were successfully migrated', () => {
+        const numMigrations = manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+        expect(numMigrations).toBe(1);
+      });
+    });
+    describe('Inactive Members', () => {
+      let migrators;
+      beforeEach(() => {
+        migrators = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, "Migrate Me": true, Status: "Expired" },
+        { Email: "a@b.com", Period: 1, First: "Not", Last: "Me", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, Status: "Expired" }
+        ];
+      });
+      it('should migrate only marked members, record the date of migration and removing any unused keys', () => {
+        const expectedMigrators = [{ ...migrators[0], Migrated: today }, { ...migrators[1] }];
+        const m = { ...migrators[0], Migrated: today, Directory: 'Yes' };
+        delete m["Migrate Me"];
+        const expectedMembers = [m];
+        manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+        expect(activeMembers).toEqual(expectedMembers);
+        expect(migrators).toEqual(expectedMigrators);
+      });
+      it('should not migrate members if an error is thrown', () => {
+        groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
+        manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+        try {
+          manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+          fail('Expected error not thrown');
+        } catch (error) {
+          expect(activeMembers).toEqual([]);
+        }
+      });
+      it('should not create an expirySchedule entry for expired members', () => {
+        manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+        expect(expirySchedule).toEqual([]);
+      })
+      it('should not add expired members to any groups', () => {  
+        manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+        expect(groupAddFun).toHaveBeenCalledTimes(0);
+      })
+      it('should not send any emails to inactive members', () => {
+        manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+        expect(sendEmailFun).toHaveBeenCalledTimes(0);
+      })
+      it('should provide logging information', () => {
+        manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+        expect(consoleSpy).toHaveBeenCalledWith('Migrating Inactive member a@b.com, row 2 - no groups will be joined or emails sent'); 
+        expect(consoleSpy).toHaveBeenCalledWith(expect.anything());
+      })
     });
   });
 
@@ -409,11 +455,11 @@ describe('Manager tests', () => {
 
     describe('logging tests', () => {
 
-  
+
       it('should produce interesting logs when processing transactions', () => {
         const txns = [{ ...transactionsFixture.paid[0] }, { ...transactionsFixture.paid[1] }];
         activeMembers = [{ Email: "test2@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "", Status: 'Active' }];
-  
+
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(consoleSpy).toHaveBeenCalledWith('transaction on row 3 test2@example.com is a renewing member');
         expect(consoleSpy).toHaveBeenCalledWith('transaction on row 2 test1@example.com is a new member');
@@ -423,13 +469,13 @@ describe('Manager tests', () => {
       let txns;
       const joinDate = utils.dateOnly("2024-03-10");
       beforeEach(() => {
-        txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year", Phone: "(408) 386-9343" }]; 
+        txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year", Phone: "(408) 386-9343" }];
       })
       it('if renewal is before expiry then new expiry is  old expiry + period', () => {
-       txns = [{...transactionsFixture.paid[0]}];
+        txns = [{ ...transactionsFixture.paid[0] }];
         activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: joinDate, Expires: utils.addDaysToDate(today, 10), "Renewed On": "", Status: "Active" },]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: joinDate, Expires: utils.addYearsToDate(activeMembers[0].Expires, 1), "Renewed On": manager.today(),  Status: "Active" },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: joinDate, Expires: utils.addYearsToDate(activeMembers[0].Expires, 1), "Renewed On": manager.today(), Status: "Active" },
         ]
         manager.processPaidTransactions(txns, activeMembers, expirySchedule);
         expect(activeMembers).toEqual(expectedMembers);
@@ -441,7 +487,7 @@ describe('Manager tests', () => {
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: joinDate, Expires: utils.addYearsToDate(manager.today(), 1), "Renewed On": manager.today(), Status: "Active" },
         ]
         manager.processPaidTransactions(txns, activeMembers, expirySchedule);
-       expect(activeMembers).toEqual(expectedMembers);
+        expect(activeMembers).toEqual(expectedMembers);
       });
     })
 

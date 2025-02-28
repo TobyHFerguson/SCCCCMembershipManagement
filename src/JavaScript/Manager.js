@@ -48,7 +48,7 @@ class Manager {
         let member = activeMembers[memberIdx];
         if (sched.Type === utils.ActionType.Expiry4) {
           member.Status = 'Expired'
-          this._groupEmails.forEach(group => {this._groupRemoveFun(member.Email, group.Email); console.log(`Expiry4 - ${member.Email} removed from group ${group.Email}`)});
+          this._groupEmails.forEach(group => { this._groupRemoveFun(member.Email, group.Email); console.log(`Expiry4 - ${member.Email} removed from group ${group.Email}`) });
         }
         let message = {
           to: member.Email,
@@ -91,16 +91,20 @@ class Manager {
           if (!requiredKeys.includes(key)) delete newMember[key];
         });
         try {
-          console.log(`Migrating ${newMember.Email}, row ${rowNum}`);
-          this._groupEmails.forEach(g => this._groupAddFun(newMember.Email, g.Email));
-          let message = {
-            to: newMember.Email,
-            subject: utils.expandTemplate(actionSpec.Subject, newMember),
-            htmlBody: utils.expandTemplate(actionSpec.Body, newMember)
-          };
-          this._sendEmailFun(message);
+          if (mi.Status !== 'Active') { 
+            console.log(`Migrating Inactive member ${newMember.Email}, row ${rowNum} - no groups will be joined or emails sent`);
+          } else {
+            console.log(`Migrating Active member ${newMember.Email}, row ${rowNum} - joining groups and sending member an email`);
+            this._groupEmails.forEach(g => this._groupAddFun(newMember.Email, g.Email));
+            expirySchedule.push(...this.createScheduleEntries_(newMember.Email, newMember.Expires));
+            let message = {
+              to: newMember.Email,
+              subject: utils.expandTemplate(actionSpec.Subject, newMember),
+              htmlBody: utils.expandTemplate(actionSpec.Body, newMember)
+            };
+            this._sendEmailFun(message);
+          } 
           activeMembers.push(newMember);
-          expirySchedule.push(...this.createScheduleEntries_(newMember.Email, newMember.Expires));
           console.log(`Migrated ${newMember.Email}, row ${rowNum}`);
           numMigrations++;
         } catch (error) {
