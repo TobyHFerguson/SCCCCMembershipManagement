@@ -493,14 +493,14 @@ describe('Manager tests', () => {
 
     it('should update an existing expirySchedule', () => {
       const exp = utils.addDaysToDate(today, 60)
-      const activeMembers = [{ Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: utils.getDateString('2021-01-01'), Expires: exp, Status: 'Active' }];
+      const activeMembers = [{ Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: utils.dateOnly('2021-01-01'), Expires: exp, Status: 'Active' }];
       const expirySchedule = [
         { Email: "test1@example.com", Type: utils.ActionType.Join, Date: today, },
         { Email: "test1@example.com", Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(today, 365 + O1) },
         { Email: "test1@example.com", Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(today, 365 + O2) },
         { Email: "test1@example.com", Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(today, 365 + O3), },
         { Email: "test1@example.com", Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(today, 365 + O4), }
-      ].map(e => { e.Date = utils.getDateString(e.Date); return e; });
+      ]
       const txns = [
         { "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" },
         { "Payable Status": "paid", "Email Address": "test2@example.com", "First Name": "Jane", "Last Name": "Smith", "Payment": "3 years" }
@@ -516,9 +516,8 @@ describe('Manager tests', () => {
         { Email: "test2@example.com", Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(exp3, O2) },
         { Email: "test2@example.com", Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(exp3, O3), },
         { Email: "test2@example.com", Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(exp3, O4), },
-      ].map(e => { e.Date = utils.getDateString(e.Date); return e; });
+      ]
       manager.processPaidTransactions(txns, activeMembers, expirySchedule);
-      expirySchedule.forEach(a => a.Date = utils.getDateString(a.Date));
       expect(expirySchedule).toEqual(expected);
     });
   });
