@@ -49,7 +49,7 @@ describe('Manager tests', () => {
   const O2 = actionSpecs.Expiry2.Offset;
   const O3 = actionSpecs.Expiry3.Offset;
   const O4 = actionSpecs.Expiry4.Offset;
-  const today = '2025-06-15';
+  const today = utils.dateOnly("2025-03-01")
   let manager;
   let activeMembers;
   let expiredMembers;
@@ -309,13 +309,11 @@ describe('Manager tests', () => {
       it('should create the new members', () => {
         const txns = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: "2026-06-15", "Renewed On": "", Status: "Active" },
-          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '', Joined: today, Expires: "2027-06-15", "Renewed On": "", Status: "Active" },
-          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '', Joined: today, Expires: "2028-06-15", "Renewed On": "", Status: "Active" }]
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": "", Status: "Active" },
+          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '', Joined: today, Expires: utils.addYearsToDate(today, 2), "Renewed On": "", Status: "Active" },
+          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '', Joined: today, Expires: utils.addYearsToDate(today, 3), "Renewed On": "", Status: "Active" }]
 
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
-        activeMembers.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
-        expectedMembers.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
         expect(activeMembers.length).toEqual(3)
         expect(activeMembers).toEqual(expectedMembers);
       });
@@ -352,8 +350,6 @@ describe('Manager tests', () => {
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: utils.addYearsToDate("2025-03-10", 1), "Renewed On": today, Status: "Active" },
         ]
         manager.processPaidTransactions(txns, members, expirySchedule,);
-        members.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
-        expectedMembers.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
         expect(members.length).toEqual(1)
         expect(members).toEqual(expectedMembers);
       });
@@ -365,7 +361,6 @@ describe('Manager tests', () => {
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired", Phone: '' },
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": "", Status: "Active", Phone: '' },
         ]
-        expectedMembers.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
         manager.processPaidTransactions(txns, members, expirySchedule,);
         expect(members).toEqual(expectedMembers);
       })
@@ -426,28 +421,27 @@ describe('Manager tests', () => {
     });
     describe('membership expiry period tests', () => {
       let txns;
+      const joinDate = utils.dateOnly("2024-03-10");
       beforeEach(() => {
-        txns = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
+        txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year", Phone: "(408) 386-9343" }]; 
       })
       it('if renewal is before expiry then new expiry is  old expiry + period', () => {
-        activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: manager.today(), Expires: utils.addDaysToDate(manager.today(), 10), "Renewed On": "" },]
+       txns = [{...transactionsFixture.paid[0]}];
+        activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: joinDate, Expires: utils.addDaysToDate(today, 10), "Renewed On": "", Status: "Active" },]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: utils.getDateString(), Expires: utils.addDaysToDate(new Date(), 365 + 10), "Renewed On": manager.today() },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: joinDate, Expires: utils.addYearsToDate(activeMembers[0].Expires, 1), "Renewed On": manager.today(),  Status: "Active" },
         ]
         manager.processPaidTransactions(txns, activeMembers, expirySchedule);
-        activeMembers.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
-        expectedMembers.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
+        expect(activeMembers).toEqual(expectedMembers);
       });
 
       it('if renewal is after expiry then new expiry is today + period', () => {
-        activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: manager.today(), Expires: utils.addDaysToDate(manager.today(), -10), "Renewed On": "" },]
+        activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: joinDate, Expires: utils.addDaysToDate(joinDate, -10), "Renewed On": "", Status: "Active" },]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: utils.getDateString(), Expires: utils.addDaysToDate(new Date(), 365), "Renewed On": manager.today() },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: joinDate, Expires: utils.addYearsToDate(manager.today(), 1), "Renewed On": manager.today(), Status: "Active" },
         ]
-        txns = transactionsFixture.paid.map(t => { return { ...t } });
         manager.processPaidTransactions(txns, activeMembers, expirySchedule);
-        activeMembers.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
-        expectedMembers.forEach(e => { e.Joined = utils.getDateString(e.Joined); e.Expires = utils.getDateString(e.Expires) });
+       expect(activeMembers).toEqual(expectedMembers);
       });
     })
 
@@ -482,47 +476,6 @@ describe('Manager tests', () => {
   });
 
 
-  describe('test the utils.getDateString function', () => {
-    it('should return a date string in the format yyyy-mm-dd', () => {
-      const date = new Date('2021-01-01');
-      const result = utils.getDateString(date);
-      expect(result).toEqual('2021-01-01');
-    });
-
-    it('should work with date objects', () => {
-      const date = new Date('2021-01-01');
-      const result = utils.getDateString(date);
-      expect(result).toEqual('2021-01-01');
-    });
-  });
-
-  describe('addDaysToDate  ', () => {
-    it('should add a number of days to a date', () => {
-      const date = '2021-01-01';
-      const result = utils.addDaysToDate(date, 2);
-      expect(result).toEqual(new Date('2021-01-03'));
-    });
-
-    it('shoud work with negative numbers', () => {
-      const date = new Date('2021-01-01');
-      const result = utils.addDaysToDate(date, -2);
-      expect(result).toEqual(new Date('2020-12-30'));
-    });
-
-    it('should work with zero', () => {
-      const date = new Date('2021-01-01');
-      const result = utils.addDaysToDate(date, 0);
-      expect(result).toEqual(new Date('2021-01-01'));
-    });
-
-    it('should work with a string date', () => {
-      const date = '2021-01-01';
-      const result = utils.addDaysToDate(date, 2);
-      expect(result).toEqual(new Date('2021-01-03'));
-    });
-  })
-
-
 
   describe('expirySchedule', () => {
     it('should create an expirySchedule', () => {
@@ -541,7 +494,7 @@ describe('Manager tests', () => {
     })
 
     it('should update an existing expirySchedule', () => {
-      const exp = utils.getDateString(utils.addDaysToDate(today, 60))
+      const exp = utils.addDaysToDate(today, 60)
       const activeMembers = [{ Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: utils.getDateString('2021-01-01'), Expires: exp, Status: 'Active' }];
       const expirySchedule = [
         { Email: "test1@example.com", Type: utils.ActionType.Join, Date: today, },
@@ -554,8 +507,8 @@ describe('Manager tests', () => {
         { "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" },
         { "Payable Status": "paid", "Email Address": "test2@example.com", "First Name": "Jane", "Last Name": "Smith", "Payment": "3 years" }
       ]
-      const exp1 = utils.calculateExpirationDate(exp, 1)
-      const exp3 = utils.calculateExpirationDate(today, 3)
+      const exp1 = utils.calculateExpirationDate(today, exp, 1)
+      const exp3 = utils.calculateExpirationDate(today, today, 3)
       const expected = [
         { Email: "test1@example.com", Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(exp1, O1) },
         { Email: "test1@example.com", Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(exp1, O2) },
