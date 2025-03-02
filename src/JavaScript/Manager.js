@@ -87,15 +87,12 @@ class Manager {
         mi.Migrated = this._today;
         const newMember = { ...mi, Directory: mi.Directory ? 'Yes' : 'No' };
         // Delete unwanted keys
-        Object.keys(newMember).forEach(key => {
-          if (!requiredKeys.includes(key)) delete newMember[key];
-        });
         try {
           if (mi.Status !== 'Active') { 
             console.log(`Migrating Inactive member ${newMember.Email}, row ${rowNum} - no groups will be joined or emails sent`);
           } else {
             console.log(`Migrating Active member ${newMember.Email}, row ${rowNum} - joining groups and sending member an email`);
-            this._groupEmails.forEach(g => this._groupAddFun(newMember.Email, g.Email));
+            Object.keys(newMember).filter(key => key.includes('@')).filter(k => newMember[k]).forEach(g => this._groupAddFun(newMember.Email, g));
             expirySchedule.push(...this.createScheduleEntries_(newMember.Email, newMember.Expires));
             let message = {
               to: newMember.Email,
@@ -104,6 +101,9 @@ class Manager {
             };
             this._sendEmailFun(message);
           } 
+          Object.keys(newMember).forEach(key => {
+            if (!requiredKeys.includes(key)) delete newMember[key];
+          });
           activeMembers.push(newMember);
           console.log(`Migrated ${newMember.Email}, row ${rowNum}`);
           numMigrations++;
