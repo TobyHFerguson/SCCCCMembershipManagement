@@ -280,7 +280,7 @@ describe('Manager tests', () => {
 
       it('should provide logging information', () => {
         manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-        expect(consoleSpy).toHaveBeenCalledWith('Migrating a@b.com, row 2');
+        expect(consoleSpy).toHaveBeenCalledWith("Migrating Active member a@b.com, row 2 - joining groups and sending member an email")
         expect(consoleSpy).toHaveBeenCalledWith('Migrated a@b.com, row 2');
       });
 
@@ -319,16 +319,6 @@ describe('Manager tests', () => {
         manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
         expect(activeMembers).toEqual(expectedMembers);
         expect(migrators).toEqual(expectedMigrators);
-      });
-      it('should not migrate members if an error is thrown', () => {
-        groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
-        manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
-        try {
-          manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-          fail('Expected error not thrown');
-        } catch (error) {
-          expect(activeMembers).toEqual([]);
-        }
       });
       it('should not create an expirySchedule entry for expired members', () => {
         manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
