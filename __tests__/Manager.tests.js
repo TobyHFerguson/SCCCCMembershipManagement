@@ -65,7 +65,7 @@ describe('Manager tests', () => {
     groupRemoveFun = jest.fn();
     groupAddFun = jest.fn();
     sendEmailFun = jest.fn();
-    groupEmails = [{ Email: "a@b.com" }];
+    groupEmails = [{ Email: "a@b.com" }, { Email: "member_discussions@sc3.club" }];
     manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
     activeMembers = [];
     expiredMembers = [];
@@ -204,7 +204,9 @@ describe('Manager tests', () => {
     describe('Active Members only', () => {
       let migrators;
       beforeEach(() => {
-        migrators = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, "Migrate Me": true, Status: "Active" },
+        migrators = [
+          { Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, "Migrate Me": true, Status: "Active", 
+            "board_announcements@sc3.club": false, "member_discussions@sc3.club": true },
         { Email: "a@b.com", Period: 1, First: "Not", Last: "Me", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, Status: "Active" }
         ];
       });
@@ -265,10 +267,10 @@ describe('Manager tests', () => {
         });
       })
 
-      it('should add migrated members to the groups', () => {
+      it('should add migrated members to groups in keys', () => {
         manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
         expect(groupAddFun).toHaveBeenCalledTimes(1);
-        expect(groupAddFun).toHaveBeenCalledWith(migrators[0].Email, groupEmails[0].Email);
+        expect(groupAddFun).toHaveBeenCalledWith(migrators[0].Email, "board_announcements@sc3.club");
       });
 
       it('should send emails to the members', () => {
