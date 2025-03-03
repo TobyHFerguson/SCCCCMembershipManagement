@@ -13,6 +13,11 @@
         "userSymbol": "AdminDirectory",
         "version": "directory_v1",
         "serviceId": "admin"
+      },
+      {
+        "userSymbol": "GroupsSettings",
+        "version": "v1",
+        "serviceId": "groupssettings"
       }
     ]
   },
@@ -31,6 +36,7 @@
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/groups",
     "https://www.googleapis.com/auth/script.scriptapp",
-    "https://www.googleapis.com/auth/drive.readonly"
+    "https://www.googleapis.com/auth/drive.readonly",
+    "https://www.googleapis.com/auth/apps.groups.settings"
   ]
 }
