@@ -1,19 +1,53 @@
-function getGroupSettings_(groupEmails) {
+function getActiveGroupSettings_(groupEmails) {
   /**
-   * Fetches settings for specified Google Groups using the Group Settings API.
+   * Fetches settings for specified Google Groups using the Group Settings API,
+   * filtering out settings with "deprecated" in their description.
    *
    * @param {string[]} groupEmails An array of Google Group email addresses.
    * @returns {object} A dictionary where keys are group email addresses and values are dictionaries
-   * containing the group settings, or null if an error occurs.
+   * containing the active group settings, or null if an error occurs.
    */
 
+  const deprecatedSettings = [
+    "whoCanInvite",
+    "whoCanAdd",
+    "maxMessageBytes",
+    "showInGroupDirectory",
+    "allowGoogleCommunication",
+    "messageDisplayFont",
+    "whoCanAddReferences",
+    "whoCanAssignTopics",
+    "whoCanUnassignTopic",
+    "whoCanTakeTopics",
+    "whoCanMarkDuplicate",
+    "whoCanMarkNoResponseNeeded",
+    "whoCanMarkFavoriteReplyOnAnyTopic",
+    "whoCanMarkFavoriteReplyOnOwnTopic",
+    "whoCanUnmarkFavoriteReplyOnAnyTopic",
+    "whoCanEnterFreeFormTags",
+    "whoCanModifyTagsAndCategories",
+    "whoCanApproveMembers",
+    "whoCanBanUsers",
+    "whoCanModifyMembers",
+    "whoCanApproveMessages",
+    "whoCanDeleteAnyPost",
+    "whoCanDeleteTopics",
+    "whoCanLockTopics",
+    "whoCanMoveTopicsIn",
+    "whoCanMoveTopicsOut",
+    "whoCanPostAnnouncements",
+    "whoCanHideAbuse",
+    "whoCanMakeTopicsSticky"
+  ]
   var results = {};
 
   for (var i = 0; i < groupEmails.length; i++) {
     var groupEmail = groupEmails[i];
     try {
-      var settings = GroupsSettings.Groups.get(groupEmail);
-      results[groupEmail] = settings;
+      var allSettings = GroupsSettings.Groups.get(groupEmail);
+      deprecatedSettings.forEach(setting => delete allSettings[setting]);
+
+      results[groupEmail] = allSettings;
     } catch (e) {
       Logger.log("Error fetching settings for " + groupEmail + ": " + e);
       results[groupEmail] = null; // Indicate failure for this specific group.
@@ -23,32 +57,29 @@ function getGroupSettings_(groupEmails) {
   return results;
 }
 
-function testGetGroupSettings() {
+
+
+function testGetActiveGroupSettings() {
   // Replace with your group emails:
   var groupEmailsToFetch = ["board_announcements@sc3.club"];
 
-  var groupSettings = getGroupSettings_(groupEmailsToFetch);
+  var groupSettings = getActiveGroupSettings_(groupEmailsToFetch);
 
   if (groupSettings) {
-    for (var groupEmail in groupSettings) {
-      if (groupSettings[groupEmail]) {
-        Logger.log("Settings for " + groupEmail + ":");
-        var settings = groupSettings[groupEmail];
-        const keys = Object.keys(settings).sort()
-        for (var key in settings) {
+    for (var group in groupSettings) {
+      if (groupSettings[group]) {
+        Logger.log("Active settings for " + group + ":");
+        const settings = groupSettings[group];
+        const keys = Object.keys(settings).sort();
+        console.log(`#keys: ${keys.length}`);
+        for (const key in keys) {
           Logger.log("  " + key + ": " + settings[key]);
         }
       } else {
-        Logger.log("Could not retrieve settings for " + groupEmail);
+        Logger.log("Could not retrieve settings for " + group);
       }
     }
   } else {
     Logger.log("Failed to retrieve group settings.");
   }
 }
-
-// Enable the Advanced Google Services:
-// 1. In the Apps Script editor, go to "Resources" > "Advanced Google services...".
-// 2. Enable the "Groups Settings API".
-// 3. Click "Google Cloud Platform project" at the bottom.
-// 4. In the Cloud Console, ensure the Groups Settings API is enabled for your project.
