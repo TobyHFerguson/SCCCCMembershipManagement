@@ -83,3 +83,20 @@ function testGetActiveGroupSettings() {
     Logger.log("Failed to retrieve group settings.");
   }
 }
+
+
+function writeGroupEmailsToSpreadsheetByType() {
+  const groupsByType = ConfigurationManager.getFiddler('GroupsByType');
+
+  const settingsToBeWritten = groupsByType.map(gbt => {
+    const settings = getActiveGroupSettings(gbt.email)[0];
+    settings.type = gbt.type;
+    return settings;
+  });
+  const groupSettingsFiddler = ConfigurationManager.getFiddler('GroupSettings');
+  groupSettingsFiddler.setData(settingsToBeWritten).dumpValues();
+}
+
+
+
+
