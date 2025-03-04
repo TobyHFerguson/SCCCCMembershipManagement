@@ -85,7 +85,7 @@ function testGetActiveGroupSettings() {
 }
 
 
-function writeGroupEmailsToSpreadsheetByType() {
+function writeGroupEmailSettingsByType() {
   const groupsByType = ConfigurationManager.getFiddler('GroupsByType');
 
   const settingsToBeWritten = groupsByType.map(gbt => {
@@ -97,6 +97,9 @@ function writeGroupEmailsToSpreadsheetByType() {
   groupSettingsFiddler.setData(settingsToBeWritten).dumpValues();
 }
 
-
+function updateGroupsFromGroupSettings() {
+  const groups = ConfigurationManager.getFiddler('GroupSettings').getData()
+ groups.forEach(group => GroupsSettings.Groups.update(group, group.email))
+}
 
 
