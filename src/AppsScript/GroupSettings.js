@@ -99,7 +99,7 @@ function writeGroupEmailSettingsByType() {
 
 function updateGroupsFromGroupSettings() {
   const groups = ConfigurationManager.getFiddler('GroupSettings').getData()
- groups.forEach(group => GroupsSettings.Groups.update(group, group.email))
+ groups.filter(group => group.email === 'rides@sc3.club').forEach(group => GroupsSettings.Groups.update(group, group.email))
 }
 
 
