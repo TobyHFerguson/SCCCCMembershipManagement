@@ -165,8 +165,9 @@ describe('Manager tests', () => {
         expectedActiveMembers = [{ ...activeMembers[0], Status: 'Expired' }];
         manager.processExpirations(activeMembers, expirySchedule);
         expect(activeMembers).toEqual(expectedActiveMembers);
-        expect(groupRemoveFun).toHaveBeenCalledTimes(1);
+        expect(groupRemoveFun).toHaveBeenCalledTimes(2);
         expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groupEmails[0].Email);
+        expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groupEmails[1].Email);
         expect(sendEmailFun).toHaveBeenCalledTimes(1);
         expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedActiveMembers[0].Email, subject: actionSpecs.Expiry4.Subject, htmlBody: actionSpecs.Expiry4.Body.replace('{First}', expectedActiveMembers[0].First).replace('{Last}', expectedActiveMembers[0].Last) });
       })
@@ -189,8 +190,9 @@ describe('Manager tests', () => {
       })
       it('should remove the member from all groups once Expiry4 has been met', () => {
         manager.processExpirations(activeMembers, expirySchedule);
-        expect(groupRemoveFun).toHaveBeenCalledTimes(1);
+        expect(groupRemoveFun).toHaveBeenCalledTimes(2);
         expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groupEmails[0].Email);
+        expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groupEmails[1].Email);
       })
       it('should send an email to the member once Expiry4 has been met', () => {
         manager.processExpirations(activeMembers, expirySchedule);
@@ -214,6 +216,8 @@ describe('Manager tests', () => {
         const expectedMigrators = [{ ...migrators[0], Migrated: today }, { ...migrators[1] }];
         const m = { ...migrators[0], Migrated: today, Directory: 'Yes' };
         delete m["Migrate Me"];
+        delete m["board_announcements@sc3.club"];
+        delete m["member_discussions@sc3.club"]
         const expectedMembers = [m];
         manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
         expect(activeMembers).toEqual(expectedMembers);
@@ -270,7 +274,7 @@ describe('Manager tests', () => {
       it('should add migrated members to groups in keys', () => {
         manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
         expect(groupAddFun).toHaveBeenCalledTimes(1);
-        expect(groupAddFun).toHaveBeenCalledWith(migrators[0].Email, "board_announcements@sc3.club");
+        expect(groupAddFun).toHaveBeenCalledWith(migrators[0].Email, "member_discussions@sc3.club");
       });
 
       it('should send emails to the members', () => {
@@ -408,8 +412,9 @@ describe('Manager tests', () => {
       it('should add a member to a group when the member is added', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
-        expect(groupAddFun).toHaveBeenCalledTimes(1);
-        expect(groupAddFun).toHaveBeenCalledWith("test1@example.com", "a@b.com")
+        expect(groupAddFun).toHaveBeenCalledTimes(2);
+        expect(groupAddFun).toHaveBeenCalledWith("test1@example.com", "a@b.com");
+        expect(groupAddFun).toHaveBeenCalledWith("test1@example.com", "member_discussions@sc3.club"); 
       })
 
       it('should not add a member to a group when the member is renewed', () => {
