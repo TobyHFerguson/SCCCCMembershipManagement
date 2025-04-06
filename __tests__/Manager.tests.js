@@ -249,18 +249,33 @@ describe('Manager tests', () => {
         expect(expirySchedule).toEqual([]);
         expect(consoleSpy).toHaveBeenCalledWith(`Skipping row 2, no email address`);
       });
-      it('should not migrate members that already exist, and log the fact', () => {
-        const m = { ...migrators[0] }
-        migrators = [m];
-        expectedMigrators = [{ ...m }];
-        const am = { ...m };
-        delete am["Migrate Me"];
-        activeMembers = [am];
-        expectedActiveMembers = [{ ...am }];
-        manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+      it('should migrate expired members, and log the fact', () => {
+        members = [{Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "1900-03-10", Expires: "1901-01-10", Directory: 'Yes', Status: "Expired"}];
+        migrators = [
+          { Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, "Migrate Me": true, Status: "Active", 
+            "board_announcements@sc3.club": false, "member_discussions@sc3.club": true },
+        ];
+        expectedMigrators = [{ ...migrators[0], Migrated: today }];
+        expectedMembers = [members[0],
+          {Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: 'Yes', Migrated: today, Status: "Active"}
+        ];
+        manager.migrateCEMembers(migrators, members, expirySchedule);
         expect(migrators).toEqual(expectedMigrators);
-        expect(activeMembers).toEqual(expectedActiveMembers);
-        expect(consoleSpy).toHaveBeenCalledWith(`Skipping ${m.Email} on row 2, already an active member`);
+        expect(members).toEqual(expectedMembers);
+        expect(groupAddFun).toHaveBeenCalledTimes(1);
+      });
+      it('should not migrate members that are already recorded as being active, and log the fact', () => {
+        members = [{Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "1900-03-10", Expires: "1901-01-10", Directory: 'Yes', Status: "Active"}];
+        migrators = [
+          { Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, "Migrate Me": true, Status: "Active", 
+            "board_announcements@sc3.club": false, "member_discussions@sc3.club": true },
+        ];
+        expectedMigrators = [{ ...migrators[0]}];
+        expectedMembers = [{...members[0]}];
+        manager.migrateCEMembers(migrators, members, expirySchedule);
+        expect(migrators).toEqual(expectedMigrators);
+        expect(members).toEqual(expectedMembers);
+        expect(consoleSpy).toHaveBeenCalledWith(`Skipping ${migrators[0].Email} on row 2, already an active member`);
       });
 
       describe('expiry Schedule ', () => {

@@ -67,7 +67,7 @@ class Manager {
     return schedulesToBeProcessed.length;
   }
 
-  migrateCEMembers(migrators, activeMembers, expirySchedule) {
+  migrateCEMembers(migrators, members, expirySchedule) {
     const actionSpec = this._actionSpecs[utils.ActionType.Migrate];
     const requiredKeys = ['Email', 'First', 'Last', 'Phone', 'Joined', 'Period', 'Expires', 'Renewed On', 'Directory', 'Migrated', 'Status'];
 
@@ -79,7 +79,7 @@ class Manager {
         console.log(`Skipping row ${rowNum}, no email address`);
         return;
       }
-      if (activeMembers.some(activeMember => activeMember.Email === mi.Email)) {
+      if (members.some(member => member.Status === 'Active' && member.Email === mi.Email)) {
         console.log(`Skipping ${mi.Email} on row ${rowNum}, already an active member`);
         return;
       }
@@ -104,7 +104,7 @@ class Manager {
           Object.keys(newMember).forEach(key => {
             if (!requiredKeys.includes(key)) delete newMember[key];
           });
-          activeMembers.push(newMember);
+          members.push(newMember);
           console.log(`Migrated ${newMember.Email}, row ${rowNum}`);
           numMigrations++;
         } catch (error) {
