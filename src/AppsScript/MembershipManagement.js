@@ -31,7 +31,9 @@ function processMigrations() {
   const expiryScheduleFiddler = ConfigurationManager.getFiddler('ExpirySchedule');
 
   const { manager, membershipData, expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
-
+  const mdLength = membershipData.length;
+  const esdLength = expiryScheduleData.length;
+ 
   try {
     manager.migrateCEMembers(migratingMembers, membershipData, expiryScheduleData);
   } catch (error) {
@@ -41,7 +43,10 @@ function processMigrations() {
       console.error(`Error: ${error.message}\nStack trace: ${error.stack}`);
     }
   }
-
+  if (PropertiesService.getScriptProperties().getProperty('logOnly').toLowerCase() === 'true') {
+    console.log(`logOnly - # newMembers added: ${membershipData.length - mdLength} - #expirySchedule entries added: ${expiryScheduleData.length - esdLength}`);
+    return;
+  }
   migratingMembersFiddler.setData(migratingMembers).dumpValues();
   membershipFiddler.setData(membershipData).dumpValues();
   expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
@@ -72,7 +77,7 @@ function initializeManagerData_(membershipFiddler, expiryScheduleFiddler,) {
 
 function getGroupAdder_() {
   if (PropertiesService.getScriptProperties().getProperty('testGroupAdds') === 'true') {
-    return (memberEmail, groupEmail) => utils.log(`Group Add: `, memberEmail, ' to ', groupEmail);
+    return (memberEmail, groupEmail) => utils.log(`testGroupAdds: true. Would have added: `, memberEmail, ' to group:', groupEmail);
   } else {
     return (memberEmail, groupEmail) => addMemberToGroup_(memberEmail, groupEmail);
   }
@@ -80,7 +85,7 @@ function getGroupAdder_() {
 
 function getGroupRemover_() {
   if (PropertiesService.getScriptProperties().getProperty('testGroupRemoves') === 'true') {
-    return (memberEmail, groupEmail) => utils.log(`Group Remove: `, memberEmail, ' from ', groupEmail);
+    return (memberEmail, groupEmail) => utils.log(`testGroupRemoves: true. Would have removed: `, memberEmail, ' from group:', groupEmail);
   } else {
     return (memberEmail, groupEmail) => removeMemberFromGroup_(memberEmail, groupEmail);
   }
