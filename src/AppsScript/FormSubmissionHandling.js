@@ -117,6 +117,10 @@ function getLastSpreadsheetUpdateTime(spreadsheetId) {
       return lastUpdated;
     } catch (e) {
       console.log(ERROR_GETTING_LAST_UPDATED_TIME_LOG, e.toString());
+      if (e.message.includes('Please wait a bit and try again')) {
+        console.log('Not waiting - returning last updated time as now');
+        return new Date(); // Return current time if the error is due to rate limiting
+      }
       return null; // Return null if there's an error
     }
 }
