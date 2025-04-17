@@ -400,7 +400,7 @@ describe('Manager tests', () => {
         expect(hasPendingPayments).toBe(false);
       })
       it('should handle membership renewals for active members', () => {
-        const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year", "Directory Share Name": false, "Directory": "Share Email"  },
+        const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year",  "Directory": "Share Email"  },
         ]
         const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Active" , "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false },]
         const expectedMembers = [
@@ -411,12 +411,12 @@ describe('Manager tests', () => {
         expect(members).toEqual(expectedMembers);
       });
       it('should treat a renewal for a member with an expired membership as a new member', () => {
-        const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" },
+        const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year", "Directory": "Share Email" },
         ]
-        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired", Phone: '' },]
+        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired", Phone: '', "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false },]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired", Phone: '' },
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": "", Status: "Active", Phone: '' },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired", Phone: '', "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": "", Status: "Active", Phone: '', "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false },
         ]
         manager.processPaidTransactions(txns, members, expirySchedule,);
         expect(members).toEqual(expectedMembers);
