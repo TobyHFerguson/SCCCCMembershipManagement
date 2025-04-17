@@ -141,8 +141,7 @@ class Manager {
         if (matchIndex !== undefined) { // a renewing member
           console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a renewing member`);
           const member = membershipData[matchIndex];
-          const years = Manager.getPeriod_(txn);
-          this.renewMember_(member, years, expirySchedule);
+          this.renewMember_(txn, member, expirySchedule);
           message = {
             to: member.Email,
             subject: utils.expandTemplate(this._actionSpecs.Renew.Subject, member),
@@ -180,10 +179,11 @@ class Manager {
     return years;
   }
 
-  renewMember_(member, period, expirySchedule,) {
-    member.Period = period;
+  renewMember_(txn, member, expirySchedule,) {
+    member.Period = Manager.getPeriod_(txn);
     member["Renewed On"] = this._today;
-    member.Expires = utils.calculateExpirationDate(this._today, member.Expires, period);
+    member.Expires = utils.calculateExpirationDate(this._today, member.Expires, member.period);
+    Object.assign(member, Manager.extractDirectorySharing_(txn));
     this.addRenewedMemberToActionSchedule_(member, expirySchedule);
   }
 
