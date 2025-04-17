@@ -9,9 +9,9 @@ const transactionsFixture = {
     { "Payable Status": "paid", "Email Address": "test3@example.com", Processed: "2025-06-15" },
   ],
   paid: [
-    { "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year", Phone: "(408) 386-9343" },
-    { "Payable Status": "paid", "Email Address": "test2@example.com", "First Name": "Jane", "Last Name": "Smith", "Payment": "2 years" },
-    { "Payable Status": "paid", "Email Address": "test3@example.com", "First Name": "Not", "Last Name": "Member", "Payment": "3 year" },
+    { "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year", Phone: "(408) 386-9343", Directory: "" },
+    { "Payable Status": "paid", "Email Address": "test2@example.com", "First Name": "Jane", "Last Name": "Smith", "Payment": "2 years", Directory: "Share Name, Share Phone" },
+    { "Payable Status": "paid", "Email Address": "test3@example.com", "First Name": "Not", "Last Name": "Member", "Payment": "3 year", Directory: "Share Email" },
 
   ],
   caseInsensitive: [
@@ -366,9 +366,9 @@ describe('Manager tests', () => {
       it('should create the new members', () => {
         const txns = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": "", Status: "Active" },
-          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '', Joined: today, Expires: utils.addYearsToDate(today, 2), "Renewed On": "", Status: "Active" },
-          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '', Joined: today, Expires: utils.addYearsToDate(today, 3), "Renewed On": "", Status: "Active" }]
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": "", Status: "Active", "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false },
+          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '', Joined: today, Expires: utils.addYearsToDate(today, 2), "Renewed On": "", Status: "Active","Directory Share Name": true, "Directory Share Email": false, "Directory Share Phone": true },
+          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '', Joined: today, Expires: utils.addYearsToDate(today, 3), "Renewed On": "", Status: "Active", "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false }]
 
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(activeMembers.length).toEqual(3)

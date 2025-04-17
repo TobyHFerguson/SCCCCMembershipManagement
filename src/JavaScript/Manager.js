@@ -215,6 +215,13 @@ class Manager {
   }
 
 
+  static extractDirectorySharing_(txn) {
+    return {
+      "Directory Share Name": txn.Directory.toLowerCase().includes('share name'),
+      "Directory Share Email": txn.Directory.toLowerCase().includes('share email'),
+      "Directory Share Phone": txn.Directory.toLowerCase().includes('share phone'),
+    }
+  }
   addNewMember_(txn, expirySchedule, membershipData) {
     const newMember = {
       Email: txn["Email Address"],
@@ -225,7 +232,8 @@ class Manager {
       Period: Manager.getPeriod_(txn),
       Expires: utils.calculateExpirationDate(this._today, this._today, Manager.getPeriod_(txn)),
       "Renewed On": '',
-      Status: "Active"
+      Status: "Active",
+      ...Manager.extractDirectorySharing_(txn)
     };
     membershipData.push(newMember);
     this.addNewMemberToActionSchedule_(newMember, expirySchedule);
