@@ -487,7 +487,16 @@ describe('Manager tests', () => {
         txns = [{ ...transactionsFixture.paid[0] }];
         activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: joinDate, Expires: utils.addDaysToDate(today, 10), "Renewed On": "", Status: "Active" },]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: joinDate, Expires: utils.addYearsToDate(activeMembers[0].Expires, 1), "Renewed On": manager.today(), Status: "Active" },
+          { Email: "test1@example.com", 
+            Period: 1, First: "John", 
+            Last: "Doe", 
+            Joined: joinDate, 
+            Expires: utils.addYearsToDate(activeMembers[0].Expires, 1), 
+            "Renewed On": manager.today(), 
+            Status: "Active" ,
+            "Directory Share Name": false,
+            "Directory Share Email": false,
+            "Directory Share Phone": false},
         ]
         manager.processPaidTransactions(txns, activeMembers, expirySchedule);
         expect(activeMembers).toEqual(expectedMembers);
@@ -496,7 +505,17 @@ describe('Manager tests', () => {
       it('if renewal is after expiry then new expiry is today + period', () => {
         activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: joinDate, Expires: utils.addDaysToDate(joinDate, -10), "Renewed On": "", Status: "Active" },]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: joinDate, Expires: utils.addYearsToDate(manager.today(), 1), "Renewed On": manager.today(), Status: "Active" },
+          { Email: "test1@example.com", 
+            Period: 1, 
+            First: "John", 
+            Last: "Doe", 
+            Joined: joinDate, 
+            Expires: utils.addYearsToDate(manager.today(), 1), 
+            "Renewed On": manager.today(), 
+            Status: "Active",
+            "Directory Share Name": false,
+            "Directory Share Email": false,
+            "Directory Share Phone": false},
         ]
         manager.processPaidTransactions(txns, activeMembers, expirySchedule);
         expect(activeMembers).toEqual(expectedMembers);
