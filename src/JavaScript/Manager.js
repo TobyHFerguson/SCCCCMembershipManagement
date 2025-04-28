@@ -217,9 +217,9 @@ class Manager {
 
   static extractDirectorySharing_(txn) {
     return {
-      "Directory Share Name": txn.Directory && txn.Directory.toLowerCase().includes('share name'),
-      "Directory Share Email": txn.Directory && txn.Directory.toLowerCase().includes('share email'),
-      "Directory Share Phone": txn.Directory && txn.Directory.toLowerCase().includes('share phone'),
+      "Directory Share Name": txn.Directory ?  txn.Directory.toLowerCase().includes('share name') : false,
+      "Directory Share Email": txn.Directory ? txn.Directory.toLowerCase().includes('share email'): false,
+      "Directory Share Phone": txn.Directory ? txn.Directory.toLowerCase().includes('share phone'): false,
     }
   }
   addNewMember_(txn, expirySchedule, membershipData) {
