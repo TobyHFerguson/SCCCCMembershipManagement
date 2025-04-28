@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <title>SCCCC Directory</title>
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
+
+  <style>
+    body {
+      font-family: sans-serif;
+    }
+  
+    #data-table {
+      width: auto; /* Set the table width to auto */
+      border-collapse: collapse;
+    }
+  
+    #data-table th,
+    #data-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+      width: auto; /* Let the content determine the width of cells */
+    }
+  
+    #data-table th {
+      background-color: #f2f2f2;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>SCCCC Directory</h1>
+  <table id="data-table" class="display">
+    <thead>
+      <tr>
+        <th>First</th>
+        <th>Last</th>
+        <th>Email</th>
+        <th>Phone</th>
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  </table>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+  <script>
+    $(document).ready(function () {
+      // Check if jQuery is loaded
+      if (typeof jQuery === 'undefined') {
+        console.error('jQuery is not loaded!');
+        return; // Don't proceed with DataTables initialization
+      }
+      google.script.run.withSuccessHandler(function (data) {
+        var tableData = JSON.parse(data);
+        var tableBody = $('#data-table tbody');
+
+        tableData.forEach(function (row) {
+          var newRow = $('<tr>');
+          newRow.append('<td>' + row.First + '</td>');
+          newRow.append('<td>' + row.Last + '</td>');
+          var emailLink = row.email ? '<a href="mailto:' + row.email + '">' + row.email + '</a>' : '';
+          newRow.append('<td>' + emailLink + '</td>');
+          var phoneLink = row.phone ? '<a href="tel:' + row.phone + '">' + row.phone + '</a>' : '';
+          newRow.append('<td>' + phoneLink + '</td>');
+          tableBody.append(newRow);
+        });
+
+        // Initialize DataTables only if jQuery is available
+        if ($.fn.DataTable) {
+          $('#data-table').DataTable({
+            "order": [[1, 'asc']],
+            "responsive": true
+          });
+        } else {
+          console.error('DataTables library not loaded!');
+        }
+      }).getData();
+    });
+  </script>
+</body>
+
+</html>

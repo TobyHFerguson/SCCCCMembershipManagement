@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Request Access</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: sans-serif; }
+    .container { width: fit-content; margin: 50px auto; } /* Use percentage and max-width */
+    input[type=email], button { width: 100%; padding: 12px 20px; margin-bottom: 10px; display: inline-block; border: 1px solid #ccc; box-sizing: border-box; }
+    button { background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+    .message { margin-top: 10px; font-size: 0.9em; }
+    .success { color: green; }
+    .error { color: red; }
+
+    /* Media query for smaller screens (e.g., phones) */
+    @media (max-width: 600px) {
+      .container {
+        width: 95%;
+        margin: 20px auto;
+      }
+
+      input[type=email], button {
+        padding: 15px;
+        font-size: 1em; /* Adjust font size slightly */
+      }
+
+      h2 {
+        font-size: 1.3em;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Request SCCCC Directory Access Link</h2>
+
+    <input type="email" id="email" placeholder="Enter your email address" required autocomplete="email">
+    <button onclick="requestLink()">Send Access Link</button>
+    <div id="message" class="message"></div>
+  </div>
+
+  <script>
+    function requestLink() {
+      var email = document.getElementById('email').value;
+      document.getElementById('message').textContent = 'Processing...';
+      google.script.run
+          .withSuccessHandler(function(response) {
+            document.getElementById('message').textContent = 'Processed';
+            document.getElementById('email').value = ''; // Clear the input
+          })
+          .sendMagicLink(email);
+    }
+  </script>
+</body>
+</html>
