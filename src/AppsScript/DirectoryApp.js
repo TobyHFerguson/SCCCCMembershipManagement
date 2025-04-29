@@ -40,7 +40,7 @@ function _getEmailAddresses() {
     Logger.log('Error: "Email" column not found.');
     return [];
   }
-  return data.slice(1).map(row => row[emailIndex]).filter(email => email !== '');
+  return data.slice(1).map(row => row[emailIndex].toLowerCase().trim()).filter(email => email !== '');
 }
 
 function storeToken(email, token) {
@@ -202,6 +202,7 @@ function doPost(e) {
 }
 
 function sendMagicLink(email) {
+  email = email.toLowerCase().trim(); // Normalize the email address
   const validEmails = _getEmailAddresses();
   const message = 'If the email address entered was that of a club member then an email with the access link was sent to that address from "membership-automation@sc3.club". If you do not receive an email, please contact the club administrator, after checking your Spam or Junk folders.';
   if (validEmails.includes(email)) {
