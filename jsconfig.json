@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+      "target": "ES2021",
+    
+      "allowJs": true       // Make sure JS files are included
+    },
+    "include": [
+      "./**/*"             // Include all files in the project
+    ],
+    "exclude": [
+      "node_modules"
+    ]
+  }

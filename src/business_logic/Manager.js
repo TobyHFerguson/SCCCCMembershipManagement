@@ -1,9 +1,9 @@
 if (typeof require !== 'undefined') {
   (utils = require('./utils.js'));
 }
-class Manager {
+class MembershipManager {
   constructor(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today) {
-    if (!groupEmails || groupEmails.length === 0) { throw new Error('Manager requires a non-empty array of group emails'); }
+    if (!groupEmails || groupEmails.length === 0) { throw new Error('MembershipManager requires a non-empty array of group emails'); }
     this._actionSpecs = actionSpecs;
     this._groupEmails = groupEmails;
     this._groupAddFun = groupAddFun || (() => { });
@@ -180,16 +180,16 @@ class Manager {
   }
 
   renewMember_(txn, member, expirySchedule,) {
-    member.Period = Manager.getPeriod_(txn);
+    member.Period = MembershipManagement.getPeriod_(txn);
     member["Renewed On"] = this._today;
     member.Expires = utils.calculateExpirationDate(this._today, member.Expires, member.period);
-    Object.assign(member, Manager.extractDirectorySharing_(txn));
+    Object.assign(member, MembershipManagement.extractDirectorySharing_(txn));
     this.addRenewedMemberToActionSchedule_(member, expirySchedule);
   }
 
   addRenewedMemberToActionSchedule_(member, expirySchedule) {
     const email = member.Email;
-    Manager.removeEmails_(email, expirySchedule);
+    MembershipManagement.removeEmails_(email, expirySchedule);
     const scheduleEntries = this.createScheduleEntries_(email, member.Expires);
     expirySchedule.push(...scheduleEntries);
   }
@@ -229,11 +229,11 @@ class Manager {
       Last: txn["Last Name"],
       Phone: txn.Phone || '',
       Joined: this._today,
-      Period: Manager.getPeriod_(txn),
-      Expires: utils.calculateExpirationDate(this._today, this._today, Manager.getPeriod_(txn)),
+      Period: MembershipManagement.getPeriod_(txn),
+      Expires: utils.calculateExpirationDate(this._today, this._today, MembershipManagement.getPeriod_(txn)),
       "Renewed On": '',
       Status: "Active",
-      ...Manager.extractDirectorySharing_(txn)
+      ...MembershipManagement.extractDirectorySharing_(txn)
     };
     membershipData.push(newMember);
     this.addNewMemberToActionSchedule_(newMember, expirySchedule);
@@ -249,5 +249,5 @@ class Manager {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = Manager;
+  module.exports = MembershipManagement;
 }

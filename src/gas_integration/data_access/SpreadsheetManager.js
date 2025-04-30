@@ -1,4 +1,4 @@
-const ConfigurationManager = (function () {
+const SpreadsheetManager = (function () {
   let sheets;
   /**
 * Gets a fiddler based on the sheet name.

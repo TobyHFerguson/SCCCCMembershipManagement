@@ -3,12 +3,12 @@
  */
 function processTransactions() {
   convertLinks_('Transactions');
-  const transactionsFiddler = ConfigurationManager.getFiddler('Transactions').needFormulas();
+  const transactionsFiddler = SpreadsheetManager.getFiddler('Transactions').needFormulas();
   const transactions = getDataWithFormulas_(transactionsFiddler);
   if (transactions.length === 0) { return; }
 
-  const membershipFiddler = ConfigurationManager.getFiddler('ActiveMembers');
-  const expiryScheduleFiddler = ConfigurationManager.getFiddler('ExpirySchedule');
+  const membershipFiddler = SpreadsheetManager.getFiddler('ActiveMembers');
+  const expiryScheduleFiddler = SpreadsheetManager.getFiddler('ExpirySchedule');
 
   const { manager, membershipData, expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
@@ -23,12 +23,12 @@ function processTransactions() {
 }
 
 function processMigrations() {
-  const migratingMembersFiddler = ConfigurationManager.getFiddler('MigratingMembers').needFormulas();
+  const migratingMembersFiddler = SpreadsheetManager.getFiddler('MigratingMembers').needFormulas();
   const migratingMembers = getDataWithFormulas_(migratingMembersFiddler);
   if (migratingMembers.length === 0) { return; }
 
-  const membershipFiddler = ConfigurationManager.getFiddler('ActiveMembers');
-  const expiryScheduleFiddler = ConfigurationManager.getFiddler('ExpirySchedule');
+  const membershipFiddler = SpreadsheetManager.getFiddler('ActiveMembers');
+  const expiryScheduleFiddler = SpreadsheetManager.getFiddler('ExpirySchedule');
 
   const { manager, membershipData, expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
   const mdLength = membershipData.length;
@@ -53,8 +53,8 @@ function processMigrations() {
 }
 
 function processExpirations() {
-  const membershipFiddler = ConfigurationManager.getFiddler('ActiveMembers');
-  const expiryScheduleFiddler = ConfigurationManager.getFiddler('ExpirySchedule');
+  const membershipFiddler = SpreadsheetManager.getFiddler('ActiveMembers');
+  const expiryScheduleFiddler = SpreadsheetManager.getFiddler('ExpirySchedule');
 
   const { manager, membershipData, expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
@@ -70,7 +70,7 @@ function initializeManagerData_(membershipFiddler, expiryScheduleFiddler,) {
   const membershipData = membershipFiddler.getData();
   const expiryScheduleData = expiryScheduleFiddler.getData();
 
-  const manager = new Manager(ConfigurationManager.getActionSpecs(), ConfigurationManager.getGroupEmails(), getGroupAdder_(), getGroupRemover_(), getEmailSender_());
+  const manager = new MembershipManager(SpreadsheetManager.getActionSpecs(), SpreadsheetManager.getGroupEmails(), getGroupAdder_(), getGroupRemover_(), getEmailSender_());
 
   return { manager, membershipData, expiryScheduleData };
 }
