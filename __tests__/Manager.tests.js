@@ -1,5 +1,6 @@
-const Manager = require('../src/JavaScript/Manager');
-(utils = require('../src/JavaScript/utils'));
+const {MembershipManagement} = require('../src/services/MembershipManagement/Manager');
+const utils = MembershipManagement.Utils;
+
 const transactionsFixture = {
   unpaid: [
     { "Payable Status": "unpaid", "Email Address": "test1@example.com" },
@@ -43,6 +44,15 @@ const actionSpecsArray = [
   { Type: 'Expiry4', Subject: 'Final Expiry', Body: 'Your membership has expired, {First} {Last}!', Offset: 10 },
 ]
 
+describe('Structure Tests,', () => {
+  it('should have the expected structure', () => {
+    expect(MembershipManagement).toHaveProperty('Manager');
+    expect(MembershipManagement).toHaveProperty('Utils');
+    expect(MembershipManagement).toHaveProperty('Utils.ActionType');
+    expect(MembershipManagement).toHaveProperty('Utils.addDaysToDate');
+  });
+}
+);
 describe('Manager tests', () => {
   const actionSpecs = Object.fromEntries(actionSpecsArray.map(spec => [spec.Type, spec]));
   const O1 = actionSpecs.Expiry1.Offset;
@@ -66,7 +76,7 @@ describe('Manager tests', () => {
     groupAddFun = jest.fn();
     sendEmailFun = jest.fn();
     groupEmails = [{ Email: "a@b.com" }, { Email: "member_discussions@sc3.club" }];
-    manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+    manager = new MembershipManagement.Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
     activeMembers = [];
     expiredMembers = [];
     expirySchedule = [];
@@ -225,7 +235,7 @@ describe('Manager tests', () => {
       });
       it('should not migrate members if an error is thrown', () => {
         groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
-        manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+        manager = new MembershipManagement.Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
         try {
           manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
           fail('Expected error not thrown');
@@ -307,7 +317,7 @@ describe('Manager tests', () => {
 
       it('should continue even when there are errors', () => {
         groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
-        manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+        manager = new MembershipManagement.Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
         try {
           manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
           fail('Expected error not thrown');
@@ -543,7 +553,7 @@ describe('Manager tests', () => {
         it('should return errors if there are any', () => {
           const transactions = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
           sendEmailFun = jest.fn(() => { throw new Error('This is a test error') });
-          manager = new Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+          manager = new MembershipManagement.Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
           const { _, __, errors } = manager.processPaidTransactions(transactions, activeMembers, expirySchedule,);
           expect(errors.length).toEqual(3);
           expect(errors[0].message).toEqual('This is a test error');

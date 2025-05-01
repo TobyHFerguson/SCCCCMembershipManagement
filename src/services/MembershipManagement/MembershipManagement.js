@@ -1,16 +1,14 @@
-/**
- * @OnlyCurrentDoc - only edit this spreadsheet, and no other
- */
-function processTransactions() {
-  convertLinks_('Transactions');
+
+MembershipManagement.processTransactions = function() {
+  this.Internal.convertLinks_('Transactions');
   const transactionsFiddler = SpreadsheetManager.getFiddler('Transactions').needFormulas();
-  const transactions = getDataWithFormulas_(transactionsFiddler);
+  const transactions = this.Internal.getDataWithFormulas_(transactionsFiddler);
   if (transactions.length === 0) { return; }
 
   const membershipFiddler = SpreadsheetManager.getFiddler('ActiveMembers');
   const expiryScheduleFiddler = SpreadsheetManager.getFiddler('ExpirySchedule');
 
-  const { manager, membershipData, expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
+  const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
   const { recordsChanged, hasPendingPayments, errors } = manager.processPaidTransactions(transactions, membershipData, expiryScheduleData);
     if (recordsChanged) {
@@ -22,15 +20,15 @@ function processTransactions() {
   return {hasPendingPayments, errors};
 }
 
-function processMigrations() {
+MembershipManagement.processMigrations = function() {
   const migratingMembersFiddler = SpreadsheetManager.getFiddler('MigratingMembers').needFormulas();
-  const migratingMembers = getDataWithFormulas_(migratingMembersFiddler);
+  const migratingMembers = this.Internal.getDataWithFormulas_(migratingMembersFiddler);
   if (migratingMembers.length === 0) { return; }
 
   const membershipFiddler = SpreadsheetManager.getFiddler('ActiveMembers');
   const expiryScheduleFiddler = SpreadsheetManager.getFiddler('ExpirySchedule');
 
-  const { manager, membershipData, expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
+  const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
   const mdLength = membershipData.length;
   const esdLength = expiryScheduleData.length;
  
@@ -52,11 +50,11 @@ function processMigrations() {
   expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
 }
 
-function processExpirations() {
+MembershipManagement.processExpirations = function() {
   const membershipFiddler = SpreadsheetManager.getFiddler('ActiveMembers');
   const expiryScheduleFiddler = SpreadsheetManager.getFiddler('ExpirySchedule');
 
-  const { manager, membershipData, expiryScheduleData } = initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
+  const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
   const numProcessed = manager.processExpirations(membershipData, expiryScheduleData);
 
@@ -66,16 +64,16 @@ function processExpirations() {
   expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
 }
 
-function initializeManagerData_(membershipFiddler, expiryScheduleFiddler,) {
+MembershipManagement.Internal.initializeManagerData_ = function(membershipFiddler, expiryScheduleFiddler,) {
   const membershipData = membershipFiddler.getData();
   const expiryScheduleData = expiryScheduleFiddler.getData();
 
-  const manager = new MembershipManager(SpreadsheetManager.getActionSpecs(), SpreadsheetManager.getGroupEmails(), getGroupAdder_(), getGroupRemover_(), getEmailSender_());
+  const manager = new MembershipManager(SpreadsheetManager.getActionSpecs(), SpreadsheetManager.getGroupEmails(), this.getGroupAdder_(), this.getGroupRemover_(), this.getEmailSender_());
 
   return { manager, membershipData, expiryScheduleData };
 }
 
-function getGroupAdder_() {
+MembershipManagement.Internal.getGroupAdder_ = function() {
   if (PropertiesService.getScriptProperties().getProperty('testGroupAdds') === 'true') {
     return (memberEmail, groupEmail) => utils.log(`testGroupAdds: true. Would have added: `, memberEmail, ' to group:', groupEmail);
   } else {
@@ -83,7 +81,7 @@ function getGroupAdder_() {
   }
 }
 
-function getGroupRemover_() {
+MembershipManagement.Internal.getGroupRemover_ = function() {
   if (PropertiesService.getScriptProperties().getProperty('testGroupRemoves') === 'true') {
     return (memberEmail, groupEmail) => utils.log(`testGroupRemoves: true. Would have removed: `, memberEmail, ' from group:', groupEmail);
   } else {
@@ -98,7 +96,7 @@ function getGroupRemover_() {
  * @param {string} memberEmail The email address of the member to add.
  * @customfunction
  */
-function addMemberToGroup_(memberEmail, groupEmail) {
+MembershipManagement.Internal.addMemberToGroup_ = function(memberEmail, groupEmail) {
   try {
     AdminDirectory.Members.insert({ email: memberEmail, role: "MEMBER" }, groupEmail);
     utils.log(`Successfully added ${memberEmail} to ${groupEmail}`);
@@ -118,7 +116,7 @@ function addMemberToGroup_(memberEmail, groupEmail) {
  * @param {string} memberEmail The email address of the member to remove.
  * @customfunction
  */
-function removeMemberFromGroup_(memberEmail, groupEmail) {
+MembershipManagement.Internal.removeMemberFromGroup_ = function(memberEmail, groupEmail) {
   try {
     AdminDirectory.Members.remove(groupEmail, memberEmail);
     utils.log(`Successfully removed ${memberEmail} from ${groupEmail}`);
@@ -133,7 +131,7 @@ function removeMemberFromGroup_(memberEmail, groupEmail) {
   }
 }
 
-function getEmailSender_() {
+MembershipManagement.Internal.getEmailSender_ = function() {
   const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails') === 'true';
   const domain = PropertiesService.getScriptProperties().getProperty('domain') || 'sc3.club';
   return (email) => {
@@ -146,10 +144,7 @@ function getEmailSender_() {
   };
 }
 
-
-
-
-function sendSingleEmail_(email) {
+MembershipManagement.Internal.sendSingleEmail_ = function(email) {
   utils.log(`Email Sent: :`, email);
   try {
     MailApp.sendEmail(email);
@@ -164,7 +159,7 @@ function sendSingleEmail_(email) {
  * @param {fiddler} fiddler 
  * @returns {Array} - The merged data.
  */
-function getDataWithFormulas_(fiddler) {
+MembershipManagement.Internal.getDataWithFormulas_ = function(fiddler) {
   fiddler.needFormulas();
   return combineArrays_(fiddler.getFormulaData(), fiddler.getData());
 }
@@ -178,7 +173,7 @@ function getDataWithFormulas_(fiddler) {
  * @returns {Array<Object>} A new array of objects with combined properties.
  * @throws {Error} If the lengths of the two arrays are not equal.
  */
-function combineArrays_(arr1, arr2) {
+MembershipManagement.Internal.combineArrays_ = function(arr1, arr2) {
   if (arr1.length !== arr2.length) {
     throw new Error("Both arrays must have the same length");
   }
@@ -198,7 +193,7 @@ function combineArrays_(arr1, arr2) {
  * Converts links in a sheet to hyperlinks.
  * @param {String} sheetName - The name of the sheet.
  */
-function convertLinks_(sheetName) {
+MembershipManagement.Internal.convertLinks_ = function(sheetName) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   if (!sheet) return;
   const range = sheet.getDataRange();
