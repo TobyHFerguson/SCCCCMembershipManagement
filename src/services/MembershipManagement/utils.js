@@ -1,6 +1,6 @@
 
 if (typeof require !== 'undefined') {
-  var MembershipManagement = { Utils: {} };
+   MembershipManagement = { Utils: {} };
 }
 
 
