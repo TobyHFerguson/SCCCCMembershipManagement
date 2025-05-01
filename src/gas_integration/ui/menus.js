@@ -1,11 +1,4 @@
-function makeMembershipManagementMenu() {
-    const ui = SpreadsheetApp.getUi();
-  ui.createMenu('Membership Management')
-    .addItem('Process Transactions', processTransactions.name)
-    .addItem('Process Expirations', processExpirations.name)
-    .addItem('Process Migrations', processMigrations.name)
-    .addToUi();
-}
+
 
 function makeUtilitiesMenu() {
   const ui = SpreadsheetApp.getUi();

@@ -1,6 +1,7 @@
 
 if (typeof require !== 'undefined') {
-  (utils = require('../src/JavaScript/utils'))
+  var MembershipManagement = require('../src/services/MembershipManagement/utils')
+  var utils = MembershipManagement.Utils;
 }
 
 describe('utils', () => {

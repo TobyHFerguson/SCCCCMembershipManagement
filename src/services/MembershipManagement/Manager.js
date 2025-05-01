@@ -1,7 +1,8 @@
 if (typeof require !== 'undefined') {
-  (utils = require('./utils.js'));
+  var MembershipManagement = require('./utils.js');
 }
-class MembershipManager {
+
+MembershipManagement.Manager = class {
   constructor(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today) {
     if (!groupEmails || groupEmails.length === 0) { throw new Error('MembershipManager requires a non-empty array of group emails'); }
     this._actionSpecs = actionSpecs;
@@ -9,7 +10,7 @@ class MembershipManager {
     this._groupAddFun = groupAddFun || (() => { });
     this._groupRemoveFun = groupRemoveFun || (() => { });
     this._sendEmailFun = sendEmailFun || (() => { });
-    this._today = utils.dateOnly(today)
+    this._today = MembershipManagement.Utils.dateOnly(today)
   }
 
   today() {
@@ -46,14 +47,14 @@ class MembershipManager {
         console.log(`Skipping member ${sched.Email} - they're not an active member`);
       } else {
         let member = activeMembers[memberIdx];
-        if (sched.Type === utils.ActionType.Expiry4) {
+        if (sched.Type === MembershipManagement.Utils.ActionType.Expiry4) {
           member.Status = 'Expired'
           this._groupEmails.forEach(group => { this._groupRemoveFun(member.Email, group.Email); console.log(`Expiry4 - ${member.Email} removed from group ${group.Email}`) });
         }
         let message = {
           to: member.Email,
-          subject: utils.expandTemplate(spec.Subject, member),
-          htmlBody: utils.expandTemplate(spec.Body, member)
+          subject: MembershipManagement.Utils.expandTemplate(spec.Subject, member),
+          htmlBody: MembershipManagement.Utils.expandTemplate(spec.Body, member)
         };
         this._sendEmailFun(message);
         console.log(`${sched.Type} - ${member.Email} - Email sent`);
@@ -68,7 +69,7 @@ class MembershipManager {
   }
 
   migrateCEMembers(migrators, members, expirySchedule) {
-    const actionSpec = this._actionSpecs[utils.ActionType.Migrate];
+    const actionSpec = this._actionSpecs[MembershipManagement.Utils.ActionType.Migrate];
     const requiredKeys = ['Email', 'First', 'Last', 'Phone', 'Joined', 'Period', 'Expires', 'Renewed On', 'Directory', 'Migrated', 'Status'];
 
     let numMigrations = 0;
@@ -88,7 +89,7 @@ class MembershipManager {
         const newMember = { ...mi, Directory: mi.Directory ? 'Yes' : 'No' };
         // Delete unwanted keys
         try {
-          if (mi.Status !== 'Active') { 
+          if (mi.Status !== 'Active') {
             console.log(`Migrating Inactive member ${newMember.Email}, row ${rowNum} - no groups will be joined or emails sent`);
           } else {
             console.log(`Migrating Active member ${newMember.Email}, row ${rowNum} - joining groups and sending member an email`);
@@ -96,11 +97,11 @@ class MembershipManager {
             expirySchedule.push(...this.createScheduleEntries_(newMember.Email, newMember.Expires));
             let message = {
               to: newMember.Email,
-              subject: utils.expandTemplate(actionSpec.Subject, newMember),
-              htmlBody: utils.expandTemplate(actionSpec.Body, newMember)
+              subject: MembershipManagement.Utils.expandTemplate(actionSpec.Subject, newMember),
+              htmlBody: MembershipManagement.Utils.expandTemplate(actionSpec.Body, newMember)
             };
             this._sendEmailFun(message);
-          } 
+          }
           Object.keys(newMember).forEach(key => {
             if (!requiredKeys.includes(key)) delete newMember[key];
           });
@@ -144,8 +145,8 @@ class MembershipManager {
           this.renewMember_(txn, member, expirySchedule);
           message = {
             to: member.Email,
-            subject: utils.expandTemplate(this._actionSpecs.Renew.Subject, member),
-            htmlBody: utils.expandTemplate(this._actionSpecs.Renew.Body, member)
+            subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Subject, member),
+            htmlBody: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Body, member)
           };
         } else { // a joining member
           console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a new member`);
@@ -153,8 +154,8 @@ class MembershipManager {
           this._groupEmails.forEach(g => this._groupAddFun(newMember.Email, g.Email));
           message = {
             to: newMember.Email,
-            subject: utils.expandTemplate(this._actionSpecs.Join.Subject, newMember),
-            htmlBody: utils.expandTemplate(this._actionSpecs.Join.Body, newMember)
+            subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Join.Subject, newMember),
+            htmlBody: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Join.Body, newMember)
           };
         }
         this._sendEmailFun(message);
@@ -180,16 +181,16 @@ class MembershipManager {
   }
 
   renewMember_(txn, member, expirySchedule,) {
-    member.Period = MembershipManagement.getPeriod_(txn);
+    member.Period = MembershipManagement.Manager.getPeriod_(txn);
     member["Renewed On"] = this._today;
-    member.Expires = utils.calculateExpirationDate(this._today, member.Expires, member.period);
-    Object.assign(member, MembershipManagement.extractDirectorySharing_(txn));
+    member.Expires = MembershipManagement.Utils.calculateExpirationDate(this._today, member.Expires, member.period);
+    Object.assign(member, MembershipManagement.Manager.extractDirectorySharing_(txn));
     this.addRenewedMemberToActionSchedule_(member, expirySchedule);
   }
 
   addRenewedMemberToActionSchedule_(member, expirySchedule) {
     const email = member.Email;
-    MembershipManagement.removeEmails_(email, expirySchedule);
+    MembershipManagement.Manager.removeEmails_(email, expirySchedule);
     const scheduleEntries = this.createScheduleEntries_(email, member.Expires);
     expirySchedule.push(...scheduleEntries);
   }
@@ -198,7 +199,7 @@ class MembershipManager {
     const scheduleEntries = [];
     Object.keys(this._actionSpecs).filter(type => type.startsWith('Expiry')).forEach((type) => {
       const spec = this._actionSpecs[type];
-      const scheduleDate = utils.addDaysToDate(expiryDate, spec.Offset);
+      const scheduleDate = MembershipManagement.Utils.addDaysToDate(expiryDate, spec.Offset);
       const tdy = new Date(this._today);
       if (tdy >= scheduleDate) { return; }
       scheduleEntries.push({ Date: scheduleDate, Type: spec.Type, Email: email });
@@ -217,9 +218,9 @@ class MembershipManager {
 
   static extractDirectorySharing_(txn) {
     return {
-      "Directory Share Name": txn.Directory ?  txn.Directory.toLowerCase().includes('share name') : false,
-      "Directory Share Email": txn.Directory ? txn.Directory.toLowerCase().includes('share email'): false,
-      "Directory Share Phone": txn.Directory ? txn.Directory.toLowerCase().includes('share phone'): false,
+      "Directory Share Name": txn.Directory ? txn.Directory.toLowerCase().includes('share name') : false,
+      "Directory Share Email": txn.Directory ? txn.Directory.toLowerCase().includes('share email') : false,
+      "Directory Share Phone": txn.Directory ? txn.Directory.toLowerCase().includes('share phone') : false,
     }
   }
   addNewMember_(txn, expirySchedule, membershipData) {
@@ -229,11 +230,11 @@ class MembershipManager {
       Last: txn["Last Name"],
       Phone: txn.Phone || '',
       Joined: this._today,
-      Period: MembershipManagement.getPeriod_(txn),
-      Expires: utils.calculateExpirationDate(this._today, this._today, MembershipManagement.getPeriod_(txn)),
+      Period: MembershipManagement.Manager.getPeriod_(txn),
+      Expires: MembershipManagement.Utils.calculateExpirationDate(this._today, this._today, MembershipManagement.Manager.getPeriod_(txn)),
       "Renewed On": '',
       Status: "Active",
-      ...MembershipManagement.extractDirectorySharing_(txn)
+      ...MembershipManagement.Manager.extractDirectorySharing_(txn)
     };
     membershipData.push(newMember);
     this.addNewMemberToActionSchedule_(newMember, expirySchedule);
@@ -249,5 +250,5 @@ class MembershipManager {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = MembershipManagement;
+  module.exports = { MembershipManagement };
 }

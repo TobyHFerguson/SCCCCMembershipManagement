@@ -1,1 +1,0 @@
-const DocsService =  { Internal: {} };
