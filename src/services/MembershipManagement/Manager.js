@@ -1,5 +1,5 @@
 if (typeof require !== 'undefined') {
-  var MembershipManagement = require('./utils.js');
+   (MembershipManagement = require('./utils.js'));
 }
 
 MembershipManagement.Manager = class {

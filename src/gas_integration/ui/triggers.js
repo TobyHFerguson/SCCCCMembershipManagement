@@ -1,4 +1,4 @@
 function onOpen() {
-    // makeMembershipManagementMenu();
+    MembershipManagement.Menu.create()
     makeUtilitiesMenu();
 }

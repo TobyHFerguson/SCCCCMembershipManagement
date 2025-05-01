@@ -1,8 +1,8 @@
 
 MembershipManagement.processTransactions = function() {
-  this.Internal.convertLinks_('Transactions');
+  SpreadsheetManager.convertLinks('Transactions');
   const transactionsFiddler = SpreadsheetManager.getFiddler('Transactions').needFormulas();
-  const transactions = this.Internal.getDataWithFormulas_(transactionsFiddler);
+  const transactions = SpreadsheetManager.getDataWithFormulas(transactionsFiddler);
   if (transactions.length === 0) { return; }
 
   const membershipFiddler = SpreadsheetManager.getFiddler('ActiveMembers');
@@ -22,7 +22,7 @@ MembershipManagement.processTransactions = function() {
 
 MembershipManagement.processMigrations = function() {
   const migratingMembersFiddler = SpreadsheetManager.getFiddler('MigratingMembers').needFormulas();
-  const migratingMembers = this.Internal.getDataWithFormulas_(migratingMembersFiddler);
+  const migratingMembers = SpreadsheetManager.getDataWithFormulas(migratingMembersFiddler);
   if (migratingMembers.length === 0) { return; }
 
   const membershipFiddler = SpreadsheetManager.getFiddler('ActiveMembers');
@@ -68,24 +68,24 @@ MembershipManagement.Internal.initializeManagerData_ = function(membershipFiddle
   const membershipData = membershipFiddler.getData();
   const expiryScheduleData = expiryScheduleFiddler.getData();
 
-  const manager = new MembershipManager(SpreadsheetManager.getActionSpecs(), SpreadsheetManager.getGroupEmails(), this.getGroupAdder_(), this.getGroupRemover_(), this.getEmailSender_());
+  const manager = new MembershipManagement.Manager(SpreadsheetManager.getActionSpecs(), SpreadsheetManager.getGroupEmails(), this.getGroupAdder_(), this.getGroupRemover_(), this.getEmailSender_());
 
   return { manager, membershipData, expiryScheduleData };
 }
 
 MembershipManagement.Internal.getGroupAdder_ = function() {
   if (PropertiesService.getScriptProperties().getProperty('testGroupAdds') === 'true') {
-    return (memberEmail, groupEmail) => utils.log(`testGroupAdds: true. Would have added: `, memberEmail, ' to group:', groupEmail);
+    return (memberEmail, groupEmail) => MembershipManagement.Utils.log(`testGroupAdds: true. Would have added: `, memberEmail, ' to group:', groupEmail);
   } else {
-    return (memberEmail, groupEmail) => addMemberToGroup_(memberEmail, groupEmail);
+    return (memberEmail, groupEmail) => this.addMemberToGroup_(memberEmail, groupEmail);
   }
 }
 
 MembershipManagement.Internal.getGroupRemover_ = function() {
   if (PropertiesService.getScriptProperties().getProperty('testGroupRemoves') === 'true') {
-    return (memberEmail, groupEmail) => utils.log(`testGroupRemoves: true. Would have removed: `, memberEmail, ' from group:', groupEmail);
+    return (memberEmail, groupEmail) => MembershipManagement.Utils.log(`testGroupRemoves: true. Would have removed: `, memberEmail, ' from group:', groupEmail);
   } else {
-    return (memberEmail, groupEmail) => removeMemberFromGroup_(memberEmail, groupEmail);
+    return (memberEmail, groupEmail) => this.removeMemberFromGroup_(memberEmail, groupEmail);
   }
 }
 
@@ -99,10 +99,10 @@ MembershipManagement.Internal.getGroupRemover_ = function() {
 MembershipManagement.Internal.addMemberToGroup_ = function(memberEmail, groupEmail) {
   try {
     AdminDirectory.Members.insert({ email: memberEmail, role: "MEMBER" }, groupEmail);
-    utils.log(`Successfully added ${memberEmail} to ${groupEmail}`);
+    MembershipManagement.Utils.log(`Successfully added ${memberEmail} to ${groupEmail}`);
   } catch (e) {
     if (e.message && e.message.includes("Member already exists")) {
-      utils.log(`Member ${memberEmail} already exists in ${groupEmail}`);
+      MembershipManagement.Utils.log(`Member ${memberEmail} already exists in ${groupEmail}`);
     } else {
       throw e;
     }
@@ -119,10 +119,10 @@ MembershipManagement.Internal.addMemberToGroup_ = function(memberEmail, groupEma
 MembershipManagement.Internal.removeMemberFromGroup_ = function(memberEmail, groupEmail) {
   try {
     AdminDirectory.Members.remove(groupEmail, memberEmail);
-    utils.log(`Successfully removed ${memberEmail} from ${groupEmail}`);
+    MembershipManagement.Utils.log(`Successfully removed ${memberEmail} from ${groupEmail}`);
   } catch (e) {
     if (e.message && e.message.includes("Resource Not Found")) {
-      utils.log(`Error: ${memberEmail} not found in ${groupEmail} - one or both of those resources do not exist. Check the addresses and try again`);
+      MembershipManagement.Utils.log(`Error: ${memberEmail} not found in ${groupEmail} - one or both of those resources do not exist. Check the addresses and try again`);
     } else if (e.message && e.message === 'API call to directory.members.delete failed with error: Missing required field: ') {
       throw new Error(`Removing member ${memberEmail} from group ${groupEmail} - one or both of those addresses are not valid email addresses.`);
     } else {
@@ -137,7 +137,7 @@ MembershipManagement.Internal.getEmailSender_ = function() {
   return (email) => {
     email.replyTo = `membership@${domain}`;
     if (testEmails) {
-      utils.log('testEmails is set to true - logging only: ', email);
+      MembershipManagement.Utils.log('testEmails is set to true - logging only: ', email);
     } else {
       sendSingleEmail_(email);
     }
@@ -145,7 +145,7 @@ MembershipManagement.Internal.getEmailSender_ = function() {
 }
 
 MembershipManagement.Internal.sendSingleEmail_ = function(email) {
-  utils.log(`Email Sent: :`, email);
+  MembershipManagement.Utils.log(`Email Sent: :`, email);
   try {
     MailApp.sendEmail(email);
     return { Timestamp: new Date(), ...email };
@@ -154,62 +154,11 @@ MembershipManagement.Internal.sendSingleEmail_ = function(email) {
   }
 }
 
-/**
- * Returns the data from a fiddler with formulas merged into it.
- * @param {fiddler} fiddler 
- * @returns {Array} - The merged data.
- */
-MembershipManagement.Internal.getDataWithFormulas_ = function(fiddler) {
-  fiddler.needFormulas();
-  return combineArrays_(fiddler.getFormulaData(), fiddler.getData());
-}
 
-/**
- * Combines two arrays of objects by merging the properties of objects at the same index.
- * If a property in the first array's object is an empty string or undefined, the property from the second array's object is used.
- * 
- * @param {Array<Object>} arr1 - The first array of objects.
- * @param {Array<Object>} arr2 - The second array of objects.
- * @returns {Array<Object>} A new array of objects with combined properties.
- * @throws {Error} If the lengths of the two arrays are not equal.
- */
-MembershipManagement.Internal.combineArrays_ = function(arr1, arr2) {
-  if (arr1.length !== arr2.length) {
-    throw new Error("Both arrays must have the same length");
-  }
 
-  return arr1.map((item, index) => {
-    const combinedItem = { ...arr2[index] };
-    for (const key in item) {
-      if (item[key] !== "" && item[key] !== undefined) {
-        combinedItem[key] = item[key];
-      }
-    }
-    return combinedItem;
-  });
-}
 
-/**
- * Converts links in a sheet to hyperlinks.
- * @param {String} sheetName - The name of the sheet.
- */
-MembershipManagement.Internal.convertLinks_ = function(sheetName) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-  if (!sheet) return;
-  const range = sheet.getDataRange();
-  const rtvs = range.getRichTextValues();
-  const values = range.getValues();
-  const newValues = rtvs.map((row, r) => {
-    return row.map((column, c) => {
-      if (!column) return null;
-      const v = column.getText() ? column.getText() : values[r][c];
-      return column.getLinkUrl()
-        ? '=hyperlink("'.concat(column.getLinkUrl(), '", "').concat(v, '")')
-        : v;
-    });
-  });
-  range.setValues(newValues);
-  SpreadsheetApp.flush();
-}
+
+
+
 
 
