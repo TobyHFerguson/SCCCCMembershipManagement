@@ -12,7 +12,7 @@
     <script>
       function submitForm() {
         var form = document.getElementById('urlForm');
-        google.script.run.withSuccessHandler(google.script.host.close).handleUserInput(form);
+        google.script.run.withSuccessHandler(google.script.host.close).DocsService_Client_handleUserInput(form);
       }
     </script>
   </body>

@@ -1,6 +1,6 @@
 function onOpen() {
     MembershipManagement.Menu.create()
-    makeUtilitiesMenu();
+    DocsService.Menu.create()
 }
 
 function onFormSubmit(e) {
