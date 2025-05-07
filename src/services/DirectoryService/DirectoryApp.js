@@ -5,8 +5,8 @@ const TOKEN_SHEET_NAME = 'MagicLinkTokens'; // Sheet to store tokens (create thi
 const ACCESS_LINK_BASE_URL = ScriptApp.getService().getUrl(); // Base URL of your web app
 const EMAIL_SUBJECT = 'SCCCC Directory Access Link';
 const EMAIL_BODY = 'Click the following link to access the SCCCC Directory (this link can only be used once):\n\n';
-const MAGIC_LINK_INPUT = 'Html/magicLinkInput.html'; // Name of the HTML file for input form
-const DIRECTORY = 'Html/directory.html'; // Name of the HTML file for the directory
+const MAGIC_LINK_INPUT = 'services/DirectoryService/html/magicLinkInput.html'; // Name of the HTML file for input form
+const DIRECTORY = 'services/DirectoryService/html/directory.html'; // Name of the HTML file for the directory
 
 // --- Helper Functions ---
 
