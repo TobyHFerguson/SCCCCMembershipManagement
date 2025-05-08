@@ -14,11 +14,11 @@ DirectoryService.WebApp = {
                 .setSandboxMode(HtmlService.SandboxMode.IFRAME);
         } else if (token) {
             console.log('Token received:', token);
-            const tokenData = getTokenData(token);
+            const tokenData = Common.Auth.TokenStorage.getTokenData(token);
 
             if (tokenData && !tokenData.used) {
                 console.log('Token is valid and not used. Email:', tokenData.email);
-                markTokenAsUsed(tokenData);
+                Common.Auth.TokenStorage.markTokenAsUsed(token);
                 const template = HtmlService.createTemplateFromFile(DIRECTORY);
                 template.userEmail = tokenData.email; // Assign the email to a template variable
                 const htmlOutput = template.evaluate()
