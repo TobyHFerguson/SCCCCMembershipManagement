@@ -34,13 +34,14 @@
 <body>
   <div class="container">
     <h2>Request SCCCC Directory Access Link</h2>
-
+    Service Value from template: <?= service ?>
     <input type="email" id="email" placeholder="Enter your email address" required autocomplete="email" oninput="validateEmail()">
     <button id="sendButton" onclick="requestLink()" disabled>Send Access Link</button>
     <div id="message" class="message"></div>
   </div>
 
   <script>
+    console.log('Service value from template:', '<?= service ?>');
     function validateEmail() {
       var emailInput = document.getElementById('email');
       var sendButton = document.getElementById('sendButton');
@@ -55,7 +56,7 @@
             document.getElementById('message').textContent = 'Processed';
             document.getElementById('email').value = ''; // Clear the input
           })
-          .sendMagicLink(email);
+          .sendMagicLink(email, '<?= service ?>');
     }
   </script>
 </body>

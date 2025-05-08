@@ -1,3 +1,6 @@
+const MAGIC_LINK_INPUT = 'services/DirectoryService/html/magicLinkInput.html'; // Name of the HTML file for input form
+const DIRECTORY = 'services/DirectoryService/html/directory.html'; // Name of the HTML file for the directory
+const SERVICE='DirectoryService'
 DirectoryService.WebApp = {
 
     doGet: (e) => {
@@ -8,10 +11,14 @@ DirectoryService.WebApp = {
 
         if (page === 'request') {
             console.log('Requesting access via email');
-            return HtmlService.createTemplateFromFile(MAGIC_LINK_INPUT)
-                .evaluate()
+            const template = HtmlService.createTemplateFromFile(MAGIC_LINK_INPUT);
+            template.service = SERVICE;
+            console.log('Service value set in template:', template.service);
+            const output = template.evaluate()
                 .setTitle('Request Access')
                 .setSandboxMode(HtmlService.SandboxMode.IFRAME);
+                console.log('Evaluated HTML:', output.getContent()); // VERY IMPORTANT: Inspect this output
+            return output;
         } else if (token) {
             console.log('Token received:', token);
             const tokenData = Common.Auth.TokenStorage.getTokenData(token);
@@ -32,8 +39,7 @@ DirectoryService.WebApp = {
             }
         } else {
             console.log('No token provided. Displaying welcome message.');
-            // const html = '<h1>Welcome</h1><p><a href="' + ScriptApp.getService().getUrl() + '?page=request"  target="_self">Request Access</a></p>';
-            const html = '<h1>Welcome</h1><p><a href="' + ScriptApp.getService().getUrl() + '?page=request" target="_top">Request Access</a></p>';
+            const html = '<h1>Welcome</h1><p><a href="' + ScriptApp.getService().getUrl() + '?page=request&service='+ SERVICE +'" target="_top">Request Access</a></p>';
             console.log('HTML:', html);
             const htmlOutput = HtmlService.createHtmlOutput(html)
                 .setTitle('Welcome')

@@ -4,8 +4,8 @@ const Common = {
 };
 
 
-const DocsService =  { Internal: {} };
-const MembershipManagement = { Internal: {}, Utils: {}}
+const DocsService = { Internal: {} };
+const MembershipManagement = { Internal: {}, Utils: {} }
 const DirectoryService = {};
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -14,4 +14,4 @@ if (typeof module !== 'undefined' && module.exports) {
         MembershipManagement,
         DirectoryService
     };
-  }
+}
