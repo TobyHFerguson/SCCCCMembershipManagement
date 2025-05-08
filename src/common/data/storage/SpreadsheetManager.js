@@ -61,20 +61,6 @@ const SpreadsheetManager = (function () {
     return combineArrays_(fiddler.getFormulaData(), fiddler.getData());
   }
 
-  function getDataWithFormulasUNUSED(fiddler) {
-    const data = fiddler.getData();
-    const formulas = fiddler.getFormulas();
-    const dataWithFormulas = data.map((row, rowIndex) => {
-      return row.map((cell, colIndex) => {
-        if (formulas[rowIndex][colIndex]) {
-          return formulas[rowIndex][colIndex];
-        }
-        return cell;
-      });
-    });
-    return dataWithFormulas;
-  }
-
   /**
  * Combines two arrays of objects by merging the properties of objects at the same index.
  * If a property in the first array's object is an empty string or undefined, the property from the second array's object is used.

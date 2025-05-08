@@ -5,7 +5,7 @@ Common.Auth.Utils = {
 
     sendMagicLink: function (email, service) {
         email = email.toLowerCase().trim(); // Normalize the email address
-        const validEmails = this._getEmailAddresses();
+        const validEmails = Common.Data.Access.getEmailAddresses();
         if (validEmails.includes(email)) {
             const token = Common.Auth.TokenManager._generateToken();
             Common.Auth.TokenStorage.storeToken(email, token);
@@ -17,11 +17,7 @@ Common.Auth.Utils = {
         }
     },
 
-    _getEmailAddresses: function () {
-        const members = SpreadsheetManager.getFiddler('ActiveMembers').getData();
-        const emails = members.map(member => member.Email);
-        return emails;
-    },
+    
     _sendEmail: function (email, accessLink) {
         const message = {
             to: email,
