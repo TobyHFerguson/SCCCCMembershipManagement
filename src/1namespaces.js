@@ -1,4 +1,9 @@
 
+const Common = {
+    Auth: {}
+};
+
+
 const DocsService =  { Internal: {} };
 const MembershipManagement = { Internal: {}, Utils: {}}
 const DirectoryService = {};
