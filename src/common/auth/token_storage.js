@@ -6,19 +6,19 @@ Common.Auth.TokenStorage = {
             Timestamp: new Date(),
             Used: false
         }
-        const tokenFiddler = SpreadsheetManager.getFiddler('Tokens');
+        const tokenFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens');
         const tokens = tokenFiddler.getData();
         tokens.push(newEntry)
         tokenFiddler.setData(tokens).dumpValues();
     },
     getTokenData:(token) => {
-        const tokenFiddler = SpreadsheetManager.getFiddler('Tokens');
+        const tokenFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens');
         const tokens = tokenFiddler.getData();
         const td = tokens.find((tokenData) => tokenData.Token === token)
         return td || null
     },
     markTokenAsUsed:(token)=> {
-        const tokenFiddler = SpreadsheetManager.getFiddler('Tokens');
+        const tokenFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens');
         const tokens = tokenFiddler.getData();
         const td = tokens.find((tokenData) => tokenData.Token === token)
         td.Used = true;

@@ -23,7 +23,7 @@ function sendEmail(form) {
   var emailAddress = form.emailAddress;
   console.log('selectedKeys', form.selectedKeys);
   var selectedKeys = Array.isArray(form.selectedKeys) ? form.selectedKeys : [form.selectedKeys]; // Ensure selectedKeys is always an array
-  var actionSpecs = SpreadsheetManager.getActionSpecs(); // Assuming this function returns the ActionSpecs object
+  var actionSpecs = Common.Data.Access.getActionSpecs(); // Assuming this function returns the ActionSpecs object
 
   selectedKeys.forEach(function (key) {
     spec = actionSpecs[key];
@@ -52,7 +52,7 @@ function sendEmail(form) {
   });
 }
 function getActionSpecTypes() {
-  var actionSpecs = SpreadsheetManager.getActionSpecs();
+  var actionSpecs = Common.Data.Access.getActionSpecs();
   const result = Object.keys(actionSpecs);
   console.log('getActionSpecTypes', result);
   return result;

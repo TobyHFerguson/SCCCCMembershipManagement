@@ -1,12 +1,12 @@
 
 MembershipManagement.processTransactions = function() {
-  SpreadsheetManager.convertLinks('Transactions');
-  const transactionsFiddler = SpreadsheetManager.getFiddler('Transactions').needFormulas();
-  const transactions = SpreadsheetManager.getDataWithFormulas(transactionsFiddler);
+  Common.Data.Storage.SpreadsheetManager.convertLinks('Transactions');
+  const transactionsFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Transactions').needFormulas();
+  const transactions = Common.Data.Storage.SpreadsheetManager.getDataWithFormulas(transactionsFiddler);
   if (transactions.length === 0) { return; }
 
-  const membershipFiddler = SpreadsheetManager.getFiddler('ActiveMembers');
-  const expiryScheduleFiddler = SpreadsheetManager.getFiddler('ExpirySchedule');
+  const membershipFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
+  const expiryScheduleFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
 
   const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
@@ -21,12 +21,12 @@ MembershipManagement.processTransactions = function() {
 }
 
 MembershipManagement.processMigrations = function() {
-  const migratingMembersFiddler = SpreadsheetManager.getFiddler('MigratingMembers').needFormulas();
-  const migratingMembers = SpreadsheetManager.getDataWithFormulas(migratingMembersFiddler);
+  const migratingMembersFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('MigratingMembers').needFormulas();
+  const migratingMembers = Common.Data.Storage.SpreadsheetManager.getDataWithFormulas(migratingMembersFiddler);
   if (migratingMembers.length === 0) { return; }
 
-  const membershipFiddler = SpreadsheetManager.getFiddler('ActiveMembers');
-  const expiryScheduleFiddler = SpreadsheetManager.getFiddler('ExpirySchedule');
+  const membershipFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
+  const expiryScheduleFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
 
   const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
   const mdLength = membershipData.length;
@@ -51,8 +51,8 @@ MembershipManagement.processMigrations = function() {
 }
 
 MembershipManagement.processExpirations = function() {
-  const membershipFiddler = SpreadsheetManager.getFiddler('ActiveMembers');
-  const expiryScheduleFiddler = SpreadsheetManager.getFiddler('ExpirySchedule');
+  const membershipFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
+  const expiryScheduleFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
 
   const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
@@ -68,7 +68,7 @@ MembershipManagement.Internal.initializeManagerData_ = function(membershipFiddle
   const membershipData = membershipFiddler.getData();
   const expiryScheduleData = expiryScheduleFiddler.getData();
 
-  const manager = new MembershipManagement.Manager(SpreadsheetManager.getActionSpecs(), SpreadsheetManager.getGroupEmails(), this.getGroupAdder_(), this.getGroupRemover_(), this.getEmailSender_());
+  const manager = new MembershipManagement.Manager(Common.Data.Access.getActionSpecs(), Common.Data.Access.getGroupEmails(), this.getGroupAdder_(), this.getGroupRemover_(), this.getEmailSender_());
 
   return { manager, membershipData, expiryScheduleData };
 }
