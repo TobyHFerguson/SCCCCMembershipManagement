@@ -1,7 +1,7 @@
 
 const Common = {
     Auth: {},
-    Data: {}
+    Data: {},
 };
 
 
