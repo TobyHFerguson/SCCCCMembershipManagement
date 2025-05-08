@@ -11,8 +11,8 @@ const ACCESS_LINK_BASE_URL = ScriptApp.getService().getUrl(); // Base URL of you
 
 
  DirectoryService.getDirectoryEntries = () => {
-  const members = SpreadsheetManager.getFiddler('ActiveMembers').getData()
-  const publicMembers = members.filter(member => member['Directory Share Name'])
+  const activeMembers = Common.Data.Access.getActiveMembers();
+  const publicMembers = activeMembers.filter(member => member['Directory Share Name'])
   const tableData = publicMembers.map(member => {
     return {
       First: member.First, 
