@@ -41,6 +41,6 @@
   ],
   "webapp": {
     "executeAs": "USER_DEPLOYING",
-    "access": "MYSELF"
+    "access": "ANYONE"
   }
 }
