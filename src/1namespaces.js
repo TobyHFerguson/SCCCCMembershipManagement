@@ -4,7 +4,7 @@ const Common = {
     Data: {},
 };
 
-
+const EmailService = { Menu: {} }
 const DocsService = { Internal: {} };
 const MembershipManagement = { Internal: {}, Utils: {} }
 const DirectoryService = {};

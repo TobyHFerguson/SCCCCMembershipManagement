@@ -7,3 +7,7 @@ function sendMagicLink(email, service) {
 function getDirectoryEntries() {
   return JSON.stringify(DirectoryService.getDirectoryEntries())
 }
+
+function sendTestEmail(form) {
+  EmailService.sendTestEmail(form)
+}

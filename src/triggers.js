@@ -1,6 +1,7 @@
 function onOpen() {
-    MembershipManagement.Menu.create()
-    DocsService.Menu.create()
+    MembershipManagement.Menu.create();
+    DocsService.Menu.create();
+    EmailService.Menu.create();
 }
 
 function onFormSubmit(e) {
