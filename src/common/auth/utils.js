@@ -13,6 +13,7 @@ Common.Auth.Utils = {
             this._sendEmail(email, accessLink);
             return { success: true };
         } else {
+            console.log('email: ' + email +' isnt valid - no token being generated nor sent')
             return { success: false };
         }
     },
