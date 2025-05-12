@@ -1,7 +1,7 @@
 Common.Data.Access = {
     getEmailAddresses: function () {
         const members = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').getData();
-        const emails = members.map(member => member.Email);
+        const emails = members.map(member => member.Email.toLowerCase());
         return emails;
     },
     getActiveMembers: () => {
