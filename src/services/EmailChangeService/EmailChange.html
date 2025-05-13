@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Change Email Address</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        font-family: sans-serif;
+        padding: 20px;
+        max-width: 500px;
+        margin: auto;
+      }
+      .form-group {
+        margin-bottom: 20px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+      }
+      input[type="email"],
+      input[type="text"] {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      button {
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      #verification-section {
+        display: none;
+        margin-top: 20px;
+        border-top: 1px solid #ccc;
+        padding-top: 20px;
+      }
+      .message {
+        margin-top: 10px;
+        font-weight: bold;
+      }
+      .success {
+        color: green;
+      }
+      .error {
+        color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Change Your Email Address</h2>
+    <form id="email-form">
+      <div class="form-group">
+        <label for="new-email">New Email Address:</label>
+        <input type="email" id="new-email" name="newEmail" required />
+      </div>
+      <button type="button" id="send-code-button">Send Verification Code</button>
+
+      <div id="verification-section">
+        <div class="form-group">
+          <label for="verification-code">Verification Code:</label>
+          <input
+            type="text"
+            id="verification-code"
+            name="verificationCode"
+            required
+            pattern="\d{6}"
+            title="Please enter a 6-digit code"
+          />
+        </div>
+        <button type="button" id="verify-button">Verify and Update Email</button>
+      </div>
+
+      <div id="message" class="message"></div>
+    </form>
+
+    <script>
+      const form = document.getElementById("email-form");
+      const newEmailInput = document.getElementById("new-email");
+      const sendCodeButton = document.getElementById("send-code-button");
+      const verificationSection = document.getElementById("verification-section");
+      const verificationCodeInput = document.getElementById(
+        "verification-code"
+      );
+      const verifyButton = document.getElementById("verify-button");
+      const messageElement = document.getElementById("message");
+      const token = "<?= token ?>"; // Get the token from the server-side
+
+      function showMessage(text, type) {
+        messageElement.textContent = text;
+        messageElement.className = "message " + type;
+      }
+
+      sendCodeButton.addEventListener("click", function () {
+        const newEmail = newEmailInput.value;
+
+        if (!newEmail) {
+          showMessage("Please enter your new email address.", "error");
+          return;
+        }
+
+        // Basic email validation
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+          showMessage("Invalid email address format.", "error");
+          return;
+        }
+
+        // Disable the button to prevent multiple requests
+        sendCodeButton.disabled = true;
+        showMessage("Sending code...", "info");
+
+        // Call the Google Apps Script backend
+        google.script.run
+          .withSuccessHandler(function (response) {
+            showMessage(response, "success");
+            verificationSection.style.display = "block";
+            sendCodeButton.style.display = "none"; //hide the send code button
+            verifyButton.disabled = false;
+          })
+          .withFailureHandler(function (error) {
+            showMessage("Error: " + error, "error");
+            sendCodeButton.disabled = false; // Re-enable the button
+          })
+          .doPost({
+            action: "sendVerificationCode",
+            newEmail: newEmail,
+            token: token,
+          });
+      });
+
+      verifyButton.addEventListener("click", function () {
+        const newEmail = newEmailInput.value;
+        const verificationCode = verificationCodeInput.value;
+
+        if (!verificationCode) {
+          showMessage("Please enter the verification code.", "error");
+          return;
+        }
+
+        // Disable the button to prevent multiple requests
+        verifyButton.disabled = true;
+        showMessage("Verifying...", "info");
+
+        google.script.run
+          .withSuccessHandler(function (response) {
+            showMessage(response, "success");
+            // Optionally, redirect the user to a "success" page
+            // window.location.href = "/email-change-success.html";
+            form.reset();
+            verificationSection.style.display = "none";
+            sendCodeButton.style.display = "none";
+          })
+          .withFailureHandler(function (error) {
+            showMessage("Error: " + error, "error");
+            verifyButton.disabled = false; // Re-enable the button
+          })
+          .doPost({
+            action: "verifyAndUpdateEmail",
+            newEmail: newEmail,
+            verificationCode: verificationCode,
+            token: token,
+          });
+      });
+    </script>
+  </body>
+</html>
