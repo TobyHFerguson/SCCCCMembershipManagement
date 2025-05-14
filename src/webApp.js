@@ -1,15 +1,20 @@
-const MAGIC_LINK_INPUT = 'services/DirectoryService/html/magicLinkInput.html'; // Name of the HTML file for input form
+const MAGIC_LINK_INPUT = 'common/auth/magicLinkInput.html'; // Name of the HTML file for input form
 
 
 function doGet(e) {
-    const service = e.parameter.service;
-    if (!service) {
+    if (!e.parameter.service) {
         return createTextResponse('No service parameter given. The url must have a service parameter!', 400);
+    }
+    const service = Services[e.parameter.service];
+    if (!service) {
+        console.error('Got an invalid service: ', e.parameter.service)
+        return createTextResponse("We're sorry - an internal error occurred. We've notified the developers and theres nothing you can do but wait until they fix it")
     }
     const page = e.parameter.page;
     if (page === 'request') {
         const template = HtmlService.createTemplateFromFile(MAGIC_LINK_INPUT);
-        template.service = service;
+        template.service = service.service;
+        template.serviceName = service.name
         const output = template.evaluate()
             .setTitle('Request Access')
             .setSandboxMode(HtmlService.SandboxMode.IFRAME);
@@ -24,7 +29,7 @@ function doGet(e) {
         throw new Error('tokenData.email === null')
     }
     Common.Auth.TokenStorage.markTokenAsUsed(token);
-    switch (service) {
+    switch (service.service) {
         case 'DirectoryService':
             return DirectoryService.WebApp.doGet(e, tokenData.Email);
             break;

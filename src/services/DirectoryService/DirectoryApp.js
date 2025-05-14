@@ -23,4 +23,7 @@ const ACCESS_LINK_BASE_URL = ScriptApp.getService().getUrl(); // Base URL of you
   return tableData;
 }
 
+DirectoryService.name = "Directory Service"
+DirectoryService.service = "DirectoryService"
+
 // --- Web App Functions ---
