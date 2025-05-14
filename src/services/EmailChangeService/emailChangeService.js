@@ -152,3 +152,6 @@ function getStoredUserIdentifier(token) {
   const tokenData = Common.Auth.TokenStorage.getTokenData(token)
   return tokenData.email;
 }
+
+EmailChangeService.name = "Email Change Service"
+EmailChangeService.service = "EmailChangeService"
