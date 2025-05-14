@@ -32,36 +32,14 @@ function doGet(e) {
             return EmailChangeService.WebApp.doGet(e, tokenData.Email)
             break;
         default:
-            return createTextResponse('Invalid service parameter.', 400);
+            return createTextResponse('Invalid service parameter.');
     }
 }
 function doPost(e) {
-    console.log('doPost(e): ', e)
-    const service = e.parameter.service;
-    if (!service) {
-        return createTextResponse('Invalid service parameter.', 400);
-    }
-    const token = e.parameter.token;
-    const tokenData = Common.Auth.TokenStorage.getTokenData(token);
-    console.log('doPost() - tokenData: ', tokenData)
-    if (!tokenData || tokenData.used) {
-        return createTextResponse('Invalid or Used Link - The access link is either invalid or has already been used.', 400);
-    }
-    if (!tokenData.Email) {
-        throw new Error('tokenData.email === null')
-    }
-    Common.Auth.TokenStorage.markTokenAsUsed(token);
-    switch (service) {
-        case 'EmailChangeService':
-            return EmailChangeService.WebApp.doPost(e, tokenData.Email)
-            break;
-        default:
-            return createTextResponse('Invalid service parameter.', 400);
-    }
-
+    return createTextResponse('doPost() unimplemented');
 }
 
-function createTextResponse(text, status) {
+function createTextResponse(text) {
     return ContentService.createTextOutput(text).setMimeType(
         ContentService.MimeType.TEXT
     )
