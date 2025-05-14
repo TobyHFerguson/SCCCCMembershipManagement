@@ -12,7 +12,6 @@ DirectoryService.WebApp = {
         template.userEmail = userEmail;
         const htmlOutput = template.evaluate()
             .setTitle('SCCCC Directory')
-            .setSandboxMode(HtmlService.SandboxMode.IFRAME)
             .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
         return htmlOutput;
     },
