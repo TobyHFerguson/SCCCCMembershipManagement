@@ -52,7 +52,7 @@
       document.getElementById('message').textContent = 'Processing...';
       google.script.run
           .withSuccessHandler(function(response) {
-            document.getElementById('message').textContent = 'Processed';
+            document.getElementById('message').textContent = 'Processed - if the email you entered is that of an active member then we have sent an access link to that address. Go check and follow the link.';
             document.getElementById('email').value = ''; // Clear the input
           })
           .sendMagicLink(email, '<?= service ?>');
