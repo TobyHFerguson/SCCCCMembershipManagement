@@ -2,7 +2,7 @@
 <html>
 
 <head>
-  <title>Change Email Address</title>
+  <title>SCCCC Email Address Change Form</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
@@ -61,7 +61,11 @@
 </head>
 
 <body>
-  <h2>Change Your Email Address</h2>
+  <h2>SCCCC Change Email Address Form</h2>
+  <div id="email-section">
+  <P>Current Email Address:
+    <?= originalEmail ?>
+  </P>
   <form id="email-form">
     <div class="form-group">
       <label for="new-email">New Email Address:</label>
@@ -70,7 +74,7 @@
     <button type="button" id="send-code-button" disabled>
       Send Verification Code
     </button>
-
+  </div>
     <div id="verification-section">
       <div class="form-group">
         <label for="verification-code">Verification Code:</label>
@@ -85,6 +89,7 @@
     <div id="message" class="message"></div>
   </form>
   <script>
+    const emailSection = document.getElementById("email-section");
     const form = document.getElementById("email-form");
     const originalEmail = "<?= originalEmail ?>"
     const newEmailInput = document.getElementById("new-email");
@@ -99,6 +104,7 @@
     const messageElement = document.getElementById("message");
 
     function showMessage(text, type) {
+      messageElement.style.display = '';
       messageElement.textContent = text;
       messageElement.className = "message " + type;
     }
@@ -107,6 +113,13 @@
       var emailInput = document.getElementById("new-email");
       var sendButton = document.getElementById("send-code-button");
       sendButton.disabled = !emailInput.checkValidity();
+    }
+
+    function resetForm() {
+      sendCodeButton.style.display = '';
+      sendCodeButton.disabled = false;
+      verificationSection.style.display = "none";
+      messageElement.style.display = "none"
     }
 
     sendCodeButton.addEventListener("click", function () {
@@ -159,16 +172,13 @@
       google.script.run
         .withSuccessHandler(function (response) {
           showMessage(response, "success");
-          form.reset();
+          emailSection.style.display = "none";
           verificationSection.style.display = "none";
           sendCodeButton.style.display = "none";
         })
         .withFailureHandler(function (error) {
           showMessage("Error: " + error, "error");
-          sendCodeButton.style.display = '';
-          sendCodeButton.disabled = false;
-          verificationSection.style.display = "none";
-
+          setTimeout(resetForm, 3000)
         })
         .handleVerifyAndUpdateEmail(originalEmail,
           newEmail,

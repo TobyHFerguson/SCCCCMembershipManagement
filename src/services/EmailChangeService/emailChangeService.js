@@ -133,7 +133,7 @@ function handleVerifyAndUpdateEmail(originalEmail, newEmail, verificationCode) {
   // 5. Invalidate the token and verification code
   deleteVerificationData(verificationCode);
 
-  return createTextResponse("Email updated.", 200);
+  return `Email changed from ${originalEmail} to ${newEmail}`
 }
 
 // Placeholder for token validation
