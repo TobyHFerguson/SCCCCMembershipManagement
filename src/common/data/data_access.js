@@ -25,5 +25,11 @@ Common.Data.Access = {
     getGroupEmails:() => {
         const groupEmails = Common.Data.Storage.SpreadsheetManager.getFiddler('GroupEmails').getData();
         return groupEmails;
-      }
+    },
+    getMember:(email) => {
+        email = email.toLowerCase();
+        const members = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').getData();
+        const member = members.map(member => { return {...member, Email: member.Email.toLowerCase() }}).filter(member => member.Email === email)
+        return member[0];
+    }
 }

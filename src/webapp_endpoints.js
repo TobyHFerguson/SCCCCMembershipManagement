@@ -8,6 +8,6 @@ function getDirectoryEntries() {
   return JSON.stringify(DirectoryService.getDirectoryEntries())
 }
 
-function sendTestEmail(form) {
+function processForm(form) {
   EmailService.sendTestEmail(form)
 }
