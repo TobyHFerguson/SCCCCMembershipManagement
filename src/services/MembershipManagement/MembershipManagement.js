@@ -139,7 +139,7 @@ MembershipManagement.Internal.getEmailSender_ = function() {
     if (testEmails) {
       MembershipManagement.Utils.log('testEmails is set to true - logging only: ', email);
     } else {
-      sendSingleEmail_(email);
+      this.sendSingleEmail_(email);
     }
   };
 }
