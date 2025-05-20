@@ -148,6 +148,7 @@ function updateUserEmailInGroup(groupEmail, originalEmail, newEmail) {
 
   try {
    GroupSubscription.changeMembersEmail(groupEmail, originalEmail, newEmail)
+   status = 'Success'
   } catch (e) {
     status = "Failed";
     error = e.message;
