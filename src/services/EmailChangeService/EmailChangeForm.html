@@ -256,11 +256,12 @@
   }
 
   function resetForm() {
+    emailSection.style.display = 'block'; // Show the initial email input section
     sendCodeButton.style.display = 'inline-block';
     sendCodeButton.disabled = true;
     resetButtonEmail.style.display = 'none';
     verificationSection.style.display = "none";
-    groupListSection.style.display = "none";
+    groupListSection.style.display = "none"; // Hide the group list section
     messageElement.style.display = "none";
     updateMessageElement.style.display = "none";
     newEmailInput.value = '';
