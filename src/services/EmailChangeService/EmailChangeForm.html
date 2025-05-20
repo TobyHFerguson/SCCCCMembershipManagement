@@ -45,6 +45,42 @@
       padding-top: 20px;
     }
 
+    #group-list-section {
+      display: none;
+      margin-top: 20px;
+      border-top: 1px solid #ccc;
+      padding-top: 20px;
+    }
+
+    #group-list-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    #group-list-table th,
+    #group-list-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+
+    #group-list-table th {
+      background-color: #f2f2f2;
+    }
+
+    .status-pending {
+      color: grey;
+    }
+
+    .status-success {
+      color: green;
+    }
+
+    .status-failed {
+      color: red;
+    }
+
     .message {
       margin-top: 10px;
       font-weight: bold;
@@ -63,50 +99,79 @@
 <body>
   <h2>SCCCC Change Email Address Form</h2>
   <div id="email-section">
-  <P>Current Email Address:
-    <?= originalEmail ?>
-  </P>
-  <form id="email-form">
+    <p>Current Email Address:
+      <?= originalEmail ?>
+    </p>
+    <form id="email-form">
+      <div class="form-group">
+        <label for="new-email">New Email Address:</label>
+        <input type="email" id="new-email" name="newEmail" required oninput="validateEmail()" />
+      </div>
+      <button type="button" id="send-code-button" disabled>
+        Send Verification Code
+      </button>
+    </form>
+  </div>
+  <div id="verification-section">
     <div class="form-group">
-      <label for="new-email">New Email Address:</label>
-      <input type="email" id="new-email" name="newEmail" required oninput="validateEmail()" />
+      <label for="verification-code">Verification Code:</label>
+      <input type="text" id="verification-code" name="verificationCode" required pattern="\d{6}"
+        title="Please enter a 6-digit code" />
     </div>
-    <button type="button" id="send-code-button" disabled>
-      Send Verification Code
+    <button type="button" id="verify-button" disabled>
+      Verify and Proceed
     </button>
   </div>
-    <div id="verification-section">
-      <div class="form-group">
-        <label for="verification-code">Verification Code:</label>
-        <input type="text" id="verification-code" name="verificationCode" required pattern="\d{6}"
-          title="Please enter a 6-digit code" />
-      </div>
-      <button type="button" id="verify-button" disabled>
-        Verify and Update Email
-      </button>
-    </div>
 
-    <div id="message" class="message"></div>
-  </form>
+  <div id="group-list-section">
+    <h3>Review and Update Group Memberships</h3>
+    <p>The table below shows the groups where your current email address is a member. Once you are ready, click the button to update your email address in these groups.</p>
+    <table id="group-list-table">
+      <thead>
+        <tr>
+          <th>Group Email</th>
+          <th>Current Email</th>
+          <th>New Email</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="group-list-body">
+        </tbody>
+    </table>
+    <button type="button" id="update-groups-button" disabled onclick="updateGroupMemberships()">
+      Change Email in Groups
+    </button>
+    <div id="update-message" class="message"></div>
+  </div>
+
+  <div id="message" class="message"></div>
+
   <script>
     const emailSection = document.getElementById("email-section");
     const form = document.getElementById("email-form");
-    const originalEmail = "<?= originalEmail ?>"
+    const originalEmail = "<?= originalEmail ?>";
     const newEmailInput = document.getElementById("new-email");
     const sendCodeButton = document.getElementById("send-code-button");
-    const verificationSection = document.getElementById(
-      "verification-section"
-    );
-    const verificationCodeInput = document.getElementById(
-      "verification-code"
-    );
+    const verificationSection = document.getElementById("verification-section");
+    const verificationCodeInput = document.getElementById("verification-code");
     const verifyButton = document.getElementById("verify-button");
     const messageElement = document.getElementById("message");
+    const groupListSection = document.getElementById("group-list-section");
+    const groupListTableBody = document.getElementById("group-list-body");
+    const updateGroupsButton = document.getElementById("update-groups-button");
+    const updateMessageElement = document.getElementById("update-message");
+    let groupMembershipData = [];
 
     function showMessage(text, type) {
       messageElement.style.display = '';
       messageElement.textContent = text;
       messageElement.className = "message " + type;
+    }
+
+    function showUpdateMessage(text, type) {
+      updateMessageElement.style.display = '';
+      updateMessageElement.textContent = text;
+      updateMessageElement.className = "message " + type;
     }
 
     function validateEmail() {
@@ -119,7 +184,9 @@
       sendCodeButton.style.display = '';
       sendCodeButton.disabled = false;
       verificationSection.style.display = "none";
-      messageElement.style.display = "none"
+      groupListSection.style.display = "none";
+      messageElement.style.display = "none";
+      updateMessageElement.style.display = "none";
     }
 
     sendCodeButton.addEventListener("click", function () {
@@ -141,7 +208,6 @@
 
       google.script.run
         .withSuccessHandler(function (response) {
-          console.log('response: ', response)
           showMessage(response, "success");
           verificationSection.style.display = "block";
           sendCodeButton.style.display = "none";
@@ -167,24 +233,86 @@
       }
 
       verifyButton.disabled = true;
-      showMessage("Verifying & updating email...", "info");
+      showMessage("Verifying...", "info");
 
       google.script.run
-        .withSuccessHandler(function (response) {
-          showMessage(response, "success");
+        .withSuccessHandler(function (groupData) {
+          showMessage("Email verified successfully!", "success");
           emailSection.style.display = "none";
           verificationSection.style.display = "none";
-          sendCodeButton.style.display = "none";
+          groupListSection.style.display = "block";
+          groupMembershipData = groupData;
+          populateGroupListTable(groupData);
+          updateGroupsButton.disabled = false;
         })
         .withFailureHandler(function (error) {
-          showMessage("Error: " + error, "error");
-          setTimeout(resetForm, 3000)
+          showMessage("Verification failed: " + error, "error");
+          verifyButton.disabled = false;
         })
-        .handleVerifyAndUpdateEmail(originalEmail,
-          newEmail,
-          verificationCode,
-        );
+        .handleVerifyAndGetGroups(originalEmail, newEmail, verificationCode);
     });
+
+    function populateGroupListTable(groups) {
+      groupListTableBody.innerHTML = "";
+      if (groups && groups.length > 0) {
+        groups.forEach(function (groupInfo) {
+          const row = groupListTableBody.insertRow();
+          const groupEmailCell = row.insertCell();
+          const oldEmailCell = row.insertCell();
+          const newEmailCell = row.insertCell();
+          const statusCell = row.insertCell();
+
+          groupEmailCell.textContent = groupInfo.groupEmail;
+          oldEmailCell.textContent = groupInfo.oldEmail;
+          newEmailCell.textContent = groupInfo.newEmail;
+          statusCell.textContent = groupInfo.status || "Pending";
+          statusCell.className = "status-pending";
+        });
+      } else {
+        const row = groupListTableBody.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = 4;
+        cell.textContent = "No Google Groups found for your current email address.";
+      }
+    }
+
+    function updateGroupMemberships() {
+      if (groupMembershipData.length === 0) {
+        showUpdateMessage("No groups to update.", "info");
+        return;
+      }
+
+      updateGroupsButton.disabled = true;
+      showUpdateMessage("Updating group memberships...", "info");
+
+      const newEmail = newEmailInput.value;
+
+      google.script.run
+        .withSuccessHandler(function (results) {
+          showUpdateMessage("Group membership updates complete.", "success");
+          updateGroupListStatus(results);
+          updateGroupsButton.disabled = false; // Allow retry if needed
+        })
+        .withFailureHandler(function (error) {
+          showUpdateMessage("Error updating group memberships: " + error, "error");
+          updateGroupsButton.disabled = false;
+        })
+        .handleChangeEmailInGroupsUI(originalEmail, newEmail, groupMembershipData);
+    }
+
+    function updateGroupListStatus(results) {
+      results.forEach(function (result) {
+        const row = Array.from(groupListTableBody.rows).find(row => row.cells[0].textContent === result.groupEmail);
+        if (row) {
+          row.cells[3].textContent = result.status;
+          row.cells[3].className = `status-${result.status.toLowerCase()}`;
+          if (result.error) {
+            console.error(`Error updating ${result.groupEmail}: ${result.error}`);
+            // Optionally, you could add a tooltip or more detailed error display in the UI
+          }
+        }
+      });
+    }
   </script>
 </body>
 
