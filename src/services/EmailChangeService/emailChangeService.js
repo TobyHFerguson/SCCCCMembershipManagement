@@ -43,12 +43,6 @@ function deleteVerificationData(verificationCode) {
   SCRIPT_PROP.deleteProperty(key);
 }
 
-// Function to update the user's email (placeholder - replace with your actual logic)
-function updateEmailInDatabase(oldEmail, newEmail) {
-  Logger.log(`[updateEmailInDatabase]  Old Email: ${oldEmail} New Email: ${newEmail}`);
-  return true;
-}
-
 // Function to send the verification email
 function sendVerificationEmail(email, code) {
   const subject = "Verify Your New Email Address";
@@ -96,45 +90,86 @@ function handleSendVerificationCode(newEmail, email) {
   // 5. Send the verification email
   const emailSent = sendVerificationEmail(newEmail, verificationCode);
   if (!emailSent) {
-    throw new Error("Failed to send email.", 500);
+    throw new Error("Failed to send email.");
   }
   console.log('Verification Code sent');
   return `Verification code sent to ${newEmail}. Retrieve that code and enter it here`;
 }
 
-function handleVerifyAndUpdateEmail(originalEmail, newEmail, verificationCode) {
-    console.log('handleVerifyAndUpdateEmail(originalEmail, newEmail, verificationCode): ', originalEmail, newEmail, verificationCode)
+function handleVerifyAndGetGroups(originalEmail, newEmail, verificationCode) {
+  console.log('handleVerifyAndGetGroups (using Directory API): ', originalEmail, newEmail, verificationCode);
+
   // 1. Validate input
   if (!originalEmail) {
-    throw new Error("No original email");
+    throw new Error("No original email provided.");
   }
   if (!newEmail) {
-    throw new Error("No new email");
+    throw new Error("No new email provided.");
   }
-
   if (!verificationCode) {
-    throw new Error("No verification code")
+    throw new Error("No verification code provided.");
   }
 
   // 2. Verify the token
   const storedData = getVerificationData(verificationCode);
-  if (!storedData || storedData.type !== "emailUpdate" || storedData.oldEmail !== originalEmail || storedData.newEmail !== newEmail) { // check the values
+  if (!storedData || storedData.type !== "emailUpdate" || storedData.oldEmail !== originalEmail || storedData.newEmail !== newEmail) {
     throw new Error("Invalid or expired verification code.");
   }
 
-  
+ // 3. Find all groups the originalEmail is a member of using listGroupsFor
+  try {
+    const groups = GroupSubscription.listGroupsFor(originalEmail);
+    const groupData = groups.map(group => ({
+      groupEmail: group.email,
+      oldEmail: originalEmail,
+      newEmail: newEmail,
+      status: "Pending"
+    }));
 
-  // 4. Update the email in the database
-  const updateSuccessful = updateEmailInDatabase(originalEmail, newEmail); // Use it here
-  if (!updateSuccessful) {
-    throw new Error("Failed to update email.", 500);
+    // 4. Invalidate the token
+    deleteVerificationData(verificationCode);
+
+    return groupData;
+
+  } catch (error) {
+    console.error("Error retrieving group memberships using Directory API:", error);
+    throw new Error("Failed to retrieve group memberships.");
+  }
+}
+
+// You'll need to have these functions defined elsewhere in your Apps Script:
+// - getVerificationData(verificationCode)
+// - deleteVerificationData(verificationCode)
+
+
+function updateUserEmailInGroup(groupEmail, originalEmail, newEmail) {
+  var status = "Pending";
+  var error = null;
+
+  try {
+   GroupSubscription.changeMembersEmail(groupEmail, originalEmail, newEmail)
+  } catch (e) {
+    status = "Failed";
+    error = e.message;
+    Logger.log(`Error changing members email from ${originalEmail} to ${newEmail} in group ${groupEmail}: ${e}`);
   }
 
-  // 5. Invalidate the token and verification code
-  deleteVerificationData(verificationCode);
-
-  return `Email changed from ${originalEmail} to ${newEmail}`
+  return { groupEmail: groupEmail, status: status, error: error };
 }
+
+function handleChangeEmailInGroupsUI(oldEmail, newEmail, groupData) {
+  var results = [];
+
+  for (var i = 0; i < groupData.length; i++) {
+    var groupEmail = groupData[i].groupEmail;
+    var updateResult = updateUserEmailInGroup(groupEmail, oldEmail, newEmail);
+    results.push(updateResult);
+  }
+
+  return results;
+}
+
+
 
 // Placeholder for token validation
 function isValidToken(token, type) {
