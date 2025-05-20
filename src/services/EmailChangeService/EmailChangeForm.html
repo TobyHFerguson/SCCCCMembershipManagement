@@ -308,8 +308,13 @@
           row.cells[3].className = `status-${result.status.toLowerCase()}`;
           if (result.error) {
             console.error(`Error updating ${result.groupEmail}: ${result.error}`);
-            // Optionally, you could add a tooltip or more detailed error display in the UI
-          }
+ // Add tooltip
+        row.cells[3].title = result.error;
+        row.cells[3].style.cursor = 'help'; // Optional: change cursor to indicate tooltip
+      } else {
+        // Remove tooltip if the status is not an error
+        row.cells[3].title = '';
+        row.cells[3].style.cursor = '';          }
         }
       });
     }
