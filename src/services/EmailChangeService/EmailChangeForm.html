@@ -106,6 +106,7 @@
       <div class="form-group">
         <label for="new-email">New Email Address:</label>
         <input type="email" id="new-email" name="newEmail" required oninput="validateEmail()" />
+        <span id="new-email-error" class="error"></span>
       </div>
       <button type="button" id="send-code-button" disabled>
         Send Verification Code
@@ -160,6 +161,7 @@
     const groupListTableBody = document.getElementById("group-list-body");
     const updateGroupsButton = document.getElementById("update-groups-button");
     const updateMessageElement = document.getElementById("update-message");
+    const newEmailError = document.getElementById("new-email-error");
     let groupMembershipData = [];
 
     function showMessage(text, type) {
@@ -174,10 +176,28 @@
       updateMessageElement.className = "message " + type;
     }
 
+    function isValidEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    }
+
     function validateEmail() {
       var emailInput = document.getElementById("new-email");
       var sendButton = document.getElementById("send-code-button");
-      sendButton.disabled = !emailInput.checkValidity();
+
+      if (emailInput.value.trim() === '') {
+        newEmailError.textContent = 'New email is required.';
+        sendButton.disabled = true;
+      } else if (!isValidEmail(emailInput.value.trim())) {
+        newEmailError.textContent = 'Please enter a valid email address.';
+        sendButton.disabled = true;
+      } else if (emailInput.value.trim() === originalEmail) {
+        newEmailError.textContent = 'New email cannot be the same as the current email.';
+        sendButton.disabled = true;
+      } else {
+        newEmailError.textContent = '';
+        sendButton.disabled = false;
+      }
     }
 
     function resetForm() {
@@ -197,9 +217,13 @@
         return;
       }
 
-      // Basic email validation
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      if (!isValidEmail(newEmail)) {
         showMessage("Invalid email address format.", "error");
+        return;
+      }
+
+      if (newEmail === originalEmail) {
+        showMessage("New email cannot be the same as the current email.", "error");
         return;
       }
 
@@ -308,13 +332,12 @@
           row.cells[3].className = `status-${result.status.toLowerCase()}`;
           if (result.error) {
             console.error(`Error updating ${result.groupEmail}: ${result.error}`);
- // Add tooltip
-        row.cells[3].title = result.error;
-        row.cells[3].style.cursor = 'help'; // Optional: change cursor to indicate tooltip
-      } else {
-        // Remove tooltip if the status is not an error
-        row.cells[3].title = '';
-        row.cells[3].style.cursor = '';          }
+            row.cells[3].title = result.error;
+            row.cells[3].style.cursor = 'help';
+          } else {
+            row.cells[3].title = '';
+            row.cells[3].style.cursor = '';
+          }
         }
       });
     }
