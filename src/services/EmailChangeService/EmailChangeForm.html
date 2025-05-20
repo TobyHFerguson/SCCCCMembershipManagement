@@ -29,7 +29,14 @@
       border-radius: 4px;
     }
 
-    button {
+    .button-container {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px; /* Add some space below the input */
+    }
+
+    .button-container button {
       padding: 10px 20px;
       background-color: #007bff;
       color: white;
@@ -38,11 +45,23 @@
       cursor: pointer;
     }
 
+    .button-container button#reset-button {
+      background-color: #6c757d; /* Grey color for reset */
+      margin-left: auto; /* Push to the right */
+    }
+
     #verification-section {
-      display: none;
+      display: none; /* Hidden by default */
       margin-top: 20px;
       border-top: 1px solid #ccc;
       padding-top: 20px;
+      display: flex; /* For button alignment */
+      gap: 10px;
+      align-items: center;
+    }
+
+    #verification-section button {
+      background-color: #007bff; /* Blue */
     }
 
     #group-list-section {
@@ -50,6 +69,10 @@
       margin-top: 20px;
       border-top: 1px solid #ccc;
       padding-top: 20px;
+    }
+
+    #group-list-section button {
+      background-color: #007bff; /* Blue */
     }
 
     #group-list-table {
@@ -108,20 +131,32 @@
         <input type="email" id="new-email" name="newEmail" required oninput="validateEmail()" />
         <span id="new-email-error" class="error"></span>
       </div>
-      <button type="button" id="send-code-button" disabled>
-        Send Verification Code
-      </button>
+      <div class="button-container">
+        <button type="button" id="send-code-button" disabled>
+          Send Verification Code
+        </button>
+        <button type="button" id="reset-button" title="Start this process again">
+          Reset
+        </button>
+      </div>
     </form>
   </div>
   <div id="verification-section">
-    <div class="form-group">
-      <label for="verification-code">Verification Code:</label>
-      <input type="text" id="verification-code" name="verificationCode" required pattern="\d{6}"
-        title="Please enter a 6-digit code" />
-    </div>
-    <button type="button" id="verify-button" disabled>
-      Verify and Proceed
-    </button>
+    <form id="verification-form">
+      <div class="form-group">
+        <label for="verification-code">Verification Code:</label>
+        <input type="text" id="verification-code" name="verificationCode" required pattern="\d{6}"
+          title="Please enter a 6-digit code" />
+      </div>
+      <div class="button-container">
+        <button type="button" id="verify-button" disabled>
+          Verify and Proceed
+        </button>
+        <button type="button" id="reset-button-verification" title="Start this process again" style="background-color: #6c757d;">
+          Reset
+        </button>
+      </div>
+    </form>
   </div>
 
   <div id="group-list-section">
@@ -139,9 +174,14 @@
       <tbody id="group-list-body">
         </tbody>
     </table>
-    <button type="button" id="update-groups-button" disabled onclick="updateGroupMemberships()">
-      Change Email in Groups
-    </button>
+    <div class="button-container">
+      <button type="button" id="update-groups-button" disabled onclick="updateGroupMemberships()">
+        Change Email in Groups
+      </button>
+      <button type="button" id="reset-button-groups" title="Start this process again" style="background-color: #6c757d; margin-left: auto;">
+        Reset
+      </button>
+    </div>
     <div id="update-message" class="message"></div>
   </div>
 
@@ -153,13 +193,16 @@
     const originalEmail = "<?= originalEmail ?>";
     const newEmailInput = document.getElementById("new-email");
     const sendCodeButton = document.getElementById("send-code-button");
+    const resetButtonEmail = document.getElementById("reset-button");
     const verificationSection = document.getElementById("verification-section");
     const verificationCodeInput = document.getElementById("verification-code");
     const verifyButton = document.getElementById("verify-button");
+    const resetButtonVerification = document.getElementById("reset-button-verification");
     const messageElement = document.getElementById("message");
     const groupListSection = document.getElementById("group-list-section");
     const groupListTableBody = document.getElementById("group-list-body");
     const updateGroupsButton = document.getElementById("update-groups-button");
+    const resetButtonGroups = document.getElementById("reset-button-groups");
     const updateMessageElement = document.getElementById("update-message");
     const newEmailError = document.getElementById("new-email-error");
     let groupMembershipData = [];
@@ -184,29 +227,46 @@
     function validateEmail() {
       var emailInput = document.getElementById("new-email");
       var sendButton = document.getElementById("send-code-button");
+      var isNewEmailValid = false;
 
       if (emailInput.value.trim() === '') {
         newEmailError.textContent = 'New email is required.';
         sendButton.disabled = true;
+        resetButtonEmail.style.display = 'none';
       } else if (!isValidEmail(emailInput.value.trim())) {
         newEmailError.textContent = 'Please enter a valid email address.';
         sendButton.disabled = true;
+        resetButtonEmail.style.display = 'none';
       } else if (emailInput.value.trim() === originalEmail) {
         newEmailError.textContent = 'New email cannot be the same as the current email.';
         sendButton.disabled = true;
+        resetButtonEmail.style.display = 'none';
       } else {
         newEmailError.textContent = '';
         sendButton.disabled = false;
+        resetButtonEmail.style.display = 'inline-block';
+        isNewEmailValid = true;
       }
+
+      // Initially hide the reset buttons in later sections
+      resetButtonVerification.style.display = 'none';
+      resetButtonGroups.style.display = 'none';
+      verificationSection.style.display = 'none'; // Ensure verification section is hidden on initial load
     }
 
     function resetForm() {
-      sendCodeButton.style.display = '';
-      sendCodeButton.disabled = false;
+      sendCodeButton.style.display = 'inline-block';
+      sendCodeButton.disabled = true;
+      resetButtonEmail.style.display = 'none';
       verificationSection.style.display = "none";
       groupListSection.style.display = "none";
       messageElement.style.display = "none";
       updateMessageElement.style.display = "none";
+      newEmailInput.value = '';
+      verificationCodeInput.value = '';
+      groupListTableBody.innerHTML = '';
+      groupMembershipData = [];
+      validateEmail(); // Re-validate to ensure send button is initially disabled
     }
 
     sendCodeButton.addEventListener("click", function () {
@@ -229,13 +289,16 @@
 
       sendCodeButton.disabled = true;
       showMessage("Sending code...", "info");
+      resetButtonEmail.style.display = 'inline-block';
 
       google.script.run
         .withSuccessHandler(function (response) {
           showMessage(response, "success");
-          verificationSection.style.display = "block";
-          sendCodeButton.style.display = "none";
+          verificationSection.style.display = "flex"; // Show verification section
+          sendCodeButton.style.display = "none"; // Hide send button
           verifyButton.disabled = false;
+          resetButtonEmail.style.display = 'none'; // Hide reset from email section
+          resetButtonVerification.style.display = 'inline-block'; // Show reset in verification
         })
         .withFailureHandler(function (error) {
           showMessage("Error: " + error, "error");
@@ -268,6 +331,8 @@
           groupMembershipData = groupData;
           populateGroupListTable(groupData);
           updateGroupsButton.disabled = false;
+          resetButtonVerification.style.display = 'none'; // Hide reset from verification
+          resetButtonGroups.style.display = 'flex'; // Show reset in group list (using flex to align with update button)
         })
         .withFailureHandler(function (error) {
           showMessage("Verification failed: " + error, "error");
@@ -341,6 +406,11 @@
         }
       });
     }
+
+    resetButtonEmail.addEventListener("click", resetForm);
+    resetButtonVerification.addEventListener("click", resetForm);
+    resetButtonGroups.addEventListener("click", resetForm);
+    validateEmail(); // Initial validation to set button state
   </script>
 </body>
 
