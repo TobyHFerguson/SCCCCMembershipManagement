@@ -1,5 +1,5 @@
 function sendMagicLink(email, service) {
-  console.log('sendMagicLink(', email, service,')')
+  console.log('sendMagicLink(', email, service, ')')
   email = email.toLowerCase().trim(); // Normalize the email address
   return Common.Auth.Utils.sendMagicLink(email, service)
 }
@@ -9,5 +9,17 @@ function getDirectoryEntries() {
 }
 
 function processForm(form) {
-  EmailService.sendTestEmail(form)
+  return EmailService.sendTestEmail(form)
+}
+
+function handleChangeEmailInGroupsUI(originalEmail, newEmail, groupMembershipData) {
+  return EmailChangeService.handleChangeEmailInGroupsUI(originalEmail, newEmail, groupMembershipData)
+}
+
+function handleVerifyAndGetGroups(originalEmail, newEmail, verificationCode) {
+  return EmailChangeService.handleVerifyAndGetGroups(originalEmail, newEmail, verificationCode);
+}
+
+function handleSendVerificationCode(newEmail, originalEmail) {
+  return EmailChangeService.handleSendVerificationCode(newEmail, originalEmail)
 }
