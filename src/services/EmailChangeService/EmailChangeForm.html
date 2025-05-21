@@ -176,7 +176,7 @@
     </table>
     <div class="button-container">
       <button type="button" id="update-groups-button" disabled onclick="updateGroupMemberships()">
-        Change Email in Groups
+        Change My Email
       </button>
       <button type="button" id="reset-button-groups" title="Start this process again" style="background-color: #6c757d; margin-left: auto;">
         Reset
@@ -316,10 +316,7 @@
         showMessage("Error: " + error, "error");
         sendCodeButton.disabled = false;
       })
-      .handleSendVerificationCode(
-        newEmail,
-        originalEmail
-      );
+      .handleSendVerificationCode(originalEmail, newEmail);
   });
 
   verifyButton.addEventListener("click", function () {
@@ -384,13 +381,13 @@
     }
 
     updateGroupsButton.disabled = true;
-    showUpdateMessage("Updating group memberships...", "info");
+    showUpdateMessage("Updating email address...", "info");
 
     const newEmail = newEmailInput.value;
 
     google.script.run
       .withSuccessHandler(function (results) {
-        showUpdateMessage("Group membership updates complete.", "success");
+        showUpdateMessage("Your email has been changed successfully.", "success");
         updateGroupListStatus(results);
         updateGroupsButton.disabled = false; // Allow retry if needed
       })
