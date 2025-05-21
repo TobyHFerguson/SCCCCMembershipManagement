@@ -22,7 +22,7 @@ function doGet(e) {
     }
     const token = e.parameter.token;
     const tokenData = Common.Auth.TokenStorage.getTokenData(token);
-    if (!tokenData || tokenData.used) {
+    if (!tokenData || tokenData.Used) {
         return createTextResponse('Invalid or Used Link - The access link is either invalid or has already been used.', 400);
     }
     if (!tokenData.Email) {
