@@ -167,10 +167,34 @@ function handleChangeEmailInGroupsUI(oldEmail, newEmail, groupData) {
     results.push(updateResult);
   }
 
+
+  const sheetRefs = ['ActiveMembers', 'ExpirySchedule'];
+  changeEmailInSpreadsheets(oldEmail, newEmail, sheetRefs)
+
+  // Log the change
+  const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('EmailChange');
+  const data = fiddler.getData();
+  data.push({date: new Date(), from: oldEmail, to: newEmail})
+  fiddler.setData(data).dumpValues();
+
   return results;
 }
 
+function changeEmailInSpreadsheets(oldEmail, newEmail, sheetRefs) {
+  for (const ref of sheetRefs) {
+    const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler(ref);
+    fiddler.mapRows((row) => {
+      if (row.Email.toLowerCase() === oldEmail.toLowerCase()) {
+        row.Email = newEmail.toLowerCase()
+      }
+      return row;
+    })
+    fiddler.dumpValues() 
+  }
+}
 
+function changeEmailInSpreadsheet(oldEmail, newEmail, fiddler) {
+}
 
 // Placeholder for token validation
 function isValidToken(token, type) {
