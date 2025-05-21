@@ -6,11 +6,18 @@ const Common = {
 
 const GroupSubscription = {};
 
-const EmailChangeService = {}
+const EmailChangeService = {
+    name: 'Email Change Service',
+    service: 'EmailChangeService'
+}
+
 const EmailService = { Menu: {} }
 const DocsService = { Internal: {} };
 const MembershipManagement = { Internal: {}, Utils: {} }
-const DirectoryService = {};
+const DirectoryService = {
+    name: 'Directory Service',
+    service: 'DirectoryService'
+};
 
 const Services = {
     DirectoryService: DirectoryService,
