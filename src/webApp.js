@@ -29,16 +29,8 @@ function doGet(e) {
         throw new Error('tokenData.email === null')
     }
     Common.Auth.TokenStorage.markTokenAsUsed(token);
-    switch (service.service) {
-        case 'DirectoryService':
-            return DirectoryService.WebApp.doGet(e, tokenData.Email);
-            break;
-        case 'EmailChangeService':
-            return EmailChangeService.WebApp.doGet(e, tokenData.Email)
-            break;
-        default:
-            return createTextResponse('Invalid service parameter.');
-    }
+    
+    return service.WebApp.doGet(e, tokenData.Email);
 }
 function doPost(e) {
     return createTextResponse('doPost() unimplemented');

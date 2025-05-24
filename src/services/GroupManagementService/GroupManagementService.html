@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Manage Subscriptions</title>
+    <style>
+        .subscription-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .group-name {
+            flex-grow: 1;
+        }
+
+        .delivery-select {
+            /* Style your select dropdown */
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            padding: 5px;
+            border-radius: 3px;
+            box-shadow: 2px 2px 5px #888;
+            z-index: 10;
+            display: none;
+            /* Initially hidden */
+        }
+
+        .delivery-option:hover+.tooltip {
+            display: block;
+        }
+
+        .buttons-container {
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Manage Your Subscriptions</h1>
+
+    <form id="subscriptionForm">
+        <input type="hidden" id="userToken" name="userToken" value="<?!= userToken ?>">
+        <?!= userGroupSubscription.map(subscription => `
+        <div class="subscription-row" data-group-name="${subscription.groupName}" data-group-email="${subscription.groupEmail}" data-original-delivery-value="${subscription.deliveryValue}">
+            <span class="group-name">${subscription.groupName}</span>
+            <div style="position: relative;">
+                <select class="delivery-select" name="${subscription.groupEmail}">
+                    ${Object.entries(deliveryMap).map(([valueKey, [displayValue, tooltip]]) => `
+                      <option value="${valueKey}" ${subscription.deliveryValue === valueKey ? 'selected' : ''} title="${tooltip}">${displayValue}</option>
+                    `).join('')}
+                </select>
+            </div>
+        </div>
+        `).join('') ?>
+
+        <div class="buttons-container">
+            <button type="button" id="resetButton">Reset</button>
+            <button type="button" id="applyButton" disabled>Apply Changes</button>
+        </div>
+    </form>
+
+    <script>
+        const subscriptionForm = document.getElementById('subscriptionForm');
+        const deliverySelects = document.querySelectorAll('.delivery-select');
+        const resetButton = document.getElementById('resetButton');
+        const applyButton = document.getElementById('applyButton');
+        const userTokenInput = document.getElementById('userToken');
+
+        let changesMade = false;
+        const originalSubscriptions = {}; // Will store { groupEmail: { name: 'Human Name', value: 'ACTUAL_VALUE' } }
+
+        // Store the initial state of the subscriptions, using group email as key
+        deliverySelects.forEach(select => {
+            const row = select.closest('.subscription-row');
+            const groupEmail = row.dataset.groupEmail;
+            const originalDeliveryValue = row.dataset.originalDeliveryValue;
+            const selectedOption = select.options[select.selectedIndex];
+            const originalDeliveryName = selectedOption.textContent;
+            originalSubscriptions[groupEmail] = { name: originalDeliveryName, value: originalDeliveryValue };
+        });
+
+        function checkChanges() {
+            changesMade = false;
+            deliverySelects.forEach(select => {
+                const groupEmail = select.name;
+                const selectedValue = select.value;
+                if (originalSubscriptions[groupEmail] && originalSubscriptions[groupEmail].value !== selectedValue) {
+                    changesMade = true;
+                }
+            });
+            applyButton.disabled = !changesMade;
+        }
+
+        deliverySelects.forEach(select => {
+            select.addEventListener('change', checkChanges);
+        });
+
+        resetButton.addEventListener('click', function () {
+            deliverySelects.forEach(select => {
+                const groupEmail = select.name;
+                if (originalSubscriptions[groupEmail]) {
+                    select.value = originalSubscriptions[groupEmail].value;
+                }
+            });
+            changesMade = false;
+            applyButton.disabled = true;
+        });
+
+        applyButton.addEventListener('click', function () {
+            if (changesMade) {
+                console.log('Changes made, preparing to update subscriptions...');
+                const updatedSubscriptions = [];
+                deliverySelects.forEach(select => {
+                    const groupEmail = select.name;
+                    const newDeliveryValue = select.value;
+                    if (originalSubscriptions[groupEmail] && originalSubscriptions[groupEmail].value !== newDeliveryValue) {
+                        updatedSubscriptions.push({
+                            groupEmail: groupEmail,
+                            deliveryValue: newDeliveryValue // Send the actual value
+                        });
+                    }
+                });
+
+                const currentUserToken = userTokenInput.value;
+                console.log('Updated subscriptions:', JSON.stringify(updatedSubscriptions));
+                google.script.run.withSuccessHandler(function (response) {
+                    if (response && response.success) {
+                        alert('Subscriptions updated successfully!');
+                        // Update originalSubscriptions with the new values
+                        updatedSubscriptions.forEach(updatedSub => {
+                            console.log('updatedSub:', updatedSub);
+                            const selectElement = document.querySelector(`select[name="${updatedSub.groupEmail}"]`);
+                            console.log('selectElement:', selectElement);
+                            if (selectElement) {
+                                const selectedOption = selectElement.options[selectElement.selectedIndex];
+                                console.log('selectedOption:', selectedOption);
+                                const newDeliveryName = selectedOption.textContent;
+                                console.log('newDeliveryName:', newDeliveryName);
+                                originalSubscriptions[updatedSub.groupEmail] = { name: newDeliveryName, value: updatedSub.delivery };
+                                console.log('Updated originalSubscriptions:', originalSubscriptions);
+                            }
+                        });
+                        changesMade = false;
+                        applyButton.disabled = true;
+                    } else {
+                        alert(response ? response.message : 'Error updating subscriptions. Please try again.');
+                    }
+                }).withFailureHandler(function (error) {
+                    console.error('Error updating subscriptions:', error);
+                    alert('Error updating subscriptions. Please try again.');
+                }).updateUserSubscriptions(updatedSubscriptions, currentUserToken);
+            }
+        });
+    </script>
+</body>
+
+</html>

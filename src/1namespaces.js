@@ -19,9 +19,15 @@ const DirectoryService = {
     service: 'DirectoryService'
 };
 
+const GroupManagementService = {
+    name: 'Group Management Service',
+    service: 'GroupManagementService'
+};
+
 const Services = {
     DirectoryService: DirectoryService,
-    EmailChangeService: EmailChangeService
+    EmailChangeService: EmailChangeService,
+    GroupManagementService: GroupManagementService,
 }
 
 if (typeof module !== 'undefined' && module.exports) {
