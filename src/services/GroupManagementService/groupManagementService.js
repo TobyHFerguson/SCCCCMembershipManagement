@@ -30,25 +30,20 @@ function testUpdateUserSubscriptions() {
 }
 
 GroupManagementService.getUserGroupSubscription = function(userEmail) {
-    const groups = [
-        { name: "Ride Announcements", email: "ride_announcements@sc3.club" },
-        { name: "Member Discussions", email: "member_discussions@sc3.club" },
-        { name: "A Group Discussions", email: "a_group_discussions@sc3.club" },
-        { name: "Board Announcements", email: "board_announcements@sc3.club" },
-    ]
+    const groups = Common.Data.Access.getPublicGroups()
     const userGroupSubscription = groups.map(group => {
-        const member = GroupSubscription.getMember(group.email, userEmail);
+        const member = GroupSubscription.getMember(group.Email, userEmail);
         if (member) {
             return {
-                groupName: group.name,
-                groupEmail: group.email,
+                groupName: group.Name,
+                groupEmail: group.Email,
                 deliveryValue: member.delivery_settings,
                 deliveryName: GroupSubscription.deliveryOptions[member.delivery_settings][0] // Add the human-readable name
             };
         } else {
             return {
-                groupName: group.name,
-                groupEmail: group.email,
+                groupName: group.Name,
+                groupEmail: group.Email,
                 deliveryValue: "UNSUBSCRIBE",
                 deliveryName: "UNSUBSCRIBED"
             };

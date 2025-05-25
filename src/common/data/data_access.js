@@ -22,9 +22,9 @@ Common.Data.Access = {
         }
         return actionSpecs;
     },
-    getGroupEmails:() => {
-        const groupEmails = Common.Data.Storage.SpreadsheetManager.getFiddler('GroupEmails').getData();
-        return groupEmails;
+    getPublicGroups:() => {
+        const publicGroups = Common.Data.Storage.SpreadsheetManager.getFiddler('PublicGroups').getData();
+        return publicGroups;
     },
     getMember:(email) => {
         email = email.toLowerCase();
