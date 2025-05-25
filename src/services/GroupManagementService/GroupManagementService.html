@@ -238,6 +238,7 @@
 
         applyButton.addEventListener('click', function () {
             if (changesMade) {
+                applyButton.disabled = true;
                 console.log('Changes made, preparing to update subscriptions...');
                 const updatedSubscriptions = [];
                 deliverySelects.forEach(select => {
@@ -271,13 +272,15 @@
                             }
                         });
                         changesMade = false;
-                        applyButton.disabled = true;
                     } else {
+                        changesMade = true; // Keep the button enabled if there was an error
+                        applyButton.disabled = false;
                         alert(response ? response.message : 'Error updating subscriptions. Please try again.');
                     }
                 }).withFailureHandler(function (error) {
                     console.error('Error updating subscriptions:', error);
                     alert('Error updating subscriptions. Please try again.');
+                    applyButton.disabled = false; // Re-enable the button on error
                 }).updateUserSubscriptions(updatedSubscriptions, currentUserToken);
             }
         });
