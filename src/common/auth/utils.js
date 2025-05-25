@@ -17,7 +17,7 @@ Common.Auth.Utils = {
 
     
     _sendEmail: function (email, accessLink, service) {
-        const serviceName = Services[service].name || ''
+        const serviceName = WebServices[service].name || ''
         const message = {
             to: email,
             subject: `SCCCC ${serviceName} Access Link`,

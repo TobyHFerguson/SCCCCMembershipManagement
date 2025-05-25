@@ -23,3 +23,8 @@ function handleVerifyAndGetGroups(originalEmail, newEmail, verificationCode) {
 function handleSendVerificationCode(newEmail, originalEmail) {
   return EmailChangeService.handleSendVerificationCode(newEmail, originalEmail)
 }
+
+function updateUserSubscriptions(updatedSubscriptions, userToken) {
+    const response = GroupManagementService.WebApp.updateUserSubscriptions(updatedSubscriptions, userToken);
+    return response;
+}
