@@ -1,0 +1,8 @@
+EmailChangeService.WebApp = {
+    doGet: (e, userEmail) => {
+        // We only get here when the previous token (and therefore email) were valid.
+       const template = HtmlService.createTemplateFromFile("services/EmailChangeService/EmailChangeForm")
+        template.originalEmail = userEmail; // Pass the token to the HTML template
+        return template.evaluate();
+    }
+}

@@ -22,5 +22,3 @@ const ACCESS_LINK_BASE_URL = ScriptApp.getService().getUrl(); // Base URL of you
   }})
   return tableData;
 }
-
-// --- Web App Functions ---

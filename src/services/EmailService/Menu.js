@@ -1,7 +1,7 @@
 EmailService.Menu = {
     create: () => {
         SpreadsheetApp.getUi().createMenu('EmailService')
-            .addItem('Send test email', 'showEmailDialog')
+            .addItem('Send email', 'showEmailDialog')
             .addToUi();
     }
 }

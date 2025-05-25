@@ -1,5 +1,5 @@
 Common.Auth.TokenManager = {
-    _generateToken: () => {
+    generateToken: () => {
         return Utilities.getUuid(); // Generate a unique UUID
     }
 }

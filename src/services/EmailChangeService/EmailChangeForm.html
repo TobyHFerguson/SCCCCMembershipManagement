@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>SCCCC Email Address Change Form</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 500px;
+      margin: auto;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    input[type="email"],
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .button-container {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px; /* Add some space below the input */
+    }
+
+    .button-container button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .button-container button#reset-button {
+      background-color: #6c757d; /* Grey color for reset */
+      margin-left: auto; /* Push to the right */
+    }
+
+    #verification-section {
+      display: none; /* Hidden by default */
+      margin-top: 20px;
+      border-top: 1px solid #ccc;
+      padding-top: 20px;
+      display: flex; /* For button alignment */
+      gap: 10px;
+      align-items: center;
+    }
+
+    #verification-section button {
+      background-color: #007bff; /* Blue */
+    }
+
+    #group-list-section {
+      display: none;
+      margin-top: 20px;
+      border-top: 1px solid #ccc;
+      padding-top: 20px;
+    }
+
+    #group-list-section button {
+      background-color: #007bff; /* Blue */
+    }
+
+    #group-list-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    #group-list-table th,
+    #group-list-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+
+    #group-list-table th {
+      background-color: #f2f2f2;
+    }
+
+    .status-pending {
+      color: grey;
+    }
+
+    .status-success {
+      color: green;
+    }
+
+    .status-failed {
+      color: red;
+    }
+
+    .message {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .success {
+      color: green;
+    }
+
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>SCCCC Change Email Address Form</h2>
+  <div id="email-section">
+    <p>Current Email Address:
+      <?= originalEmail ?>
+    </p>
+    <form id="email-form">
+      <div class="form-group">
+        <label for="new-email">New Email Address:</label>
+        <input type="email" id="new-email" name="newEmail" required oninput="validateEmail()" />
+        <span id="new-email-error" class="error"></span>
+      </div>
+      <div class="button-container">
+        <button type="button" id="send-code-button" disabled>
+          Send Verification Code
+        </button>
+        <button type="button" id="reset-button" title="Start this process again">
+          Reset
+        </button>
+      </div>
+    </form>
+  </div>
+  <div id="verification-section">
+    <form id="verification-form">
+      <div class="form-group">
+        <label for="verification-code">Verification Code:</label>
+        <input type="text" id="verification-code" name="verificationCode" required pattern="\d{6}"
+          title="Please enter a 6-digit code" />
+      </div>
+      <div class="button-container">
+        <button type="button" id="verify-button" disabled>
+          Verify and Proceed
+        </button>
+        <button type="button" id="reset-button-verification" title="Start this process again" style="background-color: #6c757d;">
+          Reset
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div id="group-list-section">
+    <h3>Review and Update Group Memberships</h3>
+    <p>The table below shows the groups where your current email address is a member. Once you are ready, click the button to update your email address in these groups.</p>
+    <table id="group-list-table">
+      <thead>
+        <tr>
+          <th>Group Email</th>
+          <th>Current Email</th>
+          <th>New Email</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="group-list-body">
+        </tbody>
+    </table>
+    <div class="button-container">
+      <button type="button" id="update-groups-button" disabled onclick="updateGroupMemberships()">
+        Change My Email
+      </button>
+      <button type="button" id="reset-button-groups" title="Start this process again" style="background-color: #6c757d; margin-left: auto;">
+        Reset
+      </button>
+    </div>
+    <div id="update-message" class="message"></div>
+  </div>
+
+  <div id="message" class="message"></div>
+
+  <script>
+  const emailSection = document.getElementById("email-section");
+  const form = document.getElementById("email-form");
+  const originalEmail = "<?= originalEmail ?>";
+  const newEmailInput = document.getElementById("new-email");
+  const sendCodeButton = document.getElementById("send-code-button");
+  const resetButtonEmail = document.getElementById("reset-button");
+  const verificationSection = document.getElementById("verification-section");
+  const verificationForm = document.getElementById("verification-form"); // Get the verification form
+  const verificationCodeInput = document.getElementById("verification-code");
+  const verifyButton = document.getElementById("verify-button");
+  const resetButtonVerification = document.getElementById("reset-button-verification");
+  const messageElement = document.getElementById("message");
+  const groupListSection = document.getElementById("group-list-section");
+  const groupListTableBody = document.getElementById("group-list-body");
+  const updateGroupsButton = document.getElementById("update-groups-button");
+  const resetButtonGroups = document.getElementById("reset-button-groups");
+  const updateMessageElement = document.getElementById("update-message");
+  const newEmailError = document.getElementById("new-email-error");
+  let groupMembershipData = [];
+
+  function showMessage(text, type) {
+    messageElement.style.display = '';
+    messageElement.textContent = text;
+    messageElement.className = "message " + type;
+  }
+
+  function showUpdateMessage(text, type) {
+    updateMessageElement.style.display = '';
+    updateMessageElement.textContent = text;
+    updateMessageElement.className = "message " + type;
+  }
+
+  function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  function validateEmail() {
+    var emailInput = document.getElementById("new-email");
+    var sendButton = document.getElementById("send-code-button");
+    var isNewEmailValid = false;
+
+    if (emailInput.value.trim() === '') {
+      newEmailError.textContent = 'New email is required.';
+      sendButton.disabled = true;
+      resetButtonEmail.style.display = 'none';
+    } else if (!isValidEmail(emailInput.value.trim())) {
+      newEmailError.textContent = 'Please enter a valid email address.';
+      sendButton.disabled = true;
+      resetButtonEmail.style.display = 'none';
+    } else if (emailInput.value.trim() === originalEmail) {
+      newEmailError.textContent = 'New email cannot be the same as the current email.';
+      sendButton.disabled = true;
+      resetButtonEmail.style.display = 'none';
+    } else {
+      newEmailError.textContent = '';
+      sendButton.disabled = false;
+      resetButtonEmail.style.display = 'inline-block';
+      isNewEmailValid = true;
+    }
+
+    // Initially hide the reset buttons in later sections
+    resetButtonVerification.style.display = 'none';
+    resetButtonGroups.style.display = 'none';
+    verificationSection.style.display = 'none'; // Ensure verification section is hidden on initial load
+  }
+
+  function resetForm() {
+    emailSection.style.display = 'block'; // Show the initial email input section
+    sendCodeButton.style.display = 'inline-block';
+    sendCodeButton.disabled = true;
+    resetButtonEmail.style.display = 'none';
+    verificationSection.style.display = "none";
+    groupListSection.style.display = "none"; // Hide the group list section
+    messageElement.style.display = "none";
+    updateMessageElement.style.display = "none";
+    newEmailInput.value = '';
+    verificationCodeInput.value = '';
+    groupListTableBody.innerHTML = '';
+    groupMembershipData = [];
+    validateEmail(); // Re-validate to ensure send button is initially disabled
+  }
+
+  form.addEventListener('submit', function(event) {
+    event.preventDefault(); // Prevent default submission of the email form
+    sendCodeButton.click();    // Trigger the click event of the send button
+  });
+
+  verificationForm.addEventListener('submit', function(event) {
+    event.preventDefault(); // Prevent default submission of the verification form
+    verifyButton.click();      // Trigger the click event of the verify button
+  });
+
+  sendCodeButton.addEventListener("click", function () {
+    const newEmail = newEmailInput.value;
+
+    if (!newEmail) {
+      showMessage("Please enter your new email address.", "error");
+      return;
+    }
+
+    if (!isValidEmail(newEmail)) {
+      showMessage("Invalid email address format.", "error");
+      return;
+    }
+
+    if (newEmail === originalEmail) {
+      showMessage("New email cannot be the same as the current email.", "error");
+      return;
+    }
+
+    sendCodeButton.disabled = true;
+    showMessage("Sending code...", "info");
+    resetButtonEmail.style.display = 'inline-block';
+
+    google.script.run
+      .withSuccessHandler(function (response) {
+        showMessage(response, "success");
+        verificationSection.style.display = "flex"; // Show verification section
+        sendCodeButton.style.display = "none"; // Hide send button
+        verifyButton.disabled = false;
+        resetButtonEmail.style.display = 'none'; // Hide reset from email section
+        resetButtonVerification.style.display = 'inline-block'; // Show reset in verification
+      })
+      .withFailureHandler(function (error) {
+        showMessage("Error: " + error, "error");
+        sendCodeButton.disabled = false;
+      })
+      .handleSendVerificationCode(originalEmail, newEmail);
+  });
+
+  verifyButton.addEventListener("click", function () {
+    const newEmail = newEmailInput.value;
+    const verificationCode = verificationCodeInput.value;
+
+    if (!verificationCode) {
+      showMessage("Please enter the verification code.", "error");
+      return;
+    }
+
+    verifyButton.disabled = true;
+    showMessage("Verifying...", "info");
+
+    google.script.run
+      .withSuccessHandler(function (groupData) {
+        showMessage("Email verified successfully!", "success");
+        emailSection.style.display = "none";
+        verificationSection.style.display = "none";
+        groupListSection.style.display = "block";
+        groupMembershipData = groupData;
+        populateGroupListTable(groupData);
+        updateGroupsButton.disabled = false;
+        resetButtonVerification.style.display = 'none'; // Hide reset from verification
+        resetButtonGroups.style.display = 'flex'; // Show reset in group list (using flex to align with update button)
+      })
+      .withFailureHandler(function (error) {
+        showMessage("Verification failed: " + error, "error");
+        verifyButton.disabled = false;
+      })
+      .handleVerifyAndGetGroups(originalEmail, newEmail, verificationCode);
+  });
+
+  function populateGroupListTable(groups) {
+    groupListTableBody.innerHTML = "";
+    if (groups && groups.length > 0) {
+      groups.forEach(function (groupInfo) {
+        const row = groupListTableBody.insertRow();
+        const groupEmailCell = row.insertCell();
+        const oldEmailCell = row.insertCell();
+        const newEmailCell = row.insertCell();
+        const statusCell = row.insertCell();
+
+        groupEmailCell.textContent = groupInfo.groupEmail;
+        oldEmailCell.textContent = groupInfo.oldEmail;
+        newEmailCell.textContent = groupInfo.newEmail;
+        statusCell.textContent = groupInfo.status || "Pending";
+        statusCell.className = "status-pending";
+      });
+    } else {
+      const row = groupListTableBody.insertRow();
+      const cell = row.insertCell();
+      cell.colSpan = 4;
+      cell.textContent = "No Google Groups found for your current email address.";
+    }
+  }
+
+  function updateGroupMemberships() {
+    if (groupMembershipData.length === 0) {
+      showUpdateMessage("No groups to update.", "info");
+      return;
+    }
+
+    updateGroupsButton.disabled = true;
+    showUpdateMessage("Updating email address...", "info");
+
+    const newEmail = newEmailInput.value;
+
+    google.script.run
+      .withSuccessHandler(function (results) {
+        showUpdateMessage("Your email has been changed successfully.", "success");
+        updateGroupListStatus(results);
+        updateGroupsButton.disabled = false; // Allow retry if needed
+      })
+      .withFailureHandler(function (error) {
+        showUpdateMessage("Error updating group memberships: " + error, "error");
+        updateGroupsButton.disabled = false;
+      })
+      .handleChangeEmailInGroupsUI(originalEmail, newEmail, groupMembershipData);
+  }
+
+  function updateGroupListStatus(results) {
+    results.forEach(function (result) {
+      const row = Array.from(groupListTableBody.rows).find(row => row.cells[0].textContent === result.groupEmail);
+      if (row) {
+        row.cells[3].textContent = result.status;
+        row.cells[3].className = `status-${result.status.toLowerCase()}`;
+        if (result.error) {
+          console.error(`Error updating ${result.groupEmail}: ${result.error}`);
+          row.cells[3].title = result.error;
+          row.cells[3].style.cursor = 'help';
+        } else {
+          row.cells[3].title = '';
+          row.cells[3].style.cursor = '';
+        }
+      }
+    });
+  }
+
+  resetButtonEmail.addEventListener("click", resetForm);
+  resetButtonVerification.addEventListener("click", resetForm);
+  resetButtonGroups.addEventListener("click", resetForm);
+  validateEmail(); // Initial validation to set button state
+</script>
+</body>
+
+</html>
