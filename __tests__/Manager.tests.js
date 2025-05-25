@@ -67,7 +67,7 @@ describe('Manager tests', () => {
   let groupAddFun;
   let groupRemoveFun;
   let sendEmailFun;
-  let groupEmails;
+  let groups;
   let numProcessed;
   let consoleSpy;
 
@@ -75,8 +75,8 @@ describe('Manager tests', () => {
     groupRemoveFun = jest.fn();
     groupAddFun = jest.fn();
     sendEmailFun = jest.fn();
-    groupEmails = [{ Email: "a@b.com" }, { Email: "member_discussions@sc3.club" }];
-    manager = new MembershipManagement.Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+    groups = [{ Email: "a@b.com" }, { Email: "member_discussions@sc3.club" }];
+    manager = new MembershipManagement.Manager(actionSpecs, groups, groupAddFun, groupRemoveFun, sendEmailFun, today);
     activeMembers = [];
     expiredMembers = [];
     expirySchedule = [];
@@ -149,7 +149,7 @@ describe('Manager tests', () => {
         ];
         manager.processExpirations(activeMembers, expirySchedule);
         expect(consoleSpy).toHaveBeenCalledWith(expect.anything())
-        expect(consoleSpy).toHaveBeenCalledWith(`Expiry4 - test4@example.com removed from group ${groupEmails[0].Email}`)
+        expect(consoleSpy).toHaveBeenCalledWith(`Expiry4 - test4@example.com removed from group ${groups[0].Email}`)
         expect(consoleSpy).toHaveBeenCalledWith(`Expiry4 - test4@example.com - Email sent`)
         expect(consoleSpy).toHaveBeenCalledWith(`Expiry2 - test2@example.com`)
         expect(consoleSpy).toHaveBeenCalledWith(`Expiry2 - test2@example.com - Email sent`)
@@ -176,8 +176,8 @@ describe('Manager tests', () => {
         manager.processExpirations(activeMembers, expirySchedule);
         expect(activeMembers).toEqual(expectedActiveMembers);
         expect(groupRemoveFun).toHaveBeenCalledTimes(2);
-        expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groupEmails[0].Email);
-        expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groupEmails[1].Email);
+        expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groups[0].Email);
+        expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groups[1].Email);
         expect(sendEmailFun).toHaveBeenCalledTimes(1);
         expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedActiveMembers[0].Email, subject: actionSpecs.Expiry4.Subject, htmlBody: actionSpecs.Expiry4.Body.replace('{First}', expectedActiveMembers[0].First).replace('{Last}', expectedActiveMembers[0].Last) });
       })
@@ -201,8 +201,8 @@ describe('Manager tests', () => {
       it('should remove the member from all groups once Expiry4 has been met', () => {
         manager.processExpirations(activeMembers, expirySchedule);
         expect(groupRemoveFun).toHaveBeenCalledTimes(2);
-        expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groupEmails[0].Email);
-        expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groupEmails[1].Email);
+        expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groups[0].Email);
+        expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groups[1].Email);
       })
       it('should send an email to the member once Expiry4 has been met', () => {
         manager.processExpirations(activeMembers, expirySchedule);
@@ -235,7 +235,7 @@ describe('Manager tests', () => {
       });
       it('should not migrate members if an error is thrown', () => {
         groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
-        manager = new MembershipManagement.Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+        manager = new MembershipManagement.Manager(actionSpecs, groups, groupAddFun, groupRemoveFun, sendEmailFun, today);
         try {
           manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
           fail('Expected error not thrown');
@@ -317,7 +317,7 @@ describe('Manager tests', () => {
 
       it('should continue even when there are errors', () => {
         groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
-        manager = new MembershipManagement.Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+        manager = new MembershipManagement.Manager(actionSpecs, groups, groupAddFun, groupRemoveFun, sendEmailFun, today);
         try {
           manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
           fail('Expected error not thrown');
@@ -553,7 +553,7 @@ describe('Manager tests', () => {
         it('should return errors if there are any', () => {
           const transactions = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
           sendEmailFun = jest.fn(() => { throw new Error('This is a test error') });
-          manager = new MembershipManagement.Manager(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today);
+          manager = new MembershipManagement.Manager(actionSpecs, groups, groupAddFun, groupRemoveFun, sendEmailFun, today);
           const { _, __, errors } = manager.processPaidTransactions(transactions, activeMembers, expirySchedule,);
           expect(errors.length).toEqual(3);
           expect(errors[0].message).toEqual('This is a test error');
