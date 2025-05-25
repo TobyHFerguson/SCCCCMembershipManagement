@@ -5,7 +5,7 @@ function doGet(e) {
     if (!e.parameter.service) {
         return createTextResponse('No service parameter given. The url must have a service parameter!', 400);
     }
-    const service = Services[e.parameter.service];
+    const service = WebServices[e.parameter.service];
     if (!service) {
         console.error('Got an invalid service: ', e.parameter.service)
         return createTextResponse("We're sorry - an internal error occurred. We've notified the developers and theres nothing you can do but wait until they fix it")

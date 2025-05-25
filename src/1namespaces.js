@@ -24,7 +24,7 @@ const GroupManagementService = {
     service: 'GroupManagementService'
 };
 
-const Services = {
+const WebServices = {
     DirectoryService: DirectoryService,
     EmailChangeService: EmailChangeService,
     GroupManagementService: GroupManagementService,
