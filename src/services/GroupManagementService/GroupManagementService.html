@@ -113,15 +113,15 @@
         });
 
         resetButton.addEventListener('click', function () {
-            deliverySelects.forEach(select => {
-                const groupEmail = select.name;
-                if (originalSubscriptions[groupEmail]) {
+    deliverySelects.forEach(select => {
+        const groupEmail = select.name;
+        if (originalSubscriptions[groupEmail]) {
                     select.value = originalSubscriptions[groupEmail].value;
-                }
-            });
-            changesMade = false;
-            applyButton.disabled = true;
-        });
+        }
+    });
+    changesMade = false;
+    applyButton.disabled = true;
+});
 
         applyButton.addEventListener('click', function () {
             if (changesMade) {
@@ -153,7 +153,7 @@
                                 console.log('selectedOption:', selectedOption);
                                 const newDeliveryName = selectedOption.textContent;
                                 console.log('newDeliveryName:', newDeliveryName);
-                                originalSubscriptions[updatedSub.groupEmail] = { name: newDeliveryName, value: updatedSub.delivery };
+                                originalSubscriptions[updatedSub.groupEmail] = { name: newDeliveryName, value: updatedSub.deliveryValue };
                                 console.log('Updated originalSubscriptions:', originalSubscriptions);
                             }
                         });
