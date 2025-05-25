@@ -3,10 +3,10 @@ if (typeof require !== 'undefined') {
 }
 
 MembershipManagement.Manager = class {
-  constructor(actionSpecs, groupEmails, groupAddFun, groupRemoveFun, sendEmailFun, today) {
-    if (!groupEmails || groupEmails.length === 0) { throw new Error('MembershipManager requires a non-empty array of group emails'); }
+  constructor(actionSpecs, groups, groupAddFun, groupRemoveFun, sendEmailFun, today) {
+    if (!groups || groups.length === 0) { throw new Error('MembershipManager requires a non-empty array of group emails'); }
     this._actionSpecs = actionSpecs;
-    this._groupEmails = groupEmails;
+    this._groups = groups;
     this._groupAddFun = groupAddFun || (() => { });
     this._groupRemoveFun = groupRemoveFun || (() => { });
     this._sendEmailFun = sendEmailFun || (() => { });
@@ -15,10 +15,6 @@ MembershipManagement.Manager = class {
 
   today() {
     return this._today;
-  }
-
-  setGroupEmails(groupEmails) {
-    this._groupEmails = groupEmails;
   }
 
   processExpirations(activeMembers, expirySchedule) {
@@ -49,7 +45,7 @@ MembershipManagement.Manager = class {
         let member = activeMembers[memberIdx];
         if (sched.Type === MembershipManagement.Utils.ActionType.Expiry4) {
           member.Status = 'Expired'
-          this._groupEmails.forEach(group => { this._groupRemoveFun(member.Email, group.Email); console.log(`Expiry4 - ${member.Email} removed from group ${group.Email}`) });
+          this._groups.forEach(group => { this._groupRemoveFun(member.Email, group.Email); console.log(`Expiry4 - ${member.Email} removed from group ${group.Email}`) });
         }
         let message = {
           to: member.Email,
@@ -151,7 +147,7 @@ MembershipManagement.Manager = class {
         } else { // a joining member
           console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a new member`);
           const newMember = this.addNewMember_(txn, expirySchedule, membershipData);
-          this._groupEmails.forEach(g => this._groupAddFun(newMember.Email, g.Email));
+          this._groups.forEach(g => this._groupAddFun(newMember.Email, g.Email));
           message = {
             to: newMember.Email,
             subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Join.Subject, newMember),
