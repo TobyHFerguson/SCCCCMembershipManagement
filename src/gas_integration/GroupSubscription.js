@@ -7,6 +7,8 @@ function testGetMember() {
   const member = GroupSubscription.getMember('tg1@sc3.club', 'membership-automation@sc3.club')
   console.log(member)
 }
+// deliveryOptions links the value that GAS expects (as a key) to the human readable text that is displayed in the UI
+// and the description that is displayed in the tooltip.
 GroupSubscription.deliveryOptions = {
             "UNSUBSCRIBE": ["Unsubscribed", "Not subscribed to the group"],
             "ALL_MAIL": ["Each message", "Receive an email for every message"],
@@ -53,6 +55,7 @@ GroupSubscription.getMember = function (groupEmail, memberEmail) {
     if (e.message.includes('Resource Not Found:')) {
       return null;
     }
+    e += ` when getting member ${memberEmail} from group ${groupEmail}`;
     throw e;
   }
 }
