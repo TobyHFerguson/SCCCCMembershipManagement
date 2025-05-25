@@ -31,13 +31,10 @@ function testUpdateUserSubscriptions() {
 
 GroupManagementService.getUserGroupSubscription = function(userEmail) {
     const groups = [
-        // { name: "Ride Announcements", email: "ride-announcements@example.com" },
-        // { name: "Member Discussions", email: "member-discussions@example.com" },
-        // { name: "A Group Discussions", email: "a-group-discussions@example.com" },
-        // { name: "Board Announcements", email: "board-announcements@example.com" },
-        { name: "Test Group 1", email: "tg1@sc3.club" },
-        { name: "Test Group 2", email: "tg2@sc3.club" },
-        { name: "Test Group 3", email: "tg3@sc3.club" },
+        { name: "Ride Announcements", email: "ride_announcements@sc3.club" },
+        { name: "Member Discussions", email: "member_discussions@sc3.club" },
+        { name: "A Group Discussions", email: "a_group_discussions@sc3.club" },
+        { name: "Board Announcements", email: "board_announcements@sc3.club" },
     ]
     const userGroupSubscription = groups.map(group => {
         const member = GroupSubscription.getMember(group.email, userEmail);
