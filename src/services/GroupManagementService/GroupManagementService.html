@@ -4,45 +4,104 @@
 <head>
     <title>Manage Subscriptions</title>
     <style>
-        .subscription-row {
+        body {
+            font-family: sans-serif;
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            justify-content: flex-start;
+            /* Center the entire form */
             align-items: center;
-            padding: 8px 0;
+            /* Align form items to the top */
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            width: 80%;
+            max-width: 600px;
+            /* Ensure heading spans the full width */
+        }
+
+        #subscriptionForm {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            /* Adjust width as needed */
+            max-width: 600px;
+            /* Set a maximum width if desired */
+            display: grid;
+            grid-template-columns: auto 1fr;
+            /* Create two equal columns */
+            gap: 10px;
+            /* Spacing between rows and columns */
+            align-items: center;
+            /* Vertically align items in each row */
+        }
+
+        .subscription-row {
+            display: contents;
+            /* Make the row behave like its children for grid layout */
             border-bottom: 1px solid #eee;
+            /* Keep the visual separator */
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+        }
+
+        .subscription-row:last-child {
+            border-bottom: none;
+            /* Remove border from the last row */
+            margin-bottom: 0;
+            padding-bottom: 0;
         }
 
         .group-name {
-            flex-grow: 1;
+            text-align: left;
+            padding-right: 10px;
+            /* Add some spacing between name and dropdown */
+        }
+
+        .delivery-select-container {
+            position: relative;
+            /* For potential absolute positioning of tooltips */
+            text-align: left;
         }
 
         .delivery-select {
-            /* Style your select dropdown */
-        }
-
-        .tooltip {
-            position: absolute;
-            background-color: #f9f9f9;
+            width: 100%;
+            /* Make the dropdown take the full width of its container */
+            padding: 8px;
             border: 1px solid #ccc;
-            padding: 5px;
-            border-radius: 3px;
-            box-shadow: 2px 2px 5px #888;
-            z-index: 10;
-            display: none;
-            /* Initially hidden */
-        }
-
-        .delivery-option:hover+.tooltip {
-            display: block;
+            border-radius: 4px;
+            box-sizing: border-box;
+            /* Ensure padding and border are inside the width */
         }
 
         .buttons-container {
+            grid-column: 1 / 3;
+            /* Span across both columns */
             margin-top: 20px;
+            text-align: center;
         }
 
         button {
             padding: 8px 15px;
             cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            font-size: 1rem;
+            margin: 0 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
         }
 
         button:disabled {
@@ -113,15 +172,15 @@
         });
 
         resetButton.addEventListener('click', function () {
-    deliverySelects.forEach(select => {
-        const groupEmail = select.name;
-        if (originalSubscriptions[groupEmail]) {
+            deliverySelects.forEach(select => {
+                const groupEmail = select.name;
+                if (originalSubscriptions[groupEmail]) {
                     select.value = originalSubscriptions[groupEmail].value;
-        }
-    });
-    changesMade = false;
-    applyButton.disabled = true;
-});
+                }
+            });
+            changesMade = false;
+            applyButton.disabled = true;
+        });
 
         applyButton.addEventListener('click', function () {
             if (changesMade) {
