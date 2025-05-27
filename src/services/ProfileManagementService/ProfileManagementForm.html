@@ -91,43 +91,48 @@
     const phonePublicCheckbox = document.getElementById('phonePublic');
     const emailPublicCheckbox = document.getElementById('emailPublic');
 
+    const originalProfileData = JSON.parse('<?= JSON.stringify(profile) ?>');
     const originalData = {
-      First: "<?= profile.First ?>",
-      Last: "<?= profile.Last ?>",
-      Phone: "<?= profile.Phone ?>",
-      'Directory Share Name': "<?= profile['Directory Share Name'] ?>",
-      'Directory Share Phone': "<?= profile['Directory Share Phone'] ?>",
-      'Directory Share Email': "<?= profile['Directory Share Email'] ?>"
+      First: originalProfileData.First,
+      Last: originalProfileData.Last,
+      Phone: originalProfileData.Phone,
+      'Directory Share Name': originalProfileData['Directory Share Name'],
+      'Directory Share Phone': originalProfileData['Directory Share Phone'],
+      'Directory Share Email': originalProfileData['Directory Share Email']
     };
 
     let updatedProfile = { ...originalData }; // Initialize with original data
 
-    function syncNameAndContact() {
-      const isContactChecked = phonePublicCheckbox.checked || emailPublicCheckbox.checked;
-      const isNameChecked = firstPublicCheckbox.checked || lastPublicCheckbox.checked;
 
-      if (isContactChecked && !isNameChecked) {
-        firstPublicCheckbox.checked = true; // Ensure at least First Name is checked
-      } else if (!isNameChecked && isContactChecked) {
+    function _updateContactCheckboxState() {
+      const isNameChecked = firstPublicCheckbox.checked || lastPublicCheckbox.checked;
+      if (!isNameChecked) {
         phonePublicCheckbox.checked = false;
         emailPublicCheckbox.checked = false;
+      } else {
+        firstPublicCheckbox.checked = true;
+        lastPublicCheckbox.checked = true;
       }
+      phonePublicCheckbox.disabled = !isNameChecked;
+      emailPublicCheckbox.disabled = !isNameChecked;
     }
 
+
+
     phonePublicCheckbox.addEventListener('change', () => {
-      syncNameAndContact();
+      _updateContactCheckboxState();
       updateUpdatedProfile();
     });
     emailPublicCheckbox.addEventListener('change', () => {
-      syncNameAndContact();
+      _updateContactCheckboxState();
       updateUpdatedProfile();
     });
     firstPublicCheckbox.addEventListener('change', () => {
-      syncNameAndContact();
+      _updateContactCheckboxState();
       updateUpdatedProfile();
     });
     lastPublicCheckbox.addEventListener('change', () => {
-      syncNameAndContact();
+      _updateContactCheckboxState();
       updateUpdatedProfile();
     });
     document.getElementById('first').addEventListener('input', updateUpdatedProfile);
@@ -139,7 +144,7 @@
         First: document.getElementById('first').value,
         Last: document.getElementById('last').value,
         Phone: document.getElementById('phone').value,
-        'Directory Share Name': firstPublicCheckbox.checked && lastPublicCheckbox.checked,
+        'Directory Share Name': firstPublicCheckbox.checked || lastPublicCheckbox.checked,
         'Directory Share Phone': phonePublicCheckbox.checked,
         'Directory Share Email': emailPublicCheckbox.checked
       };
@@ -173,6 +178,7 @@
       emailPublicCheckbox.checked = originalData['Directory Share Email'];
 
       updatedProfile = { ...originalData };
+      _updateContactCheckboxState(); // Ensure correct disabled/unchecked state after reset
     });
   </script>
   </script>
