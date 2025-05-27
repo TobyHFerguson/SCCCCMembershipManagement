@@ -8,8 +8,6 @@ ProfileManagementService.WebApp = {
         }
         template.profile = profile; // Pass the profile to the HTML template
         const output = template.evaluate();
-        console.log(`Rendering Profile Management Form for ${userEmail}`);
-        console.log(output.getContent());
-        return output.setTitle("Profile Management");
+        return output.setTitle("SCCCC Profile Management Service");
     }
 }
