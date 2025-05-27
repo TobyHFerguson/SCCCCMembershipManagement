@@ -102,34 +102,32 @@
 
     let updatedProfile = { ...originalData }; // Initialize with original data
 
-    function updateNameCheckbox() {
-      if (phonePublicCheckbox.checked || emailPublicCheckbox.checked) {
-        firstPublicCheckbox.checked = true;
-        lastPublicCheckbox.checked = true;
-      }
-    }
+    function syncNameAndContact() {
+      const isContactChecked = phonePublicCheckbox.checked || emailPublicCheckbox.checked;
+      const isNameChecked = firstPublicCheckbox.checked || lastPublicCheckbox.checked;
 
-    function updateContactCheckbox() {
-      if (!firstPublicCheckbox.checked || !lastPublicCheckbox.checked) {
+      if (isContactChecked && !isNameChecked) {
+        firstPublicCheckbox.checked = true; // Ensure at least First Name is checked
+      } else if (!isNameChecked && isContactChecked) {
         phonePublicCheckbox.checked = false;
         emailPublicCheckbox.checked = false;
       }
     }
 
     phonePublicCheckbox.addEventListener('change', () => {
-      updateNameCheckbox();
+      syncNameAndContact();
       updateUpdatedProfile();
     });
     emailPublicCheckbox.addEventListener('change', () => {
-      updateNameCheckbox();
+      syncNameAndContact();
       updateUpdatedProfile();
     });
     firstPublicCheckbox.addEventListener('change', () => {
-      updateContactCheckbox();
+      syncNameAndContact();
       updateUpdatedProfile();
     });
     lastPublicCheckbox.addEventListener('change', () => {
-      updateContactCheckbox();
+      syncNameAndContact();
       updateUpdatedProfile();
     });
     document.getElementById('first').addEventListener('input', updateUpdatedProfile);
@@ -143,19 +141,16 @@
         Phone: document.getElementById('phone').value,
         'Directory Share Name': firstPublicCheckbox.checked && lastPublicCheckbox.checked,
         'Directory Share Phone': phonePublicCheckbox.checked,
-        'Directory Share Email': emailPublicCheckbox.checked // Email public is not editable
+        'Directory Share Email': emailPublicCheckbox.checked
       };
     }
 
     document.getElementById('applyBtn').addEventListener('click', function () {
       google.script.run.withSuccessHandler(function (result) {
-        // If the apply was successful on the server, update the original data
         if (result === "success") {
           Object.assign(originalData, updatedProfile);
-          // Optionally provide user feedback
           alert("Profile updated!");
         } else {
-          // Handle potential errors from the server
           alert("Error updating profile.");
         }
       }).updateProfile("<?= profile.Email ?>", {
@@ -165,11 +160,10 @@
         'Directory Share Name': updatedProfile['Directory Share Name'],
         'Directory Share Phone': updatedProfile['Directory Share Phone'],
         'Directory Share Email': updatedProfile['Directory Share Email']
-      }); // Assuming profile.Email is the user's email
+      });
     });
 
     document.getElementById('resetBtn').addEventListener('click', function () {
-      // Copy the original data back to the form
       document.getElementById('first').value = originalData.First;
       document.getElementById('last').value = originalData.Last;
       document.getElementById('phone').value = originalData.Phone;
@@ -178,9 +172,9 @@
       phonePublicCheckbox.checked = originalData['Directory Share Phone'];
       emailPublicCheckbox.checked = originalData['Directory Share Email'];
 
-      // Update the updatedProfile object as well
       updatedProfile = { ...originalData };
     });
+  </script>
   </script>
 </body>
 
