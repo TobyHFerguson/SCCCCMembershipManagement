@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Profile</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: sans-serif;
+    }
+    .profile-container {
+      width: 400px; /* Adjust as needed */
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .profile-row {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+    .profile-row label {
+      text-align: right;
+    }
+    .buttons-container {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="profile-container">
+    <h2>Your Profile</h2>
+
+    <div class="profile-row">
+      <label for="first">First Name:</label>
+      <input type="text" id="first" name="First" value="<?= profile.First ?>">
+      <input type="checkbox" id="firstPublic" name="Directory Share Name" <?= profile['Directory Share Name'] ? 'checked' : '' ?>>
+    </div>
+
+    <div class="profile-row">
+      <label for="last">Last Name:</label>
+      <input type="text" id="last" name="Last" value="<?= profile.Last ?>">
+      <input type="checkbox" id="lastPublic" name="Directory Share Name" <?= profile['Directory Share Name'] ? 'checked' : '' ?>>
+    </div>
+
+    <div class="profile-row">
+      <label for="phone">Phone:</label>
+      <input type="text" id="phone" name="Phone" value="<?= profile.Phone ?>">
+      <input type="checkbox" id="phonePublic" name="Directory Share Phone" <?= profile['Directory Share Phone'] ? 'checked' : '' ?>>
+    </div>
+
+    <div class="profile-row">
+      <label>Email:</label>
+      <span><?= profile.Email ?></span>
+      <input type="checkbox" id="emailPublic" name="Directory Share Email" <?= profile['Directory Share Email'] ? 'checked' : '' ?> disabled>
+    </div>
+
+    <div class="profile-row">
+      <div></div>
+      <div></div>
+      <label>In Directory</label>
+    </div>
+
+    <div class="buttons-container">
+      <button id="applyBtn">Apply</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+  </div>
+
+  <script>
+    const firstPublicCheckbox = document.getElementById('firstPublic');
+    const lastPublicCheckbox = document.getElementById('lastPublic');
+    const phonePublicCheckbox = document.getElementById('phonePublic');
+    const emailPublicCheckbox = document.getElementById('emailPublic');
+
+    const originalData = {
+      First: "<?= profile.First ?>",
+      Last: "<?= profile.Last ?>",
+      Phone: "<?= profile.Phone ?>",
+      'Directory Share Name': "<?= profile['Directory Share Name'] ?>",
+      'Directory Share Phone': "<?= profile['Directory Share Phone'] ?>",
+      'Directory Share Email': "<?= profile['Directory Share Email'] ?>"
+    };
+
+    let updatedProfile = { ...originalData }; // Initialize with original data
+
+    function updateNameCheckbox() {
+      if (phonePublicCheckbox.checked || emailPublicCheckbox.checked) {
+        firstPublicCheckbox.checked = true;
+        lastPublicCheckbox.checked = true;
+      }
+    }
+
+    function updateContactCheckbox() {
+      if (!firstPublicCheckbox.checked || !lastPublicCheckbox.checked) {
+        phonePublicCheckbox.checked = false;
+        emailPublicCheckbox.checked = false;
+      }
+    }
+
+    phonePublicCheckbox.addEventListener('change', () => {
+      updateNameCheckbox();
+      updateUpdatedProfile();
+    });
+    emailPublicCheckbox.addEventListener('change', () => {
+      updateNameCheckbox();
+      updateUpdatedProfile();
+    });
+    firstPublicCheckbox.addEventListener('change', () => {
+      updateContactCheckbox();
+      updateUpdatedProfile();
+    });
+    lastPublicCheckbox.addEventListener('change', () => {
+      updateContactCheckbox();
+      updateUpdatedProfile();
+    });
+    document.getElementById('first').addEventListener('input', updateUpdatedProfile);
+    document.getElementById('last').addEventListener('input', updateUpdatedProfile);
+    document.getElementById('phone').addEventListener('input', updateUpdatedProfile);
+
+    function updateUpdatedProfile() {
+      updatedProfile = {
+        First: document.getElementById('first').value,
+        Last: document.getElementById('last').value,
+        Phone: document.getElementById('phone').value,
+        'Directory Share Name': firstPublicCheckbox.checked && lastPublicCheckbox.checked,
+        'Directory Share Phone': phonePublicCheckbox.checked,
+        'Directory Share Email': emailPublicCheckbox.checked // Email public is not editable
+      };
+    }
+
+    document.getElementById('applyBtn').addEventListener('click', function() {
+      google.script.run.withSuccessHandler(function(result) {
+        // If the apply was successful on the server, update the original data
+        if (result === "success") {
+          Object.assign(originalData, updatedProfile);
+          // Optionally provide user feedback
+          alert("Profile updated!");
+        } else {
+          // Handle potential errors from the server
+          alert("Error updating profile.");
+        }
+      }).updateProfile("<?= profile.Email ?>", {
+        First: updatedProfile.First,
+        Last: updatedProfile.Last,
+        Phone: updatedProfile.Phone,
+        'Directory Share Name': updatedProfile['Directory Share Name'],
+        'Directory Share Phone': updatedProfile['Directory Share Phone'],
+        'Directory Share Email': updatedProfile['Directory Share Email']
+      }); // Assuming profile.Email is the user's email
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', function() {
+      // Copy the original data back to the form
+      document.getElementById('first').value = originalData.First;
+      document.getElementById('last').value = originalData.Last;
+      document.getElementById('phone').value = originalData.Phone;
+      firstPublicCheckbox.checked = originalData['Directory Share Name'];
+      lastPublicCheckbox.checked = originalData['Directory Share Name'];
+      phonePublicCheckbox.checked = originalData['Directory Share Phone'];
+      emailPublicCheckbox.checked = originalData['Directory Share Email'];
+
+      // Update the updatedProfile object as well
+      updatedProfile = { ...originalData };
+    });
+  </script>
+</body>
+</html>

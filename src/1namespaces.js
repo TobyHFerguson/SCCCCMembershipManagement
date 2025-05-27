@@ -33,6 +33,7 @@ const WebServices = {
     DirectoryService: DirectoryService,
     EmailChangeService: EmailChangeService,
     GroupManagementService: GroupManagementService,
+    ProfileManagementService: ProfileManagementService
 }
 
 if (typeof module !== 'undefined' && module.exports) {
