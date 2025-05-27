@@ -8,6 +8,7 @@ function doGet(e) {
     const service = WebServices[e.parameter.service];
     if (!service) {
         console.error('Got an invalid service: ', e.parameter.service)
+        console.error('Available services: ', Object.keys(WebServices));
         return createTextResponse("We're sorry - an internal error occurred. We've notified the developers and theres nothing you can do but wait until they fix it")
     }
     const page = e.parameter.page;
