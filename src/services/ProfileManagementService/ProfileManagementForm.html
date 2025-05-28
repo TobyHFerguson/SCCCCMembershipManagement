@@ -44,6 +44,12 @@
 <body>
   <div class="profile-container">
     <h2>Your Profile</h2>
+    <p>You can modify your profile below.</p>
+
+    <p>You can publish your full name (First and Last) in the club Directory, along with your phone and/or email.
+    </p>
+    <p>Changing your email requires additional security steps and so is implemented as a separate service.</p>
+
     <div class="profile-row">
       <div></div>
       <div></div>
@@ -104,37 +110,57 @@
     let updatedProfile = { ...originalData }; // Initialize with original data
 
 
-    function _updateContactCheckboxState() {
-      const isNameChecked = firstPublicCheckbox.checked || lastPublicCheckbox.checked;
-      if (!isNameChecked) {
-        phonePublicCheckbox.checked = false;
-        emailPublicCheckbox.checked = false;
-      } else {
-        firstPublicCheckbox.checked = true;
-        lastPublicCheckbox.checked = true;
-      }
-      phonePublicCheckbox.disabled = !isNameChecked;
-      emailPublicCheckbox.disabled = !isNameChecked;
+    function enableContactCheckboxes() {
+      console.log('enableContactCheckboxes called');
+      phonePublicCheckbox.disabled = false;
+      emailPublicCheckbox.disabled = false;
     }
 
+    function uncheckAndDisableContactCheckboxes() {
+      console.log('uncheckAndDisableContactCheckboxes called');
+      phonePublicCheckbox.checked = false;
+      emailPublicCheckbox.checked = false;
+      phonePublicCheckbox.disabled = true;
+      emailPublicCheckbox.disabled = true;
+    }
 
+    function updateCheckboxState() {
+      console.log('updateCheckboxState - firstPublicCheckbox.checked:', firstPublicCheckbox.checked);
+      console.log('updateCheckboxState - lastPublicCheckbox.checked:', lastPublicCheckbox.checked);
+      if (firstPublicCheckbox.checked)
+        enableContactCheckboxes();
+      else {
+        uncheckAndDisableContactCheckboxes()
+      }
+    }
+
+    function synchronizeNameCheckedStateChange(current = true) {
+      console.log('synchronizeNameCheckedStateChange - current:', current);
+      firstPublicCheckbox.checked = current;
+      lastPublicCheckbox.checked = current;
+    }
 
     phonePublicCheckbox.addEventListener('change', () => {
-      _updateContactCheckboxState();
+      if (phonePublicCheckbox.checked) synchronizeNameCheckedStateChange();
+      updateCheckboxState();
       updateUpdatedProfile();
     });
     emailPublicCheckbox.addEventListener('change', () => {
-      _updateContactCheckboxState();
+      if (emailPublicCheckbox.checked) synchronizeNameCheckedStateChange();
+      updateCheckboxState();
       updateUpdatedProfile();
     });
     firstPublicCheckbox.addEventListener('change', () => {
-      _updateContactCheckboxState();
+      synchronizeNameCheckedStateChange(firstPublicCheckbox.checked);
+      updateCheckboxState();
       updateUpdatedProfile();
     });
     lastPublicCheckbox.addEventListener('change', () => {
-      _updateContactCheckboxState();
+      synchronizeNameCheckedStateChange(lastPublicCheckbox.checked);
+      updateCheckboxState();
       updateUpdatedProfile();
     });
+
     document.getElementById('first').addEventListener('input', updateUpdatedProfile);
     document.getElementById('last').addEventListener('input', updateUpdatedProfile);
     document.getElementById('phone').addEventListener('input', updateUpdatedProfile);
@@ -178,7 +204,7 @@
       emailPublicCheckbox.checked = originalData['Directory Share Email'];
 
       updatedProfile = { ...originalData };
-      _updateContactCheckboxState(); // Ensure correct disabled/unchecked state after reset
+      updateCheckboxState(); // Ensure correct disabled/unchecked state after reset
     });
   </script>
   </script>
