@@ -38,6 +38,11 @@
       gap: 20px;
       margin-top: 20px;
     }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 
@@ -86,12 +91,16 @@
 
 
     <div class="buttons-container">
-      <button id="applyBtn">Apply</button>
+      <button id="applyBtn" disabled>Apply</button>
       <button id="resetBtn">Reset</button>
     </div>
   </div>
 
   <script>
+    const applyBtn = document.getElementById('applyBtn');
+    const firstInput = document.getElementById('first');
+    const lastInput = document.getElementById('last');
+    const phoneInput = document.getElementById('phone');
     const firstPublicCheckbox = document.getElementById('firstPublic');
     const lastPublicCheckbox = document.getElementById('lastPublic');
     const phonePublicCheckbox = document.getElementById('phonePublic');
@@ -110,62 +119,86 @@
     let updatedProfile = { ...originalData }; // Initialize with original data
 
     function changesMade() {
-      return JSON.stringify(originalData) !== JSON.stringify(updatedProfile);
+      const currentUpdatedProfile = {
+        First: firstInput.value,
+        Last: lastInput.value,
+        Phone: phoneInput.value,
+        'Directory Share Name': firstPublicCheckbox.checked || lastPublicCheckbox.checked,
+        'Directory Share Phone': phonePublicCheckbox.checked,
+        'Directory Share Email': emailPublicCheckbox.checked
+      };
+      return JSON.stringify(originalData) !== JSON.stringify(currentUpdatedProfile);
     }
+
+    function updateApplyButtonState() {
+      applyBtn.disabled = !changesMade();
+    }
+
     function enableContactCheckboxes() {
-      console.log('enableContactCheckboxes called');
       phonePublicCheckbox.disabled = false;
       emailPublicCheckbox.disabled = false;
     }
 
     function uncheckAndDisableContactCheckboxes() {
-      console.log('uncheckAndDisableContactCheckboxes called');
       phonePublicCheckbox.checked = false;
       emailPublicCheckbox.checked = false;
       phonePublicCheckbox.disabled = true;
       emailPublicCheckbox.disabled = true;
+      updateApplyButtonState(); // Ensure button state updates when disabling
     }
 
     function updateCheckboxState() {
-      console.log('updateCheckboxState - firstPublicCheckbox.checked:', firstPublicCheckbox.checked);
-      console.log('updateCheckboxState - lastPublicCheckbox.checked:', lastPublicCheckbox.checked);
-      if (firstPublicCheckbox.checked)
+      if (firstPublicCheckbox.checked) {
         enableContactCheckboxes();
-      else {
-        uncheckAndDisableContactCheckboxes()
+      } else {
+        uncheckAndDisableContactCheckboxes();
       }
+      updateApplyButtonState(); // Ensure button state updates after name checkbox change
     }
 
     function synchronizeNameCheckedStateChange(current = true) {
-      console.log('synchronizeNameCheckedStateChange - current:', current);
       firstPublicCheckbox.checked = current;
       lastPublicCheckbox.checked = current;
+      updateApplyButtonState(); // Ensure button state updates after name checkbox sync
     }
 
     phonePublicCheckbox.addEventListener('change', () => {
       if (phonePublicCheckbox.checked) synchronizeNameCheckedStateChange();
       updateCheckboxState();
       updateUpdatedProfile();
+      updateApplyButtonState(); // Added this line
     });
     emailPublicCheckbox.addEventListener('change', () => {
       if (emailPublicCheckbox.checked) synchronizeNameCheckedStateChange();
       updateCheckboxState();
       updateUpdatedProfile();
+      updateApplyButtonState(); // Added this line
     });
     firstPublicCheckbox.addEventListener('change', () => {
       synchronizeNameCheckedStateChange(firstPublicCheckbox.checked);
       updateCheckboxState();
       updateUpdatedProfile();
+      updateApplyButtonState(); // Added this line
     });
     lastPublicCheckbox.addEventListener('change', () => {
       synchronizeNameCheckedStateChange(lastPublicCheckbox.checked);
       updateCheckboxState();
       updateUpdatedProfile();
+      updateApplyButtonState(); // Added this line
     });
 
-    document.getElementById('first').addEventListener('input', updateUpdatedProfile);
-    document.getElementById('last').addEventListener('input', updateUpdatedProfile);
-    document.getElementById('phone').addEventListener('input', updateUpdatedProfile);
+    document.getElementById('first').addEventListener('input', () => {
+      updateUpdatedProfile();
+      updateApplyButtonState(); // Added this line
+    });
+    document.getElementById('last').addEventListener('input', () => {
+      updateUpdatedProfile();
+      updateApplyButtonState(); // Added this line
+    });
+    document.getElementById('phone').addEventListener('input', () => {
+      updateUpdatedProfile();
+      updateApplyButtonState(); // Added this line
+    });
 
     function updateUpdatedProfile() {
       updatedProfile = {
@@ -179,36 +212,43 @@
     }
 
     document.getElementById('applyBtn').addEventListener('click', function () {
+      applyBtn.disabled = true; // Disable immediately after clicking
+      const currentUpdatedProfile = {
+        First: firstInput.value,
+        Last: lastInput.value,
+        Phone: phoneInput.value,
+        'Directory Share Name': firstPublicCheckbox.checked || lastPublicCheckbox.checked,
+        'Directory Share Phone': phonePublicCheckbox.checked,
+        'Directory Share Email': emailPublicCheckbox.checked
+      };
       google.script.run.withSuccessHandler(function (response) {
         if (response && response.success) {
-          Object.assign(originalData, updatedProfile);
+          Object.assign(originalData, currentUpdatedProfile);
           alert("Profile updated!");
+          applyBtn.disabled = !changesMade(); // Re-enable if further changes are made
         } else {
           alert("Error updating profile.");
+          applyBtn.disabled = false; // Re-enable on failure
         }
-      }).updateProfile("<?= token ?>", {
-        First: updatedProfile.First,
-        Last: updatedProfile.Last,
-        Phone: updatedProfile.Phone,
-        'Directory Share Name': updatedProfile['Directory Share Name'],
-        'Directory Share Phone': updatedProfile['Directory Share Phone'],
-        'Directory Share Email': updatedProfile['Directory Share Email']
-      });
+      }).updateProfile("<?= token ?>", currentUpdatedProfile);
     });
 
     document.getElementById('resetBtn').addEventListener('click', function () {
-      document.getElementById('first').value = originalData.First;
-      document.getElementById('last').value = originalData.Last;
-      document.getElementById('phone').value = originalData.Phone;
+      firstInput.value = originalData.First;
+      lastInput.value = originalData.Last;
+      phoneInput.value = originalData.Phone;
       firstPublicCheckbox.checked = originalData['Directory Share Name'];
       lastPublicCheckbox.checked = originalData['Directory Share Name'];
       phonePublicCheckbox.checked = originalData['Directory Share Phone'];
       emailPublicCheckbox.checked = originalData['Directory Share Email'];
 
-      updatedProfile = { ...originalData };
+      updateApplyButtonState(); // Update button state after reset
       updateCheckboxState(); // Ensure correct disabled/unchecked state after reset
     });
-  </script>
+
+    // Initialize the apply button state on page load
+    updateApplyButtonState();
+    updateCheckboxState();
   </script>
 </body>
 
