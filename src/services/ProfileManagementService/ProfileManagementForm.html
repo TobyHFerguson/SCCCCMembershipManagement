@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Profile</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: sans-serif;
+    }
+
+    .profile-container {
+      width: 400px;
+      /* Adjust as needed */
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    .profile-row {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+
+    .profile-row label {
+      text-align: right;
+    }
+
+    .buttons-container {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="profile-container">
+    <h2>Your Profile</h2>
+    <p>You can modify your profile below.</p>
+
+    <p>You can publish your full name (First and Last) in the club Directory, along with your phone and/or email.
+    </p>
+    <p>Changing your email requires additional security steps and so is implemented as a separate service.</p>
+
+    <div class="profile-row">
+      <div></div>
+      <div></div>
+      <label>In Directory</label>
+    </div>
+    <div class="profile-row">
+      <label for="first">First Name:</label>
+      <input type="text" id="first" name="First" value="<?= profile.First ?>">
+      <input type="checkbox" id="firstPublic" name="Directory Share Name" <?=profile['Directory Share Name'] ? 'checked'
+        : '' ?>>
+    </div>
+
+    <div class="profile-row">
+      <label for="last">Last Name:</label>
+      <input type="text" id="last" name="Last" value="<?= profile.Last ?>">
+      <input type="checkbox" id="lastPublic" name="Directory Share Name" <?=profile['Directory Share Name'] ? 'checked'
+        : '' ?>>
+    </div>
+
+    <div class="profile-row">
+      <label for="phone">Phone:</label>
+      <input type="text" id="phone" name="Phone" value="<?= profile.Phone ?>">
+      <input type="checkbox" id="phonePublic" name="Directory Share Phone" <?=profile['Directory Share Phone']
+        ? 'checked' : '' ?>>
+    </div>
+
+    <div class="profile-row">
+      <label>Email:</label>
+      <input type="text" id="email" name="Email" value="<?= profile.Email?>" disabled>
+      <input type="checkbox" id="emailPublic" name="Directory Share Email" <?=profile['Directory Share Email']
+        ? 'checked' : '' ?>>
+    </div>
+
+
+
+    <div class="buttons-container">
+      <button id="applyBtn" disabled>Apply</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+  </div>
+
+  <script>
+    const applyBtn = document.getElementById('applyBtn');
+    const firstInput = document.getElementById('first');
+    const lastInput = document.getElementById('last');
+    const phoneInput = document.getElementById('phone');
+    const firstPublicCheckbox = document.getElementById('firstPublic');
+    const lastPublicCheckbox = document.getElementById('lastPublic');
+    const phonePublicCheckbox = document.getElementById('phonePublic');
+    const emailPublicCheckbox = document.getElementById('emailPublic');
+
+    const originalProfileData = JSON.parse('<?= JSON.stringify(profile) ?>');
+    const originalData = {
+      First: originalProfileData.First,
+      Last: originalProfileData.Last,
+      Phone: originalProfileData.Phone,
+      'Directory Share Name': originalProfileData['Directory Share Name'],
+      'Directory Share Phone': originalProfileData['Directory Share Phone'],
+      'Directory Share Email': originalProfileData['Directory Share Email']
+    };
+
+    let updatedProfile = { ...originalData }; // Initialize with original data
+
+    function changesMade() {
+      const currentUpdatedProfile = {
+        First: firstInput.value,
+        Last: lastInput.value,
+        Phone: phoneInput.value,
+        'Directory Share Name': firstPublicCheckbox.checked || lastPublicCheckbox.checked,
+        'Directory Share Phone': phonePublicCheckbox.checked,
+        'Directory Share Email': emailPublicCheckbox.checked
+      };
+      return JSON.stringify(originalData) !== JSON.stringify(currentUpdatedProfile);
+    }
+
+    function updateApplyButtonState() {
+      applyBtn.disabled = !changesMade();
+    }
+
+    function enableContactCheckboxes() {
+      phonePublicCheckbox.disabled = false;
+      emailPublicCheckbox.disabled = false;
+    }
+
+    function uncheckAndDisableContactCheckboxes() {
+      phonePublicCheckbox.checked = false;
+      emailPublicCheckbox.checked = false;
+      phonePublicCheckbox.disabled = true;
+      emailPublicCheckbox.disabled = true;
+      updateApplyButtonState(); // Ensure button state updates when disabling
+    }
+
+    function updateCheckboxState() {
+      if (firstPublicCheckbox.checked) {
+        enableContactCheckboxes();
+      } else {
+        uncheckAndDisableContactCheckboxes();
+      }
+      updateApplyButtonState(); // Ensure button state updates after name checkbox change
+    }
+
+    function synchronizeNameCheckedStateChange(current = true) {
+      firstPublicCheckbox.checked = current;
+      lastPublicCheckbox.checked = current;
+      updateApplyButtonState(); // Ensure button state updates after name checkbox sync
+    }
+
+    phonePublicCheckbox.addEventListener('change', () => {
+      if (phonePublicCheckbox.checked) synchronizeNameCheckedStateChange();
+      updateCheckboxState();
+      updateUpdatedProfile();
+      updateApplyButtonState(); // Added this line
+    });
+    emailPublicCheckbox.addEventListener('change', () => {
+      if (emailPublicCheckbox.checked) synchronizeNameCheckedStateChange();
+      updateCheckboxState();
+      updateUpdatedProfile();
+      updateApplyButtonState(); // Added this line
+    });
+    firstPublicCheckbox.addEventListener('change', () => {
+      synchronizeNameCheckedStateChange(firstPublicCheckbox.checked);
+      updateCheckboxState();
+      updateUpdatedProfile();
+      updateApplyButtonState(); // Added this line
+    });
+    lastPublicCheckbox.addEventListener('change', () => {
+      synchronizeNameCheckedStateChange(lastPublicCheckbox.checked);
+      updateCheckboxState();
+      updateUpdatedProfile();
+      updateApplyButtonState(); // Added this line
+    });
+
+    document.getElementById('first').addEventListener('input', () => {
+      updateUpdatedProfile();
+      updateApplyButtonState(); // Added this line
+    });
+    document.getElementById('last').addEventListener('input', () => {
+      updateUpdatedProfile();
+      updateApplyButtonState(); // Added this line
+    });
+    document.getElementById('phone').addEventListener('input', () => {
+      updateUpdatedProfile();
+      updateApplyButtonState(); // Added this line
+    });
+
+    function updateUpdatedProfile() {
+      updatedProfile = {
+        First: document.getElementById('first').value,
+        Last: document.getElementById('last').value,
+        Phone: document.getElementById('phone').value,
+        'Directory Share Name': firstPublicCheckbox.checked || lastPublicCheckbox.checked,
+        'Directory Share Phone': phonePublicCheckbox.checked,
+        'Directory Share Email': emailPublicCheckbox.checked
+      };
+    }
+
+    document.getElementById('applyBtn').addEventListener('click', function () {
+      applyBtn.disabled = true; // Disable immediately after clicking
+      const currentUpdatedProfile = {
+        First: firstInput.value,
+        Last: lastInput.value,
+        Phone: phoneInput.value,
+        'Directory Share Name': firstPublicCheckbox.checked || lastPublicCheckbox.checked,
+        'Directory Share Phone': phonePublicCheckbox.checked,
+        'Directory Share Email': emailPublicCheckbox.checked
+      };
+      google.script.run.withSuccessHandler(function (response) {
+        if (response && response.success) {
+          Object.assign(originalData, currentUpdatedProfile);
+          alert("Profile updated!");
+          applyBtn.disabled = !changesMade(); // Re-enable if further changes are made
+        } else {
+          alert("Error updating profile.");
+          applyBtn.disabled = false; // Re-enable on failure
+        }
+      }).updateProfile("<?= token ?>", currentUpdatedProfile);
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', function () {
+      firstInput.value = originalData.First;
+      lastInput.value = originalData.Last;
+      phoneInput.value = originalData.Phone;
+      firstPublicCheckbox.checked = originalData['Directory Share Name'];
+      lastPublicCheckbox.checked = originalData['Directory Share Name'];
+      phonePublicCheckbox.checked = originalData['Directory Share Phone'];
+      emailPublicCheckbox.checked = originalData['Directory Share Email'];
+
+      updateApplyButtonState(); // Update button state after reset
+      updateCheckboxState(); // Ensure correct disabled/unchecked state after reset
+    });
+
+    // Initialize the apply button state on page load
+    updateApplyButtonState();
+    updateCheckboxState();
+  </script>
+</body>
+
+</html>
