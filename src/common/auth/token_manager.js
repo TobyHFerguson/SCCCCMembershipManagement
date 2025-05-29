@@ -4,7 +4,7 @@ Common.Auth.TokenManager = {
     },
     getMultiUseToken: (email) => {
         const token = Common.Auth.TokenManager.generateToken();
-       const cache = CacheService.getScriptCache();
+        const cache = CacheService.getScriptCache();
         const tokenKey = `user_token_${token}`;
         const expirationInSeconds = 900; // Example: 5 minutes
 
