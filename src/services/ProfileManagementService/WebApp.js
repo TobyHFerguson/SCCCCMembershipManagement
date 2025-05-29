@@ -7,6 +7,7 @@ ProfileManagementService.WebApp = {
             throw new Error(`Profile not found for email: ${userEmail}`);
         }
         template.profile = profile; // Pass the profile to the HTML template
+        template.token = Common.Auth.TokenManager.getMultiUseToken(userEmail);
         const output = template.evaluate();
         return output.setTitle("SCCCC Profile Management Service");
     }

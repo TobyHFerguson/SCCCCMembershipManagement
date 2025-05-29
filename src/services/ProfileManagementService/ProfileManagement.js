@@ -5,11 +5,11 @@ if (typeof require !== 'undefined') {
 ProfileManagementService._checkForForbiddenUpdates = function (originalObject, updatedObject, forbiddenFields) {
   for (const field of forbiddenFields) {
     if (updatedObject.hasOwnProperty(field) &&
-        originalObject.hasOwnProperty(field) &&
-        updatedObject[field] !== originalObject[field]) {
+      originalObject.hasOwnProperty(field) &&
+      updatedObject[field] !== originalObject[field]) {
       throw new Error(`Update to forbidden field: ${field}`);
     } else if (updatedObject.hasOwnProperty(field) &&
-               !originalObject.hasOwnProperty(field)) {
+      !originalObject.hasOwnProperty(field)) {
       throw new Error(`Addition of forbidden field: ${field}`);
     }
   }
@@ -38,15 +38,32 @@ ProfileManagementService._checkForForbiddenUpdates = function (originalObject, u
 }
 
 ProfileManagementService.getProfile = function (email) {
-    return Commmon.Data.getMember(email);
+  return Commmon.Data.getMember(email);
 }
-ProfileManagementService.updateProfile = function (originalProfile, updatedProfile) {
-    const forbiddenFields = ["Status", "Email", "Joined", "Expires", "Period", "Migrated", "Renewed On"]; // Define the fields that are forbidden to update
-    ProfileManagementService._checkForForbiddenUpdates(originalProfile, updatedProfile, forbiddenFields);
-    
-    // Proceed with the update if no forbidden fields were modified
-    return Common.Data.updateMember(email, updatedProfile);
-    }
+ProfileManagementService.updateProfile = function (userToken, updatedProfile) {
+  const forbiddenFields = ["Status", "Email", "Joined", "Expires", "Period", "Migrated", "Renewed On"]; // Define the fields that are forbidden to update
+  const userEmail = Common.Auth.TokenManager.getEmailFromMUT(userToken);
+  if (!userEmail) {
+    console.warning(`Invalid or expired token: ${userToken}`);
+    return JSON.stringify({ success: false, message: "Invalid session. Please refresh the page." });
+  }
+  if (!updatedProfile) {
+    throw new Error("Original and updated profiles must be provided.");
+  }
+  const originalProfile = Common.Data.Access.getMember(userEmail);
+  if (!originalProfile) {
+    throw new Error(`Profile not found for email: ${userEmail}`);
+  }
+  ProfileManagementService._checkForForbiddenUpdates(originalProfile, updatedProfile, forbiddenFields);
+  console.log('originalProfile', originalProfile);
+  console.log('updatedProfile', updatedProfile);
+  updatedProfile = {...originalProfile, ...updatedProfile}; // Merge original and updated profiles
+  console.log('mergedProfile', updatedProfile);
+
+  // Proceed with the update if no forbidden fields were modified
+  Common.Data.Access.updateMember(userEmail, updatedProfile);
+  return { success: true, message: "Profile updated successfully." };
+}
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {

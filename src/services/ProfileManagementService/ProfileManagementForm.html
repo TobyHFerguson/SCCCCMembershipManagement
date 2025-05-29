@@ -109,7 +109,9 @@
 
     let updatedProfile = { ...originalData }; // Initialize with original data
 
-
+    function changesMade() {
+      return JSON.stringify(originalData) !== JSON.stringify(updatedProfile);
+    }
     function enableContactCheckboxes() {
       console.log('enableContactCheckboxes called');
       phonePublicCheckbox.disabled = false;
@@ -177,14 +179,14 @@
     }
 
     document.getElementById('applyBtn').addEventListener('click', function () {
-      google.script.run.withSuccessHandler(function (result) {
-        if (result === "success") {
+      google.script.run.withSuccessHandler(function (response) {
+        if (response && response.success) {
           Object.assign(originalData, updatedProfile);
           alert("Profile updated!");
         } else {
           alert("Error updating profile.");
         }
-      }).updateProfile("<?= profile.Email ?>", {
+      }).updateProfile("<?= token ?>", {
         First: updatedProfile.First,
         Last: updatedProfile.Last,
         Phone: updatedProfile.Phone,
