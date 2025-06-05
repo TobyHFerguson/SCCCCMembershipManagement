@@ -1,56 +1,63 @@
 VotingService.Trigger = {
-    onEdit: function (e) {
+    handleFormIdEdit: function (e) {
         const editedRange = e.range;
+        const sheet = editedRange.getSheet();
+        if (sheet.getName() !== REGISTRATION_SHEET_NAME) {
+            console.log(`Edit detected in sheet: ${sheet.getName()}, but not in registration sheet (${REGISTRATION_SHEET_NAME}).`);
+            return; // Only process edits in the registration sheet
+        }
         const editedRow = editedRange.getRow();
         const editedColumn = editedRange.getColumn();
         const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-
         const formIdColumnIndex = headers.indexOf(FORM_ID_COLUMN_NAME) + 1;
         const resultsRecipientColumnIndex = headers.indexOf(RESULTS_RECIPIENT_COLUMN_NAME) + 1;
         const triggerStatusColumnIndex = headers.indexOf(TRIGGER_STATUS_COLUMN_NAME) + 1;
+        console.log(`Edit detected in row: ${editedRow}, column: ${editedColumn} in sheet: ${sheet.getName()}`);
+        console.log(`Form ID column index: ${formIdColumnIndex}, Results Recipient column index: ${resultsRecipientColumnIndex}, Trigger Status column index: ${triggerStatusColumnIndex}`);
 
         if (editedColumn === formIdColumnIndex && editedRow > 1) {
+            console.log(`Form ID edited in row: ${editedRow}`);
             const formId = sheet.getRange(editedRow, formIdColumnIndex).getValue();
             const resultsRecipients = sheet.getRange(editedRow, resultsRecipientColumnIndex).getValue();
 
             if (formId) {
-                return this._attachOnSubmitTrigger(formId, editedRow, triggerStatusColumnIndex, resultsRecipients);
+                console.log(`Processing form ID: ${formId} in row: ${editedRow}`);
+                try {
+                    this._attachOnSubmitTrigger(formId);
+                    console.log(`Attached votingFormSubmitHandler trigger to form ID: ${formId}`);
+                    if (triggerStatusColumnIndex > 0) {
+                        sheet.getRange(editedRow, triggerStatusColumnIndex).setValue('Active');
+                    }
+                    if (resultsRecipients) {
+                        this._shareResultsSheet(resultsRecipients);
+                    }
+                } catch (error) {
+                    console.log(`Error attaching trigger to form ID: ${formId}: ${error}`);
+                    if (triggerStatusColumnIndex > 0) {
+                        sheet.getRange(editedRow, triggerStatusColumnIndex).setValue('Failed: ' + error);
+                    }
+                    throw error
+                }
             }
         }
     },
-    _attachOnSubmitTrigger: function (formId, row, triggerStatusColumnIndex, resultsRecipients) {
-        try {
-            const form = FormApp.openById(formId);
-            ScriptApp.newTrigger('votingFormSubmitHandler')
-                .forForm(form)
-                .onFormSubmit()
-                .create();
-
-            if (triggerStatusColumnIndex > 0) {
-                SpreadsheetApp.getActiveSpreadsheet().getSheetByName(REGISTRATION_SHEET_NAME).getRange(row, triggerStatusColumnIndex).setValue('Active');
-            }
-            console.log(`Attached votingFormSubmitHandler trigger to form ID: ${formId}`);
-
-            if (resultsRecipients) {
-                this._shareResultsSheet(resultsRecipients);
-            }
-
-        } catch (error) {
-            console.log(`Error attaching votingFormSubmitHandler trigger to form ID: ${formId}: ${error}`);
-            if (triggerStatusColumnIndex > 0) {
-                SpreadsheetApp.getActiveSpreadsheet().getSheetByName(REGISTRATION_SHEET_NAME).getRange(row, triggerStatusColumnIndex).setValue('Failed: ' + error);
-            }
-        }
-    }, _shareResultsSheet: function (recipients) {
+    _attachOnSubmitTrigger: function (formId) {
+        const form = FormApp.openById(formId);
+        ScriptApp.newTrigger('votingFormSubmitHandler')
+            .forForm(form)
+            .onFormSubmit()
+            .create();
+    },
+    _shareResultsSheet: function (recipients) {
         const ss = SpreadsheetApp.openById(VOTE_DATA_SHEET_ID);
-        const sheet = ss.getActiveSheet();
         const recipientEmails = recipients.split(',').map(email => email.trim());
         recipientEmails.forEach(email => {
             try {
-                sheet.addViewer(email);
+                ss.addViewer(email);
                 console.log(`Shared results sheet with: ${email}`);
             } catch (error) {
                 console.log(`Error sharing results sheet with ${email}: ${error}`);
+                throw error;
             }
         });
     },

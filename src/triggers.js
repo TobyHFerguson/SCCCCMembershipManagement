@@ -9,13 +9,15 @@ function onFormSubmit(e) {
 }
 
 
-function onEdit(e) {
+function handleFormIdEdit(e) {
     const sheet = e.source.getActiveSheet();
     if (sheet.getName() === REGISTRATION_SHEET_NAME) {
-        VotingService.Trigger.onEdit(e);
+        console.log(`Edit detected in registration sheet: ${sheet.getName()}`);
+        VotingService.Trigger.handleFormIdEdit(e);
     }
 }
 
 function votingFormSubmitHandler(e) {
+    console.log('Voting form submitted:', e);
     VotingService.Trigger.onFormSubmit(e);
 }
