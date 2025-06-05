@@ -29,6 +29,12 @@ const ProfileManagementService = {
     service: 'ProfileManagementService'
 }
 
+const VotingService = {
+    name: 'Voting Service',
+    service: 'VotingService',
+    Trigger: {}
+};
+
 const WebServices = {
     DirectoryService: DirectoryService,
     EmailChangeService: EmailChangeService,

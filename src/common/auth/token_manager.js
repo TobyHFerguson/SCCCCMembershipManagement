@@ -22,5 +22,8 @@ Common.Auth.TokenManager = {
             console.warning(`Token ${token} not found or expired.`);
             return null;
         }
+    }, 
+    getTokenData:(token) => {
+        Common.Auth.TokenStorage.getTokenData().find((tokenData) => tokenData[0] === token) || null;
     }
 }

@@ -38,5 +38,10 @@ Common.Data.Access = {
             return (member.Email.toLowerCase() === email) ? newMember : member;
         }).dumpValues();
         return true;
+    },
+    isMember:(email) => {
+        email = email.toLowerCase();
+        const members = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').getData();
+        return members.some(member => member.Email.toLowerCase() === email);
     }
 }

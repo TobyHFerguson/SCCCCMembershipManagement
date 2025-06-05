@@ -11,11 +11,8 @@ Common.Auth.TokenStorage = {
         tokens.push(newEntry)
         tokenFiddler.setData(tokens).dumpValues();
     },
-    getTokenData:(token) => {
-        const tokenFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens');
-        const tokens = tokenFiddler.getData();
-        const td = tokens.find((tokenData) => tokenData.Token === token)
-        return td || null
+    getTokenData:() => {
+        return Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens').getData();
     },
     markTokenAsUsed:(token)=> {
         const tokenFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens');
