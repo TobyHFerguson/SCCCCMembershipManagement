@@ -43,5 +43,9 @@ Common.Data.Access = {
         email = email.toLowerCase();
         const members = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').getData();
         return members.some(member => member.Email.toLowerCase() === email);
+    },
+    getVotingData: () => {
+        const votingData = Common.Data.Storage.SpreadsheetManager.getFiddler('VotingData').getData();
+        return votingData;
     }
 }

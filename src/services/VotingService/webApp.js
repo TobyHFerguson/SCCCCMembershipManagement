@@ -1,7 +1,4 @@
-const MAGIC_LINK_SERVICE_URL = ScriptApp.getService().getUrl(); // The URL of this web app
-const VOTE_REGISTRATION_SHEET_ID = 'YOUR_VOTE_REGISTRATION_SPREADSHEET_ID'; // Replace
-const TOKEN_STORAGE_SHEET_ID = 'YOUR_TOKEN_STORAGE_SHEET_ID';   // Replace
-const TOKEN_ENTRY_FIELD_TITLE = 'Your Voting Token'; // Adjust
+
 
 // Always arrive here with a validated token converted to the userEmail
 VotingService.WebApp.doGet = function (e, userEmail) {
@@ -40,14 +37,7 @@ VotingService.WebApp._getFormUrlWithTokenField = function (userEmail, formId, to
 
 
 VotingService.WebApp._getActiveVoteOptions = function () {
-    const ss = SpreadsheetApp.openById(VOTE_REGISTRATION_SHEET_ID);
-    const sheet = ss.getActiveSheet();
-    const data = sheet.getDataRange().getValues();
-    const headers = data[0];
-    const titleColIndex = headers.indexOf('Vote Title');
-    const formIdColIndex = headers.indexOf('Voting Form ID');
-    const startDateColIndex = headers.indexOf('Start Date');
-    const endDateColIndex = headers.indexOf('End Date');
+    const votingData = Common.Data.Spreadsheet.getDataFromSheet(VOTE_REGISTRATION_SHEET_ID, 'Vote Registrations');
 
     const activeVotes = [];
     const today = new Date();

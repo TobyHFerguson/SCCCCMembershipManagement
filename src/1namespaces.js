@@ -32,6 +32,7 @@ const ProfileManagementService = {
 const VotingService = {
     name: 'Voting Service',
     service: 'VotingService',
+    WebApp: {},
     Trigger: {}
 };
 
@@ -39,7 +40,8 @@ const WebServices = {
     DirectoryService: DirectoryService,
     EmailChangeService: EmailChangeService,
     GroupManagementService: GroupManagementService,
-    ProfileManagementService: ProfileManagementService
+    ProfileManagementService: ProfileManagementService,
+    VotingService: VotingService,
 }
 
 if (typeof module !== 'undefined' && module.exports) {
