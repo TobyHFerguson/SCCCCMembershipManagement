@@ -24,6 +24,12 @@ const GroupManagementService = {
     service: 'GroupManagementService'
 };
 
+const VotingService = {
+    name: 'Voting Service',
+    service: 'VotingService',
+    Trigger: {}
+};
+
 const WebServices = {
     DirectoryService: DirectoryService,
     EmailChangeService: EmailChangeService,
