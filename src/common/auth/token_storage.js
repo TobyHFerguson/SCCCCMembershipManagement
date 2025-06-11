@@ -12,7 +12,8 @@ Common.Auth.TokenStorage = {
         tokenFiddler.setData(tokens).dumpValues();
     },
     getTokenData:() => {
-        return Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens').getData();
+        const tokenData = Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens').getData();
+        return tokenData;
     },
     markTokenAsUsed:(token)=> {
         const tokenFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens');

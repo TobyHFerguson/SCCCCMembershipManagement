@@ -24,6 +24,6 @@ Common.Auth.TokenManager = {
         }
     }, 
     getTokenData:(token) => {
-        Common.Auth.TokenStorage.getTokenData().find((tokenData) => tokenData[0] === token) || null;
+        return Common.Auth.TokenStorage.getTokenData().find((tokenData) => tokenData.Token === token) || null;
     }
 }
