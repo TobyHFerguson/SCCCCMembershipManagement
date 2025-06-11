@@ -33,12 +33,13 @@ function doGet(e) {
         return output;
     }
     const token = e.parameter.token;
-    const tokenData = Common.Auth.TokenStorage.getTokenData(token);
+    const tokenData = Common.Auth.TokenManager.getTokenData(token);
+    console.log('doGet() called with token: ', token, ' and tokenData: ', tokenData);
     if (!tokenData || tokenData.Used) {
         return createTextResponse('Invalid or Used Link - The access link is either invalid or has already been used.', 400);
     }
     if (!tokenData.Email) {
-        throw new Error('tokenData.email === null')
+        throw new Error('tokenData.Email === null')
     }
     Common.Auth.TokenStorage.markTokenAsUsed(token);
     

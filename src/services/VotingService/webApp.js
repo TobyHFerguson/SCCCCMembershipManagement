@@ -15,10 +15,10 @@ VotingService.WebApp._renderVotingOptions = function (userEmail) {
 }
 
 VotingService.WebApp._getVotingDataForTemplate = function (userEmail) {
-    const activeVotes = this._getActiveVoteOptions();
+    const activeVotes = this._getActiveVotes();
     return activeVotes.map(vote => ({
         title: vote.title,
-        formUrl: this._getFormUrlWithTokenField(userEmail, vote.formId, TOKEN_ENTRY_FIELD_TITLE)
+        formUrl: this._getFormUrlWithTokenField(userEmail, vote['Form ID'], TOKEN_ENTRY_FIELD_TITLE)
     }));
 }
 VotingService.WebApp._getFormUrlWithTokenField = function (userEmail, formId, tokenFieldTitle) {
@@ -36,23 +36,14 @@ VotingService.WebApp._getFormUrlWithTokenField = function (userEmail, formId, to
 }
 
 
-VotingService.WebApp._getActiveVoteOptions = function () {
-    const votingData = Common.Data.Spreadsheet.getDataFromSheet(VOTE_REGISTRATION_SHEET_ID, 'Vote Registrations');
+VotingService.WebApp._getActiveVotes = function () {
+    const data = Common.Data.Access.getVotingData();
 
-    const activeVotes = [];
     const today = new Date();
-
-    for (let i = 1; i < data.length; i++) {
-        const startDate = data[i][startDateColIndex] ? new Date(data[i][startDateColIndex]) : null;
-        const endDate = data[i][endDateColIndex] ? new Date(data[i][endDateColIndex]) : null;
-        const formId = data[i][formIdColIndex];
-        const title = data[i][titleColIndex];
-
-        if (formId && title &&
-            (startDate === null || startDate <= today) &&
-            (endDate === null || endDate >= today)) {
-            activeVotes.push({ title: title, formId: formId });
-        }
-    }
+    const activeVotes = data.filter(vote => {
+        const startDate = vote['Start Date'] ? new Date(vote['Start Date']) : null;
+        const endDate = vote['End Date'] ? new Date(vote['End Date']) : null;
+        return (startDate === null || startDate <= today) && (endDate === null || endDate >= today);
+    });
     return activeVotes;
 }
