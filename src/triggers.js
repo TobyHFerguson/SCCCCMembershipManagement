@@ -9,11 +9,11 @@ function onFormSubmit(e) {
 }
 
 
-function handleFormIdEdit(e) {
+function handleRegistrationSheetEdit(e) {
     const sheet = e.source.getActiveSheet();
     if (sheet.getName() === REGISTRATION_SHEET_NAME) {
         console.log(`Edit detected in registration sheet: ${sheet.getName()}`);
-        VotingService.Trigger.handleFormIdEdit(e);
+        VotingService.Trigger.handleRegistrationSheetEdit(e);
     }
 }
 
