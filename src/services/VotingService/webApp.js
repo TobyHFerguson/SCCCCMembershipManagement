@@ -8,7 +8,7 @@ VotingService.WebApp.doGet = function (e, userEmail) {
 VotingService.WebApp._renderVotingOptions = function (userEmail) {
     const voteDataForTemplate = this._getVotingDataForTemplate(userEmail);
 
-    const htmlTemplate = HtmlService.createTemplate(HtmlService.createHtmlOutputFromFile('services/VotingService/ActiveVotes.html').getContent());
+    const htmlTemplate = HtmlService.createTemplateFromFile('services/VotingService/ActiveVotes.html');
     htmlTemplate.userEmail = userEmail;
     htmlTemplate.activeVotes = voteDataForTemplate;
     return htmlTemplate.evaluate();
