@@ -1,5 +1,5 @@
 VotingService.Trigger = {
-    handleFormIdEdit: function (e) {
+    handleRegistrationSheetEdit: function (e) {
         const editedRange = e.range;
         const sheet = editedRange.getSheet();
         if (sheet.getName() !== REGISTRATION_SHEET_NAME) {
