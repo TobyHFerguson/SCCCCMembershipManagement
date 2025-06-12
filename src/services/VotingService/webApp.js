@@ -16,23 +16,19 @@ VotingService.WebApp._renderVotingOptions = function (userEmail) {
 
 VotingService.WebApp._getVotingDataForTemplate = function (userEmail) {
     const activeVotes = this._getActiveVotes();
-    return activeVotes.map(vote => ({
-        title: vote['Vote Title'],
-        formUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSdY4j5BdpcQ1gAE8vh_mz3nHUvbRXZ4_AsbcVQ7ITxpjVCHtg/viewform?usp=header' // this._getFormUrlWithTokenField(userEmail, vote['Form ID'], TOKEN_ENTRY_FIELD_TITLE)
-    }));
+    return activeVotes.map(vote => {
+        return {
+            title: vote[VOTE_TITLE_COLUMN_NAME],
+            formUrl: this._getFormUrlWithTokenField(userEmail, vote)
+        }
+    });
 }
-VotingService.WebApp._getFormUrlWithTokenField = function (userEmail, formId, tokenFieldTitle) {
+VotingService.WebApp._getFormUrlWithTokenField = function (userEmail, vote) {
     const token = Common.Auth.TokenManager.generateToken(userEmail);
     Common.Auth.TokenStorage.storeToken(token, userEmail);
-    const form = FormApp.openById(formId);
-    const items = form.getItems();
-    for (const item of items) {
-        if (item.getTitle() === tokenFieldTitle && item.getType() === FormApp.ItemType.TEXT) {
-            return form.getPublishedUrl() + '&entry.' + item.getId() + '=' + token;
-        }
-    }
-    // Handle case where token field isn't found (error message or default field?)
-    throw new Error(`Token field "${tokenFieldTitle}" not found in form ID: ${formId}`);
+    const components = VotingService.parsePrefilledFormUrlComponents(vote[PREFILLED_URL_COLUMN_NAME]);
+    const form = FormApp.openById(vote[FORM_ID_COLUMN_NAME]);
+    return form.getPublishedUrl() + '?entry.' + components.entryTokenId + '=' + token;
 }
 
 
