@@ -19,5 +19,5 @@ function handleRegistrationSheetEdit(e) {
 
 function votingFormSubmitHandler(e) {
     console.log('Voting form submitted:', e);
-    VotingService.Trigger.onFormSubmit(e);
+    VotingService.Trigger.votingFormSubmitHandler(e);
 }
