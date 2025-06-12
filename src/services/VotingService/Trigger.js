@@ -64,9 +64,16 @@ VotingService.Trigger = {
     votingFormSubmitHandler: function (e) {
         const formResponse = e.response;
         const itemResponses = formResponse.getItemResponses();
-        const form = FormApp.getActiveForm();
-        const formId = form.getId();
-        const responsesSheet = SpreadsheetApp.openById(VOTE_DATA_SHEET_ID).getActiveSheet();
+        const formSource = e.source;
+        const formId = formSource.getId();
+        if (formSource.getDestinationType() !== FormApp.DestinationType.SPREADSHEET) {
+            console.log(`Form ID: ${formId} does not have a valid destination set.`);
+            return; // Exit if the form does not have a valid destination
+        }
+        const responsesSpreadsheet = SpreadsheetApp.openById(formSource.getDestinationId());
+        const responsesSheet = responsesSpreadsheet.getActiveSheet();
+
+        const consolidatedSheet = responsesSpreadsheet.getSheetByName('Consolidated Responses');
         const responseRow = responsesSheet.getLastRow();
         const responseValues = responsesSheet.getRange(responseRow, 1, 1, responsesSheet.getLastColumn()).getValues()[0];
         const headers = responsesSheet.getRange(1, 1, 1, responsesSheet.getLastColumn()).getValues()[0];
@@ -86,16 +93,16 @@ VotingService.Trigger = {
             return;
         }
 
-        const tokenData = Common.Auth.TokenManager.getTokenData();
+        const tokenData = Common.Auth.TokenManager.getTokenData(submittedToken);
 
         if (tokenData) {
             const voterEmail = tokenData.Email; // Assuming email is in the second column
 
             // Optional: Verify if the email is a registered member
             if (Common.Data.Access.isMember(voterEmail)) {
-                this._recordVote(formId, voterEmail, headers, responseValues);
+                this._recordVote(consolidatedSheet, voterEmail, responseValues);
                 Common.Auth.TokenStorage.markTokenAsUsed(submittedToken);
-                this._replaceTokenWithEmail(responsesSheet, responseRow, headers, voterEmail, tokenQuestionTitle);
+                // this._replaceTokenWithEmail(responsesSheet, responseRow, headers, voterEmail, tokenQuestionTitle);
                 console.log(`Valid vote recorded for ${voterEmail} in form ID: ${formId}`);
             } else {
                 console.log(`Non-member email ${voterEmail} tried to vote in form ID: ${formId}`);
@@ -106,17 +113,15 @@ VotingService.Trigger = {
             // Optionally mark as invalid
         }
     },
-    _recordVote: function (formId, voterEmail, headers, responseValues) {
-        const ss = SpreadsheetApp.openById(VOTE_DATA_SPREADSHEET_ID);
-        const sheet = ss.getActiveSheet();
+    _recordVote: function (sheet, voterEmail, responseValues) {
         const timestamp = new Date();
-        const voteData = [timestamp, formId, voterEmail, ...responseValues];
+        const voteData = [timestamp, voterEmail, ...responseValues];
         sheet.appendRow(voteData);
     },
-    _replaceTokenWithEmail: function (responsesSheet, row, headers, email, tokenQuestionTitle) {
+    _replaceTokenWithEmail: function (sheet, row, headers, email, tokenQuestionTitle) {
         const tokenColumnIndex = headers.indexOf(tokenQuestionTitle) + 1;
         if (tokenColumnIndex > 0) {
-            responsesSheet.getRange(row, tokenColumnIndex).setValue(email);
+            sheet.getRange(row, tokenColumnIndex).setValue(email);
         }
     }
 }

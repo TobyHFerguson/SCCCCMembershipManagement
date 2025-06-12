@@ -25,7 +25,7 @@ VotingService.WebApp._getVotingDataForTemplate = function (userEmail) {
 }
 VotingService.WebApp._getFormUrlWithTokenField = function (userEmail, vote) {
     const token = Common.Auth.TokenManager.generateToken(userEmail);
-    Common.Auth.TokenStorage.storeToken(token, userEmail);
+    Common.Auth.TokenStorage.storeToken(userEmail, token);
     const components = VotingService.parsePrefilledFormUrlComponents(vote[PREFILLED_URL_COLUMN_NAME]);
     const form = FormApp.openById(vote[FORM_ID_COLUMN_NAME]);
     return form.getPublishedUrl() + '?entry.' + components.entryTokenId + '=' + token;
