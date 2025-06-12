@@ -17,8 +17,8 @@ VotingService.WebApp._renderVotingOptions = function (userEmail) {
 VotingService.WebApp._getVotingDataForTemplate = function (userEmail) {
     const activeVotes = this._getActiveVotes();
     return activeVotes.map(vote => ({
-        title: vote.title,
-        formUrl: this._getFormUrlWithTokenField(userEmail, vote['Form ID'], TOKEN_ENTRY_FIELD_TITLE)
+        title: vote['Vote Title'],
+        formUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSdY4j5BdpcQ1gAE8vh_mz3nHUvbRXZ4_AsbcVQ7ITxpjVCHtg/viewform?usp=header' // this._getFormUrlWithTokenField(userEmail, vote['Form ID'], TOKEN_ENTRY_FIELD_TITLE)
     }));
 }
 VotingService.WebApp._getFormUrlWithTokenField = function (userEmail, formId, tokenFieldTitle) {
