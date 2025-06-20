@@ -24,10 +24,16 @@ const GroupManagementService = {
     service: 'GroupManagementService'
 };
 
+const ProfileManagementService = {
+    name: 'Profile Management Service',
+    service: 'ProfileManagementService'
+}
+
 const WebServices = {
     DirectoryService: DirectoryService,
     EmailChangeService: EmailChangeService,
     GroupManagementService: GroupManagementService,
+    ProfileManagementService: ProfileManagementService
 }
 
 if (typeof module !== 'undefined' && module.exports) {

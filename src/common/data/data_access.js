@@ -22,14 +22,21 @@ Common.Data.Access = {
         }
         return actionSpecs;
     },
-    getPublicGroups:() => {
+    getPublicGroups: () => {
         const publicGroups = Common.Data.Storage.SpreadsheetManager.getFiddler('PublicGroups').getData();
         return publicGroups;
     },
-    getMember:(email) => {
+    getMember: (email) => {
         email = email.toLowerCase();
         const members = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').getData();
-        const member = members.map(member => { return {...member, Email: member.Email.toLowerCase() }}).filter(member => member.Email === email)
+        const member = members.filter(member => member.Email.toLowerCase() === email).map(member => { return { ...member, Email: member.Email.toLowerCase() } })
         return member[0];
+    },
+    updateMember: (email, newMember) => {
+        email = email.toLowerCase();
+        Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').mapRows(member => {
+            return (member.Email.toLowerCase() === email) ? newMember : member;
+        }).dumpValues();
+        return true;
     }
 }
