@@ -28,3 +28,7 @@ function updateUserSubscriptions(updatedSubscriptions, userToken) {
     const response = GroupManagementService.WebApp.updateUserSubscriptions(updatedSubscriptions, userToken);
     return response;
 }
+
+function updateProfile(userToken, updatedProfile ) {
+    return ProfileManagementService.updateProfile(userToken, updatedProfile);
+}
