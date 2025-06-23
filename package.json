@@ -4,13 +4,42 @@
   "description": "Management utilities for SCCCC written in GAS",
   "main": "index.js",
   "scripts": {
-    "test": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp push && clasp run test",
-    "prod:push": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp push",
-    "prod:pull": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp pull",
-    "prod:open": "npx clasp-env --folder . --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 && clasp open",
-    "dev:push": "npx clasp-env --folder . --scriptId 1vxnOkgujRS9wKml2m0qcykeUhHcqI1e7UUTLdngcoGGtx4lCnsDfSSKc && clasp push -w",
-    "dev:pull": "npx clasp-env --folder . --scriptId 1vxnOkgujRS9wKml2m0qcykeUhHcqI1e7UUTLdngcoGGtx4lCnsDfSSKc && clasp pull",
-    "dev:open": "npx clasp-env --folder . --scriptId 1vxnOkgujRS9wKml2m0qcykeUhHcqI1e7UUTLdngcoGGtx4lCnsDfSSKc && clasp open",
+    "postinstall": "echo '.clasp.json' >> .gitignore",
+
+    "set-dev-env": "npx clasp-env --scriptId 1vxnOkgujRS9wKml2m0qcykeUhHcqI1e7UUTLdngcoGGtx4lCnsDfSSKc --folder .",
+    "set-prod-env": "npx clasp-env --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 --folder .",
+
+    "clasp:login": "npx @google/clasp login",
+    "clasp:logout": "npx @google/clasp logout",
+    "clasp:open": "npx @google/clasp open",
+    "clasp:deployments": "npx @google/clasp deployments",
+    "clasp:versions": "npx @google/clasp versions",
+
+    "dev:push": "npm run set-dev-env && npx @google/clasp push",
+    "dev:open": "npm run set-dev-env && npx @google/clasp open",
+    "dev:deployments": "npm run set-dev-env && npx @google/clasp deployments",
+    "dev:versions": "npm run set-dev-env && npx @google/clasp versions",
+
+    "dev:rapid-test": "npm run dev:push && echo \"\\nDev HEAD (rapid test) updated. Open: https://script.google.com/macros/s/1vxnOkgujRS9wKml2m0qcykeUhHcqI1e7UUTLdngcoGGtx4lCnsDfSSKc/dev\\n\"",
+
+    "dev:create-version": "npm run set-dev-env && npx @google/clasp version \"Dev Version $(date '+%Y-%m-%d %H:%M:%S')\"",
+
+    "dev:redeploy-staging": "npm run set-dev-env && LAST_VERSION=$(npx @google/clasp versions | head -n 1 | awk '{print $1}') && npx @google/clasp redeploy AKfycbz-9SiAvv7c7HlZjcZAXXaRWi2TKbxxvZt0KQFS5DcvBKAKU-sGLnHDw0yZa2VcEtv- \"Dev Staging (v$LAST_VERSION) - $(date '+%Y-%m-%d %H:%M:%S')\"",
+
+    "dev:deploy-staging": "npm run dev:push && npm run dev:create-version && npm run dev:redeploy-staging && echo \"\\nDev Staging deployment updated to latest code. Access via: https://script.google.com/macros/s/AKfycbz-9SiAvv7c7HlZjcZAXXaRWi2TKbxxvZt0KQFS5DcvBKAKU-sGLnHDw0yZa2VcEtv-/exec\\n\"",
+
+    "prod:push": "npm run set-prod-env && npx @google/clasp push",
+    "prod:open": "npm run set-prod-env && npx @google/clasp open",
+    "prod:deployments": "npm run set-prod-env && npx @google/clasp deployments",
+    "prod:versions": "npm run set-prod-env && npx @google/clasp versions",
+
+    "prod:create-version": "npm run set-prod-env && npx @google/clasp version \"Production Release v$(npm pkg get version) $(date '+%Y-%m-%d %H:%M:%S')\"",
+
+    "prod:redeploy-live": "npm run set-prod-env && LAST_VERSION=$(npx @google/clasp versions | head -n 1 | awk '{print $1}') && npx @google/clasp redeploy AKfycbx9sAdtVj0GstkRqp7oJBhevDzW5h52pIG3lHR31qIRRQ1G6oa0eAiycf1D59ssWMcY \"Production (v$(npm pkg get version)) - $(date '+%Y-%m-%d %H:%M:%S')\"",
+
+    "prod:deploy-live": "npm run prod:push && npm run prod:create-version && npm run prod:redeploy-live && echo \"\\nProduction deployment updated to v$(npm pkg get version). Access via: https://script.google.com/macros/s/AKfycbx9sAdtVj0GstkRqp7oJBhevDzW5h52pIG3lHR31qIRRQ1G6oa0eAiycf1D59ssWMcY/exec\\n\"",
+
+    "test": "npx @google/clasp run test",
     "docs": "npx jsdoc -c jsdoc.json"
   },
   "repository": {
