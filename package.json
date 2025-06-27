@@ -22,7 +22,22 @@
     
     "dev:create-version": "npm run set-dev-env && npx @google/clasp version \"Dev Version $(date '+%Y-%m-%d %H:%M:%S')\"",
 
+    "dev:redeploy": "npm run set-dev-env && npx @google/clasp deploy",
+
+    "dev:group-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbwcmjrYuLMikCiApywRFO6iDp5Cu3lZP3mD7fRrqpI/dev?page=request&service=GroupManagementService\"",
+    "dev:profile-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbwcmjrYuLMikCiApywRFO6iDp5Cu3lZP3mD7fRrqpI/dev?page=request&service=ProfileManagementService\"",
+    "dev:directory-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbwcmjrYuLMikCiApywRFO6iDp5Cu3lZP3mD7fRrqpI/dev?page=request&service=DirectoryService\"",
+    
+
     "stage:push": "npm run set-dev-env && npx @google/clasp push",
+
+    "stage:redeploy": "npm run set-dev-env && npx @google/clasp deploy -i AKfycbxoGcHi-pJ7glBOpUnRwZLVK9AYYSlUWzR3Cwz0IvTYn5CAqjk7wx5ulme8gWnXp0k -V $(npx @google/clasp versions | tail -n 1 | awk '{print $1}') -d Staging",
+    "stage:deploy": "npm run stage:push && npm run dev:create-version && npm run dev:redeploy-staging && echo \"\\nDev Staging deployment updated to latest code. Access via: https://script.google.com/macros/s/AKfycbxoGcHi-pJ7glBOpUnRwZLVK9AYYSlUWzR3Cwz0IvTYn5CAqjk7wx5ulme8gWnXp0k/exec\\n\"",
+
+    "stage:group-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbxoGcHi-pJ7glBOpUnRwZLVK9AYYSlUWzR3Cwz0IvTYn5CAqjk7wx5ulme8gWnXp0k/dev?page=request&service=GroupManagementService\"",
+    "stage:profile-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbxoGcHi-pJ7glBOpUnRwZLVK9AYYSlUWzR3Cwz0IvTYn5CAqjk7wx5ulme8gWnXp0k/dev?page=request&service=ProfileManagementService\"",
+    "stage:directory-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbxoGcHi-pJ7glBOpUnRwZLVK9AYYSlUWzR3Cwz0IvTYn5CAqjk7wx5ulme8gWnXp0k/dev?page=request&service=DirectoryService\"",
+    
     "prod:push": "npm run set-prod-env && npx @google/clasp push",
     "prod:open": "npm run set-prod-env && npx @google/clasp open",
     "prod:deployments": "npm run set-prod-env && npx @google/clasp deployments",
@@ -34,6 +49,10 @@
 
     "prod:deploy-live": "npm run prod:push && npm run prod:create-version && npm run prod:redeploy-live && echo \"\\nProduction deployment updated to v$(npm pkg get version). Access via: https://script.google.com/macros/s/AKfycbx9sAdtVj0GstkRqp7oJBhevDzW5h52pIG3lHR31qIRRQ1G6oa0eAiycf1D59ssWMcY/exec\\n\"",
 
+    "prod:group-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbx9sAdtVj0GstkRqp7oJBhevDzW5h52pIG3lHR31qIRRQ1G6oa0eAiycf1D59ssWMcY/dev?page=request&service=GroupManagementService\"",
+    "prod:profile-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbx9sAdtVj0GstkRqp7oJBhevDzW5h52pIG3lHR31qIRRQ1G6oa0eAiycf1D59ssWMcY/dev?page=request&service=ProfileManagementService\"",
+    "prod:directory-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbx9sAdtVj0GstkRqp7oJBhevDzW5h52pIG3lHR31qIRRQ1G6oa0eAiycf1D59ssWMcY/dev?page=request&service=DirectoryService\"",
+    
     "test": "npx @google/clasp run test",
     "docs": "npx jsdoc -c jsdoc.json"
   },
