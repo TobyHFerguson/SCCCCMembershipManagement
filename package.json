@@ -19,9 +19,7 @@
     "dev:open": "npm run set-dev-env && npx @google/clasp open-script",
     "dev:deployments": "npm run set-dev-env && npx @google/clasp deployments",
     "dev:versions": "npm run set-dev-env && npx @google/clasp versions",
-
-    "dev:rapid-test": "npm run dev:push && echo \"\\nDev HEAD (rapid test) updated. Open: https://script.google.com/macros/s/1vxnOkgujRS9wKml2m0qcykeUhHcqI1e7UUTLdngcoGGtx4lCnsDfSSKc/dev\\n\"",
-
+    
     "dev:create-version": "npm run set-dev-env && npx @google/clasp version \"Dev Version $(date '+%Y-%m-%d %H:%M:%S')\"",
 
     "stage:push": "npm run set-dev-env && npx @google/clasp push",
