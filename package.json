@@ -11,12 +11,12 @@
 
     "clasp:login": "npx @google/clasp login",
     "clasp:logout": "npx @google/clasp logout",
-    "clasp:open": "npx @google/clasp open",
+    "clasp:open": "npx @google/clasp open-script",
     "clasp:deployments": "npx @google/clasp deployments",
     "clasp:versions": "npx @google/clasp versions",
 
     "dev:push": "npm run set-dev-env && npx @google/clasp push",
-    "dev:open": "npm run set-dev-env && npx @google/clasp open",
+    "dev:open": "npm run set-dev-env && npx @google/clasp open-script",
     "dev:deployments": "npm run set-dev-env && npx @google/clasp deployments",
     "dev:versions": "npm run set-dev-env && npx @google/clasp versions",
 
