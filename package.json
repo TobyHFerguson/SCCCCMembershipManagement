@@ -45,7 +45,7 @@
 
     "prod:create-version": "npm run set-prod-env && npx @google/clasp version \"Production Release v$(npm pkg get version) $(date '+%Y-%m-%d %H:%M:%S')\"",
 
-    "prod:redeploy-live": "npm run set-prod-env && LAST_VERSION=$(npx @google/clasp versions | head -n 1 | awk '{print $1}') && npx @google/clasp redeploy AKfycbx9sAdtVj0GstkRqp7oJBhevDzW5h52pIG3lHR31qIRRQ1G6oa0eAiycf1D59ssWMcY \"Production (v$(npm pkg get version)) - $(date '+%Y-%m-%d %H:%M:%S')\"",
+    "prod:redeploy-live": "npm run set-prod-env  && npx @google/clasp deploy -i AKfycbx9sAdtVj0GstkRqp7oJBhevDzW5h52pIG3lHR31qIRRQ1G6oa0eAiycf1D59ssWMcY -V $(npx @google/clasp versions | tail -n 1 | awk '{print $1}') -d \"Production (v$(npm pkg get version)) - $(date '+%Y-%m-%d %H:%M:%S')\"",
 
     "prod:deploy-live": "npm run prod:push && npm run prod:create-version && npm run prod:redeploy-live && echo \"\\nProduction deployment updated to v$(npm pkg get version). Access via: https://script.google.com/macros/s/AKfycbx9sAdtVj0GstkRqp7oJBhevDzW5h52pIG3lHR31qIRRQ1G6oa0eAiycf1D59ssWMcY/exec\\n\"",
 
