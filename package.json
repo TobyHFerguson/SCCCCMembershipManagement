@@ -3,11 +3,30 @@
   "version": "1.0.0",
   "description": "Management utilities for SCCCC written in GAS",
   "main": "index.js",
+  "config": {
+    "CLASP_DEV_SCRIPT_ID": "1vxnOkgujRS9wKml2m0qcykeUhHcqI1e7UUTLdngcoGGtx4lCnsDfSSKc",
+    "CLASP_PROD_SCRIPT_ID": "1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2",
+    "CLASP_DEV_TEST_DEPLOYMENT_ID": "AKfycbwcmjrYuLMikCiApywRFO6iDp5Cu3lZP3mD7fRrqpI",
+    "CLASP_STAGING_DEPLOYMENT_ID": "AKfycbxoGcHi-pJ7glBOpUnRwZLVK9AYYSlUWzR3Cwz0IvTYn5CAqjk7wx5ulme8gWnXp0k",
+    "CLASP_PROD_LIVE_DEPLOYMENT_ID": "AKfycbx9sAdtVj0GstkRqp7oJBhevDzW5h52pIG3lHR31qIRRQ1G6oa0eAiycf1D59ssWMcY",
+
+    "GAS_BASE_DOMAIN": "https://script.google.com/a/macros/sc3.club/s",
+    "GAS_EXEC_PATH": "/exec",
+    "GAS_DEV_PATH": "/dev?page=request",
+    "GAS_SERVICE_PARAM": "&service=",
+
+    "CLASP_PROJECT_NAME": "SCCCCManagement",
+    "CLASP_ROOT_DIR": "./src",
+    "CLASP_SCRIPTS_DIR": "./src/scripts",
+    "CLASP_LIBS_DIR": "./src/libs",
+    "CLASP_TESTS_DIR": "./src/tests",
+    "BUILD_DIR": "./dist"
+  },
   "scripts": {
     "postinstall": "echo '.clasp.json' >> .gitignore",
 
-    "set-dev-env": "npx clasp-env --scriptId 1vxnOkgujRS9wKml2m0qcykeUhHcqI1e7UUTLdngcoGGtx4lCnsDfSSKc --folder .",
-    "set-prod-env": "npx clasp-env --scriptId 1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2 --folder .",
+    "set-dev-env": "npx clasp-env --scriptId \"${npm_package_config_CLASP_DEV_SCRIPT_ID}\" --folder .",
+    "set-prod-env": "npx clasp-env --scriptId \"${npm_package_config_CLASP_PROD_SCRIPT_ID}\" --folder .",
 
     "clasp:login": "npx @google/clasp login",
     "clasp:logout": "npx @google/clasp logout",
@@ -24,19 +43,19 @@
 
     "dev:redeploy": "npm run set-dev-env && npx @google/clasp deploy",
 
-    "dev:group-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbwcmjrYuLMikCiApywRFO6iDp5Cu3lZP3mD7fRrqpI/dev?page=request&service=GroupManagementService\"",
-    "dev:profile-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbwcmjrYuLMikCiApywRFO6iDp5Cu3lZP3mD7fRrqpI/dev?page=request&service=ProfileManagementService\"",
-    "dev:directory-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbwcmjrYuLMikCiApywRFO6iDp5Cu3lZP3mD7fRrqpI/dev?page=request&service=DirectoryService\"",
-    
+    "dev:group-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_DEV_TEST_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}GroupManagementService\"",
+    "dev:profile-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_DEV_TEST_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}ProfileManagementService\"",
+    "dev:directory-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_DEV_TEST_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}DirectoryService\"",
 
     "stage:push": "npm run set-dev-env && npx @google/clasp push",
 
-    "stage:redeploy": "npm run set-dev-env && npx @google/clasp deploy -i AKfycbxoGcHi-pJ7glBOpUnRwZLVK9AYYSlUWzR3Cwz0IvTYn5CAqjk7wx5ulme8gWnXp0k -V $(npx @google/clasp versions | tail -n 1 | awk '{print $1}') -d Staging",
-    "stage:deploy": "npm run stage:push && npm run dev:create-version && npm run dev:redeploy-staging && echo \"\\nDev Staging deployment updated to latest code. Access via: https://script.google.com/macros/s/AKfycbxoGcHi-pJ7glBOpUnRwZLVK9AYYSlUWzR3Cwz0IvTYn5CAqjk7wx5ulme8gWnXp0k/exec\\n\"",
+    "stage:redeploy": "npm run set-dev-env && npx @google/clasp deploy --deploymentId \"${npm_package_config_CLASP_STAGING_DEPLOYMENT_ID}\" --versionNumber \"$(npx @google/clasp versions | tail -n 1 | awk '{print $1}')\" --description \"Staging\"",
+    
+    "stage:deploy": "npm run stage:push && npm run dev:create-version && npm run stage:redeploy && echo \"\\nDev Staging deployment updated to latest code. Access via: ${npm_package_config_GAS_STAGING_URL_BASE_PATH}${npm_package_config_GAS_EXEC_PATH}\\n\"",
 
-    "stage:group-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbxoGcHi-pJ7glBOpUnRwZLVK9AYYSlUWzR3Cwz0IvTYn5CAqjk7wx5ulme8gWnXp0k/dev?page=request&service=GroupManagementService\"",
-    "stage:profile-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbxoGcHi-pJ7glBOpUnRwZLVK9AYYSlUWzR3Cwz0IvTYn5CAqjk7wx5ulme8gWnXp0k/dev?page=request&service=ProfileManagementService\"",
-    "stage:directory-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbxoGcHi-pJ7glBOpUnRwZLVK9AYYSlUWzR3Cwz0IvTYn5CAqjk7wx5ulme8gWnXp0k/dev?page=request&service=DirectoryService\"",
+    "stage:group-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_STAGING_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}GroupManagementService\"",
+    "stage:profile-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_STAGING_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}ProfileManagementService\"",
+    "stage:directory-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_STAGING_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}DirectoryService\"",
     
     "prod:push": "npm run set-prod-env && npx @google/clasp push",
     "prod:open": "npm run set-prod-env && npx @google/clasp open",
@@ -45,16 +64,17 @@
 
     "prod:create-version": "npm run set-prod-env && npx @google/clasp version \"Production Release v$(npm pkg get version) $(date '+%Y-%m-%d %H:%M:%S')\"",
 
-    "prod:redeploy-live": "npm run set-prod-env  && npx @google/clasp deploy -i AKfycbx9sAdtVj0GstkRqp7oJBhevDzW5h52pIG3lHR31qIRRQ1G6oa0eAiycf1D59ssWMcY -V $(npx @google/clasp versions | tail -n 1 | awk '{print $1}') -d \"Production (v$(npm pkg get version)) - $(date '+%Y-%m-%d %H:%M:%S')\"",
+    "prod:redeploy-live": "npm run set-prod-env  && npx @google/clasp deploy --deploymentId \"${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}\" --versionNumber \"$(npx @google/clasp versions | tail -n 1 | awk '{print $1}')\" --description \"Production (v$(npm pkg get version)) - $(date '+%Y-%m-%d %H:%M:%S')\"",
 
-    "prod:deploy-live": "npm run prod:push && npm run prod:create-version && npm run prod:redeploy-live && echo \"\\nProduction deployment updated to v$(npm pkg get version). Access via: https://script.google.com/macros/s/AKfycbx9sAdtVj0GstkRqp7oJBhevDzW5h52pIG3lHR31qIRRQ1G6oa0eAiycf1D59ssWMcY/exec\\n\"",
+    "prod:deploy-live": "npm run prod:push && npm run prod:create-version && npm run prod:redeploy-live && echo \"\\nProduction deployment updated to v$(npm pkg get version). Access via: ${npm_package_config_GAS_PROD_URL_BASE_PATH}${npm_package_config_GAS_EXEC_PATH}\\n\"",
 
-    "prod:group-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbx9sAdtVj0GstkRqp7oJBhevDzW5h52pIG3lHR31qIRRQ1G6oa0eAiycf1D59ssWMcY/dev?page=request&service=GroupManagementService\"",
-    "prod:profile-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbx9sAdtVj0GstkRqp7oJBhevDzW5h52pIG3lHR31qIRRQ1G6oa0eAiycf1D59ssWMcY/dev?page=request&service=ProfileManagementService\"",
-    "prod:directory-test": "open \"https://script.google.com/a/macros/sc3.club/s/AKfycbx9sAdtVj0GstkRqp7oJBhevDzW5h52pIG3lHR31qIRRQ1G6oa0eAiycf1D59ssWMcY/dev?page=request&service=DirectoryService\"",
+    "prod:group-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}GroupManagementService\"",
+    "prod:profile-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}ProfileManagementService\"",
+    "prod:directory-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}DirectoryService\"",
     
     "test": "npx @google/clasp run test",
-    "docs": "npx jsdoc -c jsdoc.json"
+    "docs": "npx jsdoc -c jsdoc.json",
+    "build": "echo \"${npm_package_config_MESSAGE}\""
   },
   "repository": {
     "type": "git",
