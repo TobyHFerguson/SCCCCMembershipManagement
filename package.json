@@ -34,9 +34,9 @@
     "clasp:deployments": "npx @google/clasp deployments",
     "clasp:versions": "npx @google/clasp versions",
 
-    "git:enforce-clean-and-get-commit": "git diff-index --quiet HEAD -- || (echo \"\\nERROR: Git working directory is not clean. Commit or stash your changes before proceeding.\\n\" && git status --short && exit 1) && export GIT_COMMIT_FULL=\"$(git rev-parse HEAD)\" && export GIT_COMMIT_SHORT=\"$(git rev-parse --short HEAD)\" && echo \"Git clean. Commit: ${GIT_COMMIT_SHORT}\"",
+    "git:enforce-clean": "git diff-index --quiet HEAD -- || (echo \"\\nERROR: Git working directory is not clean. Commit or stash your changes before proceeding.\\n\" && git status --short && exit 1)",
     
-    "clasp:create-version": "npm run git:enforce-clean-and-get-commit && npx @google/clasp version \"Version created from Git Commit: ${GIT_COMMIT_SHORT} (${GIT_COMMIT_FULL}) on $(date '+%Y-%m-%d %H:%M:%S')\"",
+    "clasp:create-version": "npm run git:enforce-clean && npx @google/clasp version \"Version created from Git Commit: $(git rev-parse --short HEAD) ($(git rev-parse HEAD)) on $(date '+%Y-%m-%d %H:%M:%S')\"",
 
     
     "dev:push": "npm run set-dev-env && npx @google/clasp push -w",
@@ -67,8 +67,6 @@
     "prod:group-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}GroupManagementService\"",
     "prod:profile-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}ProfileManagementService\"",
     "prod:directory-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}DirectoryService\"",
-    
-    "test": "npx @google/clasp run test",
     "docs": "npx jsdoc -c jsdoc.json"
   },
   "repository": {
