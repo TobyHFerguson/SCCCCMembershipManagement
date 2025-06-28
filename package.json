@@ -8,7 +8,7 @@
     "CLASP_PROD_SCRIPT_ID": "1azMwGgFrxDDBZjtRwAuJqHYONMEIrTnkpaKuiZJFNRmcw_fbDUOBHan2",
     "CLASP_DEV_TEST_DEPLOYMENT_ID": "AKfycbwcmjrYuLMikCiApywRFO6iDp5Cu3lZP3mD7fRrqpI",
     "CLASP_STAGING_DEPLOYMENT_ID": "AKfycbxoGcHi-pJ7glBOpUnRwZLVK9AYYSlUWzR3Cwz0IvTYn5CAqjk7wx5ulme8gWnXp0k",
-    "CLASP_PROD_LIVE_DEPLOYMENT_ID": "AKfycbx9sAdtVj0GstkRqp7oJBhevDzW5h52pIG3lHR31qIRRQ1G6oa0eAiycf1D59ssWMcY",
+    "CLASP_PROD_LIVE_DEPLOYMENT_ID": "AKfycbwVXDwqQfuLkRrRBoncHr7q0q7KILDGztj1ILc_9VeR--VFY94BJwuElEjWKJWC6TMB",
 
     "GAS_BASE_DOMAIN": "https://script.google.com/a/macros/sc3.club/s",
     "GAS_EXEC_PATH": "/exec",
@@ -62,7 +62,7 @@
     "prod:open": "npm run set-prod-env && npx @google/clasp open-script",
     "prod:deployments": "npm run set-prod-env && npx @google/clasp deployments",
     "prod:versions": "npm run set-prod-env && npx @google/clasp versions",
-    "prod:redeploy-live": "npm run set-prod-env  && npx @google/clasp deploy --deploymentId \"${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}\" --versionNumber \"$(npx @google/clasp versions | tail -n 1 | awk '{print $1}')\" --description \"Production (v$(npm pkg get version)) - $(date '+%Y-%m-%d %H:%M:%S')\"",
+    "prod:redeploy-live": "npm run set-prod-env  && npx @google/clasp deploy --deploymentId \"${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}\" --versionNumber \"$(npx @google/clasp versions | tail -n 1 | awk '{print $1}')\" --description \"Production\"",
     "prod:deploy-live": "npm run prod:push && npm run clasp:create-version && npm run prod:redeploy-live && echo \"\\nProduction deployment updated to v$(npm pkg get version) and versioned with Git. Access via: ${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}${npm_package_config_GAS_EXEC_PATH}\\n\"",
     "prod:group-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}GroupManagementService\"",
     "prod:profile-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}ProfileManagementService\"",
