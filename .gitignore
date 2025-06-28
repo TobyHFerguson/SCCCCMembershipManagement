@@ -8,3 +8,4 @@ docs/
 out/
 
 .vscode/
+.clasp.json
