@@ -34,47 +34,42 @@
     "clasp:deployments": "npx @google/clasp deployments",
     "clasp:versions": "npx @google/clasp versions",
 
+    "git:enforce-clean-and-get-commit": "git diff-index --quiet HEAD -- || (echo \"\\nERROR: Git working directory is not clean. Commit or stash your changes before proceeding.\\n\" && git status --short && exit 1) && export GIT_COMMIT_FULL=\"$(git rev-parse HEAD)\" && export GIT_COMMIT_SHORT=\"$(git rev-parse --short HEAD)\" && echo \"Git clean. Commit: ${GIT_COMMIT_SHORT}\"",
+    
+    "clasp:create-version": "npm run git:enforce-clean-and-get-commit && npx @google/clasp version \"Version created from Git Commit: ${GIT_COMMIT_SHORT} (${GIT_COMMIT_FULL}) on $(date '+%Y-%m-%d %H:%M:%S')\"",
+
+    
     "dev:push": "npm run set-dev-env && npx @google/clasp push -w",
     "dev:open": "npm run set-dev-env && npx @google/clasp open-script",
     "dev:deployments": "npm run set-dev-env && npx @google/clasp deployments",
     "dev:versions": "npm run set-dev-env && npx @google/clasp versions",
-    
     "dev:create-version": "npm run set-dev-env && npx @google/clasp version \"Dev Version $(date '+%Y-%m-%d %H:%M:%S')\"",
-
     "dev:redeploy": "npm run set-dev-env && npx @google/clasp deploy",
-
     "dev:group-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_DEV_TEST_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}GroupManagementService\"",
     "dev:profile-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_DEV_TEST_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}ProfileManagementService\"",
     "dev:directory-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_DEV_TEST_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}DirectoryService\"",
 
-    "stage:push": "npm run set-dev-env && npx @google/clasp push",
-
-    "stage:redeploy": "npm run set-dev-env && npx @google/clasp deploy --deploymentId \"${npm_package_config_CLASP_STAGING_DEPLOYMENT_ID}\" --versionNumber \"$(npx @google/clasp versions | tail -n 1 | awk '{print $1}')\" --description \"Staging\"",
     
-    "stage:deploy": "npm run stage:push && npm run dev:create-version && npm run stage:redeploy && echo \"\\nDev Staging deployment updated to latest code. Access via: ${npm_package_config_GAS_STAGING_URL_BASE_PATH}${npm_package_config_GAS_EXEC_PATH}\\n\"",
-
+    "stage:push": "npm run set-dev-env && npx @google/clasp push",
+    "stage:redeploy": "npm run set-dev-env && npx @google/clasp deploy --deploymentId \"${npm_package_config_CLASP_STAGING_DEPLOYMENT_ID}\" --versionNumber \"$(npx @google/clasp versions | tail -n 1 | awk '{print $1}')\" --description \"Staging\"",
+    "stage:deploy": "npm run stage:push && npm run clasp:create-version && npm run stage:redeploy && echo \"\\nStaging deployment updated to latest code and versioned with Git. Access via: ${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_STAGING_DEPLOYMENT_ID}${npm_package_config_GAS_EXEC_PATH}\\n\"",
     "stage:group-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_STAGING_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}GroupManagementService\"",
     "stage:profile-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_STAGING_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}ProfileManagementService\"",
     "stage:directory-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_STAGING_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}DirectoryService\"",
     
+
     "prod:push": "npm run set-prod-env && npx @google/clasp push",
-    "prod:open": "npm run set-prod-env && npx @google/clasp open",
+    "prod:open": "npm run set-prod-env && npx @google/clasp open-script",
     "prod:deployments": "npm run set-prod-env && npx @google/clasp deployments",
     "prod:versions": "npm run set-prod-env && npx @google/clasp versions",
-
-    "prod:create-version": "npm run set-prod-env && npx @google/clasp version \"Production Release v$(npm pkg get version) $(date '+%Y-%m-%d %H:%M:%S')\"",
-
     "prod:redeploy-live": "npm run set-prod-env  && npx @google/clasp deploy --deploymentId \"${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}\" --versionNumber \"$(npx @google/clasp versions | tail -n 1 | awk '{print $1}')\" --description \"Production (v$(npm pkg get version)) - $(date '+%Y-%m-%d %H:%M:%S')\"",
-
-    "prod:deploy-live": "npm run prod:push && npm run prod:create-version && npm run prod:redeploy-live && echo \"\\nProduction deployment updated to v$(npm pkg get version). Access via: ${npm_package_config_GAS_PROD_URL_BASE_PATH}${npm_package_config_GAS_EXEC_PATH}\\n\"",
-
+    "prod:deploy-live": "npm run prod:push && npm run clasp:create-version && npm run prod:redeploy-live && echo \"\\nProduction deployment updated to v$(npm pkg get version) and versioned with Git. Access via: ${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}${npm_package_config_GAS_EXEC_PATH}\\n\"",
     "prod:group-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}GroupManagementService\"",
     "prod:profile-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}ProfileManagementService\"",
     "prod:directory-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}DirectoryService\"",
     
     "test": "npx @google/clasp run test",
-    "docs": "npx jsdoc -c jsdoc.json",
-    "build": "echo \"${npm_package_config_MESSAGE}\""
+    "docs": "npx jsdoc -c jsdoc.json"
   },
   "repository": {
     "type": "git",
