@@ -55,7 +55,7 @@
     "stage:deploy": "npm run stage:push && npm run clasp:create-version && npm run stage:redeploy && echo \"\\nStaging deployment updated to latest code and versioned with Git. Access via: ${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_STAGING_DEPLOYMENT_ID}${npm_package_config_GAS_EXEC_PATH}\\n\"",
     "stage:group-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_STAGING_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}GroupManagementService\"",
     "stage:profile-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_STAGING_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}ProfileManagementService\"",
-    "stage:directory-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_STAGING_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_packnpx @google/clasp versions | tail -n 1 | awk '{print $1}age_config_GAS_SERVICE_PARAM}DirectoryService\"",
+    "stage:directory-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_STAGING_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}DirectoryService\"",
     
 
     "prod:push": "npm run set-prod-env && npx @google/clasp push",
