@@ -1,0 +1,11 @@
+node_modules/
+install_nvm.sh
+.clasprc.json
+.nyc_output
+build/
+.DS_Store
+docs/
+out/
+
+.vscode/
+.clasp.json
