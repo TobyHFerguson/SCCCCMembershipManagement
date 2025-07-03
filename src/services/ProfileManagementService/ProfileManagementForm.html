@@ -5,10 +5,9 @@
   <title>Profile</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* Base styles for all devices (consider this your default for larger screens/desktops) */
+    /* Base styles (Desktop/Tablet) remain the same as previous response */
     html {
       font-size: 16px;
-      /* A good base. 1rem will be 16px. */
     }
 
     body {
@@ -18,67 +17,52 @@
       min-height: 100vh;
       font-family: sans-serif;
       font-size: 1rem;
-      /* Base font size for body */
       box-sizing: border-box;
-      /* Include padding and border in the element's total width and height */
-      /* Add this for basic CSS check (Gold should appear if no responsive class is active) */
-      /* background-color: #FFD700; */ 
     }
 
     .profile-container {
       width: 400px;
-      /* Adjust as needed */
       padding: 1.25rem;
-      /* Use rem for padding too */
       border: 1px solid #ccc;
       border-radius: 5px;
     }
 
     h2 {
       font-size: 1.875rem;
-      /* Approximately 30px on desktop */
     }
 
     p {
       font-size: 1rem;
-      /* 16px on desktop */
       margin-bottom: 0.625rem;
-      /* Adjust paragraph spacing */
     }
 
     label {
       font-size: 1rem;
-      /* Labels will also scale */
       text-align: right;
-      /* Default to right for desktop/tablet */
     }
 
     input[type="text"],
-    input[type="email"] {
+    input[type="email"] { /* This applies to all relevant inputs on desktop */
       font-size: 1rem;
-      /* Input text will scale */
       padding: 0.5rem;
-      /* Adjust input padding */
     }
 
     .profile-row {
       display: grid;
       grid-template-columns: 1fr 2fr 1fr;
-      /* Desktop/Tablet 3-column layout */
       gap: 0.625rem;
       margin-bottom: 0.625rem;
       align-items: center;
     }
 
-    /* Hide the "In Directory" header row on smaller screens by default */
     .profile-row.header-row {
       display: grid;
-      /* Keep it as grid for desktop */
     }
 
-    /* Hide the mobile-specific checkbox group elements by default (desktop/tablet) */
-    .checkbox-group-mobile {
-      display: none;
+    .directory-checkbox-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
     .directory-label-mobile {
@@ -89,16 +73,12 @@
       display: flex;
       justify-content: center;
       gap: 1.25rem;
-      /* Use rem for gap */
       margin-top: 1.25rem;
-      /* Use rem for margin */
     }
 
     button {
       font-size: 1rem;
-      /* Button text will scale */
       padding: 0.625rem 1.25rem;
-      /* Adjust button padding */
     }
 
     button:disabled {
@@ -108,28 +88,23 @@
 
     /* --- Responsive Styles (Applied by JavaScript classes) --- */
 
-    /* For Tablets (example: screens between 600px and 992px) */
+    /* For Tablets */
     body.is-tablet html {
       font-size: 17px;
-      /* Slightly larger base font for tablets */
     }
 
     body.is-tablet .profile-container {
       width: 80%;
-      /* Adjust width for tablets */
       max-width: 600px;
-      /* Set a max-width to prevent it from getting too wide */
     }
 
     body.is-tablet h2 {
       font-size: 2rem;
-      /* Adjust h2 size for tablets */
     }
 
-    /* For Mobile Phones (example: screens up to 599px) */
+    /* For Mobile Phones */
     body.is-mobile html {
       font-size: 18px;
-      /* Larger base font for mobile phones */
     }
 
     body.is-mobile {
@@ -141,88 +116,68 @@
 
     body.is-mobile .profile-container {
       width: 95%;
-      /* Make it take up more width on smaller screens */
       padding: 1rem;
-      /* Slightly less padding on mobile */
     }
 
     body.is-mobile h2 {
       font-size: 2.25rem;
-      /* Even larger h2 for mobile */
       text-align: center;
-      /* Center the title on mobile */
     }
 
     body.is-mobile p {
       font-size: 1.125rem;
     }
 
-    /* Make the main profile rows a 2-column grid for label-input, then checkbox group below */
     body.is-mobile .profile-row {
-      grid-template-columns: auto 1fr;
-      /* Two columns: auto for label, 1fr for input */
-      gap: 0.5rem 1rem;
-      /* Row gap and column gap */
+      display: grid;
+      grid-template-columns: 1fr 10px 2fr;
+      gap: 0.5rem 0;
       margin-bottom: 0.75rem;
     }
 
     body.is-mobile .profile-row label {
       grid-column: 1;
-      /* Label in the first column */
-      text-align: left;
-      /* Align labels left on mobile */
+      text-align: right;
+      padding-right: 0.5rem;
       align-self: center;
     }
 
-    body.is-mobile .profile-row input[type="text"],
-    body.is-mobile .profile-row input[type="email"] {
-      grid-column: 2;
-      /* Input in the second column */
+    /* CORRECTED: Applies font size to all relevant input types on mobile */
+    body.is-mobile input[type="text"],
+    body.is-mobile input[type="email"] { /* Combined for consistency */
+      font-size: 1.125rem; /* Now applies to all text-like inputs on mobile */
+      grid-column: 3;
       width: 100%;
-      /* Ensure inputs fill their column */
+      justify-self: start;
+      padding-left: 0.5rem;
     }
 
-    /* Hide the desktop "In Directory" header row on mobile */
     body.is-mobile .profile-row.header-row {
       display: none;
     }
 
-    /* Show and style the mobile-specific checkbox group */
-    body.is-mobile .checkbox-group-mobile {
-      display: flex;
-      /* Use flexbox to align label and checkbox horizontally */
-      grid-column: span 2;
-      /* Make the group span both columns */
-      justify-content: flex-end;
-      /* Align content to the right (under the input) */
-      align-items: center;
-      /* Vertically center label and checkbox */
-      margin-top: 0.5rem;
-      /* Space above this group */
+    body.is-mobile .directory-checkbox-wrapper {
+      grid-column: 1 / span 3;
+      display: grid;
+      grid-template-columns: 1fr 10px 2fr;
+      margin-top: -0.2rem;
+      margin-bottom: 0.5rem;
     }
 
     body.is-mobile .directory-label-mobile {
       display: inline-block;
-      /* Ensure it's displayed */
+      grid-column: 1;
+      text-align: right;
       font-size: 0.95rem;
-      /* Slightly smaller text for this label */
-      margin-right: 0.5rem;
-      /* Space between label and checkbox */
-      order: 1;
-      /* Ensure label comes before checkbox in flex order */
+      padding-right: 0.5rem;
+      align-self: center;
     }
 
-    body.is-mobile .profile-row input[type="checkbox"] {
-      /* This rule now only applies to the checkbox within the flex container */
+    body.is-mobile .profile-row .directory-checkbox-wrapper input[type="checkbox"] {
+      grid-column: 3;
       margin: 0;
-      /* Remove default margins to prevent issues with flex positioning */
-      order: 2;
-      /* Ensure checkbox comes after label in flex order */
-      /* No grid properties (grid-column, justify-self, etc.) here as it's now in a flex container */
-    }
-
-    body.is-mobile input[type="text"] {
-      font-size: 1.125rem;
+      justify-self: start;
+      padding-left: 0.5rem;
     }
 
     body.is-mobile .buttons-container {
@@ -237,7 +192,8 @@
   </style>
 </head>
 
-<body class="app-body"> <div class="profile-container">
+<body class="app-body">
+  <div class="profile-container">
     <h2>Your Profile</h2>
     <p>You can modify your profile below.</p>
 
@@ -253,7 +209,7 @@
     <div class="profile-row">
       <label for="first">First Name:</label>
       <input type="text" id="first" name="First" value="<?= profile.First ?>">
-      <div class="checkbox-group-mobile">
+      <div class="directory-checkbox-wrapper">
         <span class="directory-label-mobile">In Directory</span>
         <input type="checkbox" id="firstPublic" name="Directory Share Name" <?=profile['Directory Share Name']
           ? 'checked' : '' ?>>
@@ -263,7 +219,7 @@
     <div class="profile-row">
       <label for="last">Last Name:</label>
       <input type="text" id="last" name="Last" value="<?= profile.Last ?>">
-      <div class="checkbox-group-mobile">
+      <div class="directory-checkbox-wrapper">
         <span class="directory-label-mobile">In Directory</span>
         <input type="checkbox" id="lastPublic" name="Directory Share Name" <?=profile['Directory Share Name']
           ? 'checked' : '' ?>>
@@ -273,7 +229,7 @@
     <div class="profile-row">
       <label for="phone">Phone:</label>
       <input type="text" id="phone" name="Phone" value="<?= profile.Phone ?>">
-      <div class="checkbox-group-mobile">
+      <div class="directory-checkbox-wrapper">
         <span class="directory-label-mobile">In Directory</span>
         <input type="checkbox" id="phonePublic" name="Directory Share Phone" <?=profile['Directory Share Phone']
           ? 'checked' : '' ?>>
@@ -283,7 +239,7 @@
     <div class="profile-row">
       <label>Email:</label>
       <input type="text" id="email" name="Email" value="<?= profile.Email?>" disabled>
-      <div class="checkbox-group-mobile">
+      <div class="directory-checkbox-wrapper">
         <span class="directory-label-mobile">In Directory</span>
         <input type="checkbox" id="emailPublic" name="Directory Share Email" <?=profile['Directory Share Email']
           ? 'checked' : '' ?>>
@@ -318,7 +274,7 @@
 
     let updatedProfile = {
       ...originalData
-    }; // Initialize with original data
+    };
 
     function changesMade() {
       const currentUpdatedProfile = {
@@ -346,11 +302,11 @@
       emailPublicCheckbox.checked = false;
       phonePublicCheckbox.disabled = true;
       emailPublicCheckbox.disabled = true;
-      updateApplyButtonState(); // Ensure button state updates when disabling
+      updateApplyButtonState();
     }
 
     function updateCheckboxState() {
-      if (firstPublicCheckbox.checked) { // If name is public (since they are synchronized)
+      if (firstPublicCheckbox.checked) {
         enableContactCheckboxes();
       } else {
         uncheckAndDisableContactCheckboxes();
@@ -361,30 +317,29 @@
     function synchronizeNameCheckedStateChange(current = true) {
       firstPublicCheckbox.checked = current;
       lastPublicCheckbox.checked = current;
-      updateApplyButtonState(); // Ensure button state updates after name checkbox sync
     }
 
     phonePublicCheckbox.addEventListener('change', () => {
-      if (phonePublicCheckbox.checked) synchronizeNameCheckedStateChange(true); // Force name public
-      updateCheckboxState(); // Calls enableContactCheckboxes if appropriate
+      if (phonePublicCheckbox.checked) synchronizeNameCheckedStateChange(true);
+      updateCheckboxState();
       updateUpdatedProfile();
       updateApplyButtonState();
     });
     emailPublicCheckbox.addEventListener('change', () => {
-      if (emailPublicCheckbox.checked) synchronizeNameCheckedStateChange(true); // Force name public
-      updateCheckboxState(); // Calls enableContactCheckboxes if appropriate
+      if (emailPublicCheckbox.checked) synchronizeNameCheckedStateChange(true);
+      updateCheckboxState();
       updateUpdatedProfile();
       updateApplyButtonState();
     });
     firstPublicCheckbox.addEventListener('change', () => {
-      synchronizeNameCheckedStateChange(firstPublicCheckbox.checked); // Syncs both name checkboxes
-      updateCheckboxState(); // Will now disable contact checkboxes if name is unchecked
+      synchronizeNameCheckedStateChange(firstPublicCheckbox.checked);
+      updateCheckboxState();
       updateUpdatedProfile();
       updateApplyButtonState();
     });
     lastPublicCheckbox.addEventListener('change', () => {
-      synchronizeNameCheckedStateChange(lastPublicCheckbox.checked); // Syncs both name checkboxes
-      updateCheckboxState(); // Will now disable contact checkboxes if name is unchecked
+      synchronizeNameCheckedStateChange(lastPublicCheckbox.checked);
+      updateCheckboxState();
       updateUpdatedProfile();
       updateApplyButtonState();
     });
@@ -414,7 +369,7 @@
     }
 
     document.getElementById('applyBtn').addEventListener('click', function () {
-      applyBtn.disabled = true; // Disable immediately after clicking
+      applyBtn.disabled = true;
       const currentUpdatedProfile = {
         First: firstInput.value,
         Last: lastInput.value,
@@ -427,10 +382,10 @@
         if (response && response.success) {
           Object.assign(originalData, currentUpdatedProfile);
           alert("Profile updated!");
-          applyBtn.disabled = !changesMade(); // Re-enable if further changes are made
+          applyBtn.disabled = !changesMade();
         } else {
           alert("Error updating profile.");
-          applyBtn.disabled = false; // Re-enable on failure
+          applyBtn.disabled = false;
         }
       }).updateProfile("<?= token ?>", currentUpdatedProfile);
     });
@@ -444,44 +399,32 @@
       phonePublicCheckbox.checked = originalData['Directory Share Phone'];
       emailPublicCheckbox.checked = originalData['Directory Share Email'];
 
-      updateApplyButtonState(); // Update button state after reset
-      updateCheckboxState(); // Ensure correct disabled/unchecked state after reset
+      updateApplyButtonState();
+      updateCheckboxState();
     });
 
-    // --- NEW JAVASCRIPT FOR RESPONSIVE DESIGN ---
-
     function checkViewportAndApplyClasses() {
-      const bodyElement = document.body; // Target the body directly
-      const screenWidth = screen.width; // Use screen.width for reliable device width detection
+      const bodyElement = document.body;
+      const screenWidth = screen.width;
 
-      const mobileBreakpoint = 599; // For phones
+      const mobileBreakpoint = 599;
       const tabletMinBreakpoint = 600;
-      const tabletMaxBreakpoint = 992; // For tablets
+      const tabletMaxBreakpoint = 992;
 
-      // Remove all responsive classes first to ensure clean state
       bodyElement.classList.remove('is-mobile', 'is-tablet');
 
       if (screenWidth <= mobileBreakpoint) {
         bodyElement.classList.add('is-mobile');
-        console.log('Mobile view active (screen.width:', screenWidth, ')');
       } else if (screenWidth >= tabletMinBreakpoint && screenWidth <= tabletMaxBreakpoint) {
         bodyElement.classList.add('is-tablet');
-        console.log('Tablet view active (screen.width:', screenWidth, ')');
       } else {
         // Desktop view - no special class needed, relies on base styles
-        console.log('Desktop view active (screen.width:', screenWidth, ')');
       }
     }
 
-    // Initialize the responsive classes on page load
     checkViewportAndApplyClasses();
-
-    // Attach to resize event (useful for desktop testing & device orientation changes, though less common for mobile Safari full page resize)
     window.addEventListener('resize', checkViewportAndApplyClasses);
 
-    // --- END NEW JAVASCRIPT ---
-
-    // Initialize the apply button state on page load (these were already at the end)
     updateApplyButtonState();
     updateCheckboxState();
   </script>
