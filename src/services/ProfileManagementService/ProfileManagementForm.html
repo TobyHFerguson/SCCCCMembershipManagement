@@ -21,6 +21,8 @@
       /* Base font size for body */
       box-sizing: border-box;
       /* Include padding and border in the element's total width and height */
+      /* Add this for basic CSS check (Gold should appear if no responsive class is active) */
+      /* background-color: #FFD700; */ 
     }
 
     .profile-container {
@@ -83,7 +85,6 @@
       display: none;
     }
 
-
     .buttons-container {
       display: flex;
       justify-content: center;
@@ -105,146 +106,138 @@
       cursor: not-allowed;
     }
 
-    /* --- Media Queries for Responsive Font Sizes and Layout --- */
+    /* --- Responsive Styles (Applied by JavaScript classes) --- */
 
     /* For Tablets (example: screens between 600px and 992px) */
-    @media (min-width: 600px) and (max-width: 992px) {
-      html {
-        font-size: 17px;
-        /* Slightly larger base font for tablets */
-      }
+    body.is-tablet html {
+      font-size: 17px;
+      /* Slightly larger base font for tablets */
+    }
 
-      .profile-container {
-        width: 80%;
-        /* Adjust width for tablets */
-        max-width: 600px;
-        /* Set a max-width to prevent it from getting too wide */
-      }
+    body.is-tablet .profile-container {
+      width: 80%;
+      /* Adjust width for tablets */
+      max-width: 600px;
+      /* Set a max-width to prevent it from getting too wide */
+    }
 
-      h2 {
-        font-size: 2rem;
-        /* Adjust h2 size for tablets */
-      }
+    body.is-tablet h2 {
+      font-size: 2rem;
+      /* Adjust h2 size for tablets */
     }
 
     /* For Mobile Phones (example: screens up to 599px) */
-    @media (max-width: 599px) {
-      html {
-        font-size: 18px;
-        /* Larger base font for mobile phones */
-      }
+    body.is-mobile html {
+      font-size: 18px;
+      /* Larger base font for mobile phones */
+    }
 
-      body {
-        padding: 1rem;
-        /* Add some padding to the body on small screens */
-        border: 5px solid red;
-        background-color: blue;
-        /* Add this for testing the media query itself */
+    body.is-mobile {
+      padding: 1rem;
+      /* Add some padding to the body on small screens */
+      border: 5px solid red; /* TEST: Should be red on mobile */
+      background-color: blue; /* TEST: Should be blue on mobile */
+    }
 
-        /* Keep this for testing, remove when satisfied */
-      }
+    body.is-mobile .profile-container {
+      width: 95%;
+      /* Make it take up more width on smaller screens */
+      padding: 1rem;
+      /* Slightly less padding on mobile */
+    }
 
-      .profile-container {
-        width: 95%;
-        /* Make it take up more width on smaller screens */
-        padding: 1rem;
-        /* Slightly less padding on mobile */
-      }
+    body.is-mobile h2 {
+      font-size: 2.25rem;
+      /* Even larger h2 for mobile */
+      text-align: center;
+      /* Center the title on mobile */
+    }
 
-      h2 {
-        font-size: 2.25rem;
-        /* Even larger h2 for mobile */
-        text-align: center;
-        /* Center the title on mobile */
-      }
+    body.is-mobile p {
+      font-size: 1.125rem;
+    }
 
-      p {
-        font-size: 1.125rem;
-      }
+    /* Make the main profile rows a 2-column grid for label-input, then checkbox group below */
+    body.is-mobile .profile-row {
+      grid-template-columns: auto 1fr;
+      /* Two columns: auto for label, 1fr for input */
+      gap: 0.5rem 1rem;
+      /* Row gap and column gap */
+      margin-bottom: 0.75rem;
+    }
 
-      /* Make the main profile rows a 2-column grid for label-input, then checkbox group below */
-      .profile-row {
-        grid-template-columns: auto 1fr;
-        /* Two columns: auto for label, 1fr for input */
-        gap: 0.5rem 1rem;
-        /* Row gap and column gap */
-        margin-bottom: 0.75rem;
-      }
+    body.is-mobile .profile-row label {
+      grid-column: 1;
+      /* Label in the first column */
+      text-align: left;
+      /* Align labels left on mobile */
+      align-self: center;
+    }
 
-      .profile-row label {
-        grid-column: 1;
-        /* Label in the first column */
-        text-align: left;
-        /* Align labels left on mobile */
-        align-self: center;
-      }
+    body.is-mobile .profile-row input[type="text"],
+    body.is-mobile .profile-row input[type="email"] {
+      grid-column: 2;
+      /* Input in the second column */
+      width: 100%;
+      /* Ensure inputs fill their column */
+    }
 
-      .profile-row input[type="text"],
-      .profile-row input[type="email"] {
-        grid-column: 2;
-        /* Input in the second column */
-        width: 100%;
-        /* Ensure inputs fill their column */
-      }
+    /* Hide the desktop "In Directory" header row on mobile */
+    body.is-mobile .profile-row.header-row {
+      display: none;
+    }
 
-      /* Hide the desktop "In Directory" header row on mobile */
-      .profile-row.header-row {
-        display: none;
-      }
+    /* Show and style the mobile-specific checkbox group */
+    body.is-mobile .checkbox-group-mobile {
+      display: flex;
+      /* Use flexbox to align label and checkbox horizontally */
+      grid-column: span 2;
+      /* Make the group span both columns */
+      justify-content: flex-end;
+      /* Align content to the right (under the input) */
+      align-items: center;
+      /* Vertically center label and checkbox */
+      margin-top: 0.5rem;
+      /* Space above this group */
+    }
 
-      /* Show and style the mobile-specific checkbox group */
-      .checkbox-group-mobile {
-        display: flex;
-        /* Use flexbox to align label and checkbox horizontally */
-        grid-column: span 2;
-        /* Make the group span both columns */
-        justify-content: flex-end;
-        /* Align content to the right (under the input) */
-        align-items: center;
-        /* Vertically center label and checkbox */
-        margin-top: 0.5rem;
-        /* Space above this group */
-      }
+    body.is-mobile .directory-label-mobile {
+      display: inline-block;
+      /* Ensure it's displayed */
+      font-size: 0.95rem;
+      /* Slightly smaller text for this label */
+      margin-right: 0.5rem;
+      /* Space between label and checkbox */
+      order: 1;
+      /* Ensure label comes before checkbox in flex order */
+    }
 
-      .directory-label-mobile {
-        display: inline-block;
-        /* Ensure it's displayed */
-        font-size: 0.95rem;
-        /* Slightly smaller text for this label */
-        margin-right: 0.5rem;
-        /* Space between label and checkbox */
-        order: 1;
-        /* Ensure label comes before checkbox in flex order */
-      }
+    body.is-mobile .profile-row input[type="checkbox"] {
+      /* This rule now only applies to the checkbox within the flex container */
+      margin: 0;
+      /* Remove default margins to prevent issues with flex positioning */
+      order: 2;
+      /* Ensure checkbox comes after label in flex order */
+      /* No grid properties (grid-column, justify-self, etc.) here as it's now in a flex container */
+    }
 
-      .profile-row input[type="checkbox"] {
-        /* This rule now only applies to the checkbox within the flex container */
-        margin: 0;
-        /* Remove default margins to prevent issues with flex positioning */
-        order: 2;
-        /* Ensure checkbox comes after label in flex order */
-        /* No grid properties (grid-column, justify-self, etc.) here as it's now in a flex container */
-      }
+    body.is-mobile input[type="text"] {
+      font-size: 1.125rem;
+    }
 
-      input[type="text"] {
-        font-size: 1.125rem;
-      }
+    body.is-mobile .buttons-container {
+      flex-direction: column;
+      gap: 1rem;
+    }
 
-      .buttons-container {
-        flex-direction: column;
-        gap: 1rem;
-      }
-
-      button {
-        font-size: 1.125rem;
-        padding: 0.75rem 1.5rem;
-      }
+    body.is-mobile button {
+      font-size: 1.125rem;
+      padding: 0.75rem 1.5rem;
     }
   </style>
 </head>
 
-<body>
-  <div class="profile-container">
+<body class="app-body"> <div class="profile-container">
     <h2>Your Profile</h2>
     <p>You can modify your profile below.</p>
 
@@ -455,7 +448,40 @@
       updateCheckboxState(); // Ensure correct disabled/unchecked state after reset
     });
 
-    // Initialize the apply button state on page load
+    // --- NEW JAVASCRIPT FOR RESPONSIVE DESIGN ---
+
+    function checkViewportAndApplyClasses() {
+      const bodyElement = document.body; // Target the body directly
+      const screenWidth = screen.width; // Use screen.width for reliable device width detection
+
+      const mobileBreakpoint = 599; // For phones
+      const tabletMinBreakpoint = 600;
+      const tabletMaxBreakpoint = 992; // For tablets
+
+      // Remove all responsive classes first to ensure clean state
+      bodyElement.classList.remove('is-mobile', 'is-tablet');
+
+      if (screenWidth <= mobileBreakpoint) {
+        bodyElement.classList.add('is-mobile');
+        console.log('Mobile view active (screen.width:', screenWidth, ')');
+      } else if (screenWidth >= tabletMinBreakpoint && screenWidth <= tabletMaxBreakpoint) {
+        bodyElement.classList.add('is-tablet');
+        console.log('Tablet view active (screen.width:', screenWidth, ')');
+      } else {
+        // Desktop view - no special class needed, relies on base styles
+        console.log('Desktop view active (screen.width:', screenWidth, ')');
+      }
+    }
+
+    // Initialize the responsive classes on page load
+    checkViewportAndApplyClasses();
+
+    // Attach to resize event (useful for desktop testing & device orientation changes, though less common for mobile Safari full page resize)
+    window.addEventListener('resize', checkViewportAndApplyClasses);
+
+    // --- END NEW JAVASCRIPT ---
+
+    // Initialize the apply button state on page load (these were already at the end)
     updateApplyButtonState();
     updateCheckboxState();
   </script>
