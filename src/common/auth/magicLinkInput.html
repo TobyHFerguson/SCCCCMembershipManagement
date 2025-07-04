@@ -4,30 +4,133 @@
   <title>Request Access</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: sans-serif; }
-    .container { width: fit-content; margin: 50px auto; } /* Use percentage and max-width */
-    input[type=email], button { width: 100%; padding: 12px 20px; margin-bottom: 10px; display: inline-block; border: 1px solid #ccc; box-sizing: border-box; }
-    button { background-color: #4CAF50; color: white; border: none; cursor: pointer; }
-    .message { margin-top: 10px; font-size: 0.9em; }
-    .success { color: green; }
-    .error { color: red; }
+    /* Base styles (Desktop/Tablet default) */
+    html {
+      font-size: 16px; /* Base font size for desktop */
+    }
 
-    /* Media query for smaller screens (e.g., phones) */
-    @media (max-width: 600px) {
-      .container {
-        width: 95%;
-        margin: 20px auto;
-      }
+    body {
+      font-family: sans-serif;
+      display: flex; /* Use flexbox to center content vertically and horizontally */
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh; /* Ensure body takes at least full viewport height */
+      margin: 0; /* Remove default body margin */
+      box-sizing: border-box; /* Include padding/border in element's total width/height */
+    }
 
-      input[type=email], button {
-        padding: 15px;
-        font-size: 1em; /* Adjust font size slightly */
-      }
+    .container {
+      width: 400px; /* Default desktop width */
+      padding: 20px; /* Default padding */
+      box-sizing: border-box; /* Include padding in width */
+      border: 1px solid #ccc; /* Add a border for better visual separation */
+      border-radius: 8px; /* Slightly rounded corners */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    }
 
-      h2 {
-        font-size: 1.3em;
-        text-align: center;
-      }
+    h2 {
+      font-size: 1.5em; /* Default desktop heading size */
+      text-align: center;
+      margin-top: 0; /* Remove top margin */
+      margin-bottom: 20px; /* Space below heading */
+    }
+
+    input[type=email], button {
+      width: 100%;
+      padding: 12px 20px;
+      margin-bottom: 10px;
+      display: block; /* Change to block for better control */
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      font-size: 1em; /* Default input/button font size */
+      border-radius: 4px; /* Slight rounding for fields */
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease; /* Smooth transition for hover */
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #45a049;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .message {
+      margin-top: 10px;
+      font-size: 0.9em;
+      text-align: center; /* Center messages */
+    }
+
+    .success {
+      color: green;
+    }
+
+    .error {
+      color: red;
+    }
+
+    /* --- Responsive Styles (Applied by JavaScript classes) --- */
+
+    /* Tablet Styles */
+    body.is-tablet html {
+      font-size: 17px; /* Slightly larger base font for tablets */
+    }
+
+    body.is-tablet .container {
+      width: 80%; /* Wider on tablet, still centered */
+      max-width: 500px; /* Prevent it from getting too wide */
+      padding: 25px;
+    }
+
+    body.is-tablet h2 {
+      font-size: 1.6em;
+    }
+
+    /* Mobile Phone Styles */
+    body.is-mobile html {
+      font-size: 18px; /* Larger base font for better mobile readability */
+    }
+
+    body.is-mobile {
+      /* On mobile, remove flex centering from body to allow container to align left */
+      display: block;
+      padding: 15px; /* Add some padding around the viewport edge */
+      justify-content: flex-start; /* Ensure content starts from the top/left */
+      align-items: flex-start;
+    }
+
+    body.is-mobile .container {
+      width: 95%; /* Take up most of the screen width */
+      margin: 0; /* Remove auto margin if body is no longer flex-centered */
+      padding: 15px;
+      /* If you want it truly left-aligned and not just filling 95% of the centered iframe,
+         you might still need margin-left: 0; margin-right: auto; if it's in an iframe */
+      margin-left: 0;
+      margin-right: auto;
+    }
+
+    body.is-mobile h2 {
+      font-size: 1.8em; /* Larger heading for mobile */
+      text-align: left; /* Align heading to left on mobile */
+      margin-bottom: 15px;
+    }
+
+    body.is-mobile input[type=email], body.is-mobile button {
+      padding: 18px; /* Larger tap target */
+      font-size: 1.1em; /* Larger font size */
+    }
+
+    body.is-mobile .message {
+      font-size: 1em; /* Adjust message font size */
+      text-align: left; /* Align messages to left on mobile */
     }
   </style>
 </head>
@@ -40,7 +143,9 @@
   </div>
 
   <script>
+    // This part remains mostly the same as your original script
     console.log('Service value from template:', '<?= service ?>');
+
     function validateEmail() {
       var emailInput = document.getElementById('email');
       var sendButton = document.getElementById('sendButton');
@@ -49,14 +154,50 @@
 
     function requestLink() {
       var email = document.getElementById('email').value;
-      document.getElementById('message').textContent = 'Processing...';
+      var messageDiv = document.getElementById('message');
+      messageDiv.className = 'message'; // Reset classes
+      messageDiv.textContent = 'Processing...';
+
       google.script.run
           .withSuccessHandler(function(response) {
-            document.getElementById('message').textContent = 'Processed - if the email you entered is that of an active member then we have sent an access link to that address. Go check and follow the link.';
+            messageDiv.className = 'message success'; // Add success class
+            messageDiv.textContent = 'Processed - if the email you entered is that of an active member then we have sent an access link to that address. Go check and follow the link.';
             document.getElementById('email').value = ''; // Clear the input
+          })
+          .withFailureHandler(function(error) {
+              messageDiv.className = 'message error'; // Add error class
+              messageDiv.textContent = 'Error: ' + error.message; // Display error message
           })
           .sendMagicLink(email, '<?= service ?>');
     }
+
+    // --- Responsive JavaScript (Copy/Pasted from previous successful implementation) ---
+    function checkViewportAndApplyClasses() {
+      const bodyElement = document.body;
+      const screenWidth = window.innerWidth; // Use window.innerWidth for responsive JS
+
+      const mobileBreakpoint = 599; // Same breakpoints as before
+      const tabletMinBreakpoint = 600;
+      const tabletMaxBreakpoint = 992;
+
+      bodyElement.classList.remove('is-mobile', 'is-tablet');
+
+      if (screenWidth <= mobileBreakpoint) {
+        bodyElement.classList.add('is-mobile');
+      } else if (screenWidth >= tabletMinBreakpoint && screenWidth <= tabletMaxBreakpoint) {
+        bodyElement.classList.add('is-tablet');
+      } else {
+        // Desktop view - no special class needed, relies on base styles
+      }
+    }
+
+    // Initial check on load
+    checkViewportAndApplyClasses();
+    // Re-check on window resize
+    window.addEventListener('resize', checkViewportAndApplyClasses);
+
+    // Initial validation check to set button state on page load
+    validateEmail();
   </script>
 </body>
 </html>
