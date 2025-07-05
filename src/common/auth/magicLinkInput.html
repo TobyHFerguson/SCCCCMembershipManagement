@@ -4,47 +4,47 @@
   <title>Request Access</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* Base styles (Desktop/Tablet default) */
+    /* Base Styles (for Desktop) */
     html {
       font-size: 16px; /* Base font size for desktop */
-      background-color: lemonchiffon;
     }
 
     body {
       font-family: sans-serif;
-      display: flex; /* Use flexbox to center content vertically and horizontally */
+      display: flex; /* Flexbox for centering on desktop */
       justify-content: center;
       align-items: center;
-      min-height: 100vh; /* Ensure body takes at least full viewport height */
-      margin: 0; /* Remove default body margin */
-      box-sizing: border-box; /* Include padding/border in element's total width/height */
+      min-height: 100vh;
+      margin: 0;
+      box-sizing: border-box;
+      background-color: #FFFFE0; /* Light Yellow for Desktop */
     }
 
     .container {
       width: 400px; /* Default desktop width */
-      padding: 20px; /* Default padding */
-      box-sizing: border-box; /* Include padding in width */
-      border: 1px solid #ccc; /* Add a border for better visual separation */
-      border-radius: 8px; /* Slightly rounded corners */
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+      padding: 20px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
 
     h2 {
-      font-size: 1.5em; /* Default desktop heading size */
+      font-size: 1.5em;
       text-align: center;
-      margin-top: 0; /* Remove top margin */
-      margin-bottom: 20px; /* Space below heading */
+      margin-top: 0;
+      margin-bottom: 20px;
     }
 
     input[type=email], button {
       width: 100%;
       padding: 12px 20px;
       margin-bottom: 10px;
-      display: block; /* Change to block for better control */
+      display: block; /* Ensures they stack */
       border: 1px solid #ccc;
       box-sizing: border-box;
-      font-size: 1em; /* Default input/button font size */
-      border-radius: 4px; /* Slight rounding for fields */
+      font-size: 1em;
+      border-radius: 4px;
     }
 
     button {
@@ -52,7 +52,7 @@
       color: white;
       border: none;
       cursor: pointer;
-      transition: background-color 0.3s ease; /* Smooth transition for hover */
+      transition: background-color 0.3s ease;
     }
 
     button:hover:not(:disabled) {
@@ -67,7 +67,7 @@
     .message {
       margin-top: 10px;
       font-size: 0.9em;
-      text-align: center; /* Center messages */
+      text-align: center;
     }
 
     .success {
@@ -80,60 +80,53 @@
 
     /* --- Responsive Styles (Applied by JavaScript classes) --- */
 
-    /* Tablet Styles */
+    /* Mobile Portrait Styles (iPhone 15 Max Pro in Portrait) */
+    body.is-mobile-portrait {
+      display: block; /* Override flex for mobile layout */
+      padding: 15px;
+      background-color: #FFB6C1; /* Light Magenta for Mobile Portrait */
+    }
+
+    body.is-mobile-portrait .container {
+      width: 95%;
+      margin: 0;
+      padding: 15px;
+    }
+
+    body.is-mobile-portrait h2 {
+      font-size: 1.8em;
+      text-align: left;
+      margin-bottom: 15px;
+    }
+
+    body.is-mobile-portrait input[type=email],
+    body.is-mobile-portrait button {
+      padding: 18px;
+      font-size: 1.1em;
+    }
+
+    body.is-mobile-portrait .message {
+      font-size: 1em;
+      text-align: left;
+    }
+
+    /* Tablet/Mobile Landscape Styles (iPhone 15 Max Pro in Landscape, and actual Tablets) */
+    body.is-tablet {
+      background-color: #ADD8E6; /* Light Blue for Tablet/Mobile Landscape */
+    }
+
     body.is-tablet html {
       font-size: 17px; /* Slightly larger base font for tablets */
-      background-color: #45a049;
     }
 
     body.is-tablet .container {
       width: 80%; /* Wider on tablet, still centered */
-      max-width: 500px; /* Prevent it from getting too wide */
+      max-width: 600px; /* Prevent it from getting too wide */
       padding: 25px;
     }
 
     body.is-tablet h2 {
       font-size: 1.6em;
-    }
-
-    /* Mobile Phone Styles */
-    body.is-mobile html {
-      font-size: 18px; /* Larger base font for better mobile readability */
-      background-color: coral;
-    }
-
-    body.is-mobile {
-      /* On mobile, remove flex centering from body to allow container to align left */
-      display: block;
-      padding: 15px; /* Add some padding around the viewport edge */
-      justify-content: flex-start; /* Ensure content starts from the top/left */
-      align-items: flex-start;
-    }
-
-    body.is-mobile .container {
-      width: 95%; /* Take up most of the screen width */
-      margin: 0; /* Remove auto margin if body is no longer flex-centered */
-      padding: 15px;
-      /* If you want it truly left-aligned and not just filling 95% of the centered iframe,
-         you might still need margin-left: 0; margin-right: auto; if it's in an iframe */
-      margin-left: 0;
-      margin-right: auto;
-    }
-
-    body.is-mobile h2 {
-      font-size: 1.8em; /* Larger heading for mobile */
-      text-align: left; /* Align heading to left on mobile */
-      margin-bottom: 15px;
-    }
-
-    body.is-mobile input[type=email], body.is-mobile button {
-      padding: 18px; /* Larger tap target */
-      font-size: 1.1em; /* Larger font size */
-    }
-
-    body.is-mobile .message {
-      font-size: 1em; /* Adjust message font size */
-      text-align: left; /* Align messages to left on mobile */
     }
   </style>
 </head>
@@ -146,7 +139,6 @@
   </div>
 
   <script>
-    // This part remains mostly the same as your original script
     console.log('Service value from template:', '<?= service ?>');
 
     function validateEmail() {
@@ -174,20 +166,35 @@
           .sendMagicLink(email, '<?= service ?>');
     }
 
-    // --- Responsive JavaScript (Copy/Pasted from previous successful implementation) ---
+    // --- Responsive JavaScript (REVISED) ---
     function checkViewportAndApplyClasses() {
       const bodyElement = document.body;
-      const screenWidth = window.innerWidth; // Use window.innerWidth for responsive JS
+      const screenWidth = window.screen.width; // Use screen.width for device detection
+      const screenHeight = window.screen.height; // Also get screen height for reference
+      const isPortrait = window.matchMedia('(orientation: portrait)').matches; // Robust orientation check
 
-      const mobileBreakpoint = 599; // Same breakpoints as before
-      const tabletMinBreakpoint = 600;
-      const tabletMaxBreakpoint = 992;
+      console.log('Viewport Width (window.innerWidth):', window.innerWidth);
+      console.log('Screen Width (screen.width):', screenWidth);
+      console.log('Screen Height (screen.height):', screenHeight);
+      console.log('Is Portrait:', isPortrait);
 
-      bodyElement.classList.remove('is-mobile', 'is-tablet');
+      // Remove all previous responsive classes
+      bodyElement.classList.remove('is-mobile-portrait', 'is-tablet');
 
-      if (screenWidth <= mobileBreakpoint) {
-        bodyElement.classList.add('is-mobile');
-      } else if (screenWidth >= tabletMinBreakpoint && screenWidth <= tabletMaxBreakpoint) {
+      // Define breakpoints based on screen.width (the "native" device width)
+      // Assuming 600px is your threshold for mobile screen.width
+      const mobileScreenBreakpoint = 600; // This might be more like 480 or 430 for your actual device
+
+      if (screenWidth <= mobileScreenBreakpoint) {
+        // This is a "phone-sized" device based on screen.width (like your iPhone 15 Pro Max's 430px)
+        if (isPortrait) {
+          bodyElement.classList.add('is-mobile-portrait'); // Apply mobile portrait styles
+        } else {
+          // It's a mobile device in landscape, apply tablet-like styles
+          bodyElement.classList.add('is-tablet');
+        }
+      } else if (screenWidth > mobileScreenBreakpoint && screenWidth <= 1023) {
+        // This is an actual tablet or a larger phone reporting a larger screen.width
         bodyElement.classList.add('is-tablet');
       } else {
         // Desktop view - no special class needed, relies on base styles
@@ -196,7 +203,7 @@
 
     // Initial check on load
     checkViewportAndApplyClasses();
-    // Re-check on window resize
+    // Re-check on window resize (for orientation changes)
     window.addEventListener('resize', checkViewportAndApplyClasses);
 
     // Initial validation check to set button state on page load
