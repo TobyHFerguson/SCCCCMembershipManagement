@@ -6,7 +6,13 @@
   <style>
     /* Base Styles (for Desktop) */
     html {
-      font-size: 16px; /* Base font size for desktop */
+      font-size: 16px; /* Base font size for desktop - 1rem = 16px */
+      /* Consider adding box-sizing to html for global inheritance */
+      box-sizing: border-box;
+    }
+
+    *, *::before, *::after {
+      box-sizing: inherit; /* Inherit box-sizing globally */
     }
 
     body {
@@ -16,35 +22,32 @@
       align-items: center;
       min-height: 100vh;
       margin: 0;
-      box-sizing: border-box;
       background-color: #FFFFE0; /* Light Yellow for Desktop */
     }
 
     .container {
-      width: 400px; /* Default desktop width */
-      padding: 20px;
-      box-sizing: border-box;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      width: 25rem; /* 400px / 16px = 25rem */
+      padding: 1.25rem; /* 20px / 16px = 1.25rem */
+      border: 0.0625rem solid #ccc; /* 1px / 16px = 0.0625rem */
+      border-radius: 0.5rem; /* 8px / 16px = 0.5rem */
+      box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1); /* 0 4px 8px */
     }
 
     h2 {
-      font-size: 1.5em;
+      font-size: 1.5rem; /* Using rem directly for consistency, or keep 1.5em if preferred to scale with parent */
       text-align: center;
       margin-top: 0;
-      margin-bottom: 20px;
+      margin-bottom: 1.25rem; /* 20px / 16px = 1.25rem */
     }
 
     input[type=email], button {
       width: 100%;
-      padding: 12px 20px;
-      margin-bottom: 10px;
+      padding: 0.75rem 1.25rem; /* 12px 20px */
+      margin-bottom: 0.625rem; /* 10px / 16px = 0.625rem */
       display: block; /* Ensures they stack */
-      border: 1px solid #ccc;
-      box-sizing: border-box;
-      font-size: 1em;
-      border-radius: 4px;
+      border: 0.0625rem solid #ccc;
+      border-radius: 0.25rem; /* 4px / 16px = 0.25rem */
+      font-size: 1rem; /* Base font size for inputs/buttons */
     }
 
     button {
@@ -65,8 +68,8 @@
     }
 
     .message {
-      margin-top: 10px;
-      font-size: 0.9em;
+      margin-top: 0.625rem; /* 10px / 16px = 0.625rem */
+      font-size: 0.9rem; /* 0.9em still works, but 0.9rem ensures it's tied to html base */
       text-align: center;
     }
 
@@ -78,36 +81,52 @@
       color: red;
     }
 
-    /* --- Responsive Styles (Applied by JavaScript classes) --- */
+    /* --- Responsive Styles (Applied by JavaScript classes on <html>) --- */
+    /* Instead of putting classes on body, we'll put them on html if needed,
+       or better yet, use media queries for a purely CSS solution.
+       However, since your JS is already set up to add classes to <body>,
+       I will modify the CSS to respond to those classes for font-size.
+       The ideal way for font-size scaling is to change the html font-size
+       directly in media queries. But let's adapt to your existing JS. */
+
+    /* If you're using JS to set classes, consider setting them on <html> instead of <body>
+       for more direct control over `rem` units. For now, let's make the
+       `body.is-mobile-portrait` and `body.is-tablet` classes modify the
+       `html` element's font-size.
+    */
 
     /* Mobile Portrait Styles (iPhone 15 Max Pro in Portrait) */
+    /* When body has is-mobile-portrait class, adjust html font-size */
     body.is-mobile-portrait {
       display: block; /* Override flex for mobile layout */
-      padding: 15px;
+      padding: 0.9375rem; /* 15px / 16px = 0.9375rem */
       background-color: #FFB6C1; /* Light Magenta for Mobile Portrait */
-      font-size: 18px; /* Slightly larger base font for mobile */
+    }
+
+    body.is-mobile-portrait html {
+        font-size: 18px; /* New base: 1rem = 18px for mobile portrait */
     }
 
     body.is-mobile-portrait .container {
       width: 95%;
       margin: 0;
-      padding: 15px;
+      padding: 0.9375rem; /* 15px / 16px = 0.9375rem (this will now be relative to the 18px base) */
     }
 
     body.is-mobile-portrait h2 {
-      font-size: 1.8em;
+      font-size: 1.8rem; /* Will be 1.8 * 18px */
       text-align: left;
-      margin-bottom: 15px;
+      margin-bottom: 0.9375rem; /* 15px / 16px = 0.9375rem (this will now be relative to the 18px base) */
     }
 
     body.is-mobile-portrait input[type=email],
     body.is-mobile-portrait button {
-      padding: 18px;
-      font-size: 1.1em;
+      padding: 1rem; /* 18px / 18px = 1rem (relative to 18px base) */
+      font-size: 1.1rem; /* Will be 1.1 * 18px */
     }
 
     body.is-mobile-portrait .message {
-      font-size: 1em;
+      font-size: 1rem; /* Will be 1 * 18px */
       text-align: left;
     }
 
@@ -117,17 +136,17 @@
     }
 
     body.is-tablet html {
-      font-size: 17px; /* Slightly larger base font for tablets */
+      font-size: 17px; /* New base: 1rem = 17px for tablet */
     }
 
     body.is-tablet .container {
       width: 80%; /* Wider on tablet, still centered */
-      max-width: 600px; /* Prevent it from getting too wide */
-      padding: 25px;
+      max-width: 37.5rem; /* 600px / 16px = 37.5rem (original base for max-width) */
+      padding: 1.5625rem; /* 25px / 16px = 1.5625rem (will be relative to 17px base) */
     }
 
     body.is-tablet h2 {
-      font-size: 1.6em;
+      font-size: 1.6rem; /* Will be 1.6 * 17px */
     }
   </style>
 </head>
@@ -154,22 +173,30 @@
       messageDiv.className = 'message'; // Reset classes
       messageDiv.textContent = 'Processing...';
 
-      google.script.run
-          .withSuccessHandler(function(response) {
-            messageDiv.className = 'message success'; // Add success class
-            messageDiv.textContent = 'Processed - if the email you entered is that of an active member then we have sent an access link to that address. Go check and follow the link.';
-            document.getElementById('email').value = ''; // Clear the input
-          })
-          .withFailureHandler(function(error) {
-              messageDiv.className = 'message error'; // Add error class
-              messageDiv.textContent = 'Error: ' + error.message; // Display error message
-          })
-          .sendMagicLink(email, '<?= service ?>');
+      // Assuming google.script.run is defined elsewhere (e.g., Google Apps Script)
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+          google.script.run
+              .withSuccessHandler(function(response) {
+                messageDiv.className = 'message success'; // Add success class
+                messageDiv.textContent = 'Processed - if the email you entered is that of an active member then we have sent an access link to that address. Go check and follow the link.';
+                document.getElementById('email').value = ''; // Clear the input
+              })
+              .withFailureHandler(function(error) {
+                  messageDiv.className = 'message error'; // Add error class
+                  messageDiv.textContent = 'Error: ' + error.message; // Display error message
+              })
+              .sendMagicLink(email, '<?= service ?>');
+      } else {
+          messageDiv.className = 'message error';
+          messageDiv.textContent = 'Error: google.script.run is not defined. (Are you running this in a Google Apps Script context?)';
+          console.error("google.script.run is not defined. This script expects to be run in a Google Apps Script environment.");
+      }
     }
 
     // --- Responsive JavaScript (REVISED) ---
     function checkViewportAndApplyClasses() {
       const bodyElement = document.body;
+      const htmlElement = document.documentElement; // Get the html element
       const screenWidth = window.screen.width; // Use screen.width for device detection
       const screenHeight = window.screen.height; // Also get screen height for reference
       const isPortrait = window.matchMedia('(orientation: portrait)').matches; // Robust orientation check
@@ -179,7 +206,7 @@
       console.log('Screen Height (screen.height):', screenHeight);
       console.log('Is Portrait:', isPortrait);
 
-      // Remove all previous responsive classes
+      // Remove all previous responsive classes from body
       bodyElement.classList.remove('is-mobile-portrait', 'is-tablet');
 
       // Define breakpoints based on screen.width (the "native" device width)
@@ -200,6 +227,7 @@
       } else {
         // Desktop view - no special class needed, relies on base styles
       }
+      // For desktop, no specific class is added to body; it relies on base styles.
     }
 
     // Initial check on load
