@@ -7,7 +7,6 @@
     /* Base Styles (for Desktop) */
     html {
       font-size: 16px; /* Base font size for desktop - 1rem = 16px */
-      /* Consider adding box-sizing to html for global inheritance */
       box-sizing: border-box;
     }
 
@@ -20,8 +19,9 @@
       display: flex; /* Flexbox for centering on desktop */
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
+      min-height: 100vh; /* This might be tricky in a fixed-size iframe. Consider adjusting if centering issues arise. */
       margin: 0;
+      box-sizing: border-box; /* Ensuring body also respects box-sizing */
       background-color: #FFFFE0; /* Light Yellow for Desktop */
     }
 
@@ -34,7 +34,7 @@
     }
 
     h2 {
-      font-size: 1.5rem; /* Using rem directly for consistency, or keep 1.5em if preferred to scale with parent */
+      font-size: 1.8rem; /* Desktop h2: 1.8 * 16px = 28.8px */
       text-align: center;
       margin-top: 0;
       margin-bottom: 1.25rem; /* 20px / 16px = 1.25rem */
@@ -47,7 +47,7 @@
       display: block; /* Ensures they stack */
       border: 0.0625rem solid #ccc;
       border-radius: 0.25rem; /* 4px / 16px = 0.25rem */
-      font-size: 1rem; /* Base font size for inputs/buttons */
+      font-size: 1rem; /* Base font size for inputs/buttons (1 * 16px = 16px) */
     }
 
     button {
@@ -69,7 +69,7 @@
 
     .message {
       margin-top: 0.625rem; /* 10px / 16px = 0.625rem */
-      font-size: 0.9rem; /* 0.9em still works, but 0.9rem ensures it's tied to html base */
+      font-size: 0.9rem; /* 0.9 * 16px = 14.4px */
       text-align: center;
     }
 
@@ -81,73 +81,90 @@
       color: red;
     }
 
-    /* --- Responsive Styles (Applied by JavaScript classes on <html>) --- */
-    /* Instead of putting classes on body, we'll put them on html if needed,
-       or better yet, use media queries for a purely CSS solution.
-       However, since your JS is already set up to add classes to <body>,
-       I will modify the CSS to respond to those classes for font-size.
-       The ideal way for font-size scaling is to change the html font-size
-       directly in media queries. But let's adapt to your existing JS. */
+    /* --- Responsive Styles (Applied by JavaScript classes on <body>) --- */
 
-    /* If you're using JS to set classes, consider setting them on <html> instead of <body>
-       for more direct control over `rem` units. For now, let's make the
-       `body.is-mobile-portrait` and `body.is-tablet` classes modify the
-       `html` element's font-size.
-    */
-
-    /* Mobile Portrait Styles (iPhone 15 Max Pro in Portrait) */
-    /* When body has is-mobile-portrait class, adjust html font-size */
-    body.is-mobile-portrait {
-      display: block; /* Override flex for mobile layout */
-      padding: 0.9375rem; /* 15px / 16px = 0.9375rem */
-      background-color: #FFB6C1; /* Light Magenta for Mobile Portrait */
-    }
-
-    body.is-mobile-portrait html {
-        font-size: 18px; /* New base: 1rem = 18px for mobile portrait */
-    }
-
-    body.is-mobile-portrait .container {
-      width: 95%;
-      margin: 0;
-      padding: 0.9375rem; /* 15px / 16px = 0.9375rem (this will now be relative to the 18px base) */
-    }
-
-    body.is-mobile-portrait h2 {
-      font-size: 1.8rem; /* Will be 1.8 * 18px */
-      text-align: left;
-      margin-bottom: 0.9375rem; /* 15px / 16px = 0.9375rem (this will now be relative to the 18px base) */
-    }
-
-    body.is-mobile-portrait input[type=email],
-    body.is-mobile-portrait button {
-      padding: 1rem; /* 18px / 18px = 1rem (relative to 18px base) */
-      font-size: 1.1rem; /* Will be 1.1 * 18px */
-    }
-
-    body.is-mobile-portrait .message {
-      font-size: 1rem; /* Will be 1 * 18px */
-      text-align: left;
-    }
-
-    /* Tablet/Mobile Landscape Styles (iPhone 15 Max Pro in Landscape, and actual Tablets) */
+    /* Tablet Styles */
     body.is-tablet {
-      background-color: #ADD8E6; /* Light Blue for Tablet/Mobile Landscape */
+      background-color: #ADD8E6; /* Light Blue for Tablet */
+      /* No change to display/padding from desktop for tablet, maintain desktop flex behavior unless explicitly overridden */
     }
 
     body.is-tablet html {
-      font-size: 17px; /* New base: 1rem = 17px for tablet */
+      font-size: 17px; /* Tablet base font: 1rem = 17px */
     }
 
     body.is-tablet .container {
       width: 80%; /* Wider on tablet, still centered */
-      max-width: 37.5rem; /* 600px / 16px = 37.5rem (original base for max-width) */
-      padding: 1.5625rem; /* 25px / 16px = 1.5625rem (will be relative to 17px base) */
+      max-width: 37.5rem; /* 600px / 16px = 37.5rem (This max-width will now scale based on the 17px base) */
+      padding: 1.5625rem; /* 25px / 17px = ~1.47rem */
     }
 
     body.is-tablet h2 {
-      font-size: 1.6rem; /* Will be 1.6 * 17px */
+      font-size: 2.0rem; /* Tablet h2: 2.0 * 17px = 34px (Larger than Desktop h2) */
     }
+
+    /* Mobile Portrait Styles */
+    body.is-mobile-portrait {
+      display: block; /* Override flex for mobile portrait layout */
+      padding: 0.9375rem; /* 15px / 18px = ~0.83rem (relative to new 18px base) */
+      background-color: #FFB6C1; /* Light Magenta for Mobile Portrait */
+    }
+
+    body.is-mobile-portrait html {
+      font-size: 18px; /* Mobile Portrait base font: 1rem = 18px */
+    }
+
+    body.is-mobile-portrait .container {
+      width: 95%;
+      margin: 0 auto; /* Center container on mobile block layout */
+      padding: 0.9375rem; /* 15px / 18px = ~0.83rem */
+    }
+
+    body.is-mobile-portrait h2 {
+      font-size: 2.2rem; /* Mobile Portrait h2: 2.2 * 18px = 39.6px (Largest h2) */
+      text-align: left;
+      margin-bottom: 0.9375rem; /* 15px / 18px = ~0.83rem */
+    }
+
+    body.is-mobile-portrait input[type=email],
+    body.is-mobile-portrait button {
+      padding: 1rem; /* 18px / 18px = 1rem */
+      font-size: 1.1rem; /* 1.1 * 18px = 19.8px */
+    }
+
+    body.is-mobile-portrait .message {
+      font-size: 1rem; /* 1 * 18px = 18px */
+      text-align: left;
+    }
+
+    /* Mobile Landscape Styles */
+    body.is-mobile-landscape {
+        /* Mobile landscape might share some characteristics with tablet,
+           or have its own distinct styling. For now, let's make it distinct
+           from portrait and different from tablet.
+           You'll likely want to adjust these values based on actual testing. */
+        display: block; /* Typically block layout for wider content */
+        padding: 0.8rem; /* Slightly less padding than portrait */
+        background-color: #E0FFFF; /* Light Cyan for Mobile Landscape */
+    }
+
+    body.is-mobile-landscape html {
+        font-size: 17.5px; /* A distinct base size for mobile landscape */
+    }
+
+    body.is-mobile-landscape .container {
+        width: 90%; /* Wider than portrait, narrower than tablet */
+        max-width: 30rem; /* Custom max-width for mobile landscape */
+        margin: 0 auto;
+        padding: 1rem;
+    }
+
+    body.is-mobile-landscape h2 {
+        font-size: 2.1rem; /* 2.1 * 17.5px = 36.75px */
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    /* Input, button, message styles can inherit or be overridden here */
   </style>
 </head>
 <body>
@@ -196,38 +213,38 @@
     // --- Responsive JavaScript (REVISED) ---
     function checkViewportAndApplyClasses() {
       const bodyElement = document.body;
-      const htmlElement = document.documentElement; // Get the html element
-      const screenWidth = window.screen.width; // Use screen.width for device detection
-      const screenHeight = window.screen.height; // Also get screen height for reference
+      const screenWidth = window.screen.width;
+      const screenHeight = window.screen.height;
       const isPortrait = window.matchMedia('(orientation: portrait)').matches; // Robust orientation check
+      // Your established breakpoints
+      const mobileBreakpoint = 767;
+      const tabletMinBreakpoint = 768;
+      const tabletMaxBreakpoint = 1032;
 
-      console.log('Viewport Width (window.innerWidth):', window.innerWidth);
-      console.log('Screen Width (screen.width):', screenWidth);
-      console.log('Screen Height (screen.height):', screenHeight);
+      console.log('Device Screen Width (window.screen.width):', screenWidth);
+      console.log('Device Screen Height (window.screen.height):', screenHeight);
       console.log('Is Portrait:', isPortrait);
 
-      // Remove all previous responsive classes from body
-      bodyElement.classList.remove('is-mobile-portrait', 'is-tablet');
+      // Remove all previous responsive classes
+      bodyElement.classList.remove('is-mobile-portrait', 'is-mobile-landscape', 'is-tablet');
 
-      // Define breakpoints based on screen.width (the "native" device width)
-      // Assuming 600px is your threshold for mobile screen.width
-      const mobileScreenBreakpoint = 600; // This might be more like 480 or 430 for your actual device
-
-      if (screenWidth <= mobileScreenBreakpoint) {
-        // This is a "phone-sized" device based on screen.width (like your iPhone 15 Pro Max's 430px)
+      if (screenWidth <= mobileBreakpoint) {
+        // This is a "mobile-sized" device based on its screen width
         if (isPortrait) {
-          bodyElement.classList.add('is-mobile-portrait'); // Apply mobile portrait styles
+          bodyElement.classList.add('is-mobile-portrait');
+          console.log('- Mobile Portrait');
         } else {
-          // It's a mobile device in landscape, apply tablet-like styles
-          bodyElement.classList.add('is-tablet');
+          bodyElement.classList.add('is-mobile-landscape');
+          console.log('- Mobile Landscape');
         }
-      } else if (screenWidth > mobileScreenBreakpoint && screenWidth <= 1023) {
-        // This is an actual tablet or a larger phone reporting a larger screen.width
+      } else if (screenWidth >= tabletMinBreakpoint && screenWidth <= tabletMaxBreakpoint) {
+        // This is a "tablet-sized" device based on its screen width
         bodyElement.classList.add('is-tablet');
+        console.log('- Tablet');
       } else {
-        // Desktop view - no special class needed, relies on base styles
+        // Desktop device (screenWidth > tabletMaxBreakpoint) - relies on base styles
+        console.log('- Desktop');
       }
-      // For desktop, no specific class is added to body; it relies on base styles.
     }
 
     // Initial check on load
