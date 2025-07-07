@@ -13,12 +13,21 @@ function doGet(e) {
     }
     const page = e.parameter.page;
     if (page === 'request') {
+        const scriptProperties = PropertiesService.getScriptProperties();
+        const mobileBreakpoint = scriptProperties.getProperty('MOBILE_BREAKPOINT') || '767';
+        const tabletMinBreakpoint = scriptProperties.getProperty('TABLET_MIN_BREAKPOINT') || '768';
+        const tabletMaxBreakpoint = scriptProperties.getProperty('TABLET_MAX_BREAKPOINT') || '1032';
+
         const template = HtmlService.createTemplateFromFile(MAGIC_LINK_INPUT);
+        template.breakpoints = {
+            mobile: mobileBreakpoint,
+            tabletMin: tabletMinBreakpoint,
+            tabletMax: tabletMaxBreakpoint
+        };
         template.service = service.service;
         template.serviceName = service.name
         const output = template.evaluate()
             .setTitle('Request Access')
-            .setSandboxMode(HtmlService.SandboxMode.IFRAME);
         return output;
     }
     const token = e.parameter.token;

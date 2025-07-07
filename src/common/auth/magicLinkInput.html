@@ -203,9 +203,10 @@
       const isPortrait = window.matchMedia('(orientation: portrait)').matches; // Robust orientation check
 
       // Your established breakpoints
-      const mobileBreakpoint = 767;
-      const tabletMinBreakpoint = 768;
-      const tabletMaxBreakpoint = 1032;
+      const breakpoints = JSON.parse(<?= JSON.stringify(breakpoints) ?>);
+      const mobileBreakpoint = parseInt(breakpoints.mobile);
+      const tabletMinBreakpoint = parseInt(breakpoints.tabletMin);
+      const tabletMaxBreakpoint = parseInt(breakpoints.tabletMax);
 
       console.log('Device Screen Width (window.screen.width):', screenWidth);
       console.log('Device Screen Height (window.screen.height):', screenHeight);
