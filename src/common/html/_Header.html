@@ -122,7 +122,8 @@
     html.is-tablet .container {
         width: 80%;
         /* Wider on tablet, still centered */
-       
+        max-width: 37.5rem;
+        /* 600px / 16px = 37.5rem (This max-width will now scale based on the 17px base) */
         padding: 1.5625rem;
         /* 25px / 17px = ~1.47rem */
     }
@@ -199,6 +200,7 @@
     html.is-mobile-landscape .container {
         width: 90%;
         /* Wider than portrait, narrower than tablet */
+        max-width: 30rem;
         /* Custom max-width for mobile landscape */
         margin: 0 auto;
         padding: 1rem;
