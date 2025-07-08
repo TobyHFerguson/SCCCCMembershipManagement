@@ -8,13 +8,13 @@
   }
 
   .container {
-    width: fit-content
+    /* width: fit-content; */ /* This can expand the container beyond the viewport */
   }
 
   #data-table {
-    width: auto;
-    /* Set the table width to auto */
+    width: 100%; /* Make the table always take 100% of its parent container */
     border-collapse: collapse;
+    /* Remove width: auto; */
   }
 
   #data-table th,
@@ -22,8 +22,7 @@
     border: 1px solid #ddd;
     padding: 8px;
     text-align: left;
-    width: auto;
-    /* Let the content determine the width of cells */
+    /* width: auto; */ /* Let DataTables and 100% width manage this */
   }
 
   #data-table th {
@@ -31,63 +30,12 @@
   }
 
   html.is-tablet .container {
-    max-width: none;
+    max-width: none; /* Keep this if desired, but 80% with a responsive max-width is usually better */
   }
 
   html.is-mobile-landscape .container {
-    max-width: none;
+    max-width: none; /* If you remove this, the 30rem max-width from the base stylesheet will apply */
+    /* Add overflow-x to handle cases where DataTables responsive still can't fit content */
+    overflow-x: auto;
   }
 </style>
-
-<h2>SCCCC Directory</h2>
-<table id="data-table" class="display">
-  <thead>
-    <tr>
-      <th>First</th>
-      <th>Last</th>
-      <th>Email</th>
-      <th>Phone</th>
-    </tr>
-  </thead>
-  <tbody>
-  </tbody>
-</table>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script type="text/javascript"
-  src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
-<script>
-  $(document).ready(function () {
-    // Check if jQuery is loaded
-    if (typeof jQuery === 'undefined') {
-      console.error('jQuery is not loaded!');
-      return; // Don't proceed with DataTables initialization
-    }
-    google.script.run.withSuccessHandler(function (data) {
-      var tableData = JSON.parse(data);
-      var tableBody = $('#data-table tbody');
-
-      tableData.forEach(function (row) {
-        var newRow = $('<tr>');
-        newRow.append('<td>' + row.First + '</td>');
-        newRow.append('<td>' + row.Last + '</td>');
-        var emailLink = row.email ? '<a href="mailto:' + row.email + '">' + row.email + '</a>' : '';
-        newRow.append('<td>' + emailLink + '</td>');
-        var phoneLink = row.phone ? '<a href="tel:' + row.phone + '">' + row.phone + '</a>' : '';
-        newRow.append('<td>' + phoneLink + '</td>');
-        tableBody.append(newRow);
-      });
-
-      // Initialize DataTables only if jQuery is available
-      if ($.fn.DataTable) {
-        $('#data-table').DataTable({
-          "order": [[1, 'asc']],
-          "responsive": true
-        });
-      } else {
-        console.error('DataTables library not loaded!');
-      }
-    }).getDirectoryEntries();
-  });
-</script>
