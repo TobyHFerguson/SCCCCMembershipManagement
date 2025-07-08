@@ -12,25 +12,24 @@ function doGet(e) {
         return createTextResponse("We're sorry - an internal error occurred. We've notified the developers and theres nothing you can do but wait until they fix it")
     }
     const page = e.parameter.page;
-    if (page === 'request') {
-        const scriptProperties = PropertiesService.getScriptProperties();
-        const mobileBreakpoint = scriptProperties.getProperty('MOBILE_BREAKPOINT') || '767';
-        const tabletMinBreakpoint = scriptProperties.getProperty('TABLET_MIN_BREAKPOINT') || '768';
-        const tabletMaxBreakpoint = scriptProperties.getProperty('TABLET_MAX_BREAKPOINT') || '1032';
+    const scriptProperties = PropertiesService.getScriptProperties();
+    const mobileBreakpoint = scriptProperties.getProperty('MOBILE_BREAKPOINT') || '767';
+    const tabletMinBreakpoint = scriptProperties.getProperty('TABLET_MIN_BREAKPOINT') || '768';
+    const tabletMaxBreakpoint = scriptProperties.getProperty('TABLET_MAX_BREAKPOINT') || '1032';
+    const template = HtmlService.createTemplateFromFile(_LAYOUT_FILE);
+    template.breakpoints = {
+        mobile: mobileBreakpoint,
+        tabletMin: tabletMinBreakpoint,
+        tabletMax: tabletMaxBreakpoint
+    };
+    template.include = _includeHtml; 
 
-        const contentFileName = MAGIC_LINK_INPUT
-        const template = HtmlService.createTemplateFromFile(_LAYOUT_FILE);
-        template.breakpoints = {
-            mobile: mobileBreakpoint,
-            tabletMin: tabletMinBreakpoint,
-            tabletMax: tabletMaxBreakpoint
-        };
-        template.contentFileName = contentFileName;
-        template.include = _includeHtml; 
+    if (page === 'request') {
+        template.contentFileName = MAGIC_LINK_INPUT;
         template.service = service.service;
         template.serviceName = service.name
         const output = template.evaluate()
-            .setTitle(`Request Access - ${contentFileName.replace('Content', '')}`)
+            .setTitle(`Request Access - ${MAGIC_LINK_INPUT}`)
         return output;
     }
     const token = e.parameter.token;
@@ -43,7 +42,7 @@ function doGet(e) {
     }
     Common.Auth.TokenStorage.markTokenAsUsed(token);
     
-    return service.WebApp.doGet(e, tokenData.Email);
+    return service.WebApp.doGet(e, tokenData.Email, template);
 }
 function doPost(e) {
     return createTextResponse('doPost() unimplemented');
