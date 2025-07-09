@@ -112,6 +112,7 @@
       cursor: pointer;
       font-size: 1rem; /* Base font size */
       transition: background-color 0.3s ease;
+      text-align: center; /* Added to explicitly center button text */
     }
 
     .button-container button:hover:not(:disabled) {
@@ -449,16 +450,11 @@
 
     google.script.run
       .withSuccessHandler(function (response) {
-        showMessage(response.message, response.type); // Use response.message and response.type
-        if (response.success) {
-          verificationSection.style.display = "flex"; // Show verification section
-          emailSection.style.display = "none"; // Hide email section
-          verifyButton.disabled = false;
-          resetButtonVerification.style.display = 'inline-block'; // Show reset in verification
-        } else {
-          sendCodeButton.disabled = false; // Re-enable send button on error
-          resetButtonEmail.style.display = 'inline-block'; // Show email section reset button
-        }
+        showMessage(response, 'success'); // Use response.message and response.type
+        verificationSection.style.display = "flex"; // Show verification section
+        emailSection.style.display = "none"; // Hide email section
+        verifyButton.disabled = false;
+        resetButtonVerification.style.display = 'inline-block'; // Show reset in verification
       })
       .withFailureHandler(function (error) {
         showMessage("Server error: " + error.message, "error");
@@ -468,18 +464,15 @@
       .handleSendVerificationCode(originalEmail, newEmail);
   });
 
-  // Listener for verification code input to enable/disable verify button
-  verificationCodeInput.addEventListener('input', () => {
-    verifyButton.disabled = verificationCodeInput.value.trim().length !== 6;
-  });
+ 
 
 
   verifyButton.addEventListener("click", function () {
     const newEmail = newEmailInput.value.trim();
     const verificationCode = verificationCodeInput.value.trim();
 
-    if (verificationCode.length !== 6) { // Ensure correct length before sending
-      showMessage("Please enter a 6-digit verification code.", "error");
+    if (!verificationCode) {
+      showMessage("Please enter the verification code.", "error");
       return;
     }
 
@@ -487,24 +480,19 @@
     showMessage("Verifying...", "info");
 
     google.script.run
-      .withSuccessHandler(function (response) {
-        if (response.success) {
-            showMessage("Email verified successfully!", "success");
-            emailSection.style.display = "none";
-            verificationSection.style.display = "none";
-            groupListSection.style.display = "block";
-            groupMembershipData = response.memberGroups; // Use response.memberGroups
-            populateGroupListTable(groupMembershipData);
-            updateGroupsButton.disabled = false;
-            resetButtonVerification.style.display = 'none'; // Hide reset from verification
-            resetButtonGroups.style.display = 'flex'; // Show reset in group list (using flex to align with update button)
-        } else {
-            showMessage("Verification failed: " + response.error, "error");
-            verifyButton.disabled = false; // Re-enable verify button on error
-        }
+      .withSuccessHandler(function (groupData) {
+        showMessage("Email verified successfully!", "success");
+        emailSection.style.display = "none";
+        verificationSection.style.display = "none";
+        groupListSection.style.display = "block";
+        groupMembershipData = groupData;
+        populateGroupListTable(groupData);
+        updateGroupsButton.disabled = false;
+        resetButtonVerification.style.display = 'none'; // Hide reset from verification
+        resetButtonGroups.style.display = 'flex'; // Show reset in group list (using flex to align with update button)
       })
       .withFailureHandler(function (error) {
-        showMessage("Server error: " + error.message, "error");
+        showMessage("Verification failed: " + error, "error");
         verifyButton.disabled = false;
       })
       .handleVerifyAndGetGroups(originalEmail, newEmail, verificationCode);
@@ -520,10 +508,10 @@
         const newEmailCell = row.insertCell();
         const statusCell = row.insertCell();
 
-        groupEmailCell.textContent = groupInfo.email; // Assuming groupInfo has an 'email' property for group email
-        oldEmailCell.textContent = originalEmail; // Always the original email
-        newEmailCell.textContent = newEmailInput.value; // Always the new email
-        statusCell.textContent = "Pending";
+        groupEmailCell.textContent = groupInfo.groupEmail;
+        oldEmailCell.textContent = groupInfo.oldEmail;
+        newEmailCell.textContent = groupInfo.newEmail;
+        statusCell.textContent = groupInfo.status || "Pending";
         statusCell.className = "status-pending";
       });
     } else {
@@ -553,7 +541,7 @@
         updateGroupsButton.disabled = false; // Allow retry if needed
       })
       .withFailureHandler(function (error) {
-        showUpdateMessage("Error updating group memberships: " + error.message, "error");
+        showUpdateMessage("Error updating group memberships: " + error, "error");
         updateGroupsButton.disabled = false;
       })
       .handleChangeEmailInGroupsUI(originalEmail, newEmail, groupMembershipData);
