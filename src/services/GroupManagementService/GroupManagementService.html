@@ -1,20 +1,25 @@
 <style>
-    #subscriptionForm {
-        background-color: #fff;
-        padding: 20px;
-        border-radius: 8px;
+    .container {
+        background-color: #fff; /* White background for the container */
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        width: 100%;
-        /* Adjust width as needed */
-        max-width: 600px;
-        /* Set a maximum width if desired */
+        /* Padding and border-radius are handled by _Header.html .container */
+    }
+
+   #subscriptionForm {
+        /* These styles will make the form centered horizontally */
+        margin: 0 auto; /* THIS IS THE KEY FOR CENTERING IT WITHIN THE CONTAINER */
+        padding: 20px; /* Keep padding inside the form */
+        border-radius: 8px; /* Keep form's border-radius if you want it distinct */
+        box-shadow: none; /* Remove form's shadow if container has one */
+
+        width: 100%; /* Allows it to expand up to its max-width */
+        max-width: 600px; /* Caps the width of the form */
+
+        /* Grid properties for internal layout */
         display: grid;
-        grid-template-columns: auto 1fr;
-        /* Create two equal columns */
+        grid-template-columns: auto 1fr; /* Default side-by-side */
         gap: 10px;
-        /* Spacing between rows and columns */
         align-items: center;
-        /* Vertically align items in each row */
     }
 
     .subscription-row {
