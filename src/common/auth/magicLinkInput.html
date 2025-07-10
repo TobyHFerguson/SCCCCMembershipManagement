@@ -1,50 +1,79 @@
-<h2>Request SCCCC
-  <?= serviceName ?> Access Link
+<style>
+  .message {
+    text-align: left
+  }
+</style>
+<h2>SCCCC
+  <?= serviceName ?>
 </h2>
-<input type="email" id="email" placeholder="Enter your email address" required autocomplete="email"
-  oninput="validateEmail()">
-<button id="sendButton" onclick="requestLink()" disabled>Send Access Link</button>
-<div id="message" class="message"></div>
-</div>
+<h2>Magic Link Request</h2>
 
+<form id="magicLinkForm"> <input type="email" id="email" placeholder="Enter your email address" required
+    autocomplete="email" oninput="validateEmail()">
+  <button type="submit" id="sendButton" disabled>Send Magic Link</button>
+  <div id="message" class="message"></div>
+</form>
 <script>
   console.log('Service value from template:', '<?= service ?>');
 
+  // Get references to elements
+  const emailInput = document.getElementById('email');
+  const sendButton = document.getElementById('sendButton');
+  const messageDiv = document.getElementById('message');
+  const magicLinkForm = document.getElementById('magicLinkForm'); // Get form reference
+
+
   function validateEmail() {
-    var emailInput = document.getElementById('email');
-    var sendButton = document.getElementById('sendButton');
     sendButton.disabled = !emailInput.checkValidity();
   }
 
+  function displayMessage(message, isError = false) {
+    messageDiv.style.display = 'block';
+    messageDiv.className = 'message ' + (isError ? 'error' : 'success');
+    messageDiv.innerHTML = message;
+  }
+
+  function hideMessage() {
+    console.log('Hiding message.'); // DIAGNOSTIC LOG
+    messageDiv.style.display = 'none';
+    console.log('After hideMessage, messageDiv display should be:', messageDiv.style.display); // DIAGNOSTIC LOG
+    messageDiv.innerHTML = '';
+    messageDiv.className = 'message';
+  }
+
   function requestLink() {
-    var email = document.getElementById('email').value;
-    var messageDiv = document.getElementById('message');
-    messageDiv.className = 'message'; // Reset classes
-    messageDiv.textContent = 'Processing...';
+    var email = emailInput.value;
+    displayMessage('Processing...'); // Display "Processing..." immediately
 
     // Assuming google.script.run is defined elsewhere (e.g., Google Apps Script)
     if (typeof google !== 'undefined' && google.script && google.script.run) {
       google.script.run
         .withSuccessHandler(function (response) {
-          messageDiv.className = 'message success'; // Add success class
-          messageDiv.textContent = 'Processed - if the email you entered is that of an active member then we have sent an access link to that address. Go check and follow the link.';
-          document.getElementById('email').value = ''; // Clear the input
+          if (response && response.success) {
+            displayMessage("<p>Processed - if the email you entered is that of an active member then we have sent a Magic Link to that address.</p><p>Check your Spam or Junk folder if you don't receive an email in a couple of minutes.</p>", false);
+          } else {
+            const errorMessage = response && response.error ? response.error : 'An unknown error occurred during link sending.';
+            displayMessage('Error: ' + errorMessage, true);
+          }
         })
         .withFailureHandler(function (error) {
-          messageDiv.className = 'message error'; // Add error message
-          messageDiv.textContent = 'Error: ' + error.message; // Display error message
+          displayMessage('Error: ' + error.message, true);
         })
         .sendMagicLink(email, '<?= service ?>');
     } else {
-      messageDiv.className = 'message error';
-      messageDiv.textContent = 'Error: google.script.run is not defined. (Are you running this in a Google Apps Script context?)';
+      displayMessage('Error: google.script.run is not defined. (Are you running this in a Google Apps Script context?)', true);
       console.error("google.script.run is not defined. This script expects to be run in a Google Apps Script environment.");
     }
   }
 
-  // --- Responsive JavaScript (REVISED TO APPLY CLASSES TO HTML ELEMENT) ---
+  // --- NEW JAVASCRIPT FOR FORM SUBMISSION ---
+  magicLinkForm.addEventListener('submit', function (event) {
+    event.preventDefault(); // Prevent default form submission (page reload)
+    hideMessage();
+    requestLink();
+  });
 
+  // --- Initial validation check to set button state on page load ---
+  document.addEventListener('DOMContentLoaded', validateEmail);
 
-  // Initial validation check to set button state on page load
-  validateEmail();
 </script>

@@ -8,11 +8,11 @@ Common.Auth.Utils = {
             Common.Auth.TokenStorage.storeToken(email, token);
             const accessLink = ScriptApp.getService().getUrl() + '?token=' + token + '&service=' + service;
             this._sendEmail(email, accessLink, service);
-            return { success: true };
         } else {
             console.log('email: ' + email +' isnt valid - no token being generated nor sent')
-            return { success: false };
         }
+        // Whatever happens we act as if all is good!
+        return { success: true };
     },
 
     
