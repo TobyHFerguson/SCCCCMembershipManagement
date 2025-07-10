@@ -1,4 +1,6 @@
-<h2>SCCCC <?= serviceName ?></h2>
+<h2>SCCCC
+  <?= serviceName ?>
+</h2>
 <h2>Magic Link Request</h2>
 
 <input type="email" id="email" placeholder="Enter your email address" required autocomplete="email"
@@ -14,30 +16,34 @@
     var emailInput = document.getElementById('email');
     var sendButton = document.getElementById('sendButton');
     sendButton.disabled = !emailInput.checkValidity();
+    var messageDiv = document.getElementById('message');
+    messageDiv.style.display = 'none'
+  }
+
+  function displayMessage(message, isError = false) {
+    console.log('Displaying message:', message, 'Is error:', isError);
+    var messageDiv = document.getElementById('message');
+    messageDiv.style.display = 'block';
+    messageDiv.className = 'message ' + (isError ? 'error' : 'success');
+    messageDiv.innerHTML = message;
   }
 
   function requestLink() {
     var email = document.getElementById('email').value;
-    var messageDiv = document.getElementById('message');
-    messageDiv.className = 'message'; // Reset classes
-    messageDiv.textContent = 'Processing...';
+    displayMessage('Processing...');
 
     // Assuming google.script.run is defined elsewhere (e.g., Google Apps Script)
     if (typeof google !== 'undefined' && google.script && google.script.run) {
       google.script.run
         .withSuccessHandler(function (response) {
-          messageDiv.className = 'message success'; // Add success class
-          messageDiv.textContent = 'Processed - if the email you entered is that of an active member then we have sent an access link to that address. Go check and follow the link.';
-          document.getElementById('email').value = ''; // Clear the input
+          displayMessage("<p>Processed - if the email you entered is that of an active member then we have sent a Magic Link to that address.</p><p>Check your Spam or Junk folder if you don't receive an email in a couple of minutes.</p>")
         })
         .withFailureHandler(function (error) {
-          messageDiv.className = 'message error'; // Add error message
-          messageDiv.textContent = 'Error: ' + error.message; // Display error message
+          displayMessage('Error: ' + error.message, true); // Display error message
         })
         .sendMagicLink(email, '<?= service ?>');
     } else {
-      messageDiv.className = 'message error';
-      messageDiv.textContent = 'Error: google.script.run is not defined. (Are you running this in a Google Apps Script context?)';
+      displayMessage('Error: google.script.run is not defined. (Are you running this in a Google Apps Script context?)', true);
       console.error("google.script.run is not defined. This script expects to be run in a Google Apps Script environment.");
     }
   }
