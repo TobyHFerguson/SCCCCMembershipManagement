@@ -1,7 +1,7 @@
 ProfileManagementService.WebApp = {
-    doGet: (e, userEmail) => {
+    doGet: (e, userEmail, template) => {
         // We only get here when the previous token (and therefore email) were valid.
-       const template = HtmlService.createTemplateFromFile("services/ProfileManagementService/ProfileManagementForm")
+        template.contentFileName = "services/ProfileManagementService/ProfileManagementForm"
         const profile = Common.Data.Access.getMember(userEmail);
         if (!profile) {
             throw new Error(`Profile not found for email: ${userEmail}`);

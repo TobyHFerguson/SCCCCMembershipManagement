@@ -1,148 +1,119 @@
-<!DOCTYPE html>
-<html>
+<style>
+    #subscriptionForm {
+        /* These styles will make the form centered horizontally */
+        margin: 0 auto; /* THIS IS THE KEY FOR CENTERING IT WITHIN THE CONTAINER */
+        padding: 20px; /* Keep padding inside the form */
+        border-radius: 8px; /* Keep form's border-radius if you want it distinct */
+        box-shadow: none; /* Remove form's shadow if container has one */
 
-<head>
-    <title>Manage Subscriptions</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            /* Center the entire form */
-            align-items: center;
-            /* Align form items to the top */
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            background-color: #f4f4f4;
-        }
+        width: 100%; /* Allows it to expand up to its max-width */
+        max-width: 600px; /* Caps the width of the form */
 
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-            width: 80%;
-            max-width: 600px;
-            /* Ensure heading spans the full width */
-        }
+        /* Grid properties for internal layout */
+        display: grid;
+        grid-template-columns: auto 1fr; /* Default side-by-side */
+        gap: 10px;
+        align-items: center;
+    }
 
-        #subscriptionForm {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            width: 80%;
-            /* Adjust width as needed */
-            max-width: 600px;
-            /* Set a maximum width if desired */
-            display: grid;
-            grid-template-columns: auto 1fr;
-            /* Create two equal columns */
-            gap: 10px;
-            /* Spacing between rows and columns */
-            align-items: center;
-            /* Vertically align items in each row */
-        }
+    .subscription-row {
+        display: contents;
+        /* Make the row behave like its children for grid layout */
+        border-bottom: 1px solid #eee;
+        /* Keep the visual separator */
+        padding-bottom: 8px;
+        margin-bottom: 8px;
+    }
 
-        .subscription-row {
-            display: contents;
-            /* Make the row behave like its children for grid layout */
-            border-bottom: 1px solid #eee;
-            /* Keep the visual separator */
-            padding-bottom: 8px;
-            margin-bottom: 8px;
-        }
+    .subscription-row:last-child {
+        border-bottom: none;
+        /* Remove border from the last row */
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
 
-        .subscription-row:last-child {
-            border-bottom: none;
-            /* Remove border from the last row */
-            margin-bottom: 0;
-            padding-bottom: 0;
-        }
+    .group-name {
+        text-align: left;
+        padding-right: 10px;
+        /* Add some spacing between name and dropdown */
+    }
 
-        .group-name {
-            text-align: left;
-            padding-right: 10px;
-            /* Add some spacing between name and dropdown */
-        }
+    .delivery-select-container {
+        position: relative;
+        /* For potential absolute positioning of tooltips */
+        text-align: left;
+    }
 
-        .delivery-select-container {
-            position: relative;
-            /* For potential absolute positioning of tooltips */
-            text-align: left;
-        }
+    .delivery-select {
+        width: 100%;
+        /* Make the dropdown take the full width of its container */
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+        /* Ensure padding and border are inside the width */
+    }
 
-        .delivery-select {
-            width: 100%;
-            /* Make the dropdown take the full width of its container */
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-            /* Ensure padding and border are inside the width */
-        }
+    .custom-tooltip {
+        position: absolute;
+        /* Float above other content */
+        background-color: rgba(0, 0, 0, 0.8);
+        /* Dark grey with some transparency */
+        color: #f9f9f9;
+        /* Light text color */
+        padding: 5px 8px;
+        /* Small padding */
+        border-radius: 3px;
+        font-size: 0.8em;
+        /* Small text size */
+        z-index: 10;
+        /* Ensure it's above other elements */
+        display: none;
+        /* Initially hidden */
+        white-space: nowrap;
+        top: 100%;
+        /* Position below the select element initially */
+        left: 0;
+        transform: translateY(5px);
+        /* Nudge it down slightly */
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+        /* Subtle shadow */
+    }
 
-        .custom-tooltip {
-            position: absolute;
-            /* Float above other content */
-            background-color: rgba(0, 0, 0, 0.8);
-            /* Dark grey with some transparency */
-            color: #f9f9f9;
-            /* Light text color */
-            padding: 5px 8px;
-            /* Small padding */
-            border-radius: 3px;
-            font-size: 0.8em;
-            /* Small text size */
-            z-index: 10;
-            /* Ensure it's above other elements */
-            display: none;
-            /* Initially hidden */
-            white-space: nowrap;
-            top: 100%;
-            /* Position below the select element initially */
-            left: 0;
-            transform: translateY(5px);
-            /* Nudge it down slightly */
-            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
-            /* Subtle shadow */
-        }
+    .buttons-container {
+        grid-column: 1 / 3;
+        /* Span across both columns */
+        margin-top: 20px;
+        text-align: center;
+    }
 
-        .buttons-container {
-            grid-column: 1 / 3;
-            /* Span across both columns */
-            margin-top: 20px;
-            text-align: center;
-        }
+    button {
+        padding: 8px 15px;
+        cursor: pointer;
+        border: none;
+        border-radius: 4px;
+        background-color: #007bff;
+        color: white;
+        font-size: 1rem;
+        margin: 5px 5px;
+    }
 
-        button {
-            padding: 8px 15px;
-            cursor: pointer;
-            border: none;
-            border-radius: 4px;
-            background-color: #007bff;
-            color: white;
-            font-size: 1rem;
-            margin: 0 5px;
-        }
+    button:hover {
+        background-color: #0056b3;
+    }
 
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-    </style>
+    button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+</style>
 </head>
 
-<body>
-    <h1>Manage Your Subscriptions</h1>
+<h2>Manage Your SCCCC Group Subscriptions</h2>
 
-    <form id="subscriptionForm">
-        <input type="hidden" id="userToken" name="userToken" value="<?!= userToken ?>">
-        <?!= userGroupSubscription.map(subscription => `
+<form id="subscriptionForm">
+    <input type="hidden" id="userToken" name="userToken" value="<?!= userToken ?>">
+    <?!= userGroupSubscription.map(subscription => `
         <div class="subscription-row" data-group-name="${subscription.groupName}" data-group-email="${subscription.groupEmail}" data-original-delivery-value="${subscription.deliveryValue}">
             <span class="group-name">${subscription.groupName}</span>
             <div style="position: relative;">
@@ -156,135 +127,132 @@
         </div>
         `).join('') ?>
 
-        <div class="buttons-container">
-            <button type="button" id="resetButton">Reset</button>
-            <button type="button" id="applyButton" disabled>Apply Changes</button>
-        </div>
-    </form>
+    <div class="buttons-container">
+        <button type="button" id="resetButton">Reset</button>
+        <button type="button" id="applyButton" disabled>Apply Changes</button>
+    </div>
+</form>
 
-    <script>
-        const subscriptionForm = document.getElementById('subscriptionForm');
-        const deliverySelects = document.querySelectorAll('.delivery-select');
-        const tooltipDelay = 50;
-        const resetButton = document.getElementById('resetButton');
-        const applyButton = document.getElementById('applyButton');
-        const userTokenInput = document.getElementById('userToken');
+<script>
+    const subscriptionForm = document.getElementById('subscriptionForm');
+    const deliverySelects = document.querySelectorAll('.delivery-select');
+    const tooltipDelay = 50;
+    const resetButton = document.getElementById('resetButton');
+    const applyButton = document.getElementById('applyButton');
+    const userTokenInput = document.getElementById('userToken');
 
-        let changesMade = false;
-        const originalSubscriptions = {}; // Will store { groupEmail: { name: 'Human Name', value: 'ACTUAL_VALUE' } }
+    let changesMade = false;
+    const originalSubscriptions = {}; // Will store { groupEmail: { name: 'Human Name', value: 'ACTUAL_VALUE' } }
 
-        // Store the initial state of the subscriptions, using group email as key
+    // Store the initial state of the subscriptions, using group email as key
+    deliverySelects.forEach(select => {
+        const row = select.closest('.subscription-row');
+        const groupEmail = row.dataset.groupEmail;
+        const originalDeliveryValue = row.dataset.originalDeliveryValue;
+        const selectedOption = select.options[select.selectedIndex];
+        const originalDeliveryName = selectedOption.textContent;
+        originalSubscriptions[groupEmail] = { name: originalDeliveryName, value: originalDeliveryValue };
+    });
+
+    function checkChanges() {
+        changesMade = false;
         deliverySelects.forEach(select => {
-            const row = select.closest('.subscription-row');
-            const groupEmail = row.dataset.groupEmail;
-            const originalDeliveryValue = row.dataset.originalDeliveryValue;
-            const selectedOption = select.options[select.selectedIndex];
-            const originalDeliveryName = selectedOption.textContent;
-            originalSubscriptions[groupEmail] = { name: originalDeliveryName, value: originalDeliveryValue };
-        });
-
-        function checkChanges() {
-            changesMade = false;
-            deliverySelects.forEach(select => {
-                const groupEmail = select.name;
-                const selectedValue = select.value;
-                if (originalSubscriptions[groupEmail] && originalSubscriptions[groupEmail].value !== selectedValue) {
-                    changesMade = true;
-                }
-            });
-            applyButton.disabled = !changesMade;
-        }
-
-        deliverySelects.forEach(select => {
-            select.addEventListener('change', checkChanges);
-        });
-
-        deliverySelects.forEach(select => {
-            let tooltipTimeout;
-            const tooltipId = `tooltip-${select.name}`;
-            const tooltipElement = document.getElementById(tooltipId);
-
-            select.addEventListener('mouseenter', () => {
-                const selectedOption = select.options[select.selectedIndex];
-                if (selectedOption && selectedOption.dataset.tooltip) {
-                    tooltipTimeout = setTimeout(() => {
-                        tooltipElement.textContent = selectedOption.dataset.tooltip;
-                        tooltipElement.style.display = 'block';
-                    }, tooltipDelay);
-                }
-            });
-
-            select.addEventListener('mouseleave', () => {
-                clearTimeout(tooltipTimeout);
-                tooltipElement.style.display = 'none';
-            });
-
-            // Optional: You might want to hide the tooltip when the select loses focus (e.g., after a click)
-            select.addEventListener('blur', () => {
-                clearTimeout(tooltipTimeout);
-                tooltipElement.style.display = 'none';
-            });
-        });
-        resetButton.addEventListener('click', function () {
-            deliverySelects.forEach(select => {
-                const groupEmail = select.name;
-                if (originalSubscriptions[groupEmail]) {
-                    select.value = originalSubscriptions[groupEmail].value;
-                }
-            });
-            changesMade = false;
-            applyButton.disabled = true;
-        });
-
-        applyButton.addEventListener('click', function () {
-            if (changesMade) {
-                applyButton.disabled = true;
-                console.log('Changes made, preparing to update subscriptions...');
-                const updatedSubscriptions = [];
-                deliverySelects.forEach(select => {
-                    const groupEmail = select.name;
-                    const newDeliveryValue = select.value;
-                    if (originalSubscriptions[groupEmail] && originalSubscriptions[groupEmail].value !== newDeliveryValue) {
-                        updatedSubscriptions.push({
-                            groupEmail: groupEmail,
-                            deliveryValue: newDeliveryValue // Send the actual value
-                        });
-                    }
-                });
-
-                const currentUserToken = userTokenInput.value;
-                console.log('Updated subscriptions:', JSON.stringify(updatedSubscriptions));
-                google.script.run.withSuccessHandler(function (response) {
-                    if (response && response.success) {
-                        alert('Subscriptions updated successfully!');
-                        // Update originalSubscriptions with the new values
-                        updatedSubscriptions.forEach(updatedSub => {
-                            console.log('updatedSub:', updatedSub);
-                            const selectElement = document.querySelector(`select[name="${updatedSub.groupEmail}"]`);
-                            console.log('selectElement:', selectElement);
-                            if (selectElement) {
-                                const selectedOption = selectElement.options[selectElement.selectedIndex];
-                                console.log('selectedOption:', selectedOption);
-                                const newDeliveryName = selectedOption.textContent;
-                                console.log('newDeliveryName:', newDeliveryName);
-                                originalSubscriptions[updatedSub.groupEmail] = { name: newDeliveryName, value: updatedSub.deliveryValue };
-                                console.log('Updated originalSubscriptions:', originalSubscriptions);
-                            }
-                        });
-                        changesMade = false;
-                    } else {
-                        changesMade = true; // Keep the button enabled if there was an error
-                        applyButton.disabled = false;
-                        alert(response ? response.message : 'Error updating subscriptions. Please try again.');
-                    }
-                }).withFailureHandler(function (error) {
-                    console.error('Error updating subscriptions:', error);
-                    alert('Error updating subscriptions. Please try again.');
-                    applyButton.disabled = false; // Re-enable the button on error
-                }).updateUserSubscriptions(updatedSubscriptions, currentUserToken);
+            const groupEmail = select.name;
+            const selectedValue = select.value;
+            if (originalSubscriptions[groupEmail] && originalSubscriptions[groupEmail].value !== selectedValue) {
+                changesMade = true;
             }
         });
-    </script>
-</body>
+        applyButton.disabled = !changesMade;
+    }
 
-</html>
+    deliverySelects.forEach(select => {
+        select.addEventListener('change', checkChanges);
+    });
+
+    deliverySelects.forEach(select => {
+        let tooltipTimeout;
+        const tooltipId = `tooltip-${select.name}`;
+        const tooltipElement = document.getElementById(tooltipId);
+
+        select.addEventListener('mouseenter', () => {
+            const selectedOption = select.options[select.selectedIndex];
+            if (selectedOption && selectedOption.dataset.tooltip) {
+                tooltipTimeout = setTimeout(() => {
+                    tooltipElement.textContent = selectedOption.dataset.tooltip;
+                    tooltipElement.style.display = 'block';
+                }, tooltipDelay);
+            }
+        });
+
+        select.addEventListener('mouseleave', () => {
+            clearTimeout(tooltipTimeout);
+            tooltipElement.style.display = 'none';
+        });
+
+        // Optional: You might want to hide the tooltip when the select loses focus (e.g., after a click)
+        select.addEventListener('blur', () => {
+            clearTimeout(tooltipTimeout);
+            tooltipElement.style.display = 'none';
+        });
+    });
+    resetButton.addEventListener('click', function () {
+        deliverySelects.forEach(select => {
+            const groupEmail = select.name;
+            if (originalSubscriptions[groupEmail]) {
+                select.value = originalSubscriptions[groupEmail].value;
+            }
+        });
+        changesMade = false;
+        applyButton.disabled = true;
+    });
+
+    applyButton.addEventListener('click', function () {
+        if (changesMade) {
+            applyButton.disabled = true;
+            console.log('Changes made, preparing to update subscriptions...');
+            const updatedSubscriptions = [];
+            deliverySelects.forEach(select => {
+                const groupEmail = select.name;
+                const newDeliveryValue = select.value;
+                if (originalSubscriptions[groupEmail] && originalSubscriptions[groupEmail].value !== newDeliveryValue) {
+                    updatedSubscriptions.push({
+                        groupEmail: groupEmail,
+                        deliveryValue: newDeliveryValue // Send the actual value
+                    });
+                }
+            });
+
+            const currentUserToken = userTokenInput.value;
+            console.log('Updated subscriptions:', JSON.stringify(updatedSubscriptions));
+            google.script.run.withSuccessHandler(function (response) {
+                if (response && response.success) {
+                    alert('Subscriptions updated successfully!');
+                    // Update originalSubscriptions with the new values
+                    updatedSubscriptions.forEach(updatedSub => {
+                        console.log('updatedSub:', updatedSub);
+                        const selectElement = document.querySelector(`select[name="${updatedSub.groupEmail}"]`);
+                        console.log('selectElement:', selectElement);
+                        if (selectElement) {
+                            const selectedOption = selectElement.options[selectElement.selectedIndex];
+                            console.log('selectedOption:', selectedOption);
+                            const newDeliveryName = selectedOption.textContent;
+                            console.log('newDeliveryName:', newDeliveryName);
+                            originalSubscriptions[updatedSub.groupEmail] = { name: newDeliveryName, value: updatedSub.deliveryValue };
+                            console.log('Updated originalSubscriptions:', originalSubscriptions);
+                        }
+                    });
+                    changesMade = false;
+                } else {
+                    changesMade = true; // Keep the button enabled if there was an error
+                    applyButton.disabled = false;
+                    alert(response ? response.message : 'Error updating subscriptions. Please try again.');
+                }
+            }).withFailureHandler(function (error) {
+                console.error('Error updating subscriptions:', error);
+                alert('Error updating subscriptions. Please try again.');
+                applyButton.disabled = false; // Re-enable the button on error
+            }).updateUserSubscriptions(updatedSubscriptions, currentUserToken);
+        }
+    });
+</script>
