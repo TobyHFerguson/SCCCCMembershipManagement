@@ -247,59 +247,62 @@
   <p>You can publish your full name (First and Last) in the club Directory, along with your phone and/or email.</p>
   <p>Changing your email requires additional security steps and so is implemented as a separate service.</p>
 
-  <div class="profile-row header-row">
-    <div></div>
-    <div></div>
-    <label>In Directory</label>
-  </div>
-
-  <div class="profile-row">
-    <label for="first">First Name:</label>
-    <input type="text" id="first" name="First" value="<?= profile.First ?>">
-    <div class="directory-checkbox-wrapper">
-      <span class="directory-label-mobile">In Directory</span>
-      <input type="checkbox" id="firstPublic" name="Directory Share Name" <?=profile['Directory Share Name'] ? 'checked'
-        : '' ?>>
+  <form id="profileForm">
+    <div class="profile-row header-row">
+      <div></div>
+      <div></div>
+      <label>In Directory</label>
     </div>
-  </div>
 
-  <div class="profile-row">
-    <label for="last">Last Name:</label>
-    <input type="text" id="last" name="Last" value="<?= profile.Last ?>">
-    <div class="directory-checkbox-wrapper">
-      <span class="directory-label-mobile">In Directory</span>
-      <input type="checkbox" id="lastPublic" name="Directory Share Name" <?=profile['Directory Share Name'] ? 'checked'
-        : '' ?>>
+    <div class="profile-row">
+      <label for="first">First Name:</label>
+      <input type="text" id="first" name="First" value="<?= profile.First ?>" required oninput="updateApplyButtonState()">
+      <div class="directory-checkbox-wrapper">
+        <span class="directory-label-mobile">In Directory</span>
+        <input type="checkbox" id="firstPublic" name="Directory Share Name" <?=profile['Directory Share Name']
+          ? 'checked' : '' ?>>
+      </div>
     </div>
-  </div>
 
-  <div class="profile-row">
-    <label for="phone">Phone:</label>
-    <input type="text" id="phone" name="Phone" value="<?= profile.Phone ?>">
-    <div class="directory-checkbox-wrapper">
-      <span class="directory-label-mobile">In Directory</span>
-      <input type="checkbox" id="phonePublic" name="Directory Share Phone" <?=profile['Directory Share Phone']
-        ? 'checked' : '' ?>>
+    <div class="profile-row">
+      <label for="last">Last Name:</label>
+      <input type="text" id="last" name="Last" value="<?= profile.Last ?>">
+      <div class="directory-checkbox-wrapper">
+        <span class="directory-label-mobile">In Directory</span>
+        <input type="checkbox" id="lastPublic" name="Directory Share Name" <?=profile['Directory Share Name']
+          ? 'checked' : '' ?>>
+      </div>
     </div>
-  </div>
 
-  <div class="profile-row">
-    <label>Email:</label>
-    <input type="text" id="email" name="Email" value="<?= profile.Email?>" disabled>
-    <div class="directory-checkbox-wrapper">
-      <span class="directory-label-mobile">In Directory</span>
-      <input type="checkbox" id="emailPublic" name="Directory Share Email" <?=profile['Directory Share Email']
-        ? 'checked' : '' ?>>
+    <div class="profile-row">
+      <label for="phone">Phone:</label>
+      <input type="text" id="phone" name="Phone" value="<?= profile.Phone ?>">
+      <div class="directory-checkbox-wrapper">
+        <span class="directory-label-mobile">In Directory</span>
+        <input type="checkbox" id="phonePublic" name="Directory Share Phone" <?=profile['Directory Share Phone']
+          ? 'checked' : '' ?>>
+      </div>
     </div>
-  </div>
 
-  <div class="button-container">
-    <button id="applyBtn" disabled>Apply</button>
-    <button id="resetBtn">Reset</button>
-  </div>
-  </div>
+    <div class="profile-row">
+      <label>Email:</label>
+      <input type="text" id="email" name="Email" value="<?= profile.Email?>" disabled>
+      <div class="directory-checkbox-wrapper">
+        <span class="directory-label-mobile">In Directory</span>
+        <input type="checkbox" id="emailPublic" name="Directory Share Email" <?=profile['Directory Share Email']
+          ? 'checked' : '' ?>>
+      </div>
+    </div>
 
+    <div class="button-container">
+      <button type="submit" id="applyBtn" disabled>Apply</button>
+      <button type="button" id="resetBtn">Reset</button>
+    </div>
+  </form>
   <script>
+    // NEW: Get reference to the form
+    const profileForm = document.getElementById('profileForm');
+
     const applyBtn = document.getElementById('applyBtn');
     const firstInput = document.getElementById('first');
     const lastInput = document.getElementById('last');
@@ -309,7 +312,18 @@
     const phonePublicCheckbox = document.getElementById('phonePublic');
     const emailPublicCheckbox = document.getElementById('emailPublic');
 
+    // Make sure originalProfileData is correctly defined from the server-side
+    // For local testing, you might define it as a mock object:
+    // const originalProfileData = {
+    //   First: "John",
+    //   Last: "Doe",
+    //   Phone: "123-456-7890",
+    //   'Directory Share Name': true,
+    //   'Directory Share Phone': false,
+    //   'Directory Share Email': true
+    // };
     const originalProfileData = JSON.parse('<?= JSON.stringify(profile) ?>');
+
     const originalData = {
       First: originalProfileData.First,
       Last: originalProfileData.Last,
@@ -321,13 +335,14 @@
 
     let updatedProfile = {
       ...originalData
-    };
+    }; // Initialize updatedProfile
 
     function changesMade() {
       const currentUpdatedProfile = {
         First: firstInput.value,
         Last: lastInput.value,
         Phone: phoneInput.value,
+        // Directory Share Name is true if either firstPublic or lastPublic is checked
         'Directory Share Name': firstPublicCheckbox.checked || lastPublicCheckbox.checked,
         'Directory Share Phone': phonePublicCheckbox.checked,
         'Directory Share Email': emailPublicCheckbox.checked
@@ -349,74 +364,88 @@
       emailPublicCheckbox.checked = false;
       phonePublicCheckbox.disabled = true;
       emailPublicCheckbox.disabled = true;
-      updateApplyButtonState();
+      updateApplyButtonState(); // Update button state after changing checkboxes
     }
 
     function updateCheckboxState() {
-      if (firstPublicCheckbox.checked) {
+      // If either name checkbox is checked, enable contact checkboxes.
+      // Otherwise, uncheck and disable them.
+      if (firstPublicCheckbox.checked || lastPublicCheckbox.checked) {
         enableContactCheckboxes();
       } else {
         uncheckAndDisableContactCheckboxes();
       }
-      updateApplyButtonState();
+      updateApplyButtonState(); // Always update button state after checkbox logic
     }
 
     function synchronizeNameCheckedStateChange(current = true) {
+      // Ensure both name checkboxes are synchronized
       firstPublicCheckbox.checked = current;
       lastPublicCheckbox.checked = current;
     }
 
+    // Event Listeners for Checkboxes
     phonePublicCheckbox.addEventListener('change', () => {
+      // If phone is checked, ensure name is also checked (as per logic)
       if (phonePublicCheckbox.checked) synchronizeNameCheckedStateChange(true);
       updateCheckboxState();
       updateUpdatedProfile();
       updateApplyButtonState();
     });
     emailPublicCheckbox.addEventListener('change', () => {
+      // If email is checked, ensure name is also checked (as per logic)
       if (emailPublicCheckbox.checked) synchronizeNameCheckedStateChange(true);
       updateCheckboxState();
       updateUpdatedProfile();
       updateApplyButtonState();
     });
     firstPublicCheckbox.addEventListener('change', () => {
+      // Synchronize both name checkboxes based on the one that changed
       synchronizeNameCheckedStateChange(firstPublicCheckbox.checked);
-      updateCheckboxState();
+      updateCheckboxState(); // This will enable/disable contact checkboxes
       updateUpdatedProfile();
       updateApplyButtonState();
     });
     lastPublicCheckbox.addEventListener('change', () => {
+      // Synchronize both name checkboxes based on the one that changed
       synchronizeNameCheckedStateChange(lastPublicCheckbox.checked);
-      updateCheckboxState();
+      updateCheckboxState(); // This will enable/disable contact checkboxes
       updateUpdatedProfile();
       updateApplyButtonState();
     });
 
-    document.getElementById('first').addEventListener('input', () => {
+    // Event Listeners for Text Inputs
+    firstInput.addEventListener('input', () => {
       updateUpdatedProfile();
       updateApplyButtonState();
     });
-    document.getElementById('last').addEventListener('input', () => {
+    lastInput.addEventListener('input', () => {
       updateUpdatedProfile();
       updateApplyButtonState();
     });
-    document.getElementById('phone').addEventListener('input', () => {
+    phoneInput.addEventListener('input', () => {
       updateUpdatedProfile();
       updateApplyButtonState();
     });
 
+    // Function to update the updatedProfile object (useful for debugging/state tracking)
     function updateUpdatedProfile() {
       updatedProfile = {
-        First: document.getElementById('first').value,
-        Last: document.getElementById('last').value,
-        Phone: document.getElementById('phone').value,
+        First: firstInput.value,
+        Last: lastInput.value,
+        Phone: phoneInput.value,
         'Directory Share Name': firstPublicCheckbox.checked || lastPublicCheckbox.checked,
         'Directory Share Phone': phonePublicCheckbox.checked,
         'Directory Share Email': emailPublicCheckbox.checked
       };
     }
 
-    document.getElementById('applyBtn').addEventListener('click', function () {
-      applyBtn.disabled = true;
+    // --- MODIFIED: Use form's submit event listener ---
+    profileForm.addEventListener('submit', function (event) {
+      event.preventDefault(); // Crucial: Prevent default browser page reload
+
+      applyBtn.disabled = true; // Disable button to prevent double-submission
+
       const currentUpdatedProfile = {
         First: firstInput.value,
         Last: lastInput.value,
@@ -425,18 +454,26 @@
         'Directory Share Phone': phonePublicCheckbox.checked,
         'Directory Share Email': emailPublicCheckbox.checked
       };
-      google.script.run.withSuccessHandler(function (response) {
-        if (response && response.success) {
-          Object.assign(originalData, currentUpdatedProfile);
-          alert("Profile updated!");
-          applyBtn.disabled = !changesMade();
-        } else {
-          alert("Error updating profile.");
-          applyBtn.disabled = false;
-        }
-      }).updateProfile("<?= token ?>", currentUpdatedProfile);
+
+      google.script.run
+        .withSuccessHandler(function (response) {
+          if (response && response.success) {
+            // If successful, update originalData to reflect the new state
+            Object.assign(originalData, currentUpdatedProfile);
+            alert("Profile updated!");
+          } else {
+            alert("Error updating profile: " + (response && response.error ? response.error : 'Unknown error.'));
+          }
+          updateApplyButtonState(); // Re-enable or keep disabled based on new changes (if any)
+        })
+        .withFailureHandler(function (error) {
+          alert("Server error updating profile: " + error.message);
+          updateApplyButtonState(); // Re-enable button on failure
+        })
+        .updateProfile("<?= token ?>", currentUpdatedProfile);
     });
 
+    // Reset button functionality remains the same
     document.getElementById('resetBtn').addEventListener('click', function () {
       firstInput.value = originalData.First;
       lastInput.value = originalData.Last;
@@ -447,9 +484,10 @@
       emailPublicCheckbox.checked = originalData['Directory Share Email'];
 
       updateApplyButtonState();
-      updateCheckboxState();
+      updateCheckboxState(); // Ensure checkboxes are correctly enabled/disabled after reset
     });
 
+    // Responsive class application (no changes here)
     function checkViewportAndApplyClasses() {
       const bodyElement = document.body;
       const screenWidth = screen.width;
@@ -472,6 +510,13 @@
     checkViewportAndApplyClasses();
     window.addEventListener('resize', checkViewportAndApplyClasses);
 
-    updateApplyButtonState();
-    updateCheckboxState();
+    // Initial setup on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize the state of the Apply button and checkboxes based on initial data
+      updateApplyButtonState();
+      updateCheckboxState();
+    });
   </script>
+</body>
+
+</html>
