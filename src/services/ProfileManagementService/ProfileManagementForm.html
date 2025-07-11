@@ -1,13 +1,10 @@
-<!DOCTYPE html>
-<html>
+<style>
+    /*
+    These styles are specific to the profile form and will work in conjunction
+    with the base styles and responsive classes provided by _Header.html.
+    */
 
-<head>
-  <title>Profile</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    /* Base styles (Desktop/Tablet) remain the same */
-    
-
+    /* Base styles for profile elements */
     p {
       font-size: 1rem;
       margin-bottom: 0.625rem;
@@ -26,7 +23,8 @@
 
     .profile-row {
       display: grid;
-      grid-template-columns: 1fr 2fr 1fr; /* Desktop/Tablet columns */
+      grid-template-columns: 1fr 2fr 1fr;
+      /* Desktop/Tablet columns */
       gap: 0.625rem;
       margin-bottom: 0.625rem;
       align-items: center;
@@ -37,32 +35,38 @@
     }
 
     .directory-checkbox-wrapper {
-      display: flex; /* For centering the checkbox/label on desktop */
+      display: flex;
+      /* For centering the checkbox/label on desktop */
       justify-content: center;
       align-items: center;
     }
 
     .directory-label-mobile {
-      display: none; /* Hide this on desktop/tablet */
+      display: none;
+      /* Hide this on desktop/tablet */
     }
 
-     .button-container {
+    .button-container {
       display: flex;
       gap: 10px;
-      justify-content: center; /* Center buttons horizontally */
+      justify-content: center;
+      /* Center buttons horizontally */
       margin-top: 10px;
     }
 
     .button-container button {
-      padding: 0.625rem 1.25rem; /* Use rem for padding */
+      padding: 0.625rem 1.25rem;
+      /* Use rem for padding */
       background-color: #007bff;
       color: white;
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 1rem; /* Base font size */
+      font-size: 1rem;
+      /* Base font size */
       transition: background-color 0.3s ease;
-      text-align: center; /* Added to explicitly center button text */
+      text-align: center;
+      /* Added to explicitly center button text */
     }
 
     .button-container button:hover:not(:disabled) {
@@ -74,123 +78,120 @@
       cursor: not-allowed;
     }
 
-    /* --- Responsive Styles (Applied by JavaScript classes) --- */
-
-    /* For Tablets */
-    body.is-tablet html {
-      font-size: 17px;
+    /* Message display area styling */
+    /* This overrides the .message text-align: center from _Header.html */
+    #submissionMessage {
+      text-align: left !important; /* Important to override the .message class from header */
+      margin-top: 0.625rem; /* Matches .message margin from _Header.html */
+      padding: 10px; /* Added for visual separation */
+      border-radius: 4px; /* Added for visual separation */
+      display: none; /* Hidden by default */
+      font-size: 0.9rem; /* Matches .message font-size from _Header.html */
     }
 
-    body.is-tablet .profile-container {
-      width: 80%;
-      max-width: 600px;
+    /* --- Responsive Styles (Applied based on classes on <html> from _Header.html's JS) --- */
+
+    /* For Tablets: Styles apply when html has 'is-tablet' class */
+    html.is-tablet .profile-row label {
+      font-size: 1rem; /* Default size for tablet */
+    }
+    html.is-tablet input[type="text"],
+    html.is-tablet input[type="email"] {
+      font-size: 1rem; /* Default size for tablet */
+    }
+    html.is-tablet .button-container button {
+      font-size: 1rem; /* Default size for tablet */
     }
 
-    body.is-tablet h2 {
-      font-size: 2rem;
-    }
-
-    /* For Mobile Phones */
-    body.is-mobile html {
-      font-size: 18px;
-    }
-
-    body.is-mobile {
-      padding: 0;
-      margin: 0;
-      display: block;
-    }
-
-    body.is-mobile .profile-container {
-      width: 95%;
-      padding: 1rem;
-      margin-left: 0;
-      margin-right: auto;
-      text-align: left;
-      box-sizing: border-box;
-    }
-
-    body.is-mobile h2 {
-      font-size: 2.25rem;
-      text-align: left;
-    }
-
-    body.is-mobile p {
+    /* For Mobile Phones (Portrait & Landscape): Styles apply when html has 'is-mobile-portrait' or 'is-mobile-landscape' class */
+    html.is-mobile-portrait p,
+    html.is-mobile-landscape p {
       font-size: 1.125rem;
       text-align: left;
     }
 
     /* Mobile: Adapt .profile-row for a more compact column layout */
-    body.is-mobile .profile-row {
+    html.is-mobile-portrait .profile-row,
+    html.is-mobile-landscape .profile-row {
       display: grid;
-      /* Adjusted grid columns for mobile: narrower label, wider input, narrow checkbox */
-      grid-template-columns: 0.8fr 2fr 0.5fr; /* Tuned proportions for mobile columns */
-      gap: 0.4rem; /* Slightly reduced gap for mobile compactness */
-      margin-bottom: 0.6rem; /* Slightly reduced margin */
+      grid-template-columns: 0.8fr 2fr 0.5fr;
+      /* Tuned proportions for mobile columns */
+      gap: 0.4rem;
+      /* Slightly reduced gap for mobile compactness */
+      margin-bottom: 0.6rem;
+      /* Slightly reduced margin */
       align-items: center;
     }
 
     /* Mobile: Ensure labels (First Name, etc.) are right-aligned in their column */
-    body.is-mobile .profile-row label {
-      grid-column: 1; /* Explicitly place in first column */
-      text-align: right; /* Keep right-aligned for desktop consistency and visual balance */
-      font-size: 1.125rem; /* Larger font size for mobile readability */
-      padding-right: 0; /* Let grid gap handle separation */
+    html.is-mobile-portrait .profile-row label,
+    html.is-mobile-landscape .profile-row label {
+      grid-column: 1;
+      text-align: right;
+      font-size: 1.125rem;
+      padding-right: 0;
       align-self: center;
-      justify-self: end; /* Push label to the end of its cell */
+      justify-self: end;
     }
 
     /* Mobile: Input fields (First Name, etc.) */
-    body.is-mobile input[type="text"],
-    body.is-mobile input[type="email"] {
+    html.is-mobile-portrait input[type="text"],
+    html.is-mobile-portrait input[type="email"],
+    html.is-mobile-landscape input[type="text"],
+    html.is-mobile-landscape input[type="email"] {
       font-size: 1.125rem;
-      grid-column: 2; /* Place in the second column */
-      width: 100%; /* Take full width of its column */
-      justify-self: start; /* Align to the start of its cell */
-      padding: 0.5rem; /* Standard padding */
-      box-sizing: border-box; /* Important for width calculation */
+      grid-column: 2;
+      width: 100%;
+      justify-self: start;
+      padding: 0.5rem;
+      box-sizing: border-box;
     }
 
     /* Mobile: Header Row (make visible again) */
-    body.is-mobile .profile-row.header-row {
-      display: grid; /* Make it visible as a grid */
-      grid-template-columns: 0.8fr 2fr 0.5fr; /* Match column structure */
-      gap: 0.4rem; /* Match gap */
-      font-weight: bold; /* Make headings stand out */
-      margin-bottom: 0.4rem; /* Smaller margin below header */
+    html.is-mobile-portrait .profile-row.header-row,
+    html.is-mobile-landscape .profile-row.header-row {
+      display: grid;
+      grid-template-columns: 0.8fr 2fr 0.5fr;
+      gap: 0.4rem;
+      font-weight: bold;
+      margin-bottom: 0.4rem;
     }
 
-    body.is-mobile .profile-row.header-row label {
-      grid-column: 3; /* Place "In Directory" heading in the third column */
-      text-align: center; /* Center the "In Directory" heading */
-      justify-self: center; /* Center the element itself */
+    html.is-mobile-portrait .profile-row.header-row label,
+    html.is-mobile-landscape .profile-row.header-row label {
+      grid-column: 3;
+      text-align: center;
+      justify-self: center;
       font-size: 1.125rem;
       padding-right: 0;
     }
 
     /* Mobile: In Directory Checkbox Wrapper - Adapt for column layout */
-    body.is-mobile .directory-checkbox-wrapper {
-      grid-column: 3; /* Place in the third column of the main profile-row grid */
-      display: flex; /* Use flex to center the checkbox *within* its column */
-      justify-content: center; /* Center horizontally */
-      align-items: center; /* Center vertically */
-      height: 100%; /* Ensure it takes full height of the row for centering */
+    html.is-mobile-portrait .directory-checkbox-wrapper,
+    html.is-mobile-landscape .directory-checkbox-wrapper {
+      grid-column: 3;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
     }
 
     /* Mobile: Hide the mobile-specific label, as we're now using columns */
-    body.is-mobile .directory-label-mobile {
+    html.is-mobile-portrait .directory-label-mobile,
+    html.is-mobile-landscape .directory-label-mobile {
       display: none;
     }
 
     /* Mobile: Ensure the actual checkbox is styled within its wrapper */
-    body.is-mobile .profile-row .directory-checkbox-wrapper input[type="checkbox"] {
-      margin: 0; /* Remove default margins */
+    html.is-mobile-portrait .profile-row .directory-checkbox-wrapper input[type="checkbox"],
+    html.is-mobile-landscape .profile-row .directory-checkbox-wrapper input[type="checkbox"] {
+      margin: 0;
       padding: 0;
-      /* No justify-self needed here as flexbox on wrapper handles centering */
     }
 
-
-    body.is-mobile .button-container {
+    /* Mobile: button container and buttons */
+    html.is-mobile-portrait .button-container,
+    html.is-mobile-landscape .button-container {
       flex-direction: column;
       gap: 1rem;
       align-items: flex-start;
@@ -199,20 +200,31 @@
       width: 100%;
     }
 
-    body.is-mobile button {
+    html.is-mobile-portrait .button-container button,
+    html.is-mobile-landscape .button-container button {
       font-size: 1.125rem;
       padding: 0.75rem 1.5rem;
       width: 100%;
       box-sizing: border-box;
     }
+
+    /* Mobile adjustments for the message div */
+    html.is-mobile-portrait #submissionMessage,
+    html.is-mobile-landscape #submissionMessage {
+      font-size: 1rem; /* Adjusting as per _Header's mobile .message font-size */
+      padding: 0.75rem; /* Larger padding for readability */
+    }
   </style>
+</head>
 
-    <h2>SCCCC Profile Change Form</h2>
-    <p>You can modify your profile below.</p>
+<body>
+  <h2>SCCCC Profile Change Form</h2>
+  <p>You can modify your profile below.</p>
 
-    <p>You can publish your full name (First and Last) in the club Directory, along with your phone and/or email.</p>
-    <p>Changing your email requires additional security steps and so is implemented as a separate service.</p>
+  <p>You can publish your full name (First and Last) in the club Directory, along with your phone and/or email.</p>
+  <p>Changing your email requires additional security steps and so is implemented as a separate service.</p>
 
+  <form id="profileForm">
     <div class="profile-row header-row">
       <div></div>
       <div></div>
@@ -221,7 +233,9 @@
 
     <div class="profile-row">
       <label for="first">First Name:</label>
-      <input type="text" id="first" name="First" value="<?= profile.First ?>">
+      <input type="text" id="first" name="First" value="<?= profile.First ?>" required
+        pattern="^[A-Za-z0-9\s-'.]+$"
+        title="First Name must be non-empty and can contain letters, numbers, spaces, hyphens, apostrophes, or periods.">
       <div class="directory-checkbox-wrapper">
         <span class="directory-label-mobile">In Directory</span>
         <input type="checkbox" id="firstPublic" name="Directory Share Name" <?=profile['Directory Share Name']
@@ -231,7 +245,9 @@
 
     <div class="profile-row">
       <label for="last">Last Name:</label>
-      <input type="text" id="last" name="Last" value="<?= profile.Last ?>">
+      <input type="text" id="last" name="Last" value="<?= profile.Last ?>" required
+        pattern="^[A-Za-z0-9\s-'.]+$"
+        title="Last Name must be non-empty and can contain letters, numbers, spaces, hyphens, apostrophes, or periods.">
       <div class="directory-checkbox-wrapper">
         <span class="directory-label-mobile">In Directory</span>
         <input type="checkbox" id="lastPublic" name="Directory Share Name" <?=profile['Directory Share Name']
@@ -241,7 +257,8 @@
 
     <div class="profile-row">
       <label for="phone">Phone:</label>
-      <input type="text" id="phone" name="Phone" value="<?= profile.Phone ?>">
+      <input type="text" id="phone" name="Phone" value="<?= profile.Phone ?>" required
+        pattern="^\(\d{3}\) \d{3}-\d{4}$" title="Phone must match (123) 123-1234 format">
       <div class="directory-checkbox-wrapper">
         <span class="directory-label-mobile">In Directory</span>
         <input type="checkbox" id="phonePublic" name="Directory Share Phone" <?=profile['Directory Share Phone']
@@ -260,12 +277,15 @@
     </div>
 
     <div class="button-container">
-      <button id="applyBtn" disabled>Apply</button>
-      <button id="resetBtn">Reset</button>
+      <button type="submit" id="applyBtn" disabled>Apply</button>
+      <button type="button" id="resetBtn">Reset</button>
     </div>
-  </div>
+
+    <div id="submissionMessage" class="message"></div>
+  </form>
 
   <script>
+    const profileForm = document.getElementById('profileForm');
     const applyBtn = document.getElementById('applyBtn');
     const firstInput = document.getElementById('first');
     const lastInput = document.getElementById('last');
@@ -274,8 +294,21 @@
     const lastPublicCheckbox = document.getElementById('lastPublic');
     const phonePublicCheckbox = document.getElementById('phonePublic');
     const emailPublicCheckbox = document.getElementById('emailPublic');
+    const submissionMessage = document.getElementById('submissionMessage'); // Reference to message div
 
+    // Assuming originalProfileData is passed from server-side (e.g., Apps Script)
+    // For local testing, you might define it here:
+    // const originalProfileData = {
+    //   First: "John",
+    //   Last: "Doe",
+    //   Phone: "(123) 456-7890",
+    //   'Directory Share Name': true,
+    //   'Directory Share Phone': false,
+    //   'Directory Share Email': true,
+    //   Email: "john.doe@example.com"
+    // };
     const originalProfileData = JSON.parse('<?= JSON.stringify(profile) ?>');
+
     const originalData = {
       First: originalProfileData.First,
       Last: originalProfileData.Last,
@@ -287,7 +320,7 @@
 
     let updatedProfile = {
       ...originalData
-    };
+    }; // Initialize updatedProfile object with original data
 
     function changesMade() {
       const currentUpdatedProfile = {
@@ -298,11 +331,20 @@
         'Directory Share Phone': phonePublicCheckbox.checked,
         'Directory Share Email': emailPublicCheckbox.checked
       };
+      // Compare the current form state with the original data to detect changes
       return JSON.stringify(originalData) !== JSON.stringify(currentUpdatedProfile);
     }
 
+    function allInputsValid() {
+      // checkValidity() will use the 'required' and 'pattern' attributes in the HTML
+      return firstInput.checkValidity() &&
+             lastInput.checkValidity() &&
+             phoneInput.checkValidity();
+    }
+
     function updateApplyButtonState() {
-      applyBtn.disabled = !changesMade();
+      // The "Apply" button is enabled ONLY if changes have been made AND all required inputs are valid
+      applyBtn.disabled = !(changesMade() && allInputsValid());
     }
 
     function enableContactCheckboxes() {
@@ -315,74 +357,120 @@
       emailPublicCheckbox.checked = false;
       phonePublicCheckbox.disabled = true;
       emailPublicCheckbox.disabled = true;
-      updateApplyButtonState();
+      updateApplyButtonState(); // Update button state after changing checkboxes
     }
 
     function updateCheckboxState() {
-      if (firstPublicCheckbox.checked) {
+      // If either name checkbox is checked, enable contact checkboxes.
+      // Otherwise, uncheck and disable them.
+      if (firstPublicCheckbox.checked || lastPublicCheckbox.checked) {
         enableContactCheckboxes();
       } else {
         uncheckAndDisableContactCheckboxes();
       }
-      updateApplyButtonState();
+      updateApplyButtonState(); // Always update button state after checkbox logic
     }
 
     function synchronizeNameCheckedStateChange(current = true) {
+      // Ensures both First Name and Last Name 'In Directory' checkboxes are in sync
       firstPublicCheckbox.checked = current;
       lastPublicCheckbox.checked = current;
     }
 
+    // Function to display messages using the .message classes
+    function displayMessage(message, type) {
+      submissionMessage.textContent = message;
+      // Clear existing type classes, but keep the base 'message' class
+      submissionMessage.classList.remove('success', 'error'); 
+      submissionMessage.classList.add(type); // Add 'success' or 'error' class
+      submissionMessage.style.display = 'block'; // Make visible
+    }
+
+    // Function to clear messages
+    function clearMessage() {
+      submissionMessage.textContent = '';
+      submissionMessage.classList.remove('success', 'error'); // Clear only type classes
+      submissionMessage.style.display = 'none'; // Hide
+    }
+
+    // Event Listeners for Checkboxes to handle state changes and synchronization
     phonePublicCheckbox.addEventListener('change', () => {
+      clearMessage(); // Clear message on input change
       if (phonePublicCheckbox.checked) synchronizeNameCheckedStateChange(true);
       updateCheckboxState();
       updateUpdatedProfile();
       updateApplyButtonState();
     });
     emailPublicCheckbox.addEventListener('change', () => {
+      clearMessage(); // Clear message on input change
       if (emailPublicCheckbox.checked) synchronizeNameCheckedStateChange(true);
       updateCheckboxState();
       updateUpdatedProfile();
       updateApplyButtonState();
     });
     firstPublicCheckbox.addEventListener('change', () => {
+      clearMessage(); // Clear message on input change
       synchronizeNameCheckedStateChange(firstPublicCheckbox.checked);
-      updateCheckboxState();
+      updateCheckboxState(); // This will enable/disable contact checkboxes based on name status
       updateUpdatedProfile();
       updateApplyButtonState();
     });
     lastPublicCheckbox.addEventListener('change', () => {
+      clearMessage(); // Clear message on input change
       synchronizeNameCheckedStateChange(lastPublicCheckbox.checked);
-      updateCheckboxState();
+      updateCheckboxState(); // This will enable/disable contact checkboxes based on name status
       updateUpdatedProfile();
       updateApplyButtonState();
     });
 
+    // Event Listeners for Text Inputs to detect changes, trigger validation, and clear message
     document.getElementById('first').addEventListener('input', () => {
+      clearMessage(); // Clear message on input change
       updateUpdatedProfile();
       updateApplyButtonState();
     });
     document.getElementById('last').addEventListener('input', () => {
+      clearMessage(); // Clear message on input change
       updateUpdatedProfile();
       updateApplyButtonState();
     });
     document.getElementById('phone').addEventListener('input', () => {
+      clearMessage(); // Clear message on input change
       updateUpdatedProfile();
       updateApplyButtonState();
     });
 
+    // Function to keep the `updatedProfile` object in sync with form inputs
+    // This is useful for debugging or if you need to access the current form state
+    // before an actual submission.
     function updateUpdatedProfile() {
       updatedProfile = {
-        First: document.getElementById('first').value,
-        Last: document.getElementById('last').value,
-        Phone: document.getElementById('phone').value,
+        First: firstInput.value,
+        Last: lastInput.value,
+        Phone: phoneInput.value,
         'Directory Share Name': firstPublicCheckbox.checked || lastPublicCheckbox.checked,
         'Directory Share Phone': phonePublicCheckbox.checked,
         'Directory Share Email': emailPublicCheckbox.checked
       };
     }
 
-    document.getElementById('applyBtn').addEventListener('click', function () {
-      applyBtn.disabled = true;
+    // Event Listener for Form Submission
+    profileForm.addEventListener('submit', function (event) {
+      event.preventDefault(); // Crucial: Prevent default browser page reload behavior
+
+      clearMessage(); // Clear any previous messages when a new submission starts
+
+      // Although the browser's native validation for 'required' and 'pattern'
+      // will have already run (preventing submission if invalid), these checks
+      // act as a safeguard and ensure the button state is correctly managed.
+      if (!allInputsValid() || !changesMade()) {
+          console.warn("Form submitted with invalid inputs or no changes detected. This should not happen if button state is correct.");
+          updateApplyButtonState(); // Re-evaluate and potentially re-disable if state was out of sync
+          return;
+      }
+
+      applyBtn.disabled = true; // Disable button to prevent multiple submissions
+
       const currentUpdatedProfile = {
         First: firstInput.value,
         Last: lastInput.value,
@@ -391,19 +479,32 @@
         'Directory Share Phone': phonePublicCheckbox.checked,
         'Directory Share Email': emailPublicCheckbox.checked
       };
-      google.script.run.withSuccessHandler(function (response) {
-        if (response && response.success) {
-          Object.assign(originalData, currentUpdatedProfile);
-          alert("Profile updated!");
-          applyBtn.disabled = !changesMade();
-        } else {
-          alert("Error updating profile.");
-          applyBtn.disabled = false;
-        }
-      }).updateProfile("<?= token ?>", currentUpdatedProfile);
+
+      // Call Google Apps Script server-side function to update profile
+      google.script.run
+        .withSuccessHandler(function (response) {
+          if (response && response.success) {
+            // If the server update was successful, update our 'originalData'
+            // so `changesMade()` correctly detects future changes.
+            Object.assign(originalData, currentUpdatedProfile);
+            displayMessage("Profile updated successfully!", "success"); // Display success message
+          } else {
+            displayMessage("Error updating profile: " + (response && response.error ? response.error : 'Unknown error.'), "error"); // Display error message
+          }
+          updateApplyButtonState(); // Re-enable or keep disabled based on new changes (if any)
+        })
+        .withFailureHandler(function (error) {
+          // Handle server-side errors
+          displayMessage("Server error updating profile: " + error.message, "error"); // Display error message
+          updateApplyButtonState(); // Re-enable button on failure to allow user to retry
+        })
+        .updateProfile("<?= token ?>", currentUpdatedProfile); // Pass token and updated profile data
     });
 
+    // Event Listener for Reset Button
     document.getElementById('resetBtn').addEventListener('click', function () {
+      clearMessage(); // Clear message on reset
+      // Revert all form inputs and checkboxes to their initial `originalData` values
       firstInput.value = originalData.First;
       lastInput.value = originalData.Last;
       phoneInput.value = originalData.Phone;
@@ -412,32 +513,27 @@
       phonePublicCheckbox.checked = originalData['Directory Share Phone'];
       emailPublicCheckbox.checked = originalData['Directory Share Email'];
 
+      // Update button and checkbox states after resetting
       updateApplyButtonState();
       updateCheckboxState();
     });
 
-    function checkViewportAndApplyClasses() {
-      const bodyElement = document.body;
-      const screenWidth = screen.width;
+    /*
+    The checkViewportAndApplyClasses function and its event listeners are
+    assumed to be present in the _Header.html and apply classes to the <html> tag.
+    Therefore, we do not include them here.
+    */
 
-      const mobileBreakpoint = 599;
-      const tabletMinBreakpoint = 600;
-      const tabletMaxBreakpoint = 992;
-
-      bodyElement.classList.remove('is-mobile', 'is-tablet');
-
-      if (screenWidth <= mobileBreakpoint) {
-        bodyElement.classList.add('is-mobile');
-      } else if (screenWidth >= tabletMinBreakpoint && screenWidth <= tabletMaxBreakpoint) {
-        bodyElement.classList.add('is-tablet');
-      } else {
-        // Desktop view - no special class needed, relies on base styles
-      }
-    }
-
-    checkViewportAndApplyClasses();
-    window.addEventListener('resize', checkViewportAndApplyClasses);
-
-    updateApplyButtonState();
-    updateCheckboxState();
+    // Initial setup when the DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      // Set the initial state of the Apply button (disabled if no changes or invalid inputs)
+      updateApplyButtonState();
+      // Set the initial state of the contact checkboxes (enabled/disabled based on name checkbox)
+      updateCheckboxState();
+      // Ensure the message area is clear and hidden on initial load
+      clearMessage(); 
+    });
   </script>
+</body>
+
+</html>
