@@ -10,6 +10,8 @@ DirectoryService.WebApp = {
         }
         template.contentFileName = DIRECTORY;
         template.userEmail = userEmail;
+        template.directoryEntries = DirectoryService.getDirectoryEntries();
+        console.log('Directory entries:', template.directoryEntries);
         const htmlOutput = template.evaluate()
             .setTitle('SCCCC Directory')
         return htmlOutput;
