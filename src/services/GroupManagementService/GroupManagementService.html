@@ -326,6 +326,7 @@
         const currentUserToken = userTokenInput.value;
         console.log('Updated subscriptions:', JSON.stringify(updatedSubscriptions));
 
+        displayMessage('Updating subscriptions...', 'success'); // Show processing message
         google.script.run
             .withSuccessHandler(function (response) {
                 if (response && response.success) {
