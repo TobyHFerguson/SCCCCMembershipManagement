@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     /* Base styles (Desktop/Tablet) remain the same */
-    
+
 
     p {
       font-size: 1rem;
@@ -26,7 +26,8 @@
 
     .profile-row {
       display: grid;
-      grid-template-columns: 1fr 2fr 1fr; /* Desktop/Tablet columns */
+      grid-template-columns: 1fr 2fr 1fr;
+      /* Desktop/Tablet columns */
       gap: 0.625rem;
       margin-bottom: 0.625rem;
       align-items: center;
@@ -37,32 +38,38 @@
     }
 
     .directory-checkbox-wrapper {
-      display: flex; /* For centering the checkbox/label on desktop */
+      display: flex;
+      /* For centering the checkbox/label on desktop */
       justify-content: center;
       align-items: center;
     }
 
     .directory-label-mobile {
-      display: none; /* Hide this on desktop/tablet */
+      display: none;
+      /* Hide this on desktop/tablet */
     }
 
-     .button-container {
+    .button-container {
       display: flex;
       gap: 10px;
-      justify-content: center; /* Center buttons horizontally */
+      justify-content: center;
+      /* Center buttons horizontally */
       margin-top: 10px;
     }
 
     .button-container button {
-      padding: 0.625rem 1.25rem; /* Use rem for padding */
+      padding: 0.625rem 1.25rem;
+      /* Use rem for padding */
       background-color: #007bff;
       color: white;
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 1rem; /* Base font size */
+      font-size: 1rem;
+      /* Base font size */
       transition: background-color 0.3s ease;
-      text-align: center; /* Added to explicitly center button text */
+      text-align: center;
+      /* Added to explicitly center button text */
     }
 
     .button-container button:hover:not(:disabled) {
@@ -124,57 +131,83 @@
     body.is-mobile .profile-row {
       display: grid;
       /* Adjusted grid columns for mobile: narrower label, wider input, narrow checkbox */
-      grid-template-columns: 0.8fr 2fr 0.5fr; /* Tuned proportions for mobile columns */
-      gap: 0.4rem; /* Slightly reduced gap for mobile compactness */
-      margin-bottom: 0.6rem; /* Slightly reduced margin */
+      grid-template-columns: 0.8fr 2fr 0.5fr;
+      /* Tuned proportions for mobile columns */
+      gap: 0.4rem;
+      /* Slightly reduced gap for mobile compactness */
+      margin-bottom: 0.6rem;
+      /* Slightly reduced margin */
       align-items: center;
     }
 
     /* Mobile: Ensure labels (First Name, etc.) are right-aligned in their column */
     body.is-mobile .profile-row label {
-      grid-column: 1; /* Explicitly place in first column */
-      text-align: right; /* Keep right-aligned for desktop consistency and visual balance */
-      font-size: 1.125rem; /* Larger font size for mobile readability */
-      padding-right: 0; /* Let grid gap handle separation */
+      grid-column: 1;
+      /* Explicitly place in first column */
+      text-align: right;
+      /* Keep right-aligned for desktop consistency and visual balance */
+      font-size: 1.125rem;
+      /* Larger font size for mobile readability */
+      padding-right: 0;
+      /* Let grid gap handle separation */
       align-self: center;
-      justify-self: end; /* Push label to the end of its cell */
+      justify-self: end;
+      /* Push label to the end of its cell */
     }
 
     /* Mobile: Input fields (First Name, etc.) */
     body.is-mobile input[type="text"],
     body.is-mobile input[type="email"] {
       font-size: 1.125rem;
-      grid-column: 2; /* Place in the second column */
-      width: 100%; /* Take full width of its column */
-      justify-self: start; /* Align to the start of its cell */
-      padding: 0.5rem; /* Standard padding */
-      box-sizing: border-box; /* Important for width calculation */
+      grid-column: 2;
+      /* Place in the second column */
+      width: 100%;
+      /* Take full width of its column */
+      justify-self: start;
+      /* Align to the start of its cell */
+      padding: 0.5rem;
+      /* Standard padding */
+      box-sizing: border-box;
+      /* Important for width calculation */
     }
 
     /* Mobile: Header Row (make visible again) */
     body.is-mobile .profile-row.header-row {
-      display: grid; /* Make it visible as a grid */
-      grid-template-columns: 0.8fr 2fr 0.5fr; /* Match column structure */
-      gap: 0.4rem; /* Match gap */
-      font-weight: bold; /* Make headings stand out */
-      margin-bottom: 0.4rem; /* Smaller margin below header */
+      display: grid;
+      /* Make it visible as a grid */
+      grid-template-columns: 0.8fr 2fr 0.5fr;
+      /* Match column structure */
+      gap: 0.4rem;
+      /* Match gap */
+      font-weight: bold;
+      /* Make headings stand out */
+      margin-bottom: 0.4rem;
+      /* Smaller margin below header */
     }
 
     body.is-mobile .profile-row.header-row label {
-      grid-column: 3; /* Place "In Directory" heading in the third column */
-      text-align: center; /* Center the "In Directory" heading */
-      justify-self: center; /* Center the element itself */
+      grid-column: 3;
+      /* Place "In Directory" heading in the third column */
+      text-align: center;
+      /* Center the "In Directory" heading */
+      justify-self: center;
+      /* Center the element itself */
       font-size: 1.125rem;
       padding-right: 0;
     }
 
     /* Mobile: In Directory Checkbox Wrapper - Adapt for column layout */
     body.is-mobile .directory-checkbox-wrapper {
-      grid-column: 3; /* Place in the third column of the main profile-row grid */
-      display: flex; /* Use flex to center the checkbox *within* its column */
-      justify-content: center; /* Center horizontally */
-      align-items: center; /* Center vertically */
-      height: 100%; /* Ensure it takes full height of the row for centering */
+      grid-column: 3;
+      /* Place in the third column of the main profile-row grid */
+      display: flex;
+      /* Use flex to center the checkbox *within* its column */
+      justify-content: center;
+      /* Center horizontally */
+      align-items: center;
+      /* Center vertically */
+      height: 100%;
+      /* Ensure it takes full height of the row for centering */
     }
 
     /* Mobile: Hide the mobile-specific label, as we're now using columns */
@@ -184,7 +217,8 @@
 
     /* Mobile: Ensure the actual checkbox is styled within its wrapper */
     body.is-mobile .profile-row .directory-checkbox-wrapper input[type="checkbox"] {
-      margin: 0; /* Remove default margins */
+      margin: 0;
+      /* Remove default margins */
       padding: 0;
       /* No justify-self needed here as flexbox on wrapper handles centering */
     }
@@ -207,62 +241,62 @@
     }
   </style>
 
-    <h2>SCCCC Profile Change Form</h2>
-    <p>You can modify your profile below.</p>
+  <h2>SCCCC Profile Change Form</h2>
+  <p>You can modify your profile below.</p>
 
-    <p>You can publish your full name (First and Last) in the club Directory, along with your phone and/or email.</p>
-    <p>Changing your email requires additional security steps and so is implemented as a separate service.</p>
+  <p>You can publish your full name (First and Last) in the club Directory, along with your phone and/or email.</p>
+  <p>Changing your email requires additional security steps and so is implemented as a separate service.</p>
 
-    <div class="profile-row header-row">
-      <div></div>
-      <div></div>
-      <label>In Directory</label>
+  <div class="profile-row header-row">
+    <div></div>
+    <div></div>
+    <label>In Directory</label>
+  </div>
+
+  <div class="profile-row">
+    <label for="first">First Name:</label>
+    <input type="text" id="first" name="First" value="<?= profile.First ?>">
+    <div class="directory-checkbox-wrapper">
+      <span class="directory-label-mobile">In Directory</span>
+      <input type="checkbox" id="firstPublic" name="Directory Share Name" <?=profile['Directory Share Name'] ? 'checked'
+        : '' ?>>
     </div>
+  </div>
 
-    <div class="profile-row">
-      <label for="first">First Name:</label>
-      <input type="text" id="first" name="First" value="<?= profile.First ?>">
-      <div class="directory-checkbox-wrapper">
-        <span class="directory-label-mobile">In Directory</span>
-        <input type="checkbox" id="firstPublic" name="Directory Share Name" <?=profile['Directory Share Name']
-          ? 'checked' : '' ?>>
-      </div>
+  <div class="profile-row">
+    <label for="last">Last Name:</label>
+    <input type="text" id="last" name="Last" value="<?= profile.Last ?>">
+    <div class="directory-checkbox-wrapper">
+      <span class="directory-label-mobile">In Directory</span>
+      <input type="checkbox" id="lastPublic" name="Directory Share Name" <?=profile['Directory Share Name'] ? 'checked'
+        : '' ?>>
     </div>
+  </div>
 
-    <div class="profile-row">
-      <label for="last">Last Name:</label>
-      <input type="text" id="last" name="Last" value="<?= profile.Last ?>">
-      <div class="directory-checkbox-wrapper">
-        <span class="directory-label-mobile">In Directory</span>
-        <input type="checkbox" id="lastPublic" name="Directory Share Name" <?=profile['Directory Share Name']
-          ? 'checked' : '' ?>>
-      </div>
+  <div class="profile-row">
+    <label for="phone">Phone:</label>
+    <input type="text" id="phone" name="Phone" value="<?= profile.Phone ?>">
+    <div class="directory-checkbox-wrapper">
+      <span class="directory-label-mobile">In Directory</span>
+      <input type="checkbox" id="phonePublic" name="Directory Share Phone" <?=profile['Directory Share Phone']
+        ? 'checked' : '' ?>>
     </div>
+  </div>
 
-    <div class="profile-row">
-      <label for="phone">Phone:</label>
-      <input type="text" id="phone" name="Phone" value="<?= profile.Phone ?>">
-      <div class="directory-checkbox-wrapper">
-        <span class="directory-label-mobile">In Directory</span>
-        <input type="checkbox" id="phonePublic" name="Directory Share Phone" <?=profile['Directory Share Phone']
-          ? 'checked' : '' ?>>
-      </div>
+  <div class="profile-row">
+    <label>Email:</label>
+    <input type="text" id="email" name="Email" value="<?= profile.Email?>" disabled>
+    <div class="directory-checkbox-wrapper">
+      <span class="directory-label-mobile">In Directory</span>
+      <input type="checkbox" id="emailPublic" name="Directory Share Email" <?=profile['Directory Share Email']
+        ? 'checked' : '' ?>>
     </div>
+  </div>
 
-    <div class="profile-row">
-      <label>Email:</label>
-      <input type="text" id="email" name="Email" value="<?= profile.Email?>" disabled>
-      <div class="directory-checkbox-wrapper">
-        <span class="directory-label-mobile">In Directory</span>
-        <input type="checkbox" id="emailPublic" name="Directory Share Email" <?=profile['Directory Share Email']
-          ? 'checked' : '' ?>>
-      </div>
-    </div>
-
-    <div class="button-container">
-      <button id="applyBtn" disabled>Apply</button>
-      <button id="resetBtn">Reset</button>
-    </div>
+  <div class="button-container">
+    <button id="applyBtn" disabled>Apply</button>
+    <button id="resetBtn">Reset</button>
+  </div>
   </div>
 
   <script>
