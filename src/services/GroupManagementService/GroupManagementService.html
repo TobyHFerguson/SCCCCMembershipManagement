@@ -1,4 +1,6 @@
-<style>
+<style> 
+    /** a comment **/
+    /* Styles specific to the subscription form */
     #subscriptionForm {
         /* These styles will make the form centered horizontally */
         margin: 0 auto;
@@ -105,7 +107,7 @@
         margin: 5px 5px;
     }
 
-    button:hover {
+    button:hover:not(:disabled) {
         background-color: #0056b3;
     }
 
@@ -113,31 +115,89 @@
         opacity: 0.5;
         cursor: not-allowed;
     }
+
+    /* Message display area styling */
+    /* This leverages .message from _Header.html and customizes it */
+    #submissionMessage {
+        grid-column: 1 / 3;
+        /* Span across both columns in the grid */
+        margin-top: 10px;
+        /* Adjust margin as needed */
+        padding: 10px;
+        /* Added for visual separation */
+        border-radius: 4px;
+        /* Added for visual separation */
+        display: none;
+        /* Hidden by default */
+        /* Default font-size/text-align will come from _Header.html's .message */
+        text-align: left !important;
+        /* Override _Header.html's .message for left align */
+        font-size: 0.9rem;
+        /* Matches _Header.html's .message font size */
+    }
+
+
+
+    /* Responsive Styles for mobile (to match _Header.html's application on <html>) */
+    html.is-mobile-portrait #subscriptionForm,
+    html.is-mobile-landscape #subscriptionForm {
+        padding: 15px;
+        gap: 8px;
+    }
+
+    html.is-mobile-portrait .group-name,
+    html.is-mobile-landscape .group-name {
+        font-size: 1.125rem;
+        /* Larger font for mobile readability */
+    }
+
+    html.is-mobile-portrait .delivery-select,
+    html.is-mobile-landscape .delivery-select {
+        font-size: 1.125rem;
+        /* Larger font for mobile readability */
+        padding: 10px;
+    }
+
+    html.is-mobile-portrait .buttons-container button,
+    html.is-mobile-landscape .buttons-container button {
+        font-size: 1.125rem;
+        /* Larger font for mobile readability */
+        padding: 10px 20px;
+    }
+
+    html.is-mobile-portrait #submissionMessage,
+    html.is-mobile-landscape #submissionMessage {
+        font-size: 1rem;
+        /* Adjusting as per _Header's mobile .message font-size */
+        padding: 0.75rem;
+        /* Larger padding for readability */
+    }
 </style>
-</head>
 
 <h2>Manage Your SCCCC Group Subscriptions</h2>
 
 <form id="subscriptionForm">
     <input type="hidden" id="userToken" name="userToken" value="<?!= userToken ?>">
     <?!= userGroupSubscription.map(subscription => `
-        <div class="subscription-row" data-group-name="${subscription.groupName}" data-group-email="${subscription.groupEmail}" data-original-delivery-value="${subscription.deliveryValue}">
-            <span class="group-name">${subscription.groupName}</span>
-            <div style="position: relative;">
-                <select class="delivery-select" name="${subscription.groupEmail}">
-                    ${Object.entries(deliveryMap).map(([valueKey, [displayValue, tooltip]]) => `
-                      <option value="${valueKey}" ${subscription.deliveryValue === valueKey ? 'selected' : ''} data-tooltip="${tooltip}" title="${tooltip}">${displayValue}</option>
-                    `).join('')}
-                </select>
-                <div class="custom-tooltip" id="tooltip-${subscription.groupEmail}"></div>
+            <div class="subscription-row" data-group-name="${subscription.groupName}" data-group-email="${subscription.groupEmail}" data-original-delivery-value="${subscription.deliveryValue}">
+                <span class="group-name">${subscription.groupName}</span>
+                <div class="delivery-select-container">
+                    <select class="delivery-select" name="${subscription.groupEmail}">
+                        ${Object.entries(deliveryMap).map(([valueKey, [displayValue, tooltip]]) => `
+                          <option value="${valueKey}" ${subscription.deliveryValue === valueKey ? 'selected' : ''} data-tooltip="${tooltip}" title="${tooltip}">${displayValue}</option>
+                        `).join('')}
+                    </select>
+                    <div class="custom-tooltip" id="tooltip-${subscription.groupEmail}"></div>
+                </div>
             </div>
-        </div>
-        `).join('') ?>
+            `).join('') ?>
 
     <div class="buttons-container">
         <button type="button" id="resetButton">Reset</button>
-        <button type="button" id="applyButton" disabled>Apply Changes</button>
+        <button type="submit" id="applyButton" disabled>Apply Changes</button>
     </div>
+
+    <div id="submissionMessage" class="message"></div>
 </form>
 
 <script>
@@ -147,6 +207,7 @@
     const resetButton = document.getElementById('resetButton');
     const applyButton = document.getElementById('applyButton');
     const userTokenInput = document.getElementById('userToken');
+    const submissionMessage = document.getElementById('submissionMessage'); // Reference to the message div
 
     let changesMade = false;
     const originalSubscriptions = {}; // Will store { groupEmail: { name: 'Human Name', value: 'ACTUAL_VALUE' } }
@@ -171,12 +232,32 @@
             }
         });
         applyButton.disabled = !changesMade;
+        if (changesMade) {
+            clearMessage(); // Clear message when changes are detected
+        }
     }
 
+    // Function to display messages in the submissionMessage div
+    function displayMessage(message, type) {
+        submissionMessage.textContent = message;
+        submissionMessage.classList.remove('success', 'error'); // Clear previous types
+        submissionMessage.classList.add(type); // Add new type
+        submissionMessage.style.display = 'block'; // Make visible
+    }
+
+    // Function to clear messages
+    function clearMessage() {
+        submissionMessage.textContent = '';
+        submissionMessage.classList.remove('success', 'error');
+        submissionMessage.style.display = 'none'; // Hide
+    }
+
+    // Event listener for changes on select elements
     deliverySelects.forEach(select => {
         select.addEventListener('change', checkChanges);
     });
 
+    // Tooltip logic
     deliverySelects.forEach(select => {
         let tooltipTimeout;
         const tooltipId = `tooltip-${select.name}`;
@@ -197,13 +278,15 @@
             tooltipElement.style.display = 'none';
         });
 
-        // Optional: You might want to hide the tooltip when the select loses focus (e.g., after a click)
         select.addEventListener('blur', () => {
             clearTimeout(tooltipTimeout);
             tooltipElement.style.display = 'none';
         });
     });
+
+    // Reset Button functionality
     resetButton.addEventListener('click', function () {
+        clearMessage(); // Clear message on reset
         deliverySelects.forEach(select => {
             const groupEmail = select.name;
             if (originalSubscriptions[groupEmail]) {
@@ -214,52 +297,66 @@
         applyButton.disabled = true;
     });
 
-    applyButton.addEventListener('click', function () {
-        if (changesMade) {
-            applyButton.disabled = true;
-            console.log('Changes made, preparing to update subscriptions...');
-            const updatedSubscriptions = [];
-            deliverySelects.forEach(select => {
-                const groupEmail = select.name;
-                const newDeliveryValue = select.value;
-                if (originalSubscriptions[groupEmail] && originalSubscriptions[groupEmail].value !== newDeliveryValue) {
-                    updatedSubscriptions.push({
-                        groupEmail: groupEmail,
-                        deliveryValue: newDeliveryValue // Send the actual value
-                    });
-                }
-            });
+    // Form Submission Handler
+    subscriptionForm.addEventListener('submit', function (event) {
+        event.preventDefault(); // Prevent default form submission
 
-            const currentUserToken = userTokenInput.value;
-            console.log('Updated subscriptions:', JSON.stringify(updatedSubscriptions));
-            google.script.run.withSuccessHandler(function (response) {
+        clearMessage(); // Clear any existing messages before a new submission
+
+        if (!changesMade) {
+            displayMessage("No changes to apply.", "error"); // Or success, depending on desired UX
+            applyButton.disabled = true; // Keep disabled if no changes
+            return;
+        }
+
+        applyButton.disabled = true; // Disable button to prevent multiple submissions
+
+        const updatedSubscriptions = [];
+        deliverySelects.forEach(select => {
+            const groupEmail = select.name;
+            const newDeliveryValue = select.value;
+            if (originalSubscriptions[groupEmail] && originalSubscriptions[groupEmail].value !== newDeliveryValue) {
+                updatedSubscriptions.push({
+                    groupEmail: groupEmail,
+                    deliveryValue: newDeliveryValue // Send the actual value
+                });
+            }
+        });
+
+        const currentUserToken = userTokenInput.value;
+        console.log('Updated subscriptions:', JSON.stringify(updatedSubscriptions));
+
+        google.script.run
+            .withSuccessHandler(function (response) {
                 if (response && response.success) {
-                    alert('Subscriptions updated successfully!');
+                    displayMessage('Subscriptions updated successfully!', 'success');
                     // Update originalSubscriptions with the new values
                     updatedSubscriptions.forEach(updatedSub => {
-                        console.log('updatedSub:', updatedSub);
                         const selectElement = document.querySelector(`select[name="${updatedSub.groupEmail}"]`);
-                        console.log('selectElement:', selectElement);
                         if (selectElement) {
                             const selectedOption = selectElement.options[selectElement.selectedIndex];
-                            console.log('selectedOption:', selectedOption);
                             const newDeliveryName = selectedOption.textContent;
-                            console.log('newDeliveryName:', newDeliveryName);
                             originalSubscriptions[updatedSub.groupEmail] = { name: newDeliveryName, value: updatedSub.deliveryValue };
-                            console.log('Updated originalSubscriptions:', originalSubscriptions);
                         }
                     });
-                    changesMade = false;
+                    changesMade = false; // Reset changes flag
                 } else {
-                    changesMade = true; // Keep the button enabled if there was an error
-                    applyButton.disabled = false;
-                    alert(response ? response.message : 'Error updating subscriptions. Please try again.');
+                    displayMessage(response ? response.message : 'Error updating subscriptions. Please try again.', 'error');
+                    changesMade = true; // Keep changesMade true if there was an error
                 }
-            }).withFailureHandler(function (error) {
+                applyButton.disabled = !changesMade; // Re-enable if changes exist or on error
+            })
+            .withFailureHandler(function (error) {
                 console.error('Error updating subscriptions:', error);
-                alert('Error updating subscriptions. Please try again.');
+                displayMessage('Error updating subscriptions. Please try again: ' + error.message, 'error');
                 applyButton.disabled = false; // Re-enable the button on error
-            }).updateUserSubscriptions(updatedSubscriptions, currentUserToken);
-        }
+            })
+            .updateUserSubscriptions(updatedSubscriptions, currentUserToken);
+    });
+
+    // Initial setup when the DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        checkChanges(); // Set initial state of apply button
+        clearMessage(); // Ensure message area is clear on load
     });
 </script>
