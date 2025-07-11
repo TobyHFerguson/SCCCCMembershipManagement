@@ -256,7 +256,9 @@
 
     <div class="profile-row">
       <label for="first">First Name:</label>
-      <input type="text" id="first" name="First" value="<?= profile.First ?>" required oninput="updateApplyButtonState()">
+      <input type="text" id="first" name="First" value="<?= profile.First ?>" required
+        pattern="^[A-Za-z0-9\s-'.]+$"
+        title="First Name must be non-empty and can contain letters, numbers, spaces, hyphens, apostrophes, or periods.">
       <div class="directory-checkbox-wrapper">
         <span class="directory-label-mobile">In Directory</span>
         <input type="checkbox" id="firstPublic" name="Directory Share Name" <?=profile['Directory Share Name']
@@ -266,7 +268,9 @@
 
     <div class="profile-row">
       <label for="last">Last Name:</label>
-      <input type="text" id="last" name="Last" value="<?= profile.Last ?>">
+      <input type="text" id="last" name="Last" value="<?= profile.Last ?>" required
+        pattern="^[A-Za-z0-9\s-'.]+$"
+        title="Last Name must be non-empty and can contain letters, numbers, spaces, hyphens, apostrophes, or periods.">
       <div class="directory-checkbox-wrapper">
         <span class="directory-label-mobile">In Directory</span>
         <input type="checkbox" id="lastPublic" name="Directory Share Name" <?=profile['Directory Share Name']
@@ -276,7 +280,8 @@
 
     <div class="profile-row">
       <label for="phone">Phone:</label>
-      <input type="text" id="phone" name="Phone" value="<?= profile.Phone ?>">
+      <input type="text" id="phone" name="Phone" value="<?= profile.Phone ?>" required
+        pattern="^\(\d{3}\) \d{3}-\d{4}$" title="Phone must match (123) 123-1234 format">
       <div class="directory-checkbox-wrapper">
         <span class="directory-label-mobile">In Directory</span>
         <input type="checkbox" id="phonePublic" name="Directory Share Phone" <?=profile['Directory Share Phone']
@@ -299,10 +304,9 @@
       <button type="button" id="resetBtn">Reset</button>
     </div>
   </form>
-  <script>
-    // NEW: Get reference to the form
-    const profileForm = document.getElementById('profileForm');
 
+  <script>
+    const profileForm = document.getElementById('profileForm');
     const applyBtn = document.getElementById('applyBtn');
     const firstInput = document.getElementById('first');
     const lastInput = document.getElementById('last');
@@ -312,16 +316,6 @@
     const phonePublicCheckbox = document.getElementById('phonePublic');
     const emailPublicCheckbox = document.getElementById('emailPublic');
 
-    // Make sure originalProfileData is correctly defined from the server-side
-    // For local testing, you might define it as a mock object:
-    // const originalProfileData = {
-    //   First: "John",
-    //   Last: "Doe",
-    //   Phone: "123-456-7890",
-    //   'Directory Share Name': true,
-    //   'Directory Share Phone': false,
-    //   'Directory Share Email': true
-    // };
     const originalProfileData = JSON.parse('<?= JSON.stringify(profile) ?>');
 
     const originalData = {
@@ -350,8 +344,15 @@
       return JSON.stringify(originalData) !== JSON.stringify(currentUpdatedProfile);
     }
 
+    function allInputsValid() {
+      // checkValidity() will now automatically use the new patterns
+      return firstInput.checkValidity() &&
+             lastInput.checkValidity() &&
+             phoneInput.checkValidity();
+    }
+
     function updateApplyButtonState() {
-      applyBtn.disabled = !changesMade();
+      applyBtn.disabled = !(changesMade() && allInputsValid());
     }
 
     function enableContactCheckboxes() {
@@ -440,9 +441,14 @@
       };
     }
 
-    // --- MODIFIED: Use form's submit event listener ---
     profileForm.addEventListener('submit', function (event) {
-      event.preventDefault(); // Crucial: Prevent default browser page reload
+      event.preventDefault();
+
+      if (!allInputsValid() || !changesMade()) {
+          console.warn("Form submitted with invalid inputs or no changes detected. This should not happen if button state is correct.");
+          updateApplyButtonState();
+          return;
+      }
 
       applyBtn.disabled = true; // Disable button to prevent double-submission
 
@@ -473,7 +479,6 @@
         .updateProfile("<?= token ?>", currentUpdatedProfile);
     });
 
-    // Reset button functionality remains the same
     document.getElementById('resetBtn').addEventListener('click', function () {
       firstInput.value = originalData.First;
       lastInput.value = originalData.Last;
@@ -487,7 +492,6 @@
       updateCheckboxState(); // Ensure checkboxes are correctly enabled/disabled after reset
     });
 
-    // Responsive class application (no changes here)
     function checkViewportAndApplyClasses() {
       const bodyElement = document.body;
       const screenWidth = screen.width;
