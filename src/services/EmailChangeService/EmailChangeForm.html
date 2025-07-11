@@ -1,311 +1,364 @@
 <style>
-    /* 1. Override the .container's background/shadow and width for *this service only* */
-    .container {
-        background-color: #fff; /* White background for the container */
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* */
+  /* 1. Override the .container's background/shadow and width for *this service only* */
+  .container {
+    background-color: #fff;
+    /* White background for the container */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    /* */
 
-        /* To make this specific container's content area wide enough on desktop: */
-        width: 90%; /* Start with a percentage of the viewport width */
-        min-width: 30rem; /* Ensure a good minimum width for readability (e.g., 480px) */
-        max-width: 45rem; /* A more generous max-width for the form (e.g., 720px) */
-        margin-left: auto; /* Center the container itself */
-        margin-right: auto; /* Center the container itself */
-        padding: 2rem; /* Add some overall padding to the container */
-    }
+    /* To make this specific container's content area wide enough on desktop: */
+    width: 90%;
+    /* Start with a percentage of the viewport width */
+    min-width: 30rem;
+    /* Ensure a good minimum width for readability (e.g., 480px) */
+    max-width: 45rem;
+    /* A more generous max-width for the form (e.g., 720px) */
+    margin-left: auto;
+    /* Center the container itself */
+    margin-right: auto;
+    /* Center the container itself */
+    padding: 2rem;
+    /* Add some overall padding to the container */
+  }
 
-    /* 2. Styles for the H2 within this service */
-    h2 {
-        margin-top: 0;
-        margin-bottom: 25px;
-        color: #333;
-        text-align: center; /* Ensure heading is centered within the container */
-    }
+  /* 2. Styles for the H2 within this service */
+  h2 {
+    margin-top: 0;
+    margin-bottom: 25px;
+    color: #333;
+    text-align: center;
+    /* Ensure heading is centered within the container */
+  }
 
-    /* 3. Ensure form-group structure is consistent */
-    .form-group {
-      margin-bottom: 20px; /* Space between form groups when stacked */
-      text-align: left;
-    }
+  /* 3. Ensure form-group structure is consistent */
+  .form-group {
+    margin-bottom: 20px;
+    /* Space between form groups when stacked */
+    text-align: left;
+  }
 
-    label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-      color: #555;
-    }
+  label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+  }
 
-    input[type="email"],
-    input[type="text"] {
-      width: 100%; /* Take full width of its grid cell */
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      box-sizing: border-box; /* Ensures padding doesn't add to the width */
-      font-size: 1rem; /* Use rem based on _Header.html's html font-size */
-      min-width: 0; /* IMPORTANT: Allows input to shrink within grid/flex if needed to prevent cutoff */
-    }
+  input[type="email"],
+  input[type="text"] {
+    width: 100%;
+    /* Take full width of its grid cell */
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    /* Ensures padding doesn't add to the width */
+    font-size: 1rem;
+    /* Use rem based on _Header.html's html font-size */
+    min-width: 0;
+    /* IMPORTANT: Allows input to shrink within grid/flex if needed to prevent cutoff */
+  }
 
-    input[readonly] {
-      background-color: #e9e9e9;
-      color: #777;
-      cursor: not-allowed;
-    }
+  input[readonly] {
+    background-color: #e9e9e9;
+    color: #777;
+    cursor: not-allowed;
+  }
 
-    /* 4. Styles for the 2x2 grid */
-    .grid-container {
-      display: grid;
-      /* Define columns with a fixed width for labels and flexible for inputs */
-      grid-template-columns: 12rem 1fr; /* Example: 12rem (approx 192px) for label, rest for input */
-      /* If "Current Email Address" label needs more space, increase 12rem.
+  /* 4. Styles for the 2x2 grid */
+  .grid-container {
+    display: grid;
+    /* Define columns with a fixed width for labels and flexible for inputs */
+    grid-template-columns: 12rem 1fr;
+    /* Example: 12rem (approx 192px) for label, rest for input */
+    /* If "Current Email Address" label needs more space, increase 12rem.
          If the email address itself is long, 1fr should handle it. */
-      gap: 15px 20px; /* Row gap, column gap */
-      align-items: center; /* Vertically center items in the grid */
-      margin-bottom: 25px; /* Space below the grid before buttons */
+    gap: 15px 20px;
+    /* Row gap, column gap */
+    align-items: center;
+    /* Vertically center items in the grid */
+    margin-bottom: 25px;
+    /* Space below the grid before buttons */
 
-      /* Centering the grid-container within the wider .container */
-      width: 100%; /* Make grid-container take full width of its parent (the form) */
-      max-width: 40rem; /* Cap the grid itself to prevent inputs from becoming excessively wide */
-      margin-left: auto; /* Center it horizontally */
-      margin-right: auto; /* Center it horizontally */
-    }
+    /* Centering the grid-container within the wider .container */
+    width: 100%;
+    /* Make grid-container take full width of its parent (the form) */
+    max-width: 40rem;
+    /* Cap the grid itself to prevent inputs from becoming excessively wide */
+    margin-left: auto;
+    /* Center it horizontally */
+    margin-right: auto;
+    /* Center it horizontally */
+  }
 
-    .grid-container label {
-        margin-bottom: 0; /* Remove bottom margin for labels in grid */
-        text-align: right; /* Align labels to the right in the first column */
-        padding-right: 10px; /* Add some space between label and input */
-        white-space: nowrap; /* Prevent labels from wrapping */
-        overflow: hidden; /* Hide any overflow if label is still too long for fixed width */
-        text-overflow: ellipsis; /* Add ellipsis if text is cut off */
-    }
+  .grid-container label {
+    margin-bottom: 0;
+    /* Remove bottom margin for labels in grid */
+    text-align: right;
+    /* Align labels to the right in the first column */
+    padding-right: 10px;
+    /* Add some space between label and input */
+    white-space: nowrap;
+    /* Prevent labels from wrapping */
+    overflow: hidden;
+    /* Hide any overflow if label is still too long for fixed width */
+    text-overflow: ellipsis;
+    /* Add ellipsis if text is cut off */
+  }
 
-    /* **FIX FOR RED ERROR MESSAGE ALIGNMENT AND STYLING** */
-    #new-email-error {
-        text-align: center; /* Center the text inside the error box */
-        grid-column: 1 / -1; /* Make it span all columns of the grid */
-        margin-top: 5px; /* Space above it */
-        /* New styling for the red background and centered appearance */
-        background-color: #dc3545; /* Red background */
-        color: white; /* White text */
-        padding: 10px 15px; /* Padding inside the error box */
-        border-radius: 4px; /* Rounded corners */
-        width: fit-content; /* Make the error box only as wide as its content */
-        max-width: 80%; /* Limit its maximum width */
-        margin-left: auto; /* Center the error box itself */
-        margin-right: auto; /* Center the error box itself */
-        display: block; /* Ensure it's a block-level element for width and centering */
-    }
+  /* **FIX FOR RED ERROR MESSAGE ALIGNMENT AND STYLING** */
+  #new-email-error {
+    text-align: center;
+    /* Center the text inside the error box */
+    grid-column: 1 / -1;
+    /* Make it span all columns of the grid */
+    margin-top: 5px;
+    /* Space above it */
+    /* New styling for the red background and centered appearance */
+    background-color: #dc3545;
+    /* Red background */
+    color: white;
+    /* White text */
+    padding: 10px 15px;
+    /* Padding inside the error box */
+    border-radius: 4px;
+    /* Rounded corners */
+    width: fit-content;
+    /* Make the error box only as wide as its content */
+    max-width: 80%;
+    /* Limit its maximum width */
+    margin-left: auto;
+    /* Center the error box itself */
+    margin-right: auto;
+    /* Center the error box itself */
+    display: block;
+    /* Ensure it's a block-level element for width and centering */
+  }
 
-    /* 5. Button styles */
-    .button-container {
-      display: flex;
-      gap: 10px;
-      justify-content: center; /* Center buttons horizontally */
-      margin-top: 10px;
-    }
+  /* 5. Button styles */
+  .button-container {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    /* Center buttons horizontally */
+    margin-top: 10px;
+  }
 
-    .button-container button {
-      padding: 0.625rem 1.25rem; /* Use rem for padding */
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 1rem; /* Base font size */
-      transition: background-color 0.3s ease;
-      text-align: center; /* Added to explicitly center button text */
-    }
+  .button-container button {
+    padding: 0.625rem 1.25rem;
+    /* Use rem for padding */
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    /* Base font size */
+    transition: background-color 0.3s ease;
+    text-align: center;
+    /* Added to explicitly center button text */
+  }
 
-    .button-container button:hover:not(:disabled) {
-      background-color: #0056b3;
-    }
+  .button-container button:hover:not(:disabled) {
+    background-color: #0056b3;
+  }
 
-    .button-container button:disabled {
-      background-color: #cccccc;
-      cursor: not-allowed;
-    }
+  .button-container button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
 
-    .button-container button#reset-button,
-    .button-container button#reset-button-verification,
-    .button-container button#reset-button-groups {
-      background-color: #6c757d;
-    }
+  .button-container button#reset-button,
+  .button-container button#reset-button-verification,
+  .button-container button#reset-button-groups {
+    background-color: #6c757d;
+  }
 
-    .button-container button#reset-button:hover:not(:disabled),
-    .button-container button#reset-button-verification:hover:not(:disabled),
-    .button-container button#reset-button-groups:hover:not(:disabled) {
-      background-color: #5a6268;
-    }
+  .button-container button#reset-button:hover:not(:disabled),
+  .button-container button#reset-button-verification:hover:not(:disabled),
+  .button-container button#reset-button-groups:hover:not(:disabled) {
+    background-color: #5a6268;
+  }
 
-    /* 6. Styles for verification section */
-    #verification-section {
-      display: none; /* Hidden by default */
-      margin-top: 20px;
-      border-top: 1px solid #eee;
-      padding-top: 20px;
-      flex-direction: column; /* Stack form group and button container */
-      align-items: center; /* Center items within this section */
-    }
+  /* 6. Styles for verification section */
+  #verification-section {
+    display: none;
+    /* Hidden by default */
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+    flex-direction: column;
+    /* Stack form group and button container */
+    align-items: center;
+    /* Center items within this section */
+  }
 
-    #verification-section .form-group {
-        width: 100%; /* Make input take full width */
-        max-width: 300px; /* Limit max width for a cleaner look */
-        margin-left: auto;
-        margin-right: auto;
-    }
+  #verification-section .form-group {
+    width: 100%;
+    /* Make input take full width */
+    max-width: 300px;
+    /* Limit max width for a cleaner look */
+    margin-left: auto;
+    margin-right: auto;
+  }
 
-    #verification-section .button-container {
-        margin-top: 15px;
-    }
+  #verification-section .button-container {
+    margin-top: 15px;
+  }
 
-    /* 7. Styles for group-list section */
-    #group-list-section {
-      display: none;
-      margin-top: 20px;
-      border-top: 1px solid #eee;
-      padding-top: 20px;
-      text-align: left; /* Default text alignment for this section */
-    }
+  /* 7. Styles for group-list section */
+  #group-list-section {
+    display: none;
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+    text-align: left;
+    /* Default text alignment for this section */
+  }
 
-    #group-list-section h3 {
-        text-align: center; /* Center the heading within this section */
-        margin-bottom: 15px;
-    }
+  #group-list-section h3 {
+    text-align: center;
+    /* Center the heading within this section */
+    margin-bottom: 15px;
+  }
 
-    #group-list-section p {
-        text-align: center; /* Center the paragraph within this section */
-        margin-bottom: 20px;
-    }
+  #group-list-section p {
+    text-align: center;
+    /* Center the paragraph within this section */
+    margin-bottom: 20px;
+  }
 
-    #group-list-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-      margin-bottom: 20px;
-    }
+  #group-list-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    margin-bottom: 20px;
+  }
 
-    #group-list-table th,
-    #group-list-table td {
-      border: 1px solid #ddd;
-      padding: 10px;
-      text-align: left;
-    }
+  #group-list-table th,
+  #group-list-table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+  }
 
-    #group-list-table th {
-      background-color: #f2f2f2;
-      font-weight: bold;
-      color: #333;
-    }
+  #group-list-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+    color: #333;
+  }
 
-    .status-pending {
-      color: grey;
-    }
+  .status-pending {
+    color: grey;
+  }
 
-    .status-success {
-      color: green;
-    }
+  .status-success {
+    color: green;
+  }
 
-    .status-failed {
-      color: red;
-    }
+  .status-failed {
+    color: red;
+  }
 
-    .message {
-      margin-top: 20px;
-      font-weight: bold;
-      padding: 10px;
-      border-radius: 4px;
-      text-align: center;
-    }
+  .message {
+    margin-top: 20px;
+    font-weight: bold;
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+  }
 
-    .success {
-      color: green;
-      background-color: #e6ffe6;
-      border: 1px solid #ccffcc;
-    }
+  .success {
+    color: green;
+    background-color: #e6ffe6;
+    border: 1px solid #ccffcc;
+  }
 
-    .error {
-      color: red;
-      background-color: #ffe6e6;
-      border: 1px solid #ffcccc;
-    }
+  .error {
+    color: red;
+    background-color: #ffe6e6;
+    border: 1px solid #ffcccc;
+  }
 
-    .info {
-        color: #0056b3;
-        background-color: #e6f7ff;
-        border: 1px solid #cceeff;
-    }
+  .info {
+    color: #0056b3;
+    background-color: #e6f7ff;
+    border: 1px solid #cceeff;
+  }
 
-    /* **NO MOBILE/TABLET RESPONSIVE STYLES HERE FOR NOW - FOCUS ON DESKTOP** */
-
+  /* **NO MOBILE/TABLET RESPONSIVE STYLES HERE FOR NOW - FOCUS ON DESKTOP** */
 </style>
 
 <h2>SCCCC Email Change Form</h2>
-  <div id="email-section">
-    <form id="email-form">
-      <div class="grid-container">
-        <label for="current-email">Current Email Address:</label>
-        <input type="email" id="current-email" name="currentEmail" value="<?= originalEmail ?>" readonly />
+<div id="email-section">
+  <form id="email-form">
+    <div class="grid-container">
+      <label for="current-email">Current Email Address:</label>
+      <input type="email" id="current-email" name="currentEmail" value="<?= originalEmail ?>" readonly />
 
-        <label for="new-email">New Email Address:</label>
-        <input type="email" id="new-email" name="newEmail" required oninput="validateEmail()" />
-        <span id="new-email-error" class="error" style="grid-column: 2; text-align: left;"></span>
-      </div>
-      <div class="button-container">
-        <button type="button" id="send-code-button" disabled>
-          Send Verification Code
-        </button>
-        <button type="button" id="reset-button" title="Start this process again">
-          Reset
-        </button>
-      </div>
-    </form>
-  </div>
-  <div id="verification-section">
-    <form id="verification-form">
-      <div class="form-group">
-        <label for="verification-code">Verification Code:</label>
-        <input type="text" id="verification-code" name="verificationCode" required pattern="\d{6}"
-          title="Please enter a 6-digit code" />
-      </div>
-      <div class="button-container">
-        <button type="button" id="verify-button" disabled>
-          Verify and Proceed
-        </button>
-        <button type="button" id="reset-button-verification" title="Start this process again" style="background-color: #6c757d;">
-          Reset
-        </button>
-      </div>
-    </form>
-  </div>
-
-  <div id="group-list-section">
-    <h3>Review and Update Group Memberships</h3>
-    <p>The table below shows the groups where your current email address is a member. Once you are ready, click the button to update your email address in these groups.</p>
-    <table id="group-list-table">
-      <thead>
-        <tr>
-          <th>Group Email</th>
-          <th>Current Email</th>
-          <th>New Email</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="group-list-body">
-        </tbody>
-    </table>
+      <label for="new-email">New Email Address:</label>
+      <input type="email" autocomplete='email' id="new-email" name="newEmail" required oninput="validateEmail()" />
+      <span id="new-email-error" class="error" style="grid-column: 2; text-align: left;"></span>
+    </div>
     <div class="button-container">
-      <button type="button" id="update-groups-button" disabled onclick="updateGroupMemberships()">
-        Change My Email
+      <button type="submit" id="send-code-button" disabled>
+        Send Verification Code
       </button>
-      <button type="button" id="reset-button-groups" title="Start this process again" style="background-color: #6c757d;">
+      <button type="button" id="reset-button" title="Start this process again">
         Reset
       </button>
     </div>
-    <div id="update-message" class="message"></div>
+  </form>
+</div>
+<div id="verification-section">
+  <form id="verification-form">
+    <div class="form-group">
+      <label for="verification-code">Verification Code:</label>
+      <input type="text" id="verification-code" name="verificationCode" required pattern="\d{6}"
+        title="Please enter a 6-digit code" oninput="validateVerificationCode()"/>
+    </div>
+    <div class="button-container">
+      <button type="submit" id="verify-button" disabled>
+        Verify and Proceed
+      </button>
+      <button type="button" id="reset-button-verification" title="Start this process again"
+        style="background-color: #6c757d;">
+        Reset
+      </button>
+    </div>
+  </form>
+</div>
+
+<div id="group-list-section">
+  <h3>Review and Update Group Memberships</h3>
+  <p>The table below shows the groups where your current email address is a member. Once you are ready, click the button
+    to update your email address in these groups.</p>
+  <table id="group-list-table">
+    <thead>
+      <tr>
+        <th>Group Email</th>
+        <th>Current Email</th>
+        <th>New Email</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="group-list-body">
+    </tbody>
+  </table>
+  <div class="button-container">
+    <button type="button" id="update-groups-button" disabled onclick="updateGroupMemberships()">
+      Change My Email
+    </button>
+    <button type="button" id="reset-button-groups" title="Start this process again" style="background-color: #6c757d;">
+      Reset
+    </button>
   </div>
+  <div id="update-message" class="message"></div>
+</div>
 
-  <div id="message" class="message"></div>
+<div id="message" class="message"></div>
 
-  <script>
+<script>
   const emailSection = document.getElementById("email-section");
   const form = document.getElementById("email-form");
   // Assuming originalEmail is passed from server-side (e.g., Apps Script)
@@ -397,6 +450,14 @@
     resetButtonEmail.style.display = 'inline-block'; // Make sure it's visible if it wasn't
   }
 
+  function validateVerificationCode() {
+    // checkValidity() will now check both 'required' and 'pattern'
+    verifyButton.disabled = !verificationCodeInput.checkValidity();
+  }
+ 
+  // Attach the validateEmail function to the input event of the new email input
+  verificationCodeInput.addEventListener('input', validateVerificationCode);
+  
   function resetForm() {
     emailSection.style.display = 'block'; // Show the initial email input section
     sendCodeButton.style.display = 'inline-block';
@@ -425,12 +486,12 @@
     // No need to call validateEmail here, as it's called on DOMContentLoaded and input events
   }
 
-  form.addEventListener('submit', function(event) {
+  form.addEventListener('submit', function (event) {
     event.preventDefault(); // Prevent default submission of the email form
     sendCodeButton.click();    // Trigger the click event of the send button
   });
 
-  verificationForm.addEventListener('submit', function(event) {
+  verificationForm.addEventListener('submit', function (event) {
     event.preventDefault(); // Prevent default submission of the verification form
     verifyButton.click();      // Trigger the click event of the verify button
   });
@@ -441,7 +502,7 @@
     // Re-validate just in case, though oninput should handle most cases
     validateEmail();
     if (sendCodeButton.disabled) { // If validateEmail disabled it, return
-        return;
+      return;
     }
 
     sendCodeButton.disabled = true;
@@ -453,7 +514,7 @@
         showMessage(response, 'success'); // Use response.message and response.type
         verificationSection.style.display = "flex"; // Show verification section
         emailSection.style.display = "none"; // Hide email section
-        verifyButton.disabled = false;
+        validateVerificationCode(); // Validate verification code input
         resetButtonVerification.style.display = 'inline-block'; // Show reset in verification
       })
       .withFailureHandler(function (error) {
@@ -464,7 +525,7 @@
       .handleSendVerificationCode(originalEmail, newEmail);
   });
 
- 
+
 
 
   verifyButton.addEventListener("click", function () {
@@ -492,7 +553,7 @@
         resetButtonGroups.style.display = 'flex'; // Show reset in group list (using flex to align with update button)
       })
       .withFailureHandler(function (error) {
-        showMessage("Verification failed: " + error, "error");
+        showMessage("Verification failed: " + error.message, "error");
         verifyButton.disabled = false;
       })
       .handleVerifyAndGetGroups(originalEmail, newEmail, verificationCode);
