@@ -469,8 +469,8 @@
           return;
       }
 
-      applyBtn.disabled = true; // Disable button to prevent multiple submissions
-
+      disableForm(profileForm); // Disable the form to prevent further changes during processing
+      displayMessage("Updating profile...", "success"); // Display processing message
       const currentUpdatedProfile = {
         First: firstInput.value,
         Last: lastInput.value,
@@ -491,11 +491,13 @@
           } else {
             displayMessage("Error updating profile: " + (response && response.error ? response.error : 'Unknown error.'), "error"); // Display error message
           }
+          enableForm(profileForm); // Re-enable the form after processing
           updateApplyButtonState(); // Re-enable or keep disabled based on new changes (if any)
         })
         .withFailureHandler(function (error) {
           // Handle server-side errors
           displayMessage("Server error updating profile: " + error.message, "error"); // Display error message
+          enableForm
           updateApplyButtonState(); // Re-enable button on failure to allow user to retry
         })
         .updateProfile("<?= token ?>", currentUpdatedProfile); // Pass token and updated profile data
