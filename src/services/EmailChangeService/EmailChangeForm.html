@@ -270,7 +270,6 @@
     <div class="grid-container">
       <label for="current-email">Current Email Address:</label>
       <input type="email" id="current-email" name="currentEmail" value="<?= originalEmail ?>" readonly />
-
       <label for="new-email">New Email Address:</label>
       <input type="email" autocomplete='email' id="new-email" name="newEmail" required oninput="validateEmail()" />
       <span id="new-email-error" class="error" style="grid-column: 2; text-align: left;"></span>
@@ -338,7 +337,7 @@
   const emailForm = document.getElementById("email-form");
   // Assuming originalEmail is passed from server-side (e.g., Apps Script)
   // For local testing, you might define it here:
-  const originalEmail = "membership-automation@sc3.club"; // Example: Replace with actual value or dynamic one
+  const originalEmail = <?= originalEmail ?>; // Example: Replace with actual value or dynamic one
 
   const newEmailInput = document.getElementById("new-email");
   const sendCodeButton = document.getElementById("send-code-button");
