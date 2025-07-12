@@ -260,31 +260,6 @@
     color: red;
   }
 
-  .message {
-    margin-top: 20px;
-    font-weight: bold;
-    padding: 10px;
-    border-radius: 4px;
-    text-align: center;
-  }
-
-  .success {
-    color: green;
-    background-color: #e6ffe6;
-    border: 1px solid #ccffcc;
-  }
-
-  .error {
-    color: red;
-    background-color: #ffe6e6;
-    border: 1px solid #ffcccc;
-  }
-
-  .info {
-    color: #0056b3;
-    background-color: #e6f7ff;
-    border: 1px solid #cceeff;
-  }
 
   /* **NO MOBILE/TABLET RESPONSIVE STYLES HERE FOR NOW - FOCUS ON DESKTOP** */
 </style>
@@ -360,7 +335,7 @@
 
 <script>
   const emailSection = document.getElementById("email-section");
-  const form = document.getElementById("email-form");
+  const emailForm = document.getElementById("email-form");
   // Assuming originalEmail is passed from server-side (e.g., Apps Script)
   // For local testing, you might define it here:
   const originalEmail = "membership-automation@sc3.club"; // Example: Replace with actual value or dynamic one
@@ -459,6 +434,8 @@
   verificationCodeInput.addEventListener('input', validateVerificationCode);
   
   function resetForm() {
+    enableForm(emailForm); // Re-enable the email form
+    enableForm(verificationForm); // Re-enable the verification form
     emailSection.style.display = 'block'; // Show the initial email input section
     sendCodeButton.style.display = 'inline-block';
     sendCodeButton.disabled = true;
@@ -486,7 +463,7 @@
     // No need to call validateEmail here, as it's called on DOMContentLoaded and input events
   }
 
-  form.addEventListener('submit', function (event) {
+  emailForm.addEventListener('submit', function (event) {
     event.preventDefault(); // Prevent default submission of the email form
     sendCodeButton.click();    // Trigger the click event of the send button
   });
@@ -505,9 +482,8 @@
       return;
     }
 
-    sendCodeButton.disabled = true;
-    showMessage("Sending code...", "info");
-    resetButtonEmail.style.display = 'none'; // Hide email section reset button
+    disableForm(emailForm)
+    showMessage("Sending code...", "success");
 
     google.script.run
       .withSuccessHandler(function (response) {
@@ -519,8 +495,7 @@
       })
       .withFailureHandler(function (error) {
         showMessage("Server error: " + error.message, "error");
-        sendCodeButton.disabled = false;
-        resetButtonEmail.style.display = 'inline-block';
+        enableForm(emailForm); // Re-enable the form on failure
       })
       .handleSendVerificationCode(originalEmail, newEmail);
   });
@@ -537,8 +512,8 @@
       return;
     }
 
-    verifyButton.disabled = true;
-    showMessage("Verifying...", "info");
+    disableForm(verificationForm)
+    showMessage("Verifying...", "success");
 
     google.script.run
       .withSuccessHandler(function (groupData) {
@@ -549,12 +524,11 @@
         groupMembershipData = groupData;
         populateGroupListTable(groupData);
         updateGroupsButton.disabled = false;
-        resetButtonVerification.style.display = 'none'; // Hide reset from verification
         resetButtonGroups.style.display = 'flex'; // Show reset in group list (using flex to align with update button)
       })
       .withFailureHandler(function (error) {
         showMessage("Verification failed: " + error.message, "error");
-        verifyButton.disabled = false;
+        enableForm(verificationForm); // Re-enable the form on failure
       })
       .handleVerifyAndGetGroups(originalEmail, newEmail, verificationCode);
   });
@@ -586,12 +560,12 @@
 
   function updateGroupMemberships() {
     if (groupMembershipData.length === 0) {
-      showUpdateMessage("No groups to update.", "info");
+      showUpdateMessage("No groups to update.", "error");
       return;
     }
 
     updateGroupsButton.disabled = true;
-    showUpdateMessage("Updating email address...", "info");
+    showUpdateMessage("Updating email address...", "success");
 
     const newEmail = newEmailInput.value;
 
