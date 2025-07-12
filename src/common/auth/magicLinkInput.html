@@ -3,19 +3,6 @@
     text-align: left;
   }
 
-  /* Style for disabled form visual feedback */
-  .form-disabled {
-    opacity: 0.7; /* Faded appearance */
-    pointer-events: none; /* Prevents cursor events on the form wrapper */
-  }
-
-  /* Ensure disabled inputs/buttons still have their default disabled styles */
-  .form-disabled input,
-  .form-disabled button,
-  .form-disabled select,
-  .form-disabled textarea {
-    cursor: not-allowed;
-  }
 </style>
 <h2>SCCCC
   <?= serviceName ?>
@@ -38,59 +25,6 @@
   const messageDiv = document.getElementById('message');
   const magicLinkForm = document.getElementById('magicLinkForm'); // Get form reference
 
-  /**
-   * Disables all input, button, select, and textarea elements within a given form,
-   * and optionally adds a CSS class for visual feedback.
-   * Also prevents subsequent form submissions by stopping default behavior.
-   * @param {HTMLElement} formElement The form to disable.
-   */
-  function disableForm(formElement) {
-    if (!formElement) {
-      console.warn("Attempted to disable a non-existent form element.");
-      return;
-    }
-
-    // Disable all form control elements
-    for (let i = 0; i < formElement.elements.length; i++) {
-      const element = formElement.elements[i];
-      // Check if the element is a standard form control that can be disabled
-      if (element.tagName === 'INPUT' || element.tagName === 'BUTTON' ||
-          element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') { //
-        element.disabled = true; //
-      }
-    }
-
-    // Add a class for visual styling
-    formElement.classList.add('form-disabled');
-
-    // Add a property to track if the form is disabled via this function
-    formElement.dataset.customDisabled = 'true';
-  }
-
-  /**
-   * Enables all input, button, select, and textarea elements within a given form,
-   * and removes the visual disabled class.
-   * @param {HTMLElement} formElement The form to enable.
-   */
-  function enableForm(formElement) {
-    if (!formElement) {
-      console.warn("Attempted to enable a non-existent form element.");
-      return;
-    }
-
-    // Only enable if it was disabled by our custom function
-    if (formElement.dataset.customDisabled === 'true') {
-      for (let i = 0; i < formElement.elements.length; i++) {
-        const element = formElement.elements[i];
-        if (element.tagName === 'INPUT' || element.tagName === 'BUTTON' ||
-            element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') { //
-          element.disabled = false; //
-        }
-      }
-      formElement.classList.remove('form-disabled');
-      delete formElement.dataset.customDisabled;
-    }
-  }
 
   function validateEmail() {
     // Only enable the button if the form is not disabled and email is valid

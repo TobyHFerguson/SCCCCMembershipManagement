@@ -326,6 +326,7 @@
         const currentUserToken = userTokenInput.value;
         console.log('Updated subscriptions:', JSON.stringify(updatedSubscriptions));
 
+        disableForm(subscriptionForm); // Disable the form to prevent further changes during processing
         displayMessage('Updating subscriptions...', 'success'); // Show processing message
         google.script.run
             .withSuccessHandler(function (response) {
@@ -345,11 +346,13 @@
                     displayMessage(response ? response.message : 'Error updating subscriptions. Please try again.', 'error');
                     changesMade = true; // Keep changesMade true if there was an error
                 }
+                enableForm(subscriptionForm); // Re-enable the form after processing
                 applyButton.disabled = !changesMade; // Re-enable if changes exist or on error
             })
             .withFailureHandler(function (error) {
                 console.error('Error updating subscriptions:', error);
                 displayMessage('Error updating subscriptions. Please try again: ' + error.message, 'error');
+                enableForm
                 applyButton.disabled = false; // Re-enable the button on error
             })
             .updateUserSubscriptions(updatedSubscriptions, currentUserToken);
