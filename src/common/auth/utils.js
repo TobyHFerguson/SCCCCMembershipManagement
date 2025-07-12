@@ -20,8 +20,8 @@ Common.Auth.Utils = {
         const serviceName = WebServices[service].name || ''
         const message = {
             to: email,
-            subject: `SCCCC ${serviceName} Access Link`,
-            body: `Click the following link to access the SCCCC ${serviceName} (this link can only be used once):\n\n` + accessLink
+            subject: `SCCCC ${serviceName} Magic Link`,
+            body: `Click the following magic link to access the SCCCC ${serviceName} (this link can only be used once):\n\n` + accessLink
         }
         MailApp.sendEmail(message);
         console.log('Email sent:', message);
