@@ -322,6 +322,9 @@
       ...originalData
     }; // Initialize updatedProfile object with original data
 
+    function enableAllButEmail() {
+      enableForm(profileForm, ['email']);
+    }
     function changesMade() {
       const currentUpdatedProfile = {
         First: firstInput.value,
@@ -491,13 +494,13 @@
           } else {
             displayMessage("Error updating profile: " + (response && response.error ? response.error : 'Unknown error.'), "error"); // Display error message
           }
-          enableForm(profileForm); // Re-enable the form after processing
+          enableAllButEmail(profileForm); // Re-enable the form after processing
           updateApplyButtonState(); // Re-enable or keep disabled based on new changes (if any)
         })
         .withFailureHandler(function (error) {
           // Handle server-side errors
           displayMessage("Server error updating profile: " + error.message, "error"); // Display error message
-          enableForm
+          enableAllButEmail
           updateApplyButtonState(); // Re-enable button on failure to allow user to retry
         })
         .updateProfile("<?= token ?>", currentUpdatedProfile); // Pass token and updated profile data
