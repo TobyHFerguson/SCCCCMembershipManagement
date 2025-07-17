@@ -301,30 +301,36 @@
     formElement.dataset.customDisabled = 'true';
   }
 
-  /**
-   * Enables all input, button, select, and textarea elements within a given form,
-   * and removes the visual disabled class.
-   * @param {HTMLElement} formElement The form to enable.
-   */
-  function enableForm(formElement) {
-    if (!formElement) {
-      console.warn("Attempted to enable a non-existent form element.");
-      return;
-    }
-
-    // Only enable if it was disabled by our custom function
-    if (formElement.dataset.customDisabled === 'true') {
-      for (let i = 0; i < formElement.elements.length; i++) {
-        const element = formElement.elements[i];
-        if (element.tagName === 'INPUT' || element.tagName === 'BUTTON' ||
-            element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') { //
-          element.disabled = false; //
-        }
-      }
-      formElement.classList.remove('form-disabled');
-      delete formElement.dataset.customDisabled;
-    }
+/**
+ * Enables all input, button, select, and textarea elements within a given form,
+ * and removes the visual disabled class.
+ * @param {HTMLElement} formElement The form to enable.
+ * @param {string[]} [exceptions=[]] An optional array of element IDs to skip enabling.
+ */
+function enableForm(formElement, exceptions = []) {
+  if (!formElement) {
+    console.warn("Attempted to enable a non-existent form element.");
+    return;
   }
+
+  // Only enable if it was disabled by our custom function
+  if (formElement.dataset.customDisabled === 'true') {
+    for (let i = 0; i < formElement.elements.length; i++) {
+      const element = formElement.elements[i];
+      // Skip the element if its ID is in the exceptions array
+      if (exceptions.includes(element.id)) {
+        continue;
+      }
+
+      if (element.tagName === 'INPUT' || element.tagName === 'BUTTON' ||
+          element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') {
+        element.disabled = false;
+      }
+    }
+    formElement.classList.remove('form-disabled');
+    delete formElement.dataset.customDisabled;
+  }
+}
     // Initial check on load
     checkViewportAndApplyClasses();
     // Re-check on window resize (for orientation changes)
