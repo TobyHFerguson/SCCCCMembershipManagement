@@ -289,7 +289,7 @@
     <div class="form-group">
       <label for="verification-code">Verification Code:</label>
       <input type="text" id="verification-code" name="verificationCode" required pattern="\d{6}"
-        title="Please enter a 6-digit code" oninput="validateVerificationCode()"/>
+        title="Please enter a 6-digit code" oninput="validateVerificationCode()" />
     </div>
     <div class="button-container">
       <button type="submit" id="verify-button" disabled>
@@ -366,11 +366,6 @@
     messageElement.className = "message " + type;
   }
 
-  function showUpdateMessage(text, type) {
-    updateMessageElement.style.display = 'block'; // Ensure it's block to be visible
-    updateMessageElement.textContent = text;
-    updateMessageElement.className = "message " + type;
-  }
 
   function hideEmailError() {
     newEmailError.textContent = '';
@@ -428,10 +423,10 @@
     // checkValidity() will now check both 'required' and 'pattern'
     verifyButton.disabled = !verificationCodeInput.checkValidity();
   }
- 
+
   // Attach the validateEmail function to the input event of the new email input
   verificationCodeInput.addEventListener('input', validateVerificationCode);
-  
+
   function resetForm() {
     enableForm(emailForm); // Re-enable the email form
     enableForm(verificationForm); // Re-enable the verification form
@@ -559,23 +554,26 @@
 
   function updateGroupMemberships() {
     if (groupMembershipData.length === 0) {
-      showUpdateMessage("No groups to update.", "error");
+      showMessage("No groups to update.", "error");
       return;
     }
 
     updateGroupsButton.disabled = true;
-    showUpdateMessage("Updating email address...", "success");
+    showMessage("Updating email address...", "success");
 
     const newEmail = newEmailInput.value;
 
     google.script.run
       .withSuccessHandler(function (results) {
-        showUpdateMessage("Your email has been changed successfully.", "success");
+        showMessage("Your email has been changed successfully.", "success");
         updateGroupListStatus(results);
-        updateGroupsButton.disabled = false; // Allow retry if needed
+        document.getElementById('current-email').value = newEmail; // Update the current email field
+
+        resetForm(); // Reset the form to the initial state
+        showMessage("Your email has been updated in all groups.", "success");
       })
       .withFailureHandler(function (error) {
-        showUpdateMessage("Error updating group memberships: " + error, "error");
+        showMessage("Error updating group memberships: " + error, "error");
         updateGroupsButton.disabled = false;
       })
       .handleChangeEmailInGroupsUI(originalEmail, newEmail, groupMembershipData);
