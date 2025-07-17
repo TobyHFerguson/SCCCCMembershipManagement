@@ -1,196 +1,344 @@
-<!DOCTYPE html>
-<html>
+<style>
+  /* 1. Override the .container's background/shadow and width for *this service only* */
+  .container {
+    background-color: #fff;
+    /* White background for the container */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    /* */
 
-<head>
-  <title>SCCCC Email Address Change Form</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 20px;
-      max-width: 500px;
-      margin: auto;
-    }
+    /* To make this specific container's content area wide enough on desktop: */
+    width: 90%;
+    /* Start with a percentage of the viewport width */
+    min-width: 30rem;
+    /* Ensure a good minimum width for readability (e.g., 480px) */
+    max-width: 45rem;
+    /* A more generous max-width for the form (e.g., 720px) */
+    margin-left: auto;
+    /* Center the container itself */
+    margin-right: auto;
+    /* Center the container itself */
+    padding: 2rem;
+    /* Add some overall padding to the container */
+  }
 
-    .form-group {
-      margin-bottom: 20px;
-    }
+  /* 2. Styles for the H2 within this service */
+  h2 {
+    margin-top: 0;
+    margin-bottom: 25px;
+    color: #333;
+    text-align: center;
+    /* Ensure heading is centered within the container */
+  }
 
-    label {
-      display: block;
-      margin-bottom: 5px;
-    }
+  /* 3. Ensure form-group structure is consistent */
+  .form-group {
+    margin-bottom: 20px;
+    /* Space between form groups when stacked */
+    text-align: left;
+  }
 
-    input[type="email"],
-    input[type="text"] {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
+  label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+  }
 
-    .button-container {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-top: 10px; /* Add some space below the input */
-    }
+  input[type="email"],
+  input[type="text"] {
+    width: 100%;
+    /* Take full width of its grid cell */
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    /* Ensures padding doesn't add to the width */
+    font-size: 1rem;
+    /* Use rem based on _Header.html's html font-size */
+    min-width: 0;
+    /* IMPORTANT: Allows input to shrink within grid/flex if needed to prevent cutoff */
+  }
 
-    .button-container button {
-      padding: 10px 20px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
+  input[readonly] {
+    background-color: #e9e9e9;
+    color: #777;
+    cursor: not-allowed;
+  }
 
-    .button-container button#reset-button {
-      background-color: #6c757d; /* Grey color for reset */
-      margin-left: auto; /* Push to the right */
-    }
+  /* 4. Styles for the 2x2 grid */
+  .grid-container {
+    display: grid;
+    /* Define columns with a fixed width for labels and flexible for inputs */
+    grid-template-columns: 12rem 1fr;
+    /* Example: 12rem (approx 192px) for label, rest for input */
+    /* If "Current Email Address" label needs more space, increase 12rem.
+         If the email address itself is long, 1fr should handle it. */
+    gap: 15px 20px;
+    /* Row gap, column gap */
+    align-items: center;
+    /* Vertically center items in the grid */
+    margin-bottom: 25px;
+    /* Space below the grid before buttons */
 
-    #verification-section {
-      display: none; /* Hidden by default */
-      margin-top: 20px;
-      border-top: 1px solid #ccc;
-      padding-top: 20px;
-      display: flex; /* For button alignment */
-      gap: 10px;
-      align-items: center;
-    }
+    /* Centering the grid-container within the wider .container */
+    width: 100%;
+    /* Make grid-container take full width of its parent (the form) */
+    max-width: 40rem;
+    /* Cap the grid itself to prevent inputs from becoming excessively wide */
+    margin-left: auto;
+    /* Center it horizontally */
+    margin-right: auto;
+    /* Center it horizontally */
+  }
 
-    #verification-section button {
-      background-color: #007bff; /* Blue */
-    }
+  .grid-container label {
+    margin-bottom: 0;
+    /* Remove bottom margin for labels in grid */
+    text-align: right;
+    /* Align labels to the right in the first column */
+    padding-right: 10px;
+    /* Add some space between label and input */
+    white-space: nowrap;
+    /* Prevent labels from wrapping */
+    overflow: hidden;
+    /* Hide any overflow if label is still too long for fixed width */
+    text-overflow: ellipsis;
+    /* Add ellipsis if text is cut off */
+  }
 
-    #group-list-section {
-      display: none;
-      margin-top: 20px;
-      border-top: 1px solid #ccc;
-      padding-top: 20px;
-    }
+  /* **FIX FOR RED ERROR MESSAGE ALIGNMENT AND STYLING** */
+  #new-email-error {
+    text-align: center;
+    /* Center the text inside the error box */
+    grid-column: 1 / -1;
+    /* Make it span all columns of the grid */
+    margin-top: 5px;
+    /* Space above it */
+    /* New styling for the red background and centered appearance */
+    background-color: #dc3545;
+    /* Red background */
+    color: white;
+    /* White text */
+    padding: 10px 15px;
+    /* Padding inside the error box */
+    border-radius: 4px;
+    /* Rounded corners */
+    width: fit-content;
+    /* Make the error box only as wide as its content */
+    max-width: 80%;
+    /* Limit its maximum width */
+    margin-left: auto;
+    /* Center the error box itself */
+    margin-right: auto;
+    /* Center the error box itself */
+    display: block;
+    /* Ensure it's a block-level element for width and centering */
+  }
 
-    #group-list-section button {
-      background-color: #007bff; /* Blue */
-    }
+  /* 5. Button styles */
+  .button-container {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    /* Center buttons horizontally */
+    margin-top: 10px;
+  }
 
-    #group-list-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
+  .button-container button {
+    padding: 0.625rem 1.25rem;
+    /* Use rem for padding */
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    /* Base font size */
+    transition: background-color 0.3s ease;
+    text-align: center;
+    /* Added to explicitly center button text */
+  }
 
-    #group-list-table th,
-    #group-list-table td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: left;
-    }
+  .button-container button:hover:not(:disabled) {
+    background-color: #0056b3;
+  }
 
-    #group-list-table th {
-      background-color: #f2f2f2;
-    }
+  .button-container button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
 
-    .status-pending {
-      color: grey;
-    }
+  .button-container button#reset-button,
+  .button-container button#reset-button-verification,
+  .button-container button#reset-button-groups {
+    background-color: #6c757d;
+  }
 
-    .status-success {
-      color: green;
-    }
+  .button-container button#reset-button:hover:not(:disabled),
+  .button-container button#reset-button-verification:hover:not(:disabled),
+  .button-container button#reset-button-groups:hover:not(:disabled) {
+    background-color: #5a6268;
+  }
 
-    .status-failed {
-      color: red;
-    }
+  /* 6. Styles for verification section */
+  #verification-section {
+    display: none;
+    /* Hidden by default */
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+    flex-direction: column;
+    /* Stack form group and button container */
+    align-items: center;
+    /* Center items within this section */
+  }
 
-    .message {
-      margin-top: 10px;
-      font-weight: bold;
-    }
+  #verification-section .form-group {
+    width: 100%;
+    /* Make input take full width */
+    max-width: 300px;
+    /* Limit max width for a cleaner look */
+    margin-left: auto;
+    margin-right: auto;
+  }
 
-    .success {
-      color: green;
-    }
+  #verification-section .button-container {
+    margin-top: 15px;
+  }
 
-    .error {
-      color: red;
-    }
-  </style>
-</head>
+  /* 7. Styles for group-list section */
+  #group-list-section {
+    display: none;
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+    text-align: left;
+    /* Default text alignment for this section */
+  }
 
-<body>
-  <h2>SCCCC Change Email Address Form</h2>
-  <div id="email-section">
-    <p>Current Email Address:
-      <?= originalEmail ?>
-    </p>
-    <form id="email-form">
-      <div class="form-group">
-        <label for="new-email">New Email Address:</label>
-        <input type="email" id="new-email" name="newEmail" required oninput="validateEmail()" />
-        <span id="new-email-error" class="error"></span>
-      </div>
-      <div class="button-container">
-        <button type="button" id="send-code-button" disabled>
-          Send Verification Code
-        </button>
-        <button type="button" id="reset-button" title="Start this process again">
-          Reset
-        </button>
-      </div>
-    </form>
-  </div>
-  <div id="verification-section">
-    <form id="verification-form">
-      <div class="form-group">
-        <label for="verification-code">Verification Code:</label>
-        <input type="text" id="verification-code" name="verificationCode" required pattern="\d{6}"
-          title="Please enter a 6-digit code" />
-      </div>
-      <div class="button-container">
-        <button type="button" id="verify-button" disabled>
-          Verify and Proceed
-        </button>
-        <button type="button" id="reset-button-verification" title="Start this process again" style="background-color: #6c757d;">
-          Reset
-        </button>
-      </div>
-    </form>
-  </div>
+  #group-list-section h3 {
+    text-align: center;
+    /* Center the heading within this section */
+    margin-bottom: 15px;
+  }
 
-  <div id="group-list-section">
-    <h3>Review and Update Group Memberships</h3>
-    <p>The table below shows the groups where your current email address is a member. Once you are ready, click the button to update your email address in these groups.</p>
-    <table id="group-list-table">
-      <thead>
-        <tr>
-          <th>Group Email</th>
-          <th>Current Email</th>
-          <th>New Email</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="group-list-body">
-        </tbody>
-    </table>
+  #group-list-section p {
+    text-align: center;
+    /* Center the paragraph within this section */
+    margin-bottom: 20px;
+  }
+
+  #group-list-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    margin-bottom: 20px;
+  }
+
+  #group-list-table th,
+  #group-list-table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+  }
+
+  #group-list-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+    color: #333;
+  }
+
+  .status-pending {
+    color: grey;
+  }
+
+  .status-success {
+    color: green;
+  }
+
+  .status-failed {
+    color: red;
+  }
+
+
+  /* **NO MOBILE/TABLET RESPONSIVE STYLES HERE FOR NOW - FOCUS ON DESKTOP** */
+</style>
+
+<h2>SCCCC Email Change Form</h2>
+<div id="email-section">
+  <form id="email-form">
+    <div class="grid-container">
+      <label for="current-email">Current Email Address:</label>
+      <input type="email" id="current-email" name="currentEmail" value="<?= originalEmail ?>" readonly />
+      <label for="new-email">New Email Address:</label>
+      <input type="email" autocomplete='email' id="new-email" name="newEmail" required oninput="validateEmail()" />
+      <span id="new-email-error" class="error" style="grid-column: 2; text-align: left;"></span>
+    </div>
     <div class="button-container">
-      <button type="button" id="update-groups-button" disabled onclick="updateGroupMemberships()">
-        Change My Email
+      <button type="submit" id="send-code-button" disabled>
+        Send Verification Code
       </button>
-      <button type="button" id="reset-button-groups" title="Start this process again" style="background-color: #6c757d; margin-left: auto;">
+      <button type="button" id="reset-button" title="Start this process again">
         Reset
       </button>
     </div>
-    <div id="update-message" class="message"></div>
+  </form>
+</div>
+<div id="verification-section">
+  <form id="verification-form">
+    <div class="form-group">
+      <label for="verification-code">Verification Code:</label>
+      <input type="text" id="verification-code" name="verificationCode" required pattern="\d{6}"
+        title="Please enter a 6-digit code" oninput="validateVerificationCode()"/>
+    </div>
+    <div class="button-container">
+      <button type="submit" id="verify-button" disabled>
+        Verify and Proceed
+      </button>
+      <button type="button" id="reset-button-verification" title="Start this process again"
+        style="background-color: #6c757d;">
+        Reset
+      </button>
+    </div>
+  </form>
+</div>
+
+<div id="group-list-section">
+  <h3>Review and Update Group Memberships</h3>
+  <p>The table below shows the groups where your current email address is a member. Once you are ready, click the button
+    to update your email address in these groups.</p>
+  <table id="group-list-table">
+    <thead>
+      <tr>
+        <th>Group Email</th>
+        <th>Current Email</th>
+        <th>New Email</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="group-list-body">
+    </tbody>
+  </table>
+  <div class="button-container">
+    <button type="button" id="update-groups-button" disabled onclick="updateGroupMemberships()">
+      Change My Email
+    </button>
+    <button type="button" id="reset-button-groups" title="Start this process again" style="background-color: #6c757d;">
+      Reset
+    </button>
   </div>
+  <div id="update-message" class="message"></div>
+</div>
 
-  <div id="message" class="message"></div>
+<div id="message" class="message"></div>
 
-  <script>
+<script>
   const emailSection = document.getElementById("email-section");
-  const form = document.getElementById("email-form");
-  const originalEmail = "<?= originalEmail ?>";
+  const emailForm = document.getElementById("email-form");
+  // Assuming originalEmail is passed from server-side (e.g., Apps Script)
+  // For local testing, you might define it here:
+  const originalEmail = <?= originalEmail ?>; // Example: Replace with actual value or dynamic one
+
   const newEmailInput = document.getElementById("new-email");
   const sendCodeButton = document.getElementById("send-code-button");
   const resetButtonEmail = document.getElementById("reset-button");
@@ -208,16 +356,32 @@
   const newEmailError = document.getElementById("new-email-error");
   let groupMembershipData = [];
 
+  // Initialize currentEmailInput value (if not already set by Apps Script)
+  // This is good practice for the read-only field
+  document.getElementById('current-email').value = originalEmail;
+
   function showMessage(text, type) {
-    messageElement.style.display = '';
+    messageElement.style.display = 'block'; // Ensure it's block to be visible
     messageElement.textContent = text;
     messageElement.className = "message " + type;
   }
 
   function showUpdateMessage(text, type) {
-    updateMessageElement.style.display = '';
+    updateMessageElement.style.display = 'block'; // Ensure it's block to be visible
     updateMessageElement.textContent = text;
     updateMessageElement.className = "message " + type;
+  }
+
+  function hideEmailError() {
+    newEmailError.textContent = '';
+    newEmailError.style.display = 'none'; // Hide the error message element
+    newEmailError.classList.remove('error'); // Remove the error styling class
+  }
+
+  function showEmailError(message) {
+    newEmailError.textContent = message;
+    newEmailError.style.display = 'block'; // Show the error message element
+    newEmailError.classList.add('error'); // Add the error styling class
   }
 
   function isValidEmail(email) {
@@ -226,110 +390,129 @@
   }
 
   function validateEmail() {
-    var emailInput = document.getElementById("new-email");
-    var sendButton = document.getElementById("send-code-button");
-    var isNewEmailValid = false;
+    const emailInput = document.getElementById("new-email");
+    const sendButton = document.getElementById("send-code-button");
+    const newEmail = emailInput.value.trim();
 
-    if (emailInput.value.trim() === '') {
-      newEmailError.textContent = 'New email is required.';
-      sendButton.disabled = true;
-      resetButtonEmail.style.display = 'none';
-    } else if (!isValidEmail(emailInput.value.trim())) {
-      newEmailError.textContent = 'Please enter a valid email address.';
-      sendButton.disabled = true;
-      resetButtonEmail.style.display = 'none';
-    } else if (emailInput.value.trim() === originalEmail) {
-      newEmailError.textContent = 'New email cannot be the same as the current email.';
-      sendButton.disabled = true;
-      resetButtonEmail.style.display = 'none';
-    } else {
-      newEmailError.textContent = '';
-      sendButton.disabled = false;
-      resetButtonEmail.style.display = 'inline-block';
-      isNewEmailValid = true;
+    // **IMPORTANT FIX: Hide the error message at the very beginning of validation**
+    hideEmailError();
+
+    // Reset button disabled state
+    sendButton.disabled = true;
+
+    // Check conditions for displaying error and disabling button
+    if (newEmail === '') {
+      showEmailError('New email is required.');
+      resetButtonEmail.style.display = 'inline-block'; // Keep reset visible
+      return;
     }
 
-    // Initially hide the reset buttons in later sections
-    resetButtonVerification.style.display = 'none';
-    resetButtonGroups.style.display = 'none';
-    verificationSection.style.display = 'none'; // Ensure verification section is hidden on initial load
+    if (!isValidEmail(newEmail)) {
+      showEmailError('Please enter a valid email address.');
+      resetButtonEmail.style.display = 'inline-block';
+      return;
+    }
+
+    if (newEmail.toLowerCase() === originalEmail.toLowerCase()) {
+      showEmailError('New email cannot be the same as the current email.');
+      resetButtonEmail.style.display = 'inline-block';
+      return;
+    }
+
+    // If all checks pass, enable the send button and ensure error is hidden
+    sendButton.disabled = false;
+    resetButtonEmail.style.display = 'inline-block'; // Make sure it's visible if it wasn't
   }
 
+  function validateVerificationCode() {
+    // checkValidity() will now check both 'required' and 'pattern'
+    verifyButton.disabled = !verificationCodeInput.checkValidity();
+  }
+ 
+  // Attach the validateEmail function to the input event of the new email input
+  verificationCodeInput.addEventListener('input', validateVerificationCode);
+  
   function resetForm() {
+    enableForm(emailForm); // Re-enable the email form
+    enableForm(verificationForm); // Re-enable the verification form
     emailSection.style.display = 'block'; // Show the initial email input section
     sendCodeButton.style.display = 'inline-block';
     sendCodeButton.disabled = true;
-    resetButtonEmail.style.display = 'none';
+    resetButtonEmail.style.display = 'inline-block'; // Ensure it's visible on reset
+
     verificationSection.style.display = "none";
     groupListSection.style.display = "none"; // Hide the group list section
-    messageElement.style.display = "none";
-    updateMessageElement.style.display = "none";
-    newEmailInput.value = '';
-    verificationCodeInput.value = '';
-    groupListTableBody.innerHTML = '';
-    groupMembershipData = [];
-    validateEmail(); // Re-validate to ensure send button is initially disabled
+
+    messageElement.style.display = "none"; // Hide general messages
+    updateMessageElement.style.display = "none"; // Hide update messages
+
+    newEmailInput.value = ''; // Clear new email input
+    verificationCodeInput.value = ''; // Clear verification code input
+    groupListTableBody.innerHTML = ''; // Clear group list table
+    groupMembershipData = []; // Clear group data
+
+    hideEmailError(); // Ensure email error is hidden on reset
+
+    verifyButton.disabled = true; // Disable verify button
+    updateGroupsButton.disabled = true; // Disable update groups button
+
+    resetButtonVerification.style.display = 'none'; // Hide reset buttons from later sections
+    resetButtonGroups.style.display = 'none';
+
+    // No need to call validateEmail here, as it's called on DOMContentLoaded and input events
   }
 
-  form.addEventListener('submit', function(event) {
+  emailForm.addEventListener('submit', function (event) {
     event.preventDefault(); // Prevent default submission of the email form
     sendCodeButton.click();    // Trigger the click event of the send button
   });
 
-  verificationForm.addEventListener('submit', function(event) {
+  verificationForm.addEventListener('submit', function (event) {
     event.preventDefault(); // Prevent default submission of the verification form
     verifyButton.click();      // Trigger the click event of the verify button
   });
 
   sendCodeButton.addEventListener("click", function () {
-    const newEmail = newEmailInput.value;
+    const newEmail = newEmailInput.value.trim();
 
-    if (!newEmail) {
-      showMessage("Please enter your new email address.", "error");
+    // Re-validate just in case, though oninput should handle most cases
+    validateEmail();
+    if (sendCodeButton.disabled) { // If validateEmail disabled it, return
       return;
     }
 
-    if (!isValidEmail(newEmail)) {
-      showMessage("Invalid email address format.", "error");
-      return;
-    }
-
-    if (newEmail === originalEmail) {
-      showMessage("New email cannot be the same as the current email.", "error");
-      return;
-    }
-
-    sendCodeButton.disabled = true;
-    showMessage("Sending code...", "info");
-    resetButtonEmail.style.display = 'inline-block';
+    disableForm(emailForm)
+    showMessage("Sending code...", "success");
 
     google.script.run
       .withSuccessHandler(function (response) {
-        showMessage(response, "success");
+        showMessage(response, 'success'); // Use response.message and response.type
         verificationSection.style.display = "flex"; // Show verification section
-        sendCodeButton.style.display = "none"; // Hide send button
-        verifyButton.disabled = false;
-        resetButtonEmail.style.display = 'none'; // Hide reset from email section
+        emailSection.style.display = "none"; // Hide email section
+        validateVerificationCode(); // Validate verification code input
         resetButtonVerification.style.display = 'inline-block'; // Show reset in verification
       })
       .withFailureHandler(function (error) {
-        showMessage("Error: " + error, "error");
-        sendCodeButton.disabled = false;
+        showMessage("Server error: " + error.message, "error");
+        enableForm(emailForm); // Re-enable the form on failure
       })
       .handleSendVerificationCode(originalEmail, newEmail);
   });
 
+
+
+
   verifyButton.addEventListener("click", function () {
-    const newEmail = newEmailInput.value;
-    const verificationCode = verificationCodeInput.value;
+    const newEmail = newEmailInput.value.trim();
+    const verificationCode = verificationCodeInput.value.trim();
 
     if (!verificationCode) {
       showMessage("Please enter the verification code.", "error");
       return;
     }
 
-    verifyButton.disabled = true;
-    showMessage("Verifying...", "info");
+    disableForm(verificationForm)
+    showMessage("Verifying...", "success");
 
     google.script.run
       .withSuccessHandler(function (groupData) {
@@ -340,12 +523,11 @@
         groupMembershipData = groupData;
         populateGroupListTable(groupData);
         updateGroupsButton.disabled = false;
-        resetButtonVerification.style.display = 'none'; // Hide reset from verification
         resetButtonGroups.style.display = 'flex'; // Show reset in group list (using flex to align with update button)
       })
       .withFailureHandler(function (error) {
-        showMessage("Verification failed: " + error, "error");
-        verifyButton.disabled = false;
+        showMessage("Verification failed: " + error.message, "error");
+        enableForm(verificationForm); // Re-enable the form on failure
       })
       .handleVerifyAndGetGroups(originalEmail, newEmail, verificationCode);
   });
@@ -371,17 +553,18 @@
       const cell = row.insertCell();
       cell.colSpan = 4;
       cell.textContent = "No Google Groups found for your current email address.";
+      cell.style.textAlign = 'center';
     }
   }
 
   function updateGroupMemberships() {
     if (groupMembershipData.length === 0) {
-      showUpdateMessage("No groups to update.", "info");
+      showUpdateMessage("No groups to update.", "error");
       return;
     }
 
     updateGroupsButton.disabled = true;
-    showUpdateMessage("Updating email address...", "info");
+    showUpdateMessage("Updating email address...", "success");
 
     const newEmail = newEmailInput.value;
 
@@ -419,8 +602,12 @@
   resetButtonEmail.addEventListener("click", resetForm);
   resetButtonVerification.addEventListener("click", resetForm);
   resetButtonGroups.addEventListener("click", resetForm);
-  validateEmail(); // Initial validation to set button state
-</script>
-</body>
 
-</html>
+  // Initial setup on page load
+  document.addEventListener('DOMContentLoaded', () => {
+    resetForm(); // Call resetForm to ensure initial state is correct
+    // Set initial current email from originalEmail variable
+    document.getElementById('current-email').value = originalEmail;
+  });
+
+</script>

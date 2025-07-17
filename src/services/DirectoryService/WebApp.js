@@ -2,17 +2,18 @@ const DIRECTORY = 'services/DirectoryService/html/directory.html'; // Name of th
 const SERVICE = 'DirectoryService'
 DirectoryService.WebApp = {
 
-    doGet: (e, userEmail) => {
+    doGet: (e, userEmail, template) => {
         const service = e.parameter.service;
         if (service !== SERVICE) {
             return HtmlService.createHtmlOutput(`<h1>Invalid service. Was expecting ${DIRECTORY} but got ${service}</p>`);
 
         }
-        const template = HtmlService.createTemplateFromFile(DIRECTORY);
+        template.contentFileName = DIRECTORY;
         template.userEmail = userEmail;
+        template.directoryEntries = DirectoryService.getDirectoryEntries();
+        console.log('Directory entries:', template.directoryEntries);
         const htmlOutput = template.evaluate()
             .setTitle('SCCCC Directory')
-            .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
         return htmlOutput;
     },
 

@@ -1,11 +1,12 @@
+const GROUP_MANAGEMENT_HTML = "services/GroupManagementService/GroupManagementService.html";
 GroupManagementService.WebApp = {
-    doGet: function (e, userEmail) {
-        const token = Common.Auth.TokenManager.getMultiUseToken(userEmail);
-        const template = HtmlService.createTemplateFromFile('services/GroupManagementService/GroupManagementService.html');
+    
+    doGet: function (e, userEmail, template) {
+        template.contentFileName = GROUP_MANAGEMENT_HTML;
         template.userGroupSubscription = GroupManagementService.getUserGroupSubscription(userEmail);
         template.deliveryMap = GroupSubscription.deliveryOptions; // Pass the map to the HTML for dropdown creation
-        template.userToken = token;
-        return template.evaluate();
+        template.userToken = Common.Auth.TokenManager.getMultiUseToken(userEmail);;
+        return template.evaluate().setTitle("SCCCC Group Management");
     },
     updateUserSubscriptions: function (updatedSubscriptions, userToken) {
         const userEmail = Common.Auth.TokenManager.getEmailFromMUT(userToken);

@@ -1,0 +1,332 @@
+
+<!-- Purpose of <base target="_top">: It tells the browser that all relative links within the document should open in the topmost Browse context (i.e., the entire browser window), rather than staying within the iframe that might contain the web app. This prevents "frame busting" issues and ensures a consistent navigation experience. -->
+
+<base target="_top"> 
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+    /* Base Styles (for Desktop) */
+    html {
+        font-size: 16px;
+        /* Default/Desktop base font size - 1rem = 16px */
+        box-sizing: border-box;
+    }
+
+    *,
+    *::before,
+    *::after {
+        box-sizing: inherit;
+        /* Inherit box-sizing globally */
+    }
+
+    body {
+        font-family: sans-serif;
+        display: flex;
+        /* Flexbox for centering on desktop */
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        /* This might be tricky in a fixed-size iframe. Consider adjusting if centering issues arise. */
+        margin: 0;
+        box-sizing: border-box;
+        /* Ensuring body also respects box-sizing */
+        background-color: #FFFFE0;
+        /* Light Yellow for Desktop */
+    }
+
+    .container {
+        background-color: white;
+        width: 25rem;
+        /* 400px / 16px = 25rem */
+        padding: 1.25rem;
+        /* 20px / 16px = 1.25rem */
+        border: 0.0625rem solid #ccc;
+        /* 1px / 16px = 0.0625rem */
+        border-radius: 0.5rem;
+        /* 8px / 16px = 0.5rem */
+        box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+        /* 0 4px 8px */
+    }
+
+    h2 {
+        font-size: 1.8rem;
+        /* Desktop h2: 1.8 * 16px = 28.8px */
+        text-align: center;
+        margin-top: 0;
+        margin-bottom: 1.25rem;
+        /* 20px / 16px = 1.25rem */
+    }
+
+    input[type=email],
+    button {
+        width: 100%;
+        padding: 0.75rem 1.25rem;
+        /* 12px 20px */
+        margin-bottom: 0.625rem;
+        /* 10px / 16px = 0.625rem */
+        display: block;
+        /* Ensures they stack */
+        border: 0.0625rem solid #ccc;
+        border-radius: 0.25rem;
+        /* 4px / 16px = 0.25rem */
+        font-size: 1rem;
+        /* Base font size for inputs/buttons (1 * 16px = 16px) */
+    }
+
+    button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    button:hover:not(:disabled) {
+        background-color: #007bff;
+    }
+
+    button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+
+    /* Style for disabled form visual feedback */
+    .form-disabled {
+        opacity: 0.7;
+        /* Faded appearance */
+        pointer-events: none;
+        /* Prevents cursor events on the form wrapper */
+    }
+
+    /* Ensure disabled inputs/buttons still have their default disabled styles */
+    .form-disabled input,
+    .form-disabled button,
+    .form-disabled select,
+    .form-disabled textarea {
+        cursor: not-allowed;
+    }
+
+    .message {
+        margin-top: 0.625rem;
+        /* 10px / 16px = 0.625rem */
+        font-size: 0.9rem;
+        /* 0.9 * 16px = 14.4px */
+        text-align: center;
+    }
+
+    .success {
+        color: #007bff;
+    }
+
+    .error {
+        color: red;
+    }
+
+    /* --- Responsive Styles (Applied by JavaScript classes on <html>) --- */
+
+    /* Tablet Styles */
+    html.is-tablet {
+        /* Class now directly on HTML */
+        font-size: 17px;
+        /* Tablet base font: 1rem = 17px */
+    }
+
+    html.is-tablet body {
+        /* Target body for background/layout */
+        background-color: #ADD8E6;
+        /* Light Blue for Tablet */
+    }
+
+    html.is-tablet .container {
+        width: 80%;
+        /* Wider on tablet, still centered */
+        max-width: 37.5rem;
+        /* 600px / 16px = 37.5rem (This max-width will now scale based on the 17px base) */
+        padding: 1.5625rem;
+        /* 25px / 17px = ~1.47rem */
+    }
+
+    html.is-tablet h2 {
+        font-size: 2.0rem;
+        /* Tablet h2: 2.0 * 17px = 34px (Larger than Desktop h2) */
+    }
+
+    /* Mobile Portrait Styles */
+    html.is-mobile-portrait {
+        /* Class now directly on HTML */
+        font-size: 18px;
+        /* Mobile Portrait base font: 1rem = 18px */
+    }
+
+    html.is-mobile-portrait body {
+        /* Target body for background/layout */
+        display: block;
+        /* Override flex for mobile portrait layout */
+        padding: 0.9375rem;
+        /* 15px / 18px = ~0.83rem (relative to new 18px base) */
+        background-color: #FFB6C1;
+        /* Light Magenta for Mobile Portrait */
+    }
+
+    html.is-mobile-portrait .container {
+        width: 95%;
+        margin: 0 auto;
+        /* Center container on mobile block layout */
+        padding: 0.9375rem;
+        /* 15px / 18px = ~0.83rem */
+    }
+
+    html.is-mobile-portrait h2 {
+        font-size: 2.2rem;
+        /* Mobile Portrait h2: 2.2 * 18px = 39.6px (Largest h2) */
+        margin-bottom: 0.9375rem;
+        /* 15px / 18px = ~0.83rem */
+    }
+
+    html.is-mobile-portrait input[type=email],
+    html.is-mobile-portrait button {
+        padding: 1rem;
+        /* 18px / 18px = 1rem */
+        font-size: 1.1rem;
+        /* 1.1 * 18px = 19.8px */
+    }
+
+    html.is-mobile-portrait .message {
+        font-size: 1rem;
+        /* 1 * 18px = 18px */
+        text-align: left;
+    }
+
+    /* Mobile Landscape Styles */
+    html.is-mobile-landscape {
+        /* Class now directly on HTML */
+        font-size: 17.5px;
+        /* A distinct base size for mobile landscape */
+    }
+
+    html.is-mobile-landscape body {
+        /* Target body for background/layout */
+        display: block;
+        /* Typically block layout for wider content */
+        padding: 0.8rem;
+        /* Slightly less padding than portrait */
+        background-color: #E0FFFF;
+        /* Light Cyan for Mobile Landscape */
+    }
+
+    html.is-mobile-landscape .container {
+        width: 90%;
+        /* Wider than portrait, narrower than tablet */
+        max-width: 50rem;
+        /* Custom max-width for mobile landscape */
+        margin: 0 auto;
+        padding: 1rem;
+    }
+
+    html.is-mobile-landscape h2 {
+        font-size: 2.1rem;
+        /* 2.1 * 17.5px = 36.75px */
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+
+    /* Input, button, message styles can inherit or be overridden here */
+</style>
+<script>
+    function checkViewportAndApplyClasses() {
+        // Get the HTML element
+        const htmlElement = document.documentElement; // This correctly targets <html>
+        const screenWidth = window.screen.width;
+        const screenHeight = window.screen.height;
+        const isPortrait = window.matchMedia('(orientation: portrait)').matches; // Robust orientation check
+
+        // Your established breakpoints
+        const breakpoints = JSON.parse("<?= JSON.stringify(breakpoints) ?>");
+        const mobileBreakpoint = parseInt(breakpoints.mobile);
+        const tabletMinBreakpoint = parseInt(breakpoints.tabletMin);
+        const tabletMaxBreakpoint = parseInt(breakpoints.tabletMax);
+
+        console.log('Device Screen Width (window.screen.width):', screenWidth);
+        console.log('Device Screen Height (window.screen.height):', screenHeight);
+        console.log('Is Portrait:', isPortrait);
+
+        // Remove all previous responsive classes from HTML element
+        htmlElement.classList.remove('is-mobile-portrait', 'is-mobile-landscape', 'is-tablet');
+
+        if (screenWidth <= mobileBreakpoint) {
+            // This is a "mobile-sized" device based on its screen width
+            if (isPortrait) {
+                htmlElement.classList.add('is-mobile-portrait');
+                console.log('- Mobile Portrait');
+            } else {
+                htmlElement.classList.add('is-mobile-landscape');
+                console.log('- Mobile Landscape');
+            }
+        } else if (screenWidth >= tabletMinBreakpoint && screenWidth <= tabletMaxBreakpoint) {
+            // This is a "tablet-sized" device based on its screen width
+            htmlElement.classList.add('is-tablet');
+            console.log('- Tablet');
+        } else {
+            // Desktop device (screenWidth > tabletMaxBreakpoint) - relies on base styles
+            console.log('- Desktop');
+        }
+    }
+
+      /**
+   * Disables all input, button, select, and textarea elements within a given form,
+   * and optionally adds a CSS class for visual feedback.
+   * Also prevents subsequent form submissions by stopping default behavior.
+   * @param {HTMLElement} formElement The form to disable.
+   */
+  function disableForm(formElement) {
+    if (!formElement) {
+      console.warn("Attempted to disable a non-existent form element.");
+      return;
+    }
+
+    // Disable all form control elements
+    for (let i = 0; i < formElement.elements.length; i++) {
+      const element = formElement.elements[i];
+      // Check if the element is a standard form control that can be disabled
+      if (element.tagName === 'INPUT' || element.tagName === 'BUTTON' ||
+          element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') { //
+        element.disabled = true; //
+      }
+    }
+
+    // Add a class for visual styling
+    formElement.classList.add('form-disabled');
+
+    // Add a property to track if the form is disabled via this function
+    formElement.dataset.customDisabled = 'true';
+  }
+
+  /**
+   * Enables all input, button, select, and textarea elements within a given form,
+   * and removes the visual disabled class.
+   * @param {HTMLElement} formElement The form to enable.
+   */
+  function enableForm(formElement) {
+    if (!formElement) {
+      console.warn("Attempted to enable a non-existent form element.");
+      return;
+    }
+
+    // Only enable if it was disabled by our custom function
+    if (formElement.dataset.customDisabled === 'true') {
+      for (let i = 0; i < formElement.elements.length; i++) {
+        const element = formElement.elements[i];
+        if (element.tagName === 'INPUT' || element.tagName === 'BUTTON' ||
+            element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') { //
+          element.disabled = false; //
+        }
+      }
+      formElement.classList.remove('form-disabled');
+      delete formElement.dataset.customDisabled;
+    }
+  }
+    // Initial check on load
+    checkViewportAndApplyClasses();
+    // Re-check on window resize (for orientation changes)
+    window.addEventListener('resize', checkViewportAndApplyClasses);
+</script>
