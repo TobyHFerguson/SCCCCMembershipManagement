@@ -366,11 +366,6 @@
     messageElement.className = "message " + type;
   }
 
-  function showUpdateMessage(text, type) {
-    updateMessageElement.style.display = 'block'; // Ensure it's block to be visible
-    updateMessageElement.textContent = text;
-    updateMessageElement.className = "message " + type;
-  }
 
   function hideEmailError() {
     newEmailError.textContent = '';
@@ -559,18 +554,18 @@
 
   function updateGroupMemberships() {
     if (groupMembershipData.length === 0) {
-      showUpdateMessage("No groups to update.", "error");
+      showMessage("No groups to update.", "error");
       return;
     }
 
     updateGroupsButton.disabled = true;
-    showUpdateMessage("Updating email address...", "success");
+    showMessage("Updating email address...", "success");
 
     const newEmail = newEmailInput.value;
 
     google.script.run
       .withSuccessHandler(function (results) {
-        showUpdateMessage("Your email has been changed successfully.", "success");
+        showMessage("Your email has been changed successfully.", "success");
         updateGroupListStatus(results);
         document.getElementById('current-email').value = newEmail; // Update the current email field
 
@@ -578,7 +573,7 @@
         showMessage("Your email has been updated in all groups.", "success");
       })
       .withFailureHandler(function (error) {
-        showUpdateMessage("Error updating group memberships: " + error, "error");
+        showMessage("Error updating group memberships: " + error, "error");
         updateGroupsButton.disabled = false;
       })
       .handleChangeEmailInGroupsUI(originalEmail, newEmail, groupMembershipData);
