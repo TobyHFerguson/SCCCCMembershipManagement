@@ -1,51 +1,67 @@
 # Voting Service Design Notes
 ## Workflow
-### Vote Organizer
-#### Form Creation
-* Creates a new Google Form with the necessary questions
-* Transfers ownership of this form to the Vote System Operator (membership_automation@sc3.club)
-#### Results Review
+### Election Organizer
+#### Ballot Creation
+* Creates a new Google Form with the necessary questions to represent the ballot
+* Transfers ownership of this form to the Election System Operator (membership_automation@sc3.club)
+#### Election Results Review
 * Checks the 'Invalid' visual summary (sheet is red)
 * If sheet is valid then uses the form's visual summary to display the result
 * If sheet is invalid then manually filters out all invalid responses and manually creates the necessary graphs
 #### Alerts
-The Vote Organizer will receive email alerts if there are any invalid entries, giving them forewarning that they will have to perform manual filtering and graphing operations
+The Election Organizer will receive email alerts if there are any invalid votes, giving them forewarning that they will have to perform manual filtering and graphing operations
 ### Voter
-#### Voting Announcement
-Receives voting announcement email telling them that a new vote is active
-#### Active Votes
-* Uses the Voting Service to see the list of active votes, via the standard Magic Link mechanism
-* From the list of Active Votes selects an active vote to participate in, causing another Magic Link to be sent to them, containing a link to the corresponding voting for
+#### Election Announcement
+Receives an election announcement email telling them that a new election is active
+#### Active Elections
+* Uses the Voting Service to see the list of elections, via the standard Magic Link mechanism
+* From the list of elections selects an active election to participate in which presents them with the ballot
 #### Voting
-* Uses the magic link to access the active vote as a Google Form
+* Uses the ballot as a Google form,
 * Fills in the form with their responses
 * Submits the form
 #### Confirmation
 * Sees a confirmation message
 * Does not see 'Submit another response' link, reinforcing the one time nature of their vote
 #### Re-voting attempts
-* If the member submits the form again they will still see a confirmation but the vote will be marked as 'invalid' internally.
-* A record is kept of the votes a voter has participated in, to ensure that they are filtered out of any votes they've already voted in.
-### Voting System Operator
-The VSO is responsible for technical setup, security & maintenance
+* If the member submits the ballot again they will still see a confirmation but the vote will be marked as 'invalid' internally.
+* A record is kept of the elections a voter has participated in, to ensure that they are filtered out of any elections they've already voted in.
+### Election System Operator
+The ESO is responsible for technical setup, security & maintenance
 #### Setup (after form ownership transfer)
 ##### Manual
 * Receives ownership of the Google Form and its linked Google Sheet from the Form Designer.
-* Adds a new row for the vote to the Vote Registrations spreadsheet, with the title, form ID, results list, start & end dates
+* Adds a new row for the vote to the **Election Registrations** spreadsheet:
+* The Elections Registration spreadsheet has one row per election, with the following columns:
+  * **Election title** - textual title to be displayed to users, 
+  * **Form ID** - ID of the Google Form,
+  * **Token question ID** - Entry ID of the token question added to the Google Form 
+  * **Results recipients list** - comma separated list of email addresses with whom the responses sheet is to be shared, 
+  * **Start date** - First date on when the election is active and voting can commence
+  * **End date** - Last date on which voting can occur
+  * **Voters** - comma separated list of members that have voted in this election
 ##### Automated
-When the row has been added, a trigger is fired which will:
-* Add a results sheet to the form, and share that sheet with the addresses in the results list
-* Install an onFormSubmit trigger to the form to process the submission:
-  * Adds the submitted data to a 'validated' sheet which will mark each submission as valid or invalid
-  * A vote is invalid if it has been submitted twice
+When the row has been added to the **Elections Registrations** sheet, a trigger (`handleRegistrationSheetEdit`) is fired which will:
+* Add a results sheet to the form
+* Shares that sheet with the addresses in the recipients list
+* Add a Token question to the end of the form, noting the EntryID in the **Vote Registrations** sheet
+* Install an `onFormSubmit` trigger (`ballotSubmitHandler`) to the form to process the submission:
+  * Adds the submitted data to a 'validated' sheet which will mark a submission as invalid iff its token is invalid
+  * Marks the entire results spreadsheet and emails the recipients if any invalid token has been found
+  * Using the email associated with the vote token adds the member's email to the **Voters** list for the specific vote
 #### Voting Service
-* The Voting Service presents the user with a list of active votes. Selecting an active vote link will cause a Magic Link to be sent to that user, including a the Form URL prefilled with a voting token. 
-* When the user opens the Magic Link the Form will already have the Token question pre-filled (and the text of the question will encourage them not to modify that question). 
+* The Voting Service presents the user with a table of votes.
+* Each row shows the vote's:
+  *  **Title** - hyperlinked to the pre-filled ballot if the vote hasn't yet voted in this election
+  *  **Active dates**
+  *  **Voted on** - date (blank if not already voted on by this user)
+*  If the user selects an election title the corresponding vote form is opened up, pre-filled with a vote token to mark their single vote. (We'd like to force the current page to be overwritten - is that possible?)
 # Testing the service
 ## Setup
 * Integrate the dev and staging URLs into the SC3 Test site
 ## Development
-* Push to dev
+* Separate out the triggers from the underlying functions
+* Test the underlying functions independently, so that wiring the functions into the triggers is a separate development step
 ### Vote Organizer
 1. Create a form 'Test vote 1' with a single question: 'black === white?'
 2.Transfer ownership of that form to the Voter Operator
