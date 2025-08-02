@@ -41,3 +41,104 @@ VotingService.parsePrefilledFormUrlComponents = function(url) {
   }
   return result;
 }
+
+/**
+ * Adds a short text question "Token - do not modify" to the end of the form
+ * and returns its entry ID.
+ *
+ * @param {string} formId The ID of the Google Form to modify.
+ * @return {string} The Entry ID of the newly created question.
+ */
+VotingService.addTokenQuestion = function(formId) {
+  // Open the form using its ID
+  const form = FormApp.openById(formId);
+  
+  // Get all items (questions) in the form
+  const items = form.getItems();
+  
+  // Determine the index for the new question (the last position)
+  const lastIndex = items.length;
+  
+  // Add a new short text item at the end of the form
+  const tokenItem = form.addTextItem().setTitle('Token - do not modify');
+  
+  // Set the question to be required
+  tokenItem.setRequired(true);
+  
+  // Get the item's entry ID
+  const entryId = tokenItem.getId();
+  
+  // Log the entry ID to the console for verification
+  Logger.log('Added question with Entry ID: ' + entryId);
+  
+  return entryId;
+}
+
+/**
+ * Creates a pre-filled URL for a given question in a form.
+ *
+ * This function first finds the correct Entry ID for the question by
+ * creating a temporary pre-filled URL and then parsing it.
+ *
+ * @param {string} formId The ID of the Google Form.
+ * @param {string} questionTitle The title of the question to pre-fill.
+ * @param {string} answer The answer to pre-fill in the question. Defaults to '1234'.
+ * @return {string} A pre-filled URL for the form.
+ */
+VotingService.createPrefilledUrlWithTitle = function(formId, questionTitle, answer = '1234') {
+  const form = FormApp.openById(formId);
+  
+  // Find the question item by its title
+  const items = form.getItems();
+  let targetItem = null;
+  
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].getTitle() === questionTitle) {
+      targetItem = items[i];
+      break;
+    }
+  }
+  
+  if (!targetItem) {
+    throw new Error('Question with title "' + questionTitle + '" not found.');
+  }
+
+  // Use a temporary response to generate a pre-filled URL and get the Entry ID
+  const tempResponse = form.createResponse();
+  const itemResponse = targetItem.asTextItem().createResponse('DUMMY_VALUE');
+  tempResponse.withItemResponse(itemResponse);
+  
+  // Get the pre-filled URL and find the Entry ID
+  const prefilledUrl = tempResponse.toPrefilledUrl();
+  const entryIdMatch = prefilledUrl.match(/entry\.(\d+)=/);
+  
+  if (!entryIdMatch || entryIdMatch.length < 2) {
+    throw new Error('Could not find the Entry ID for the question.');
+  }
+  
+  const entryId = entryIdMatch[1];
+  
+  // Now, create the final URL with the correct Entry ID and the desired answer
+  const finalPrefilledUrl = form.getPublishedUrl() + '?usp=pp_url' + '&entry.' + entryId + '=' + encodeURIComponent(answer);
+  
+  Logger.log('Generated Pre-filled Link: ' + finalPrefilledUrl);
+  
+  return finalPrefilledUrl;
+}
+
+// Example usage:
+// Replace 'YOUR_FORM_ID_HERE' with your actual form ID.
+function runCreatePrefilledUrl() {
+  const formId = '1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps';
+  const prefilledLink = VotingService.createPrefilledUrlWithTitle(formId, 'Token - do not modify', '1234');
+  console.log('prefilled Link: ', prefilledLink)
+}
+// To use the function, call it with your form's ID.
+// Replace 'YOUR_FORM_ID_HERE' with the actual ID from your form's URL.
+// The form ID is the long string of letters and numbers after '/d/' in the URL.
+// Example: https://docs.google.com/forms/d/YOUR_FORM_ID_HERE/edit
+function runAddTokenQuestion() {
+  const formId = '1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps'; 
+  const entryId = VotingService.addTokenQuestion(formId);
+  console.log(`Token question added with Entry ID: ${entryId}`);
+}
