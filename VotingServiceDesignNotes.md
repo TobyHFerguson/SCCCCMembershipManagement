@@ -44,13 +44,19 @@ When the row has been added to the **Elections Registrations** sheet, a trigger 
 * Add a results sheet to the form
 * Shares that sheet with the addresses in the recipients list
 * Configures the form:
+  * Not a quiz
+  * No email addresses to be collected
+  * No response editing
+  * Questions are not shuffled
+  * Custom confirmation message
+  * No link for submitting another response
+  * No results summary
   * Adds a Token question to the end of the form
-  * Disables the 'submit another response' link
-  * Configures the confirmation message
 * Install an `onFormSubmit` trigger (`ballotSubmitHandler`) to the form to process the submission:
   * Adds the submitted data to a 'validated' sheet which will mark a submission as invalid iff its token is invalid
   * Marks the entire results spreadsheet and emails the recipients if any invalid token has been found
   * Using the email associated with the vote token adds the member's email to the **Voters** list for the specific vote
+  * Emails the voter (either from the vote token, or the question token) with a summary of how their vote was handled for this election.
 #### Voting Service
 * The Voting Service presents the user with a table of votes.
 * Each row shows the vote's:
