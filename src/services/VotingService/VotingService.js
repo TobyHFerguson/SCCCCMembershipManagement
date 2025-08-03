@@ -1,3 +1,4 @@
+// @ts-check
 
 const PREFILLED_URL_COLUMN_NAME = 'Pre-filled Form URL';
 const VOTE_TITLE_COLUMN_NAME = 'Vote Title';
@@ -78,7 +79,7 @@ VotingService.configureBallotForm = function (formId) {
 /**
  * Adds a short text question for the token at the end of the form.
  *
- * @param {string} formId The ID of the Google Form to modify.
+ * @param {Form} form The Google Form to modify.
  */
 VotingService.addTokenQuestion_ = function (form) {
     // Add a new short text item at the end of the form
@@ -139,7 +140,7 @@ VotingService.createPrefilledUrlWithTitle = function (formId, questionTitle, ans
     // Now, create the final URL with the correct Entry ID and the desired answer
     const finalPrefilledUrl = form.getPublishedUrl() + '?usp=pp_url' + '&entry.' + entryId + '=' + encodeURIComponent(answer);
 
-    Logger.log('Generated Pre-filled Link: ' + finalPrefilledUrl);
+    console.log('Generated Pre-filled Link: ' + finalPrefilledUrl);
 
     return finalPrefilledUrl;
 }

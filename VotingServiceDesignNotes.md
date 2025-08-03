@@ -33,11 +33,11 @@ The ESO is responsible for technical setup, security & maintenance
 * Receives ownership of the Google Form and its linked Google Sheet from the Form Designer.
 * Adds a new row for the election to the **Election Registrations** spreadsheet:
 * The Elections Registration spreadsheet has one row per election, with the following columns:
-  * **Election title** - textual title to be displayed to users, 
-  * **Form ID** - ID of the Google Form,
-  * **Results recipients list** - comma separated list of email addresses with whom the responses sheet is to be shared, 
-  * **Start date** - First date on when the election is active and voting can commence
-  * **End date** - Last date on which voting can occur
+  * **Title** - textual title to be displayed to users, 
+  * **ID** - ID of the Google Form,
+  * **Organizers** - comma separated list of the Election Organizer's email addresses with whom the responses sheet is to be shared, 
+  * **Starte** - First date on when the election is active and voting can commence
+  * **End** - Last date on which voting can occur
   * **Voters** - comma separated list of members that have voted in this election
 ##### Automated
 When the row has been added to the **Elections Registrations** sheet, a trigger (`handleRegistrationSheetEdit`) is fired which will:
@@ -64,6 +64,23 @@ When the row has been added to the **Elections Registrations** sheet, a trigger 
   *  **Active dates**
   *  **Voted on** - date (blank if not already voted on by this user)
 *  If the user selects an election title the corresponding vote form is opened up, pre-filled with a vote token to mark their single vote. (We'd like to force the current page to be overwritten - is that possible?)
+# Implementation ideas
+# Storage
+I need a storage layer that abstracts the underlying mechanism.
+
+The main object passed back and forth is an Election. It has the following fields:
+* ID - the FormId
+* Title - string
+* [Organizers] - array of email addresses
+* Start - Date
+* End - Date
+* [Voters] - array of email addresses
+* Trigger - trigger status
+
+The list of elections is managed by the ElectionRegistrationManager:
+* `getElections():[Election]` - a list of elections in start date order
+* `storeElections([Election])` - stores the given list of elections
+
 # Testing the service
 ## Setup
 * Integrate the dev and staging URLs into the SC3 Test site
