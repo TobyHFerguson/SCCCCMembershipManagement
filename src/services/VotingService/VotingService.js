@@ -6,7 +6,8 @@ const RESULTS_RECIPIENT_COLUMN_NAME = 'Results Recipient(s)'; // Can be comma-se
 const TRIGGER_STATUS_COLUMN_NAME = 'Trigger Status';
 const VOTE_DATA_SHEET_ID = '1FN1vogIDDWdqghflOF6hNuDDW1cqFQpSGX8GhXLYyyw'; // Replace with your central vote data sheet ID
 const REGISTRATION_SHEET_NAME = 'Vote Registrations'; // Update with your sheet name
-const TOKEN_ENTRY_FIELD_TITLE = 'Your Voting Token'; // Adjust
+const TOKEN_ENTRY_FIELD_TITLE = 'VOTING TOKEN'; // Adjust
+const TOKEN_HELP_TEXT = 'This question is used to validate your vote. Do not modify this field.';
 
 // Helper to extract components from the pre-filled URL (used by handleSheetEdit and renderVotingOptions)
 VotingService.parsePrefilledFormUrlComponents = function(url) {
@@ -43,11 +44,9 @@ VotingService.parsePrefilledFormUrlComponents = function(url) {
 }
 
 /**
- * Adds a short text question "Token - do not modify" to the end of the form
- * and returns its entry ID.
+ * Adds a short text question for the token at the end of the form.
  *
  * @param {string} formId The ID of the Google Form to modify.
- * @return {string} The Entry ID of the newly created question.
  */
 VotingService.addTokenQuestion = function(formId) {
   // Open the form using its ID
@@ -60,18 +59,14 @@ VotingService.addTokenQuestion = function(formId) {
   const lastIndex = items.length;
   
   // Add a new short text item at the end of the form
-  const tokenItem = form.addTextItem().setTitle('Token - do not modify');
+  const tokenItem = form.addTextItem().setTitle(TOKEN_ENTRY_FIELD_TITLE);
+  tokenItem.setHelpText(TOKEN_HELP_TEXT);
   
   // Set the question to be required
   tokenItem.setRequired(true);
+
+  console.log(`Added token question to form ID: ${formId}`);
   
-  // Get the item's entry ID
-  const entryId = tokenItem.getId();
-  
-  // Log the entry ID to the console for verification
-  Logger.log('Added question with Entry ID: ' + entryId);
-  
-  return entryId;
 }
 
 /**
@@ -130,7 +125,7 @@ VotingService.createPrefilledUrlWithTitle = function(formId, questionTitle, answ
 // Replace 'YOUR_FORM_ID_HERE' with your actual form ID.
 function runCreatePrefilledUrl() {
   const formId = '1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps';
-  const prefilledLink = VotingService.createPrefilledUrlWithTitle(formId, 'Token - do not modify', '1234');
+  const prefilledLink = VotingService.createPrefilledUrlWithTitle(formId, TOKEN_ENTRY_FIELD_TITLE, '1234');
   console.log('prefilled Link: ', prefilledLink)
 }
 // To use the function, call it with your form's ID.
@@ -139,6 +134,5 @@ function runCreatePrefilledUrl() {
 // Example: https://docs.google.com/forms/d/YOUR_FORM_ID_HERE/edit
 function runAddTokenQuestion() {
   const formId = '1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps'; 
-  const entryId = VotingService.addTokenQuestion(formId);
-  console.log(`Token question added with Entry ID: ${entryId}`);
+  VotingService.addTokenQuestion(formId);
 }
