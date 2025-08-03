@@ -44,8 +44,9 @@ When the row has been added to the **Elections Registrations** sheet, a trigger 
 * Add a results sheet to the form
 * Shares that sheet with the addresses in the recipients list
 * Configures the form:
-  * Add a Token question to the end of the form
+  * Adds a Token question to the end of the form
   * Disables the 'submit another response' link
+  * Configures the confirmation message
 * Install an `onFormSubmit` trigger (`ballotSubmitHandler`) to the form to process the submission:
   * Adds the submitted data to a 'validated' sheet which will mark a submission as invalid iff its token is invalid
   * Marks the entire results spreadsheet and emails the recipients if any invalid token has been found

@@ -8,7 +8,7 @@ const VOTE_DATA_SHEET_ID = '1FN1vogIDDWdqghflOF6hNuDDW1cqFQpSGX8GhXLYyyw'; // Re
 const REGISTRATION_SHEET_NAME = 'Vote Registrations'; // Update with your sheet name
 const TOKEN_ENTRY_FIELD_TITLE = 'VOTING TOKEN'; // Adjust
 const TOKEN_HELP_TEXT = 'This question is used to validate your vote. Do not modify this field.';
-
+const CONFIRMATION_MESSAGE = 'Your vote has been recorded successfully. You will be sent an email indicating how your vote was handled. Thank you for participating!';
 // Helper to extract components from the pre-filled URL (used by handleSheetEdit and renderVotingOptions)
 VotingService.parsePrefilledFormUrlComponents = function(url) {
   const result = {};
@@ -71,6 +71,16 @@ VotingService.disableFurtherVotes = function(formId) {
   form.setAcceptingResponses(false);
   
   console.log(`Disabled further votes for form ID: ${formId}`);
+}
+
+VotingService.configureConfirmationMessage = function(formId) {
+  // Open the form using its ID
+  const form = FormApp.openById(formId);
+  
+  // Set the confirmation message
+  form.setConfirmationMessage(CONFIRMATION_MESSAGE);
+  
+  console.log(`Set confirmation message for form ID: ${formId}`);
 }
 
 /**
@@ -145,4 +155,9 @@ function runAddTokenQuestion() {
 function runDisableFurtherVotes() {
   const formId = TEST_FORM_ID; 
   VotingService.disableFurtherVotes(formId);
+}
+
+function runConfigureConfirmationMessage() {
+  const formId = TEST_FORM_ID; 
+  VotingService.configureConfirmationMessage(formId);
 }
