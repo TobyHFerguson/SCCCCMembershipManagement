@@ -31,11 +31,10 @@ The ESO is responsible for technical setup, security & maintenance
 #### Setup (after form ownership transfer)
 ##### Manual
 * Receives ownership of the Google Form and its linked Google Sheet from the Form Designer.
-* Adds a new row for the vote to the **Election Registrations** spreadsheet:
+* Adds a new row for the election to the **Election Registrations** spreadsheet:
 * The Elections Registration spreadsheet has one row per election, with the following columns:
   * **Election title** - textual title to be displayed to users, 
   * **Form ID** - ID of the Google Form,
-  * **Token question ID** - Entry ID of the token question added to the Google Form 
   * **Results recipients list** - comma separated list of email addresses with whom the responses sheet is to be shared, 
   * **Start date** - First date on when the election is active and voting can commence
   * **End date** - Last date on which voting can occur
@@ -44,7 +43,9 @@ The ESO is responsible for technical setup, security & maintenance
 When the row has been added to the **Elections Registrations** sheet, a trigger (`handleRegistrationSheetEdit`) is fired which will:
 * Add a results sheet to the form
 * Shares that sheet with the addresses in the recipients list
-* Add a Token question to the end of the form, noting the EntryID in the **Vote Registrations** sheet
+* Configures the form:
+  * Add a Token question to the end of the form
+  * Disables the 'submit another response' link
 * Install an `onFormSubmit` trigger (`ballotSubmitHandler`) to the form to process the submission:
   * Adds the submitted data to a 'validated' sheet which will mark a submission as invalid iff its token is invalid
   * Marks the entire results spreadsheet and emails the recipients if any invalid token has been found
