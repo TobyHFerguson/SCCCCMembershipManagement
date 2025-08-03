@@ -52,12 +52,6 @@ VotingService.addTokenQuestion = function(formId) {
   // Open the form using its ID
   const form = FormApp.openById(formId);
   
-  // Get all items (questions) in the form
-  const items = form.getItems();
-  
-  // Determine the index for the new question (the last position)
-  const lastIndex = items.length;
-  
   // Add a new short text item at the end of the form
   const tokenItem = form.addTextItem().setTitle(TOKEN_ENTRY_FIELD_TITLE);
   tokenItem.setHelpText(TOKEN_HELP_TEXT);
@@ -67,6 +61,16 @@ VotingService.addTokenQuestion = function(formId) {
 
   console.log(`Added token question to form ID: ${formId}`);
   
+}
+
+VotingService.disableFurtherVotes = function(formId) {
+  // Open the form using its ID
+  const form = FormApp.openById(formId);
+  
+  // Disable the form to prevent further submissions
+  form.setAcceptingResponses(false);
+  
+  console.log(`Disabled further votes for form ID: ${formId}`);
 }
 
 /**
@@ -121,10 +125,11 @@ VotingService.createPrefilledUrlWithTitle = function(formId, questionTitle, answ
   return finalPrefilledUrl;
 }
 
+const TEST_FORM_ID = '1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps'; // Replace with your actual form ID
 // Example usage:
 // Replace 'YOUR_FORM_ID_HERE' with your actual form ID.
 function runCreatePrefilledUrl() {
-  const formId = '1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps';
+  const formId = TEST_FORM_ID;
   const prefilledLink = VotingService.createPrefilledUrlWithTitle(formId, TOKEN_ENTRY_FIELD_TITLE, '1234');
   console.log('prefilled Link: ', prefilledLink)
 }
@@ -133,6 +138,11 @@ function runCreatePrefilledUrl() {
 // The form ID is the long string of letters and numbers after '/d/' in the URL.
 // Example: https://docs.google.com/forms/d/YOUR_FORM_ID_HERE/edit
 function runAddTokenQuestion() {
-  const formId = '1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps'; 
+  const formId = TEST_FORM_ID; 
   VotingService.addTokenQuestion(formId);
+}
+
+function runDisableFurtherVotes() {
+  const formId = TEST_FORM_ID; 
+  VotingService.disableFurtherVotes(formId);
 }
