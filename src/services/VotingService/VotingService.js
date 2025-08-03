@@ -79,7 +79,7 @@ VotingService.configureBallotForm = function (formId) {
 /**
  * Adds a short text question for the token at the end of the form.
  *
- * @param {Form} form The Google Form to modify.
+ * @param {GoogleAppsScript.Forms.Form} form The Google Form to modify.
  */
 VotingService.addTokenQuestion_ = function (form) {
     // Add a new short text item at the end of the form

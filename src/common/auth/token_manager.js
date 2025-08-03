@@ -19,7 +19,7 @@ Common.Auth.TokenManager = {
         if (email) {
             return email;
         } else {
-            console.warning(`Token ${token} not found or expired.`);
+            console.warn(`Token ${token} not found or expired.`);
             return null;
         }
     }, 
