@@ -33,12 +33,13 @@ The ESO is responsible for technical setup, security & maintenance
 * Receives ownership of the Google Form and its linked Google Sheet from the Form Designer.
 * Adds a new row for the election to the **Election Registrations** spreadsheet:
 * The Elections Registration spreadsheet has one row per election, with the following columns:
-  * **Title** - textual title to be displayed to users, 
   * **ID** - ID of the Google Form,
+  * **Title** - textual title to be displayed to users, 
   * **Organizers** - comma separated list of the Election Organizer's email addresses with whom the responses sheet is to be shared, 
-  * **Starte** - First date on when the election is active and voting can commence
-  * **End** - Last date on which voting can occur
+  * **Start** - First date on when the election is active and voting can commence - assumed to be earliest date if missing
+  * **End** - Last date on which voting can occur - assuming to be maximum date if missing
   * **Voters** - comma separated list of members that have voted in this election
+  * **TriggerID** - the ID of the `onFormSubmit` trigger for each election ballot.
 ##### Automated
 When the row has been added to the **Elections Registrations** sheet, a trigger (`handleRegistrationSheetEdit`) is fired which will:
 * Add a results sheet to the form
@@ -59,11 +60,15 @@ When the row has been added to the **Elections Registrations** sheet, a trigger 
   * Emails the voter (either from the vote token, or the question token) with a summary of how their vote was handled for this election.
 #### Voting Service
 * The Voting Service presents the user with a table of votes.
-* Each row shows the vote's:
-  *  **Title** - hyperlinked to the pre-filled ballot if the vote hasn't yet voted in this election
+* Each row shows the election's:
+  *  **Title** - hyperlinked to the pre-filled ballot if the vote hasn't yet voted in this election and the election is active (today's date is on or between the start date and end dates)
   *  **Active dates**
   *  **Voted on** - date (blank if not already voted on by this user)
 *  If the user selects an election title the corresponding vote form is opened up, pre-filled with a vote token to mark their single vote. (We'd like to force the current page to be overwritten - is that possible?)
+*  Ballot 'taking response' settings are adjusted thus:
+   *  No, when the current date is outside of the start and end dates for the election
+   *  Yes, otherwise
+*  The `ballotSubmitHandler()` trigger will be removed from the ballot if the date is after the `end` date for the election
 # Implementation ideas
 # Storage
 I need a storage layer that abstracts the underlying mechanism.

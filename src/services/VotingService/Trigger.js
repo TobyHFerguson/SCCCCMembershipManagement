@@ -18,18 +18,17 @@ VotingService.Trigger = {
         if (editedColumn === formIdColumnIndex && editedRow > 1) {
             console.log(`Form ID edited in row: ${editedRow}`);
             const formId = sheet.getRange(editedRow, formIdColumnIndex).getValue();
-            const resultsRecipients = sheet.getRange(editedRow, resultsRecipientColumnIndex).getValue();
+            const resultsRecipients = sheet.getRange(editedRow, resultsRecipientColumnIndex).getValue().split(',').map(email => email.trim());
 
             if (formId) {
                 console.log(`Processing form ID: ${formId} in row: ${editedRow}`);
                 try {
-                    this._attachOnSubmitTrigger(formId);
+                    VotingService.configureBallotForm(formId, resultsRecipients);
+                    console.log(`Configured ballot form with ID: ${formId}`);
+                    this.attachOnSubmitTrigger_(formId);
                     console.log(`Attached votingFormSubmitHandler trigger to form ID: ${formId}`);
                     if (triggerStatusColumnIndex > 0) {
                         sheet.getRange(editedRow, triggerStatusColumnIndex).setValue('Active');
-                    }
-                    if (resultsRecipients) {
-                        this._shareResultsSheet(resultsRecipients);
                     }
                 } catch (error) {
                     console.log(`Error attaching trigger to form ID: ${formId}: ${error}`);
@@ -41,26 +40,34 @@ VotingService.Trigger = {
             }
         }
     },
-    _attachOnSubmitTrigger: function (formId) {
+    /**
+     * Attaches the votingFormSubmitHandler trigger to the specified form ID.
+     * This will handle form submissions and record votes.
+     * 
+     * @param {string} formId - the ID of the Google Form to attach the trigger to.
+     * 
+     * @throws {Error} If there is an issue attaching the trigger.
+     */
+    attachOnSubmitTrigger_: function (formId) {
         const form = FormApp.openById(formId);
+        const formDestinationType = form.getDestinationType();
+        if (formDestinationType !== FormApp.DestinationType.SPREADSHEET) {
+            throw new Error(`Form ID: ${formId} does not have a valid destination set. Please set a destination to a Google Sheet.`);
+        }
+        const spreadsheetId = form.getDestinationId(); // Ensure the form has a valid destination
+        // remove any existing triggers for this form
+        ScriptApp.getProjectTriggers().filter(trigger => trigger.getHandlerFunction() === 'votingFormSubmitHandler' && trigger.getTriggerSourceId() === formId)
+            .forEach(trigger => {
+                ScriptApp.deleteTrigger(trigger);
+                console.log(`Deleted existing trigger for form ID: ${formId}`);
+            });
         ScriptApp.newTrigger('votingFormSubmitHandler')
-            .forForm(form)
+            .forForm(spreadsheetId)
             .onFormSubmit()
             .create();
+        console.log(`Attached votingFormSubmitHandler trigger to form ID: ${formId}`);
     },
-    _shareResultsSheet: function (recipients) {
-        const ss = SpreadsheetApp.openById(VOTE_DATA_SHEET_ID);
-        const recipientEmails = recipients.split(',').map(email => email.trim());
-        recipientEmails.forEach(email => {
-            try {
-                ss.addViewer(email);
-                console.log(`Shared results sheet with: ${email}`);
-            } catch (error) {
-                console.log(`Error sharing results sheet with ${email}: ${error}`);
-                throw error;
-            }
-        });
-    },
+    
     votingFormSubmitHandler: function (e) {
         const formResponse = e.response;
         const itemResponses = formResponse.getItemResponses();

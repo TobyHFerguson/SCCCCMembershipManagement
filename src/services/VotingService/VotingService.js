@@ -43,8 +43,12 @@ VotingService.parsePrefilledFormUrlComponents = function (url) {
     }
     return result;
 }
-
-VotingService.configureBallotForm = function (formId) {
+/**
+ * 
+ * @param {string} formId - The ID of the Google Form to configure.
+ * @param {Array<string>} managers - A list of email addresses to share the results spreadsheet with.
+ */
+VotingService.configureBallotForm = function (formId, managers) {
     const form = FormApp.openById(formId);
 
     // Not a quiz
@@ -74,6 +78,9 @@ VotingService.configureBallotForm = function (formId) {
 
     // Add a token question to the form
     this.addTokenQuestion_(form)
+
+    // create and share a results spreadsheet
+    this.createResultsSpreadsheet_(formId, managers);
     console.log(`Ballot form configured with ID: ${formId}`);
 }
 /**
@@ -91,7 +98,38 @@ VotingService.addTokenQuestion_ = function (form) {
 
 }
 
+/**
+ * Creates a spreadsheet for the results of the voting form.
+ *
+ * @param {string} formId The ID of the Google Form for which to create the results spreadsheet.
+ * @param {Array<string>} managers - A list of email addresses to share the results spreadsheet with.
+ * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet} The created results spreadsheet.
+ */
+VotingService.createResultsSpreadsheet_ = function (formId, managers=[]) {
+    const form = FormApp.openById(formId);
+    const formTitle = form.getTitle();
+    const resultsSpreadsheet = SpreadsheetApp.create(`${formTitle} - Results`);
+    form.setDestination(FormApp.DestinationType.SPREADSHEET, resultsSpreadsheet.getId());
+    managers.forEach(email => {
+        try {
+            resultsSpreadsheet.addViewer(email);
+            console.log(`Shared results sheet with: ${email}`);
+        } catch (error) {
+            console.log(`Error sharing results sheet with ${email}: ${error}`);
+            throw error;
+        }
+    })
+    console.log(`Created results spreadsheet for form ID: ${formId} with title: ${formTitle}`);
+    return resultsSpreadsheet;
+}
 
+
+function runCreateResultsSpreadsheet() {
+    const formId = '1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps'; // Replace with your actual form ID
+    const resultsSpreadsheet = VotingService.createResultsSpreadsheet_(formId, ["toby.ferguson@sc3.club"]);
+    console.log(`Results spreadsheet created with ID: ${resultsSpreadsheet.getId()}`);
+    console.log(`Results spreadsheet URL: ${resultsSpreadsheet.getUrl()}`);
+}
 
 /**
  * Creates a pre-filled URL for a given question in a form.
@@ -158,7 +196,7 @@ function runCreatePrefilledUrl() {
 // The form ID is the long string of letters and numbers after '/d/' in the URL.
 // Example: https://docs.google.com/forms/d/YOUR_FORM_ID_HERE/edit
 function runAddTokenQuestion() {
-     const form = FormApp.openById(TEST_FORM_ID);
+    const form = FormApp.openById(TEST_FORM_ID);
     VotingService.addTokenQuestion_(form);
 }
 
