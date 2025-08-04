@@ -2,11 +2,11 @@
 
 const PREFILLED_URL_COLUMN_NAME = 'Pre-filled Form URL';
 const VOTE_TITLE_COLUMN_NAME = 'Vote Title';
-const FORM_ID_COLUMN_NAME = 'Form ID';
-const RESULTS_RECIPIENT_COLUMN_NAME = 'Results Recipient(s)'; // Can be comma-separated
+const FORM_ID_COLUMN_NAME = 'ID';
+const MANAGERS_COLUMN_NAME = 'Managers'; // Can be comma-separated
 const TRIGGER_STATUS_COLUMN_NAME = 'Trigger Status';
 const VOTE_DATA_SHEET_ID = '1FN1vogIDDWdqghflOF6hNuDDW1cqFQpSGX8GhXLYyyw'; // Replace with your central vote data sheet ID
-const REGISTRATION_SHEET_NAME = 'Vote Registrations'; // Update with your sheet name
+const REGISTRATION_SHEET_NAME = 'Elections'; // Update with your sheet name
 const TOKEN_ENTRY_FIELD_TITLE = 'VOTING TOKEN'; // Adjust
 const TOKEN_HELP_TEXT = 'This question is used to validate your vote. Do not modify this field.';
 const CONFIRMATION_MESSAGE = 'Your vote has been recorded successfully. You will be sent an email indicating how your vote was handled. Thank you for participating!';
@@ -43,6 +43,58 @@ VotingService.parsePrefilledFormUrlComponents = function (url) {
     }
     return result;
 }
+
+/**
+ * Extracts the Form ID from a Google Forms URL.
+ * This function handles 'edit', 'viewform', and base URLs.
+ *
+ * @param {string} url The URL of the Google Form.
+ * @return {string|null} The extracted Form ID if found, otherwise null.
+ */
+VotingService.extractGasFormId = function(url) {
+  // Regex for the 'viewform' URL (public-facing)
+  let match = url.match(/d\/e\/(.*?)\/viewform/);
+  if (match && match.length > 1) {
+    return match[1];
+  }
+
+  // Regex for the 'edit' URL (in the editor)
+  match = url.match(/d\/(.*?)\/edit/);
+  if (match && match.length > 1) {
+    return match[1];
+  }
+
+  // Regex for the base URL (e.g., https://docs.google.com/forms/d/ID)
+  match = url.match(/d\/(.*?)$/);
+  if (match && match.length > 1) {
+    // This regex is broad, so we'll check for a valid ID format.
+    // A Google Form ID is typically a long alphanumeric string.
+    // If there's a trailing slash or other characters, it won't be a valid ID.
+    // You can add more checks if needed, but this handles the common case.
+    const potentialId = match[1];
+    if (potentialId.indexOf('/') === -1) {
+      return potentialId;
+    }
+  }
+
+  // If no patterns match, return null.
+  return null;
+}
+
+function runExtractGasFormId() {
+    const urls = [
+        'https://docs.google.com/forms/d/1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps/edit',
+        'https://docs.google.com/forms/d/e/1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps/viewform',
+        'https://docs.google.com/forms/d/1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps/',
+        'https://docs.google.com/forms/d/1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps',
+        'https://docs.google.com/forms/d/1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps/edit?usp=sharing'
+    ]
+    urls.forEach(url => {
+        const formId = VotingService.extractGasFormId(url);
+        console.log(`Extracted Form ID from "${url}": ${formId}`);
+    });
+}
+   
 /**
  * 
  * @param {string} formId - The ID of the Google Form to configure.

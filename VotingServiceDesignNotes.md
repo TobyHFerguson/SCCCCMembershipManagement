@@ -35,7 +35,7 @@ The ESO is responsible for technical setup, security & maintenance
 * The Elections Registration spreadsheet has one row per election, with the following columns:
   * **ID** - ID of the Google Form,
   * **Title** - textual title to be displayed to users, 
-  * **Organizers** - comma separated list of the Election Organizer's email addresses with whom the responses sheet is to be shared, 
+  * **Managers** - comma separated list of the Election Manager's email addresses with whom the responses sheet is to be shared, 
   * **Start** - First date on when the election is active and voting can commence - assumed to be earliest date if missing
   * **End** - Last date on which voting can occur - assuming to be maximum date if missing
   * **Voters** - comma separated list of members that have voted in this election

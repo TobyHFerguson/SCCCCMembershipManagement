@@ -10,14 +10,18 @@ VotingService.Trigger = {
         const editedColumn = editedRange.getColumn();
         const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
         const formIdColumnIndex = headers.indexOf(FORM_ID_COLUMN_NAME) + 1;
-        const resultsRecipientColumnIndex = headers.indexOf(RESULTS_RECIPIENT_COLUMN_NAME) + 1;
+        const resultsRecipientColumnIndex = headers.indexOf(MANAGERS_COLUMN_NAME) + 1;
         const triggerStatusColumnIndex = headers.indexOf(TRIGGER_STATUS_COLUMN_NAME) + 1;
         console.log(`Edit detected in row: ${editedRow}, column: ${editedColumn} in sheet: ${sheet.getName()}`);
         console.log(`Form ID column index: ${formIdColumnIndex}, Results Recipient column index: ${resultsRecipientColumnIndex}, Trigger Status column index: ${triggerStatusColumnIndex}`);
 
         if (editedColumn === formIdColumnIndex && editedRow > 1) {
             console.log(`Form ID edited in row: ${editedRow}`);
-            const formId = sheet.getRange(editedRow, formIdColumnIndex).getValue();
+            const url = sheet.getRange(editedRow, formIdColumnIndex).getValue();
+            const formId = VotingService.extractGasFormId(url);
+            if (!formId) {
+                throw new Error(`No valid Form ID found in row: ${editedRow}`);
+            }
             const resultsRecipients = sheet.getRange(editedRow, resultsRecipientColumnIndex).getValue().split(',').map(email => email.trim());
 
             if (formId) {
