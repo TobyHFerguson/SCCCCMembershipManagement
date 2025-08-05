@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Active Votes</title>
+  <title>Active Elections</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     /* Your CSS will go here */
@@ -82,11 +82,11 @@
 </head>
 <body>
   <div class="container">
-    <h1>Active Votes</h1>
+    <h1>Active Elections</h1>
     <p>You are logged in with the email: <strong><?= userEmail ?></strong></p>
     <ul>
-      <? for (const vote of activeVotes) { ?>
-        <li><a href="<?= vote.formUrl ?>"><?= vote.title ?></a></li>
+      <? for (const election of activeElections) { ?>
+        <li><a href="<?= election.formUrl ?>"><?= election.title ?></a></li>
       <? } ?>
     </ul>
   </div>

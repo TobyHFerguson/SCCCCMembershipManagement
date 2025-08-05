@@ -1,45 +1,83 @@
 
-
+// @ts-check
 // Always arrive here with a validated token converted to the userEmail
+/**
+ * 
+ * @param {GoogleAppsScript.Events.DoGet} e 
+ * @param {string} userEmail 
+ * @returns 
+ */
 VotingService.WebApp.doGet = function (e, userEmail) {
     return this._renderVotingOptions(userEmail)
 }
 
+/**
+ * 
+ * @param {string} userEmail - The email address of the user.
+ * 
+ * @description Renders the voting options for the user.
+ * It retrieves the active elections and generates a prefilled URL for each election.
+ * The prefilled URL includes a token field to ensure secure voting.
+ * 
+ * @throws {Error} If there is an issue retrieving the elections or generating the prefilled URLs.
+ * @returns Google Apps HTML output for the voting options.
+ */
 VotingService.WebApp._renderVotingOptions = function (userEmail) {
-    const voteDataForTemplate = this._getVotingDataForTemplate(userEmail);
+    const electionDataForTemplate = this._getElectionsForTemplate(userEmail);
 
     const htmlTemplate = HtmlService.createTemplateFromFile('services/VotingService/ActiveVotes.html');
     htmlTemplate.userEmail = userEmail;
-    htmlTemplate.activeVotes = voteDataForTemplate;
+    console.log('Rendering voting options for user:', userEmail, 'with elections:', electionDataForTemplate);
+    htmlTemplate.activeElections = electionDataForTemplate;
     return htmlTemplate.evaluate();
 }
 
-VotingService.WebApp._getVotingDataForTemplate = function (userEmail) {
-    const activeVotes = this._getActiveVotes();
-    return activeVotes.map(vote => {
+/**
+ * @param {string} userEmail - The email address of the user.
+ * @returns {Array<{title: string, formUrl: string}>} - Returns an array of objects containing the title and form URL for each active election.
+ */
+VotingService.WebApp._getElectionsForTemplate = function(userEmail) {
+    const activeVotes = this.getActiveElections_();
+    return activeVotes.map(election => {
         return {
-            title: vote[VOTE_TITLE_COLUMN_NAME],
-            formUrl: this._getFormUrlWithTokenField(userEmail, vote)
+            title: election[VOTE_TITLE_COLUMN_NAME],
+            formUrl: this._getFormUrlWithTokenField(userEmail, election)
         }
     });
-}
-VotingService.WebApp._getFormUrlWithTokenField = function (userEmail, vote) {
+},
+/**
+ * 
+ * @param {string} userEmail - The email address of the user.
+ * @param {Election} election - The election object containing the form ID.
+ * @returns a prefilled ballot URL with a token field for the user.
+ * 
+ * @description Generates a prefilled URL for the voting form with a token field.
+ * This URL is used to ensure that the user can vote securely and their vote is recorded.
+ * It generates a token for the user and stores it in the TokenStorage.
+ * The prefilled URL includes the token field to validate the user's vote.
+ * 
+ * @throws {Error} If there is an issue generating the prefilled URL or storing the token.
+ */
+VotingService.WebApp._getFormUrlWithTokenField = function (userEmail, election) {
     const token = Common.Auth.TokenManager.generateToken();
     Common.Auth.TokenStorage.storeToken(userEmail, token);
-    const components = VotingService.parsePrefilledFormUrlComponents(vote[PREFILLED_URL_COLUMN_NAME]);
-    const form = FormApp.openById(vote[FORM_ID_COLUMN_NAME]);
-    return form.getPublishedUrl() + '?entry.' + components.entryTokenId + '=' + token;
+    const preFilledUrl = VotingService.createPrefilledUrlWithTitle(election.ID, TOKEN_ENTRY_FIELD_TITLE, token);
+    return preFilledUrl
 }
 
-
-VotingService.WebApp._getActiveVotes = function () {
-    const data = Common.Data.Access.getVotingData();
+/**
+ * 
+ * @returns {Array<Election>} - Returns an array of active Election objects.
+ * Each object contains properties like Title, Form ID, Organizers, Start Date, End Date, and Voters.
+ */
+VotingService.WebApp.getActiveElections_ = function () {
+    const data = Common.Data.Access.getElections();
 
     const today = new Date();
-    const activeVotes = data.filter(vote => {
-        const startDate = vote['Start Date'] ? new Date(vote['Start Date']) : null;
-        const endDate = vote['End Date'] ? new Date(vote['End Date']) : null;
-        return (startDate === null || startDate <= today) && (endDate === null || endDate >= today);
+    const activeElections = data.filter(election => {
+        const startDate = election.Start ? new Date(election.Start) : null;
+        const endDate = election.End ? new Date(election.End) : null;
+        return (startDate === null || startDate <= today) && (endDate === null || today <= endDate);
     });
-    return activeVotes;
+    return activeElections;
 }

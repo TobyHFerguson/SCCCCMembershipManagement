@@ -1,9 +1,15 @@
 const MAGIC_LINK_INPUT = 'common/auth/magicLinkInput.html'; // Name of the HTML file for input form
 const _LAYOUT_FILE = 'common/html/_Layout.html'; // Name of the layout file
 
+// @ts-check
+/**
+ * 
+ * @param {GoogleAppsScript.Events.DoGet} e 
+ * @returns 
+ */
 function doGet(e) {
     if (!e.parameter.service) {
-        return createTextResponse('No service parameter given. The url must have a service parameter!', 400);
+        return createTextResponse('No service parameter given. The url must have a service parameter!');
     }
     const service = WebServices[e.parameter.service];
     if (!service) {
@@ -36,7 +42,7 @@ function doGet(e) {
     const tokenData = Common.Auth.TokenManager.getTokenData(token);
     console.log('doGet() called with token: ', token, ' and tokenData: ', tokenData);
     if (!tokenData || tokenData.Used) {
-        return createTextResponse('Invalid or Used Link - The access link is either invalid or has already been used.', 400);
+        return createTextResponse('Invalid or Used Link - The access link is either invalid or has already been used.');
     }
     if (!tokenData.Email) {
         throw new Error('tokenData.Email === null')

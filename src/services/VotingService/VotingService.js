@@ -1,7 +1,7 @@
 // @ts-check
 
 const PREFILLED_URL_COLUMN_NAME = 'Pre-filled Form URL';
-const VOTE_TITLE_COLUMN_NAME = 'Vote Title';
+const VOTE_TITLE_COLUMN_NAME = 'Title';
 const FORM_ID_COLUMN_NAME = 'ID';
 const MANAGERS_COLUMN_NAME = 'Managers'; // Can be comma-separated
 const TRIGGER_STATUS_COLUMN_NAME = 'Trigger Status';
@@ -189,12 +189,15 @@ function runCreateResultsSpreadsheet() {
  * This function first finds the correct Entry ID for the question by
  * creating a temporary pre-filled URL and then parsing it.
  *
- * @param {string} formId The ID of the Google Form.
+ * @param {string} formId The ID of the Google Form. This could be a full URL or just the ID.
  * @param {string} questionTitle The title of the question to pre-fill.
  * @param {string} answer The answer to pre-fill in the question. Defaults to '1234'.
  * @return {string} A pre-filled URL for the form.
  */
 VotingService.createPrefilledUrlWithTitle = function (formId, questionTitle, answer = '1234') {
+    if (formId.startsWith('https://')) {
+        formId = VotingService.extractGasFormId(formId);
+    }
     const form = FormApp.openById(formId);
 
     // Find the question item by its title
@@ -254,5 +257,5 @@ function runAddTokenQuestion() {
 
 function runConfigureBallotForm() {
     const formId = TEST_FORM_ID;
-    VotingService.configureBallotForm(formId);
+    VotingService.configureBallotForm(formId, ["toby.ferguson@sc3.club"]);
 }

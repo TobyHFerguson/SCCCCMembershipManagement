@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2019",
+    "noImplicitAny": false,
     "lib": [
       "es2019"
     ],
