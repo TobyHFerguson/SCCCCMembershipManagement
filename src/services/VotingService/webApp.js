@@ -28,22 +28,24 @@ VotingService.WebApp._renderVotingOptions = function (userEmail) {
     const htmlTemplate = HtmlService.createTemplateFromFile('services/VotingService/ActiveVotes.html');
     htmlTemplate.userEmail = userEmail;
     console.log('Rendering voting options for user:', userEmail, 'with elections:', electionDataForTemplate);
-    htmlTemplate.activeElections = electionDataForTemplate;
+    htmlTemplate.elections = electionDataForTemplate;
     return htmlTemplate.evaluate();
 }
-
 /**
+ * Process the elections so that no URL (ID) is published for an inactive election.
  * @param {string} userEmail - The email address of the user.
- * @returns {Array<{title: string, formUrl: string}>} - Returns an array of objects containing the title and form URL for each active election.
+ * @returns {Array<Election>} - Returns an array of Election objects with prefilled URLs for voting.    
  */
 VotingService.WebApp._getElectionsForTemplate = function(userEmail) {
-    const activeVotes = this.getActiveElections_();
-    return activeVotes.map(election => {
-        return {
-            title: election[VOTE_TITLE_COLUMN_NAME],
-            formUrl: this._getFormUrlWithTokenField(userEmail, election)
-        }
+    const elections = VotingService.Data.getElectionData();
+
+    const today = new Date();
+    elections.forEach(election => {
+        const startDate = election.Start ? new Date(election.Start) : null;
+        const endDate = election.End ? new Date(election.End) : null;
+        election.ID = (startDate === null || startDate <= today) && (endDate === null || today <= endDate) ? this._getFormUrlWithTokenField(userEmail, election) : null;
     });
+    return elections;
 },
 /**
  * 
@@ -70,14 +72,14 @@ VotingService.WebApp._getFormUrlWithTokenField = function (userEmail, election) 
  * @returns {Array<Election>} - Returns an array of active Election objects.
  * Each object contains properties like Title, Form ID, Organizers, Start Date, End Date, and Voters.
  */
-VotingService.WebApp.getActiveElections_ = function () {
-    const data = Common.Data.Access.getElections();
+VotingService.WebApp.getProcessedElections_ = function () {
+    const elections = VotingService.Data.getElectionData();
 
     const today = new Date();
-    const activeElections = data.filter(election => {
+    elections.forEach(election => {
         const startDate = election.Start ? new Date(election.Start) : null;
         const endDate = election.End ? new Date(election.End) : null;
-        return (startDate === null || startDate <= today) && (endDate === null || today <= endDate);
+        election.ID = (startDate === null || startDate <= today) && (endDate === null || today <= endDate) ? election.ID : null;
     });
-    return activeElections;
+    return elections;
 }

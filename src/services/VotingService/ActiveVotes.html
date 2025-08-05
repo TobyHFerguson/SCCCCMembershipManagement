@@ -1,38 +1,114 @@
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+<link rel="stylesheet" type="text/css"
+  href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
+
 <style>
-
-  ul {
-    list-style-type: none;
-    padding: 0;
+  body {
+    font-family: sans-serif;
   }
 
-  li {
-    margin-bottom: 15px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
+  /* General table styling to ensure readability, complementing DataTables defaults */
+  #elections-table {
+    width: 100%;
+    /* Ensure the table fills its container */
+    border-collapse: collapse;
+    margin-top: 20px;
   }
 
-  li:last-child {
-    border-bottom: none;
+  #elections-table th,
+  #elections-table td {
+    padding: 8px;
+    text-align: left;
   }
 
+  /* Style for the inoperative links */
+  .disabled-link {
+    color: #999;
+    /* Grey text */
+    cursor: not-allowed;
+    /* Shows a "not allowed" cursor on hover */
+    text-decoration: none;
+    /* Removes the underline */
+  }
 
-
-  a:hover {
+  /* Basic hover effect for clickable links, which DataTables may not provide */
+  #elections-table a:hover {
     background-color: #e9ecef;
   }
-
-  
 </style>
 
 <h1>Active Elections</h1>
 <p>You are logged in with the email: <strong>
     <?= userEmail ?>
   </strong></p>
-<ul>
-  <? for (const election of activeElections) { ?>
-  <li><a href="<?= election.formUrl ?>">
-      <?= election.title ?>
-    </a></li>
-  <? } ?>
-</ul>
-</div>
+
+<table id="elections-table" class="display responsive nowrap">
+  <thead>
+    <tr>
+      <th>Election Title</th>
+      <th>Start Date</th>
+      <th>End Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    </tbody>
+</table>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript"
+  src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+
+<script>
+  // Assuming 'elections' is already processed on the server.
+  // The 'ID' will be present only if the election is active.
+  var electionsData = <?!= JSON.stringify(elections) ?>;
+
+  $(document).ready(function() {
+    if (typeof jQuery === 'undefined' || typeof jQuery.fn.DataTable === 'undefined') {
+      console.error('jQuery or DataTables library is not loaded!');
+      $('#elections-table').parent().prepend('<div style="color: red; text-align: center; margin-top: 20px;">Error: Required libraries not loaded. Table cannot be displayed.</div>');
+      return;
+    }
+
+    var processedTableData = [];
+
+    // Loop through the data to format it for DataTables
+    electionsData.forEach(function(election) {
+      // Use the presence of ID to determine if the link should be clickable.
+      const hasFormUrl = election.ID;
+
+      // Create the link or disabled span for the title
+      let electionTitleCell;
+      if (hasFormUrl) {
+        electionTitleCell = '<a href="' + election.ID + '">' + election.Title + '</a>';
+      } else {
+        electionTitleCell = '<span class="disabled-link">' + election.Title + '</span>';
+      }
+
+      // Create a new row array for DataTables
+      processedTableData.push([
+        electionTitleCell,
+        election.Start ? new Date(election.Start).toLocaleDateString() : '—',
+        election.End ? new Date(election.End).toLocaleDateString() : '—'
+      ]);
+    });
+
+    // Initialize the DataTable with the processed data
+    $('#elections-table').DataTable({
+      "data": processedTableData,
+      "columns": [{
+        "title": "Election Title"
+      }, {
+        "title": "Start Date"
+      }, {
+        "title": "End Date"
+      }],
+      "order": [
+        [2, 'asc']
+      ], // Initial order by End Date (index 2)
+      "responsive": true, // Enable DataTables Responsive extension
+      "autoWidth": false // Let DataTables handle width
+    });
+  });
+</script>
