@@ -1,94 +1,38 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Active Elections</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    /* Your CSS will go here */
-    body {
-      font-family: sans-serif;
-      margin: 20px;
-      background-color: #f4f4f4;
-      color: #333;
-    }
+<style>
 
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: #fff;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
+  ul {
+    list-style-type: none;
+    padding: 0;
+  }
 
-    h1 {
-      color: #007bff;
-      margin-bottom: 20px;
-      text-align: center;
-    }
+  li {
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+  }
 
-    p {
-      margin-bottom: 15px;
-      text-align: center;
-    }
+  li:last-child {
+    border-bottom: none;
+  }
 
-    strong {
-      color: #28a745;
-    }
 
-    ul {
-      list-style-type: none;
-      padding: 0;
-    }
 
-    li {
-      margin-bottom: 15px;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 10px;
-    }
+  a:hover {
+    background-color: #e9ecef;
+  }
 
-    li:last-child {
-      border-bottom: none;
-    }
+  
+</style>
 
-    a {
-      display: block;
-      text-decoration: none;
-      color: #007bff;
-      font-weight: bold;
-      padding: 10px;
-      border-radius: 4px;
-      transition: background-color 0.3s ease;
-    }
-
-    a:hover {
-      background-color: #e9ecef;
-    }
-
-    /* Responsive design (example) */
-    @media (max-width: 768px) {
-      .container {
-        margin: 10px;
-        padding: 20px;
-      }
-      h1 {
-        font-size: 2em;
-      }
-      p {
-        font-size: 1em;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Active Elections</h1>
-    <p>You are logged in with the email: <strong><?= userEmail ?></strong></p>
-    <ul>
-      <? for (const election of activeElections) { ?>
-        <li><a href="<?= election.formUrl ?>"><?= election.title ?></a></li>
-      <? } ?>
-    </ul>
-  </div>
-</body>
-</html>
+<h1>Active Elections</h1>
+<p>You are logged in with the email: <strong>
+    <?= userEmail ?>
+  </strong></p>
+<ul>
+  <? for (const election of activeElections) { ?>
+  <li><a href="<?= election.formUrl ?>">
+      <?= election.title ?>
+    </a></li>
+  <? } ?>
+</ul>
+</div>
