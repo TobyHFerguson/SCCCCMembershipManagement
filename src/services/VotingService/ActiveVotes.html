@@ -60,17 +60,20 @@
   /* No specific hover for active links as they are always underlined */
 </style>
 
-<h1>Active Elections</h1>
-<p>You are logged in with the email: <strong>
+<h2></h2>
+<p>Your email: <strong>
     <?= userEmail ?>
-  </strong></p>
+  </strong> will be used to track your votes. </p>
+  
+  <p>You can only vote once per election.</p>
 
 <table id="elections-table" class="display responsive nowrap">
   <thead>
     <tr>
       <th>Election Title</th>
-      <th>Start Date</th>
-      <th>End Date</th>
+      <th>Election Status</th>
+      <th>Opens</th>
+      <th>Closes</th>
     </tr>
   </thead>
   <tbody>
@@ -100,26 +103,23 @@
     // Loop through the data to format it for DataTables
     electionsData.forEach(function (election) {
       // Use the presence of ID to determine if the link should be clickable.
-      const hasFormUrl = election.ID;
+      const hasFormUrl = election.url;
 
       let electionTitleCell;
       if (hasFormUrl) {
         // Active election title: regular link, always underlined
-        electionTitleCell = '<a href="' + election.ID + '">' + election.Title + '</a>';
+        electionTitleCell = '<a href="' + election.ID + '">' + election.title + '</a>';
       } else {
         // Inactive election title: disabled span with tooltip if voted
-        let tooltipText = '';
-        if (election['You Voted']) { // Check if 'You Voted' is true
-          tooltipText = ' title="You already voted in this election"';
-        }
-        electionTitleCell = '<span class="disabled-link"' + tooltipText + '>' + election.Title + '</span>';
+        electionTitleCell = '<span class="disabled-link">'+ election.title + '</span>';
       }
 
       // Create a new row array for DataTables
       processedTableData.push([
         electionTitleCell,
-        election.Start ? new Date(election.Start).toLocaleDateString() : '—',
-        election.End ? new Date(election.End).toLocaleDateString() : '—'
+        election.status || '—', // Use '—' if Status is not defined
+        election.opens ? new Date(election.opens).toLocaleDateString() : '—',
+        election.closes ? new Date(election.closes).toLocaleDateString() : '—'
       ]);
     });
 
@@ -129,14 +129,17 @@
       "columns": [{
         "title": "Election Title"
       }, {
-        "title": "Start Date"
+        "title": "Election Status"
+      },
+      {
+        "title": "Opens"
       }, {
-        "title": "End Date"
+        "title": "Closes"
       }
       ],
       "order": [
-        [2, 'desc']
-      ], // Initial order by End Date (index 2); most recent first
+        [3, 'desc']
+      ], // Initial order by End Date (index 3); most recent first
       "pageLength": 50, // Show 10 entries per page
       "responsive": true, // Enable DataTables Responsive extension
       "autoWidth": false // Let DataTables handle width

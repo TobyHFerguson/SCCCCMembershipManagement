@@ -34,19 +34,34 @@ VotingService.WebApp._renderVotingOptions = function (userEmail) {
 /**
  * Process the elections so that no URL (ID) is published for an inactive election.
  * @param {string} userEmail - The email address of the user.
- * @returns {Array<Election>} - Returns an array of Election objects with prefilled URLs for voting.    
+ * @returns {Array<ProcessedElection>} - Returns an array of ProcessedElection objects with prefilled URLs for voting.    
  */
-VotingService.WebApp._getElectionsForTemplate = function(userEmail) {
+VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
     const elections = VotingService.Data.getElectionData();
 
     const today = new Date();
-    elections.forEach(election => {
-        const startDate = election.Start ? new Date(election.Start) : null;
-        const endDate = election.End ? new Date(election.End) : null;
-        election.ID = (startDate === null || startDate <= today) && (endDate === null || today <= endDate) ? this._getFormUrlWithTokenField(userEmail, election) : null;
+    const processedElections = elections.map(election => {
+        const result = {};
+        result.title = election.Title;
+        result.opens = election.Start ? new Date(election.Start).toLocaleDateString() : '—';
+        result.closes = election.End ? new Date(election.End).toLocaleDateString() : '—';
+        if (election.Voters.includes(userEmail)) {
+            result.status = "Inactive - you've already voted"
+            return result; // Skip further processing if user has already voted
+        } else if (election.Start && new Date(election.Start) > today) {
+            result.status = "Inactive - election not open yet"
+            return result; // Skip further processing if election has not started
+        } else if (election.End && today > new Date(election.End)) {
+            result.status = "Inactive - election has ended"
+            return result; // Skip further processing if election has ended
+        }
+        result.url = this._getFormUrlWithTokenField(userEmail, election);
+        result.status = "Active";
+        return result
     });
-    return elections;
-},
+    return processedElections;
+}
+
 /**
  * 
  * @param {string} userEmail - The email address of the user.
