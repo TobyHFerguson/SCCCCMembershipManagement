@@ -9,6 +9,15 @@
  */
 
 /**
+ * @typedef {Object} ProcessedElection
+ * @property {string} title - The title of the election.
+ * @property {string} opens - The formatted start date of the election.
+ * @property {string} closes - The formatted end date of the election.
+ * @property {string} status - The status of the election, indicating if it's active or inactive.
+ * @property {string} url - A prefilled URL for the voting form with a token field for the user. 
+ */
+
+/**
  * @interface ElectionRegistrationManager
  * @description Interface for managing election registrations.
  * This interface defines methods for adding, retrieving, and managing elections.

@@ -1,6 +1,6 @@
 //@ts-check
 VotingService.Data = {
-    getFiddler_: ()=> {
+    getFiddler_: function(){
         return Common.Data.Storage.SpreadsheetManager.getFiddler('Elections');
     },
     /**
@@ -13,9 +13,9 @@ VotingService.Data = {
      * This method abstracts the underlying storage mechanism, allowing for flexibility in implementation.
      * It fetches the data from the sheet and returns it as an array of Election objects.
      */
-    getElectionData: () => {
-        const votingData = this.getFiddler_().getData();
-        return votingData;
+    getElectionData: function() {
+        const electionData = this.getFiddler_().getData();
+        return electionData;
     },
     /**
      * Sets the election data in the Elections sheet.
@@ -24,7 +24,7 @@ VotingService.Data = {
      * @param {Array<Election>} elections - Array of election objects to be stored in the Elections sheet.
      * Each object should have properties like Title, Form ID, Managers, Start Date, End Date, and Voters.
      */
-    setElectionData: (elections) => {
+    setElectionData: function(elections) {
         this.getFiddler_().setData(elections).dumpValues();
     }
 }

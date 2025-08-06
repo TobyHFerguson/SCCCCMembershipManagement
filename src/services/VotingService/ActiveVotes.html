@@ -1,38 +1,148 @@
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+<link rel="stylesheet" type="text/css"
+  href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
+
 <style>
-
-  ul {
-    list-style-type: none;
-    padding: 0;
+  /* General table styling to ensure readability, complementing DataTables defaults */
+  #elections-table {
+    width: 100%;
+    /* Ensure the table fills its container */
+    border-collapse: collapse;
+    margin-top: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    /* Subtle shadow for the table */
+    border-radius: 8px;
+    /* Rounded corners for the table container */
+    overflow: hidden;
+    /* Ensures shadow and border-radius apply correctly */
   }
 
-  li {
-    margin-bottom: 15px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
+  #elections-table th,
+  #elections-table td {
+    padding: 12px 15px;
+    /* More padding for better spacing */
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+    /* Light border between rows */
   }
 
-  li:last-child {
-    border-bottom: none;
-  }
-
-
-
-  a:hover {
+  #elections-table th {
     background-color: #e9ecef;
+    /* Light grey header background */
+    font-weight: bold;
+    color: #495057;
+    /* Darker text for headers */
   }
 
-  
+  #elections-table tbody tr:hover {
+    background-color: #f1f1f1;
+    /* Light hover effect for rows */
+  }
+
+  /* Style for the inoperative links */
+  .disabled-link {
+    color: #999;
+    /* Grey text */
+    cursor: not-allowed;
+    /* Shows a "not allowed" cursor on hover */
+    text-decoration: none;
+    /* Removes the underline */
+  }
+
+  /* Active links should always be underlined */
+  #elections-table a {
+    color: #007bff;
+    /* Blue link color */
+    text-decoration: underline;
+    /* Always underlined */
+  }
+
+  /* No specific hover for active links as they are always underlined */
 </style>
 
-<h1>Active Elections</h1>
-<p>You are logged in with the email: <strong>
+<h2></h2>
+<p>Your email: <strong>
     <?= userEmail ?>
-  </strong></p>
-<ul>
-  <? for (const election of activeElections) { ?>
-  <li><a href="<?= election.formUrl ?>">
-      <?= election.title ?>
-    </a></li>
-  <? } ?>
-</ul>
-</div>
+  </strong> will be used to track your votes. </p>
+  
+  <p>You can only vote once per election.</p>
+
+<table id="elections-table" class="display responsive nowrap">
+  <thead>
+    <tr>
+      <th>Election Title</th>
+      <th>Election Status</th>
+      <th>Opens</th>
+      <th>Closes</th>
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript"
+  src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+
+<script>
+  // Assuming 'elections' is already processed on the server and includes the 'You Voted' property.
+  // The 'ID' will be present only if the election is active.
+  var electionsData = <?!= JSON.stringify(elections) ?>;
+
+  $(document).ready(function () {
+    // Basic check to ensure jQuery and DataTables are loaded
+    if (typeof jQuery === 'undefined' || typeof jQuery.fn.DataTable === 'undefined') {
+      console.error('jQuery or DataTables library is not loaded!');
+      $('#elections-table').parent().prepend('<div style="color: red; text-align: center; margin-top: 20px; padding: 10px; border: 1px solid red; border-radius: 5px;">Error: Required libraries not loaded. Table cannot be displayed.</div>');
+      return;
+    }
+
+    var processedTableData = [];
+
+    // Loop through the data to format it for DataTables
+    electionsData.forEach(function (election) {
+      // Use the presence of ID to determine if the link should be clickable.
+      const hasFormUrl = election.url;
+
+      let electionTitleCell;
+      if (hasFormUrl) {
+        // Active election title: regular link, always underlined
+        electionTitleCell = '<a href="' + election.ID + '">' + election.title + '</a>';
+      } else {
+        // Inactive election title: disabled span with tooltip if voted
+        electionTitleCell = '<span class="disabled-link">'+ election.title + '</span>';
+      }
+
+      // Create a new row array for DataTables
+      processedTableData.push([
+        electionTitleCell,
+        election.status || '—', // Use '—' if Status is not defined
+        election.opens ? new Date(election.opens).toLocaleDateString() : '—',
+        election.closes ? new Date(election.closes).toLocaleDateString() : '—'
+      ]);
+    });
+
+    // Initialize the DataTable with the processed data
+    $('#elections-table').DataTable({
+      "data": processedTableData,
+      "columns": [{
+        "title": "Election Title"
+      }, {
+        "title": "Election Status"
+      },
+      {
+        "title": "Opens"
+      }, {
+        "title": "Closes"
+      }
+      ],
+      "order": [
+        [2, 'desc']
+      ], // Initial order by Opening Date (index 3); most recent first
+      "pageLength": 50, // Show 10 entries per page
+      "responsive": true, // Enable DataTables Responsive extension
+      "autoWidth": false // Let DataTables handle width
+    });
+  });
+</script>
