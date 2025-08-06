@@ -3,22 +3,40 @@
   href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
 
 <style>
-  body {
-    font-family: sans-serif;
-  }
-
   /* General table styling to ensure readability, complementing DataTables defaults */
   #elections-table {
     width: 100%;
     /* Ensure the table fills its container */
     border-collapse: collapse;
     margin-top: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    /* Subtle shadow for the table */
+    border-radius: 8px;
+    /* Rounded corners for the table container */
+    overflow: hidden;
+    /* Ensures shadow and border-radius apply correctly */
   }
 
   #elections-table th,
   #elections-table td {
-    padding: 8px;
+    padding: 12px 15px;
+    /* More padding for better spacing */
     text-align: left;
+    border-bottom: 1px solid #dee2e6;
+    /* Light border between rows */
+  }
+
+  #elections-table th {
+    background-color: #e9ecef;
+    /* Light grey header background */
+    font-weight: bold;
+    color: #495057;
+    /* Darker text for headers */
+  }
+
+  #elections-table tbody tr:hover {
+    background-color: #f1f1f1;
+    /* Light hover effect for rows */
   }
 
   /* Style for the inoperative links */
@@ -32,8 +50,24 @@
   }
 
   /* Basic hover effect for clickable links, which DataTables may not provide */
+  #elections-table a {
+    color: #007bff;
+    /* Blue link color */
+    text-decoration: none;
+    /* No underline by default */
+  }
+
   #elections-table a:hover {
-    background-color: #e9ecef;
+    text-decoration: underline;
+    /* Underline on hover */
+  }
+
+  /* Center the tick/cross for better visual alignment */
+  #elections-table .voted-status {
+    text-align: center;
+    font-size: 1.2em;
+    /* Slightly larger for visibility */
+    font-weight: bold;
   }
 </style>
 
@@ -48,10 +82,11 @@
       <th>Election Title</th>
       <th>Start Date</th>
       <th>End Date</th>
+      <th>You Voted</th> <!-- New column header -->
     </tr>
   </thead>
   <tbody>
-    </tbody>
+  </tbody>
 </table>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -60,21 +95,21 @@
   src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
 
 <script>
-  // Assuming 'elections' is already processed on the server.
+  // Assuming 'elections' is already processed on the server and includes the 'You Voted' property.
   // The 'ID' will be present only if the election is active.
   var electionsData = <?!= JSON.stringify(elections) ?>;
 
-  $(document).ready(function() {
+  $(document).ready(function () {
     if (typeof jQuery === 'undefined' || typeof jQuery.fn.DataTable === 'undefined') {
       console.error('jQuery or DataTables library is not loaded!');
-      $('#elections-table').parent().prepend('<div style="color: red; text-align: center; margin-top: 20px;">Error: Required libraries not loaded. Table cannot be displayed.</div>');
+      $('#elections-table').parent().prepend('<div style="color: red; text-align: center; margin-top: 20px; padding: 10px; border: 1px solid red; border-radius: 5px;">Error: Required libraries not loaded. Table cannot be displayed.</div>');
       return;
     }
 
     var processedTableData = [];
 
     // Loop through the data to format it for DataTables
-    electionsData.forEach(function(election) {
+    electionsData.forEach(function (election) {
       // Use the presence of ID to determine if the link should be clickable.
       const hasFormUrl = election.ID;
 
@@ -86,11 +121,16 @@
         electionTitleCell = '<span class="disabled-link">' + election.Title + '</span>';
       }
 
+      // Get the 'You Voted' status, which should already be processed by the server-side JS
+      // We wrap it in a span for potential styling (e.g., centering)
+      const youVotedCell = '<span class="voted-status">' + (election['You Voted'] ? '✔' : '✖') + '</span>';
+
       // Create a new row array for DataTables
       processedTableData.push([
         electionTitleCell,
         election.Start ? new Date(election.Start).toLocaleDateString() : '—',
-        election.End ? new Date(election.End).toLocaleDateString() : '—'
+        election.End ? new Date(election.End).toLocaleDateString() : '—',
+        youVotedCell // Add the new 'You Voted' cell
       ]);
     });
 
@@ -103,6 +143,8 @@
         "title": "Start Date"
       }, {
         "title": "End Date"
+      }, {
+        "title": "You Voted" // Define the new column
       }],
       "order": [
         [2, 'asc']
