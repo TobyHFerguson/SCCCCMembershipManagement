@@ -4,16 +4,24 @@
 /**
  * 
  * @param {GoogleAppsScript.Events.DoGet} e 
- * @param {string} userEmail 
+ * @param {string} userEmail
+ * @param {GoogleAppsScript.HTML.HtmlTemplate} htmlTemplate
  * @returns 
  */
-VotingService.WebApp.doGet = function (e, userEmail) {
-    return this._renderVotingOptions(userEmail)
+VotingService.WebApp.doGet = function (e, userEmail, htmlTemplate) {
+    const service = e.parameter.service;
+    if (service !== VotingService.service) {
+        return HtmlService.createHtmlOutput(`<h1>Invalid service. Was expecting ${VotingService.service} but got ${service}</p>`);
+
+    }
+    htmlTemplate.contentFileName = 'services/VotingService/ActiveVotes.html';
+    return this._renderVotingOptions(userEmail, htmlTemplate);
 }
 
 /**
  * 
  * @param {string} userEmail - The email address of the user.
+ * @param {GoogleAppsScript.HTML.HtmlTemplate} htmlTemplate - The HTML template to render.  
  * 
  * @description Renders the voting options for the user.
  * It retrieves the active elections and generates a prefilled URL for each election.
@@ -22,15 +30,16 @@ VotingService.WebApp.doGet = function (e, userEmail) {
  * @throws {Error} If there is an issue retrieving the elections or generating the prefilled URLs.
  * @returns Google Apps HTML output for the voting options.
  */
-VotingService.WebApp._renderVotingOptions = function (userEmail) {
+VotingService.WebApp._renderVotingOptions = function (userEmail, htmlTemplate) {
     const electionDataForTemplate = this._getElectionsForTemplate(userEmail);
 
-    const htmlTemplate = HtmlService.createTemplateFromFile('services/VotingService/ActiveVotes.html');
     htmlTemplate.userEmail = userEmail;
-    console.log('Rendering voting options for user:', userEmail, 'with elections:', electionDataForTemplate);
     htmlTemplate.elections = electionDataForTemplate;
-    return htmlTemplate.evaluate();
-}
+    console.log('Rendering voting options for user:', userEmail, 'with elections:', electionDataForTemplate);
+    
+    const htmlOutput = htmlTemplate.evaluate().setTitle('SCCCC Voting Service') ;
+    return htmlOutput;
+}   
 /**
  * Process the elections so that no URL (ID) is published for an inactive election.
  * @param {string} userEmail - The email address of the user.

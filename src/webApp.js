@@ -29,11 +29,11 @@ function doGet(e) {
         tabletMax: tabletMaxBreakpoint
     };
     template.include = _includeHtml; 
+    template.serviceName = service.name
 
     if (page === 'request') {
         template.contentFileName = MAGIC_LINK_INPUT;
         template.service = service.service;
-        template.serviceName = service.name
         const output = template.evaluate()
             .setTitle(`Request Access - ${MAGIC_LINK_INPUT}`)
         return output;
