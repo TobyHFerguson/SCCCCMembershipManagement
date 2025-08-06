@@ -3,42 +3,10 @@
   href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
 
 <style>
-  /* General table styling to ensure readability, complementing DataTables defaults */
-  #elections-table {
-    width: 100%;
-    /* Ensure the table fills its container */
-    border-collapse: collapse;
-    margin-top: 20px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    /* Subtle shadow for the table */
-    border-radius: 8px;
-    /* Rounded corners for the table container */
-    overflow: hidden;
-    /* Ensures shadow and border-radius apply correctly */
-  }
-
-  #elections-table th,
-  #elections-table td {
-    padding: 12px 15px;
-    /* More padding for better spacing */
-    text-align: left;
-    border-bottom: 1px solid #dee2e6;
-    /* Light border between rows */
-  }
-
-  #elections-table th {
-    background-color: #e9ecef;
-    /* Light grey header background */
-    font-weight: bold;
-    color: #495057;
-    /* Darker text for headers */
-  }
-
-  #elections-table tbody tr:hover {
-    background-color: #f1f1f1;
-    /* Light hover effect for rows */
-  }
-
+  .container {
+    width: 50rem;
+  }/* General table styling to ensure readability, complementing DataTables defaults */
+ 
   /* Style for the inoperative links */
   .disabled-link {
     color: #999;
@@ -49,25 +17,32 @@
     /* Removes the underline */
   }
 
-  /* Active links should always be underlined */
-  #elections-table a {
-    color: #007bff;
-    /* Blue link color */
-    text-decoration: underline;
-    /* Always underlined */
+  /* Ensure these overrides are correctly applied and not cancelled out */
+  html.is-tablet .container {
+    /* If you still need this for tablet, fine, but consider the base CSS's max-width for tablets */
+    /* max-width: none; */
+    /* Consider removing this to re-enable base CSS max-width logic */
+  }
+
+  html.is-mobile-landscape .container {
+    /* This is the key rule for the screenshot's issue */
+    /* REMOVE this if it's present: max-width: none; */
+    overflow-x: auto;
+    /* THIS IS THE MOST IMPORTANT ADDITION FOR VISUAL CONTAINMENT */
+    /* Ensure other container properties from base CSS (width, padding, etc.) are active */
   }
 
   /* No specific hover for active links as they are always underlined */
 </style>
 
-<h2></h2>
+<h2><?= serviceName ?></h2>
 <p>Your email: <strong>
     <?= userEmail ?>
   </strong> will be used to track your votes. </p>
   
   <p>You can only vote once per election.</p>
 
-<table id="elections-table" class="display responsive nowrap">
+<table id="data-table" class="display">
   <thead>
     <tr>
       <th>Election Title</th>
@@ -94,7 +69,7 @@
     // Basic check to ensure jQuery and DataTables are loaded
     if (typeof jQuery === 'undefined' || typeof jQuery.fn.DataTable === 'undefined') {
       console.error('jQuery or DataTables library is not loaded!');
-      $('#elections-table').parent().prepend('<div style="color: red; text-align: center; margin-top: 20px; padding: 10px; border: 1px solid red; border-radius: 5px;">Error: Required libraries not loaded. Table cannot be displayed.</div>');
+      $('#data-table').parent().prepend('<div style="color: red; text-align: center; margin-top: 20px; padding: 10px; border: 1px solid red; border-radius: 5px;">Error: Required libraries not loaded. Table cannot be displayed.</div>');
       return;
     }
 
@@ -124,7 +99,7 @@
     });
 
     // Initialize the DataTable with the processed data
-    $('#elections-table').DataTable({
+    $('#data-table').DataTable({
       "data": processedTableData,
       "columns": [{
         "title": "Election Title"
