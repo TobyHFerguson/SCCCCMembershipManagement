@@ -49,26 +49,15 @@
     /* Removes the underline */
   }
 
-  /* Basic hover effect for clickable links, which DataTables may not provide */
+  /* Active links should always be underlined */
   #elections-table a {
     color: #007bff;
     /* Blue link color */
-    text-decoration: none;
-    /* No underline by default */
-  }
-
-  #elections-table a:hover {
     text-decoration: underline;
-    /* Underline on hover */
+    /* Always underlined */
   }
 
-  /* Center the tick/cross for better visual alignment */
-  #elections-table .voted-status {
-    text-align: center;
-    font-size: 1.2em;
-    /* Slightly larger for visibility */
-    font-weight: bold;
-  }
+  /* No specific hover for active links as they are always underlined */
 </style>
 
 <h1>Active Elections</h1>
@@ -82,7 +71,6 @@
       <th>Election Title</th>
       <th>Start Date</th>
       <th>End Date</th>
-      <th>You Voted</th> <!-- New column header -->
     </tr>
   </thead>
   <tbody>
@@ -100,6 +88,7 @@
   var electionsData = <?!= JSON.stringify(elections) ?>;
 
   $(document).ready(function () {
+    // Basic check to ensure jQuery and DataTables are loaded
     if (typeof jQuery === 'undefined' || typeof jQuery.fn.DataTable === 'undefined') {
       console.error('jQuery or DataTables library is not loaded!');
       $('#elections-table').parent().prepend('<div style="color: red; text-align: center; margin-top: 20px; padding: 10px; border: 1px solid red; border-radius: 5px;">Error: Required libraries not loaded. Table cannot be displayed.</div>');
@@ -113,24 +102,24 @@
       // Use the presence of ID to determine if the link should be clickable.
       const hasFormUrl = election.ID;
 
-      // Create the link or disabled span for the title
       let electionTitleCell;
       if (hasFormUrl) {
+        // Active election title: regular link, always underlined
         electionTitleCell = '<a href="' + election.ID + '">' + election.Title + '</a>';
       } else {
-        electionTitleCell = '<span class="disabled-link">' + election.Title + '</span>';
+        // Inactive election title: disabled span with tooltip if voted
+        let tooltipText = '';
+        if (election['You Voted']) { // Check if 'You Voted' is true
+          tooltipText = ' title="You already voted in this election"';
+        }
+        electionTitleCell = '<span class="disabled-link"' + tooltipText + '>' + election.Title + '</span>';
       }
-
-      // Get the 'You Voted' status, which should already be processed by the server-side JS
-      // We wrap it in a span for potential styling (e.g., centering)
-      const youVotedCell = '<span class="voted-status">' + (election['You Voted'] ? '✔' : '✖') + '</span>';
 
       // Create a new row array for DataTables
       processedTableData.push([
         electionTitleCell,
         election.Start ? new Date(election.Start).toLocaleDateString() : '—',
-        election.End ? new Date(election.End).toLocaleDateString() : '—',
-        youVotedCell // Add the new 'You Voted' cell
+        election.End ? new Date(election.End).toLocaleDateString() : '—'
       ]);
     });
 
@@ -143,12 +132,12 @@
         "title": "Start Date"
       }, {
         "title": "End Date"
-      }, {
-        "title": "You Voted" // Define the new column
-      }],
+      }
+      ],
       "order": [
-        [2, 'asc']
-      ], // Initial order by End Date (index 2)
+        [2, 'desc']
+      ], // Initial order by End Date (index 2); most recent first
+      "pageLength": 50, // Show 10 entries per page
       "responsive": true, // Enable DataTables Responsive extension
       "autoWidth": false // Let DataTables handle width
     });
