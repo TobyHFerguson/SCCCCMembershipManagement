@@ -1,6 +1,6 @@
 // @ts-check
 
-const PREFILLED_URL_COLUMN_NAME = 'Pre-filled Form URL';
+const BALLOT_FOLDER_ID = '1ncuM7AyS9HtqtM842SUjHnhLG6_Pa_RB';
 const VOTE_TITLE_COLUMN_NAME = 'Title';
 const FORM_ID_COLUMN_NAME = 'ID';
 const MANAGERS_COLUMN_NAME = 'Managers'; // Can be comma-separated
@@ -44,6 +44,10 @@ VotingService.parsePrefilledFormUrlComponents = function (url) {
     return result;
 }
 
+VotingService.getBallotFolderId = function () {
+    const ffi = PropertiesService.getScriptProperties().getProperty('BALLOT_FOLDER_ID') || BALLOT_FOLDER_ID;
+    return ffi;
+}
 /**
  * Extracts the Form ID from a Google Forms URL.
  * This function handles 'edit', 'viewform', and base URLs.
@@ -51,34 +55,34 @@ VotingService.parsePrefilledFormUrlComponents = function (url) {
  * @param {string} url The URL of the Google Form.
  * @return {string|null} The extracted Form ID if found, otherwise null.
  */
-VotingService.extractGasFormId = function(url) {
-  // Regex for the 'viewform' URL (public-facing)
-  let match = url.match(/d\/e\/(.*?)\/viewform/);
-  if (match && match.length > 1) {
-    return match[1];
-  }
-
-  // Regex for the 'edit' URL (in the editor)
-  match = url.match(/d\/(.*?)\/edit/);
-  if (match && match.length > 1) {
-    return match[1];
-  }
-
-  // Regex for the base URL (e.g., https://docs.google.com/forms/d/ID)
-  match = url.match(/d\/(.*?)$/);
-  if (match && match.length > 1) {
-    // This regex is broad, so we'll check for a valid ID format.
-    // A Google Form ID is typically a long alphanumeric string.
-    // If there's a trailing slash or other characters, it won't be a valid ID.
-    // You can add more checks if needed, but this handles the common case.
-    const potentialId = match[1];
-    if (potentialId.indexOf('/') === -1) {
-      return potentialId;
+VotingService.extractGasFormId = function (url) {
+    // Regex for the 'viewform' URL (public-facing)
+    let match = url.match(/d\/e\/(.*?)\/viewform/);
+    if (match && match.length > 1) {
+        return match[1];
     }
-  }
 
-  // If no patterns match, return null.
-  return null;
+    // Regex for the 'edit' URL (in the editor)
+    match = url.match(/d\/(.*?)\/edit/);
+    if (match && match.length > 1) {
+        return match[1];
+    }
+
+    // Regex for the base URL (e.g., https://docs.google.com/forms/d/ID)
+    match = url.match(/d\/(.*?)$/);
+    if (match && match.length > 1) {
+        // This regex is broad, so we'll check for a valid ID format.
+        // A Google Form ID is typically a long alphanumeric string.
+        // If there's a trailing slash or other characters, it won't be a valid ID.
+        // You can add more checks if needed, but this handles the common case.
+        const potentialId = match[1];
+        if (potentialId.indexOf('/') === -1) {
+            return potentialId;
+        }
+    }
+
+    // If no patterns match, return null.
+    return null;
 }
 
 function runExtractGasFormId() {
@@ -94,14 +98,17 @@ function runExtractGasFormId() {
         console.log(`Extracted Form ID from "${url}": ${formId}`);
     });
 }
-   
+
 /**
  * 
- * @param {string} formId - The ID of the Google Form to configure.
+ * @param {string} formId - The ID (ID or URL) of the Google Form to create a ballot from.
  * @param {Array<string>} managers - A list of email addresses to share the results spreadsheet with.
+ * @return {string} The published URL of the new, public form.
  */
-VotingService.configureBallotForm = function (formId, managers) {
-    const form = FormApp.openById(formId);
+VotingService.createBallotForm = function (formId, managers) {
+    const newFormId = VotingService.makePublishedCopyOfFormInFolder_(formId, VotingService.getBallotFolderId());
+
+    const form = FormApp.openByUrl(newFormId);
 
     // Not a quiz
     form.setIsQuiz(false);
@@ -132,8 +139,46 @@ VotingService.configureBallotForm = function (formId, managers) {
     this.addTokenQuestion_(form)
 
     // create and share a results spreadsheet
-    this.createResultsSpreadsheet_(formId, managers);
-    console.log(`Ballot form configured with ID: ${formId}`);
+    this.createResultsSpreadsheet_(newFormId, managers);
+    console.log(`Ballot form created with ID: ${newFormId}`);
+
+    return newFormId;
+}
+
+VotingService.getForm = function (id) {
+    let form;
+    try {
+        form = FormApp.openByUrl(id)
+    } catch {
+        try {
+            form = FormApp.openById(id)
+        } catch (e) {
+            throw new Error(e.message + " Id was: '" + id + "'")
+        }
+    }
+    return form
+}
+/**
+ * Creates a published copy of a Google Form in the given folder
+ *
+ * @param {string} formId The ID of the Google Form to copy (ID or URL)
+ * @param {string} destinationFolderId The ID of the folder to place the copy in.
+ * @return {string} The published URL of the new, public form.
+ */
+VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFolderId) {
+    // 1. Get the source form file from Drive.
+    const sourceFormId = VotingService.getForm(formId).getId();
+
+    const sourceFile = DriveApp.getFileById(sourceFormId);
+
+    // 2. Define the metadata for the new form copy.
+    const destination = DriveApp.getFolderById(destinationFolderId);
+    const copiedFile = sourceFile.makeCopy(sourceFile.getName(), destination);
+    console.log('New Form: ', copiedFile.getName())
+
+    // 7. Return the Url of the new, public form.
+    const newForm = this.getForm(copiedFile.getId());
+    return newForm.getEditUrl();
 }
 /**
  * Adds a short text question for the token at the end of the form.
@@ -157,8 +202,8 @@ VotingService.addTokenQuestion_ = function (form) {
  * @param {Array<string>} managers - A list of email addresses to share the results spreadsheet with.
  * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet} The created results spreadsheet.
  */
-VotingService.createResultsSpreadsheet_ = function (formId, managers=[]) {
-    const form = FormApp.openById(formId);
+VotingService.createResultsSpreadsheet_ = function (formId, managers = []) {
+    const form = this.getForm(formId);
     const formTitle = form.getTitle();
     const resultsSpreadsheet = SpreadsheetApp.create(`${formTitle} - Results`);
     form.setDestination(FormApp.DestinationType.SPREADSHEET, resultsSpreadsheet.getId());
@@ -175,6 +220,16 @@ VotingService.createResultsSpreadsheet_ = function (formId, managers=[]) {
     return resultsSpreadsheet;
 }
 
+/**
+ * 
+ * @param {string} formId The ID of the Google Form to collect responses for - either an ID or a full URL.
+ * @param {boolean} active Whether to set the form to accept responses. Defaults to true.
+ */
+VotingService.collectResponses = function (formId, active = true) {
+    // console.log(`Setting form ID: ${formId} to ${active ? 'accept' : 'not accept'} responses.`);
+    const form = this.getForm(formId);
+    form.setAcceptingResponses(active);
+}
 
 function runCreateResultsSpreadsheet() {
     const formId = '1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps'; // Replace with your actual form ID
@@ -198,7 +253,7 @@ VotingService.createPrefilledUrlWithTitle = function (formId, questionTitle, ans
     if (formId.startsWith('https://')) {
         formId = VotingService.extractGasFormId(formId);
     }
-    const form = FormApp.openById(formId);
+    const form = this.getForm(formId);
 
     // Find the question item by its title
     const items = form.getItems();
@@ -251,11 +306,25 @@ function runCreatePrefilledUrl() {
 // The form ID is the long string of letters and numbers after '/d/' in the URL.
 // Example: https://docs.google.com/forms/d/YOUR_FORM_ID_HERE/edit
 function runAddTokenQuestion() {
-    const form = FormApp.openById(TEST_FORM_ID);
+    const form = this.getForm(TEST_FORM_ID);
     VotingService.addTokenQuestion_(form);
 }
 
-function runConfigureBallotForm() {
+function runCreateBallotForm() {
     const formId = TEST_FORM_ID;
-    VotingService.configureBallotForm(formId, ["toby.ferguson@sc3.club"]);
+    VotingService.createBallotForm(formId, ["toby.ferguson@sc3.club"]);
+}
+
+function runGetForm() {
+    const formId = "https://docs.google.com/forms/d/1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps";
+    const form = VotingService.getForm(formId);
+    console.log(`Form Title: ${form.getTitle()}`);
+    console.log(`Form ID: ${form.getId()}`);
+    console.log(`Form URL: ${form.getPublishedUrl()}`);
+}
+
+function runCollectResponses() {
+    const formId = TEST_FORM_ID;
+    VotingService.collectResponses(formId, true);
+    console.log(`Responses for form ID: ${formId} are now being collected.`);
 }

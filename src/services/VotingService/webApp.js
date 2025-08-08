@@ -36,10 +36,10 @@ VotingService.WebApp._renderVotingOptions = function (userEmail, htmlTemplate) {
     htmlTemplate.userEmail = userEmail;
     htmlTemplate.elections = electionDataForTemplate;
     console.log('Rendering voting options for user:', userEmail, 'with elections:', electionDataForTemplate);
-    
-    const htmlOutput = htmlTemplate.evaluate().setTitle('SCCCC Voting Service') ;
+
+    const htmlOutput = htmlTemplate.evaluate().setTitle('SCCCC Voting Service');
     return htmlOutput;
-}   
+}
 /**
  * Process the elections so that no URL (ID) is published for an inactive election.
  * @param {string} userEmail - The email address of the user.
@@ -50,24 +50,34 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
 
     const today = new Date();
     const processedElections = elections.map(election => {
+        const today = new Date();
         const result = {};
-        result.title = election.Title;
-        result.opens = election.Start ? new Date(election.Start).toLocaleDateString() : '—';
-        result.closes = election.End ? new Date(election.End).toLocaleDateString() : '—';
-        if (election.Voters.includes(userEmail)) {
-            result.status = "Inactive - you've already voted"
-            return result; // Skip further processing if user has already voted
-        } else if (election.Start && new Date(election.Start) > today) {
-            result.status = "Inactive - election not open yet"
-            return result; // Skip further processing if election has not started
-        } else if (election.End && today > new Date(election.End)) {
-            result.status = "Inactive - election has ended"
-            return result; // Skip further processing if election has ended
-        }
-        result.url = this._getFormUrlWithTokenField(userEmail, election);
-        result.status = "Active";
-        return result
-    });
+        try {
+            VotingService.collectResponses(election.ID, false); // Default to not accepting responses
+            result.title = election.Title;
+            result.opens = election.Start;
+            result.closes = election.End;
+            if (election.Voters.includes(userEmail)) {
+                result.status = "Inactive - you've already voted"
+                return result; // Skip further processing if user has already voted
+            } else if (election.Start && today < election.Start) {
+                result.status = "Inactive - election not open yet"
+                VotingService.collectResponses(election.ID, false); // Ensure the form is not accepting responses
+                return result; // Skip further processing if election has not started
+            } else if (election.End && election.End < today) {
+                result.status = "Inactive - election has closed"
+                VotingService.collectResponses(election.ID, false); // Ensure the form is not accepting responses
+                return result; // Skip further processing if election has ended
+            }
+            result.url = this._getFormUrlWithTokenField(userEmail, election);
+            result.status = "Active";
+            VotingService.collectResponses(election.ID, true); // Ensure the form is not accepting responses
+            } catch (error) {
+                console.error(`Error processing election  for user ${userEmail}:` , election, error);
+                throw new Error(`Error processing election ${election.Title} for user ${userEmail}: ${error.message}`);
+            }
+            return result
+        });
     return processedElections;
 }
 

@@ -11,8 +11,8 @@
 /**
  * @typedef {Object} ProcessedElection
  * @property {string} title - The title of the election.
- * @property {string} opens - The formatted start date of the election.
- * @property {string} closes - The formatted end date of the election.
+ * @property {Date} opens - The formatted start date of the election.
+ * @property {Date} closes - The formatted end date of the election.
  * @property {string} status - The status of the election, indicating if it's active or inactive.
  * @property {string} url - A prefilled URL for the voting form with a token field for the user. 
  */
@@ -25,4 +25,15 @@
  * * @property {function(): Array<Election>} getElections - Retrieves a list of all elections.
  * * @property {function(Election): void} addElection - Adds a new election to the storage.
  * * @property {function(string): [Election]} storeElections - Stores a list of elections.
+ */
+
+/**
+ * @typedef {Object} VotingService
+ * @property {string} name - The name of the voting service.
+ * @property {string} service - The service identifier for the voting service.
+ * @property {Object} WebApp - Contains methods related to the web application interface of the voting service.
+ * @property {Object} Trigger - Contains methods related to triggers and event handling for the voting service.
+ * @property {ElectionRegistrationManager} Data - An interface for managing election registrations.
+ * 
+ * @description The VotingService provides functionalities for managing elections, collecting votes, and handling voting-related operations.
  */
