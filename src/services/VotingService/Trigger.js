@@ -26,16 +26,17 @@ VotingService.Trigger = {
 
             if (formId) {
                 console.log(`Processing form ID: ${formId} in row: ${editedRow}`);
+                const newFormId = VotingService.createBallotForm(formId, resultsRecipients);
+                sheet.getRange(editedRow, formIdColumnIndex).setValue(newFormId);
+                console.log(`Created ballot form with ID: ${newFormId} and updated sheet.`);
                 try {
-                    VotingService.configureBallotForm(formId, resultsRecipients);
-                    console.log(`Configured ballot form with ID: ${formId}`);
-                    this.attachOnSubmitTrigger_(formId);
-                    console.log(`Attached votingFormSubmitHandler trigger to form ID: ${formId}`);
+                    this.attachOnSubmitTrigger_(newFormId);
+                    console.log(`Attached votingFormSubmitHandler trigger to form ID: ${newFormId}`);
                     if (triggerStatusColumnIndex > 0) {
                         sheet.getRange(editedRow, triggerStatusColumnIndex).setValue('Active');
                     }
                 } catch (error) {
-                    console.log(`Error attaching trigger to form ID: ${formId}: ${error}`);
+                    console.log(`Error attaching trigger to form ID: ${newFormId}: ${error}`);
                     if (triggerStatusColumnIndex > 0) {
                         sheet.getRange(editedRow, triggerStatusColumnIndex).setValue('Failed: ' + error);
                     }
@@ -53,7 +54,8 @@ VotingService.Trigger = {
      * @throws {Error} If there is an issue attaching the trigger.
      */
     attachOnSubmitTrigger_: function (formId) {
-        const form = FormApp.openById(formId);
+
+        const form = VotingService.getForm(formId);
         const formDestinationType = form.getDestinationType();
         if (formDestinationType !== FormApp.DestinationType.SPREADSHEET) {
             throw new Error(`Form ID: ${formId} does not have a valid destination set. Please set a destination to a Google Sheet.`);
