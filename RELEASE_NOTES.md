@@ -9,9 +9,9 @@ To the extent that these changes are driven by specific issues then those issues
 # 1.2.0 - Voting Service
 ## Apps Script
 ### Services
-  [ ] Add Drive App as an Apps Script Service
+  [ ] Add **Drive App** as an Apps Script Service
   [ ] Accept new permissions
 ### Triggers
-**What triggers do I need to manually configure**
+  [ ] Configure `handleEditEvent` to run when **Spreadsheet** has an **on Edit event**
 ## Bootstrap Sheet
-  [ ] Add row for Elections sheet
+  [ ] Add row for **Elections** sheet
