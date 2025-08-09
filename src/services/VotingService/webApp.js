@@ -68,7 +68,7 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
             } else if (election.End && election.End < today) {
                 console.log(`Election ${election.Title} has ended for user ${userEmail}.`);
                 result.status = "Inactive - election has closed"
-                closingBallots.add(VotingService.getForm(election.ID).getId()); // Collect closed elections
+                closingBallots.add(VotingService.getBallot(election.ID).getId()); // Collect closed elections
                 VotingService.collectResponses(election.ID, false); // Ensure the form is not accepting responses
                 return result; // Skip further processing if election has ended
             }
@@ -113,7 +113,7 @@ VotingService.WebApp.closeElections_ = function (ballotsToBeClosed) {
                     // Delete the matching trigger.
                     ScriptApp.deleteTrigger(trigger);
                     console.log(`ballot ${ballotId} is being closed.`);
-                    VotingService.getForm(ballotId).setPublished(false); // Unpublish the form to prevent further responses
+                    VotingService.getBallot(ballotId).setPublished(false); // Unpublish the form to prevent further responses
                     console.log(`ballot with ID: ${ballotId} is now unpublished.`);
                     VotingService.collectResponses(ballotId, false); // Ensure the form is not accepting responses
                     ballotsToBeClosed.delete(ballotId)

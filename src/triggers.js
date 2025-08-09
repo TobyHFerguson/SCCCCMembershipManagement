@@ -17,7 +17,7 @@ function handleEditEvent(e) {
     }
 }
 
-function votingFormSubmitHandler(e) {
+function ballotSubmitHandler(e) {
     console.log('Voting form submitted:', e);
-    VotingService.Trigger.votingFormSubmitHandler(e);
+    VotingService.Trigger.ballotSubmitHandler(e);
 }
