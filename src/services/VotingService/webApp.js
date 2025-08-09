@@ -10,7 +10,9 @@
  */
 VotingService.WebApp.doGet = function (e, userEmail, htmlTemplate) {
     const service = e.parameter.service;
+        // @ts-ignore
     if (service !== VotingService.service) {
+            // @ts-ignore
         return HtmlService.createHtmlOutput(`<h1>Invalid service. Was expecting ${VotingService.service} but got ${service}</p>`);
 
     }
@@ -49,11 +51,10 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
     const elections = VotingService.Data.getElectionData();
 
     const today = new Date();
+    const closingBallots = new Set(); // Elections that have become closed
     const processedElections = elections.map(election => {
-        const today = new Date();
         const result = {};
         try {
-            VotingService.collectResponses(election.ID, false); // Default to not accepting responses
             result.title = election.Title;
             result.opens = election.Start;
             result.closes = election.End;
@@ -65,20 +66,67 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
                 VotingService.collectResponses(election.ID, false); // Ensure the form is not accepting responses
                 return result; // Skip further processing if election has not started
             } else if (election.End && election.End < today) {
+                console.log(`Election ${election.Title} has ended for user ${userEmail}.`);
                 result.status = "Inactive - election has closed"
+                closingBallots.add(VotingService.getForm(election.ID).getId()); // Collect closed elections
                 VotingService.collectResponses(election.ID, false); // Ensure the form is not accepting responses
                 return result; // Skip further processing if election has ended
             }
             result.url = this._getFormUrlWithTokenField(userEmail, election);
             result.status = "Active";
             VotingService.collectResponses(election.ID, true); // Ensure the form is not accepting responses
-            } catch (error) {
-                console.error(`Error processing election  for user ${userEmail}:` , election, error);
-                throw new Error(`Error processing election ${election.Title} for user ${userEmail}: ${error.message}`);
-            }
-            return result
-        });
+        } catch (error) {
+            console.error(`Error processing election  for user ${userEmail}:`, election, error);
+            throw new Error(`Error processing election ${election.Title} for user ${userEmail}: ${error.message}`);
+        }
+        this.closeElections_(closingBallots); // Close any elections that have ended
+        return result
+    });
     return processedElections;
+}
+
+VotingService.WebApp.closeElections_ = function (ballotsToBeClosed) {
+    if (ballotsToBeClosed.length === 0) {
+        console.log("No elections to close.");
+        return; // No elections to close
+    }
+
+    console.log("Closing elections for ballots with IDs:", ballotsToBeClosed);
+    try {
+        const allTriggers = ScriptApp.getProjectTriggers();
+
+        if (allTriggers.length === 0) {
+            console.log("No triggers found in this project.");
+            return;
+        }
+
+        // Iterate over each trigger.
+        for (const trigger of allTriggers) {
+            // Check if the trigger is for the specified form.
+            // getTriggerSourceId() returns the ID of the object (e.g., Form, Spreadsheet)
+            // that the trigger is attached to.
+            const ballotId = trigger.getTriggerSourceId()
+            console.log(`Checking trigger with UID: ${trigger.getUniqueId()} for ballot: ${ballotId}`);
+            if (ballotsToBeClosed.has(ballotId)) {
+                console.log(`Trigger with UID: ${trigger.getUniqueId()} matches ballot: ${ballotId}`);
+                try {
+                    // Delete the matching trigger.
+                    ScriptApp.deleteTrigger(trigger);
+                    console.log(`ballot ${ballotId} is being closed.`);
+                    VotingService.getForm(ballotId).setPublished(false); // Unpublish the form to prevent further responses
+                    console.log(`ballot with ID: ${ballotId} is now unpublished.`);
+                    VotingService.collectResponses(ballotId, false); // Ensure the form is not accepting responses
+                    ballotsToBeClosed.delete(ballotId)
+                    console.log(`Successfully deleted trigger with UID: ${trigger.getUniqueId()} for ballot: ${ballotId}`);
+                } catch (e) {
+                    console.error(`Failed to delete trigger with UID: ${trigger.getUniqueId()}. Error: ${e.message}`);
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Error closing elections:", error);
+        throw new Error(`Error closing elections: ${error.message}`);
+    }
 }
 
 /**
