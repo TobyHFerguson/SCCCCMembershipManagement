@@ -106,7 +106,7 @@ function runExtractGasFormId() {
  * @return {string} The published URL of the new, public form.
  */
 VotingService.createBallotForm = function (formId, managers) {
-    const newFormId = VotingService.makePublishedCopyOfFormInFolder_(formId, VotingService.getBallotFolderId());
+    const newFormId = this.makePublishedCopyOfFormInFolder_(formId, this.getBallotFolderId());
 
     const form = FormApp.openByUrl(newFormId);
 
@@ -140,6 +140,10 @@ VotingService.createBallotForm = function (formId, managers) {
 
     // create and share a results spreadsheet
     this.createResultsSpreadsheet_(newFormId, managers);
+
+    // unpublish the form
+    form.setPublished(false);
+    
     console.log(`Ballot form created with ID: ${newFormId}`);
 
     return newFormId;
@@ -312,7 +316,8 @@ function runAddTokenQuestion() {
 
 function runCreateBallotForm() {
     const formId = TEST_FORM_ID;
-    VotingService.createBallotForm(formId, ["toby.ferguson@sc3.club"]);
+    const url = VotingService.createBallotForm(formId, ["toby.ferguson@sc3.club"]);
+    console.log(`Ballot form created with URL: ${url}`);
 }
 
 function runGetForm() {
