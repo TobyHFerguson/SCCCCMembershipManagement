@@ -21,3 +21,8 @@ function ballotSubmitHandler(e) {
     console.log('Voting form submitted:', e);
     VotingService.Trigger.ballotSubmitHandler(e);
 }
+
+function manageElectionLifecycles() {
+    console.log('Managing election lifecycles');
+    VotingService.manageElectionLifecycles();
+}

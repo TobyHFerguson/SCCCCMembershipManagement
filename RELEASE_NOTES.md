@@ -13,5 +13,6 @@ To the extent that these changes are driven by specific issues then those issues
   [ ] Accept new permissions
 ### Triggers
   [ ] Configure `handleEditEvent` to run when **Spreadsheet** has an **on Edit event**
+  [ ] Configure daily calendar to execute `manageElectionLifecycles()`
 ## Bootstrap Sheet
   [ ] Add row for **Elections** sheet
