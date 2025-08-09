@@ -24,7 +24,7 @@ VotingService.Data = {
      * @param {Array<Election>} elections - Array of election objects to be stored in the Elections sheet.
      * Each object should have properties like Title, Form ID, Managers, Start Date, End Date, and Voters.
      */
-    setElectionData: function(elections) {
+    storeElectionData: function(elections) {
         this.getFiddler_().setData(elections).dumpValues();
     }
 }

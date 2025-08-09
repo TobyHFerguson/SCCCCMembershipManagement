@@ -85,6 +85,129 @@ VotingService.extractGasFormId = function (url) {
     return null;
 }
 
+/**
+ * @description This function manages the lifecycle of elections by checking their start and end dates.
+ * It opens elections that have started and closes those that have ended.
+ * It also attaches or removes triggers as necessary.
+ * 
+ * @returns {void}
+ */
+VotingService.manageElectionLifecycles = function () {
+    const elections = VotingService.Data.getElectionData();
+    let changesMade = false;
+    elections.forEach(election => {
+        const ballotId = election.ID;
+        if (!ballotId) {
+            console.warn(`Election "${election.Title}" has no Form ID. Skipping lifecycle management.`);
+            return;
+        }
+
+        const ballot = VotingService.getBallot(ballotId);
+        if (!ballot) {
+            console.warn(`Ballot with ID "${ballotId}" not found for election "${election.Title}". Skipping lifecycle management.`);
+            return;
+        }
+        const today = new Date();
+        if (!ballot.isPublished() && election.Start && new Date(election.Start) <= today) {
+            // If the form is not published and the start date has passed, publish it.
+            election.TriggerId = this.openElection_(ballot);
+            console.log(`Opened election "${election.Title}" with ID "${ballotId}" as the start date has passed. Attached trigger ID: ${election.TriggerId} `);
+            changesMade = changesMade || true
+            return
+        }
+
+        if (ballot.isPublished() && ballot.isAcceptingResponses() && election.End && new Date(election.End) < today) {
+            // If the form is published and the end date has passed, close it.
+            this.closeElection_(this.getBallot(election.ID), election.TriggerId);
+            console.log(`Closed election "${election.Title}" with ID "${ballotId}" as the end date has passed.`);
+            election.TriggerId = null; // Clear the trigger ID after closing
+            changesMade = changesMade || true;
+            return
+        }
+    });
+    if (changesMade) {
+        console.log('Changes made to elections during lifecycle management. Updating elections storage.');
+        VotingService.Data.storeElectionData(elections);
+    }
+}
+
+/**
+ * 
+ * @param {GoogleAppsScript.Forms.Form} ballot Ballot for which the election is being opened.
+ * @returns {string} The unique ID of the created trigger.
+ * 
+ * @description Opens the election by setting the ballot to accept responses and attaching the onSubmit trigger.
+ * This is typically called when the election's start date has passed.
+ * It updates the election's status and attaches the necessary trigger for handling form submissions.
+ * 
+ * @throws {Error} If there is an issue attaching the trigger or if the form does not have a valid destination.
+ */
+VotingService.openElection_ = function (ballot) {
+    ballot.setPublished(true);
+    return this.attachOnSubmitTrigger_(ballot)
+}
+/**
+ * 
+ * @param {GoogleAppsScript.Forms.Form} ballot Ballot to which a trigger is to be attached.
+ * @returns {string} The unique ID of the created trigger.
+ * 
+ * @description Attaches the votingFormSubmitHandler trigger to the specified ballot form's underlying response spreadsheet.
+ * This will handle form submissions and record votes.
+ * 
+ * @throws {Error} If there is an issue attaching the trigger, such as the form not having a valid destination.
+ */
+VotingService.attachOnSubmitTrigger_ = function (ballot) {
+    const formDestinationType = ballot.getDestinationType();
+    if (formDestinationType !== FormApp.DestinationType.SPREADSHEET) {
+        throw new Error(`Ballot '${ballot.getTitle()}' does not have a valid destination set. Please set a destination to a Google Sheet.`);
+    }
+    const triggerFunctionName = 'ballotSubmitHandler'; // Ensure this matches the function name in triggers.js
+    const trigger = ScriptApp.newTrigger(triggerFunctionName)
+        .forForm(ballot.getDestinationId())
+        .onFormSubmit()
+        .create();
+    return trigger.getUniqueId();
+}
+
+/**
+ * 
+ * @param {GoogleAppsScript.Forms.Form} ballot - the ballot whose election is being closed.
+ * @param {string} triggerId - the ID of the trigger associated with this election.
+ * @returns true if the election was successfully closed, false otherwise.
+ * 
+ * @description Closes the election by setting the ballot to not accept responses and removing the onSubmit trigger.
+ * This is typically called when the election's end date has passed.
+ * It updates the election's status and cleans up the trigger.
+ * 
+ * @throws {Error} If there is an issue removing the trigger.
+ */
+VotingService.closeElection_ = function (ballot, triggerId) {
+    ballot.setAcceptingResponses(false);
+    return this.removeOnSubmitTrigger_(triggerId)
+}
+
+/**
+ * 
+ * @param {string} triggerId - the trigger ID to remove.
+ * @returns {boolean} - true if the trigger was successfully removed, false if it was not found.
+ * 
+ * @description Removes the onSubmit trigger associated with the given trigger ID.
+ * This is useful for cleaning up triggers when an election ends or when a form is no longer needed.
+ */
+VotingService.removeOnSubmitTrigger_ = function (triggerId) {
+    const triggers = ScriptApp.getProjectTriggers();
+    const trigger = triggers.find(t => t.getUniqueId() === triggerId);
+    if (trigger) {
+        ScriptApp.deleteTrigger(trigger);
+        console.log(`Deleted trigger with ID: ${triggerId}`);
+        return true;
+    } else {
+        console.warn(`No trigger found with ID: ${triggerId}`);
+        return false;
+    }
+}
+
+
 function runExtractGasFormId() {
     const urls = [
         'https://docs.google.com/forms/d/1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps/edit',
@@ -143,13 +266,13 @@ VotingService.createBallotForm = function (formId, managers) {
 
     // unpublish the form
     form.setPublished(false);
-    
+
     console.log(`Ballot form created with ID: ${newFormId}`);
 
     return newFormId;
 }
 
-VotingService.getForm = function (id) {
+VotingService.getBallot = function (id) {
     let form;
     try {
         form = FormApp.openByUrl(id)
@@ -171,7 +294,7 @@ VotingService.getForm = function (id) {
  */
 VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFolderId) {
     // 1. Get the source form file from Drive.
-    const sourceFormId = VotingService.getForm(formId).getId();
+    const sourceFormId = VotingService.getBallot(formId).getId();
 
     const sourceFile = DriveApp.getFileById(sourceFormId);
 
@@ -181,7 +304,7 @@ VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFo
     console.log('New Form: ', copiedFile.getName())
 
     // 7. Return the Url of the new, public form.
-    const newForm = this.getForm(copiedFile.getId());
+    const newForm = this.getBallot(copiedFile.getId());
     return newForm.getEditUrl();
 }
 /**
@@ -207,7 +330,7 @@ VotingService.addTokenQuestion_ = function (form) {
  * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet} The created results spreadsheet.
  */
 VotingService.createResultsSpreadsheet_ = function (formId, managers = []) {
-    const form = this.getForm(formId);
+    const form = this.getBallot(formId);
     const formTitle = form.getTitle();
     const resultsSpreadsheet = SpreadsheetApp.create(`${formTitle} - Results`);
     form.setDestination(FormApp.DestinationType.SPREADSHEET, resultsSpreadsheet.getId());
@@ -231,7 +354,7 @@ VotingService.createResultsSpreadsheet_ = function (formId, managers = []) {
  */
 VotingService.collectResponses = function (formId, active = true) {
     // console.log(`Setting form ID: ${formId} to ${active ? 'accept' : 'not accept'} responses.`);
-    const form = this.getForm(formId);
+    const form = this.getBallot(formId);
     form.setAcceptingResponses(active);
 }
 
@@ -257,7 +380,7 @@ VotingService.createPrefilledUrlWithTitle = function (formId, questionTitle, ans
     if (formId.startsWith('https://')) {
         formId = VotingService.extractGasFormId(formId);
     }
-    const form = this.getForm(formId);
+    const form = this.getBallot(formId);
 
     // Find the question item by its title
     const items = form.getItems();
@@ -322,7 +445,7 @@ function runCreateBallotForm() {
 
 function runGetForm() {
     const formId = "https://docs.google.com/forms/d/1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps";
-    const form = VotingService.getForm(formId);
+    const form = VotingService.getBallot(formId);
     console.log(`Form Title: ${form.getTitle()}`);
     console.log(`Form ID: ${form.getId()}`);
     console.log(`Form URL: ${form.getPublishedUrl()}`);
@@ -332,4 +455,8 @@ function runCollectResponses() {
     const formId = TEST_FORM_ID;
     VotingService.collectResponses(formId, true);
     console.log(`Responses for form ID: ${formId} are now being collected.`);
+}
+
+function runManageElectionLifecycles() {
+    VotingService.manageElectionLifecycles();
 }
