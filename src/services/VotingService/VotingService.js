@@ -110,16 +110,16 @@ VotingService.manageElectionLifecycles = function () {
         const today = new Date();
         if (!ballot.isPublished() && election.Start && new Date(election.Start) <= today) {
             // If the form is not published and the start date has passed, publish it.
-            console.log(`Opening election "${election.Title}" with ID "${ballotId}" as the start date has passed.`);
             election.TriggerId = this.openElection_(ballot);
+            console.log(`Opened election "${election.Title}" with ID "${ballotId}" as the start date has passed. Attached trigger ID: ${election.TriggerId} `);
             changesMade = changesMade || true
             return
         }
 
         if (ballot.isPublished() && ballot.isAcceptingResponses() && election.End && new Date(election.End) < today) {
             // If the form is published and the end date has passed, close it.
-            console.log(`Closing election "${election.Title}" with ID "${ballotId}" as the end date has passed.`);
             this.closeElection_(this.getBallot(election.ID), election.TriggerId);
+            console.log(`Closed election "${election.Title}" with ID "${ballotId}" as the end date has passed.`);
             election.TriggerId = null; // Clear the trigger ID after closing
             changesMade = changesMade || true;
             return
