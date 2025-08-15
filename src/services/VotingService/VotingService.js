@@ -7,6 +7,7 @@ const MANAGERS_COLUMN_NAME = 'Managers'; // Can be comma-separated
 const TRIGGER_STATUS_COLUMN_NAME = 'Trigger Status';
 const VOTE_DATA_SHEET_ID = '1FN1vogIDDWdqghflOF6hNuDDW1cqFQpSGX8GhXLYyyw'; // Replace with your central vote data sheet ID
 const REGISTRATION_SHEET_NAME = 'Elections'; // Update with your sheet name
+const RESULTS_SUFFIX = '- Results';
 const TOKEN_ENTRY_FIELD_TITLE = 'VOTING TOKEN'; // Adjust
 const TOKEN_HELP_TEXT = 'This question is used to validate your vote. Do not modify this field.';
 const CONFIRMATION_MESSAGE = 'Your vote has been recorded successfully. You will be sent an email indicating how your vote was handled. Thank you for participating!';
@@ -110,7 +111,8 @@ VotingService.manageElectionLifecycles = function () {
         const today = new Date();
         if (!ballot.isPublished() && election.Start && new Date(election.Start) <= today) {
             // If the form is not published and the start date has passed, publish it.
-            election.TriggerId = this.openElection_(ballot);
+            // Trigger IDs can overflow a spreadsheet number, so store as a string.
+            election.TriggerId = "'"+this.openElection_(ballot); 
             console.log(`Opened election "${election.Title}" with ID "${ballotId}" as the start date has passed. Attached trigger ID: ${election.TriggerId} `);
             changesMade = changesMade || true
             return
@@ -163,7 +165,7 @@ VotingService.attachOnSubmitTrigger_ = function (ballot) {
     }
     const triggerFunctionName = 'ballotSubmitHandler'; // Ensure this matches the function name in triggers.js
     const trigger = ScriptApp.newTrigger(triggerFunctionName)
-        .forForm(ballot.getDestinationId())
+        .forSpreadsheet(ballot.getDestinationId())
         .onFormSubmit()
         .create();
     return trigger.getUniqueId();
@@ -272,6 +274,15 @@ VotingService.createBallotForm = function (formId, managers) {
     return newFormId;
 }
 
+/**
+ * 
+ * @param {string} id - The ID (ID or URL) of the ballot (a Google Form) to retrieve.
+ * @description Retrieves a Google Form by its ID or URL.
+ * If the ID is a URL, it will extract the ID from the URL.
+ * 
+ * @throws {Error} If the form cannot be opened by either ID or URL.
+ * @returns {GoogleAppsScript.Forms.Form} The ballot object.
+ */
 VotingService.getBallot = function (id) {
     let form;
     try {
@@ -332,7 +343,7 @@ VotingService.addTokenQuestion_ = function (form) {
 VotingService.createResultsSpreadsheet_ = function (formId, managers = []) {
     const form = this.getBallot(formId);
     const formTitle = form.getTitle();
-    const resultsSpreadsheet = SpreadsheetApp.create(`${formTitle} - Results`);
+    const resultsSpreadsheet = SpreadsheetApp.create(`${formTitle} ${RESULTS_SUFFIX}`);
     form.setDestination(FormApp.DestinationType.SPREADSHEET, resultsSpreadsheet.getId());
     managers.forEach(email => {
         try {

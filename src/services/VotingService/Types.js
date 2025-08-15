@@ -30,6 +30,7 @@
 
 /**
  * @typedef {Object} VotingService
+ * @property {string} TOKEN_QUESTION_TITLE - The title of the question in the voting form that holds the token.
  * @property {string} name - The name of the voting service.
  * @property {string} service - The service identifier for the voting service.
  * @property {Object} WebApp - Contains methods related to the web application interface of the voting service.
@@ -52,4 +53,15 @@
  * @property {ElectionRegistrationManager} Data - An interface for managing election registrations.
  * 
  * @description The VotingService provides functionalities for managing elections, collecting votes, and handling voting-related operations.
+ */
+
+/**
+ * @typedef {Object} Vote
+ * @ts-nocheck - the [''] below causes a ts 10003 error  
+ * @property {string} ['Voter Email'] - The email address of the voter.
+ * @property {string} [TOKEN_ENTRY_FIELD_TITLE] - The token field title, if applicable.
+ * @property {string} Timestamp - timestamp of vote.
+ *
+ * 
+ * @description Represents a vote cast by a user in an election. It includes the voter's email and their selections.
  */

@@ -1,3 +1,10 @@
+if (typeof require !== 'undefined') {
+    VotingService = {
+        //@ts-ignore
+        Trigger: {}
+    };
+}
+
 VotingService.Trigger = {
     handleRegistrationSheetEdit: function (e) {
         const editedRange = e.range;
@@ -32,68 +39,213 @@ VotingService.Trigger = {
             }
         }
     },
-    
+
+    /**
+     * 
+     * @param {GoogleAppsScript.Events.SheetsOnFormSubmit} e 
+     * @returns 
+     */
     ballotSubmitHandler: function (e) {
-        const formResponse = e.response;
-        const itemResponses = formResponse.getItemResponses();
-        const formSource = e.source;
-        const formId = formSource.getId();
-        if (formSource.getDestinationType() !== FormApp.DestinationType.SPREADSHEET) {
-            console.log(`Ballot ${formId} does not have a valid destination set.`);
-            return; // Exit if the form does not have a valid destination
+        console.log('Ballot submit handler triggered', e.namedValues);
+        const trigger = ScriptApp.getProjectTriggers().find(t => t.getUniqueId() === e.triggerUid);
+        const spreadsheetId = trigger.getTriggerSourceId()
+        const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+        const vote = this.firstValues_(e.namedValues)
+        //@ts-ignore
+        const fiddler = bmPreFiddler.PreFiddler().getFiddler({ id: spreadsheet.getId(), sheetName: 'Validated Results', createIfMissing: true });
+        const votes = fiddler.getData();
+
+        if (!this.voteIsValid_(vote, votes, Common.Auth.TokenManager.consumeMUT)) {
+            this.addInvalidVote_(vote, spreadsheet);
+            return
         }
-        const responsesSpreadsheet = SpreadsheetApp.openById(formSource.getDestinationId());
-        const responsesSheet = responsesSpreadsheet.getActiveSheet();
 
-        const consolidatedSheet = responsesSpreadsheet.getSheetByName('Consolidated Responses');
-        const responseRow = responsesSheet.getLastRow();
-        const responseValues = responsesSheet.getRange(responseRow, 1, 1, responsesSheet.getLastColumn()).getValues()[0];
-        const headers = responsesSheet.getRange(1, 1, 1, responsesSheet.getLastColumn()).getValues()[0];
+        // Get here with a valid vote
 
-        // Assuming you have a question in your form to collect the token (adjust the question title)
-        const tokenQuestionTitle = 'Your Voting Token';
-        let submittedToken = null;
-        itemResponses.forEach(response => {
-            if (response.getItem().getTitle() === tokenQuestionTitle) {
-                submittedToken = response.getResponse();
-            }
+        delete vote[TOKEN_ENTRY_FIELD_TITLE]; // Remove the token field from the vote object
+        console.log('recording valid vote', vote);
+        votes.push(vote);
+        fiddler.setData(votes).dumpValues();
+        this.sendValidVoteEmail_(vote['Voter Email'], this.getElectionTitle_(fiddler.getSheet().getParent()));
+        return
+
+    },
+    /**
+     * 
+     * @param {Vote} vote - the vote to be validated
+     * @param {Vote[]} votes - the array of votes already recorded
+     * @param {function} consumeMUT - function to consume the multi-use token
+     * @returns {boolean} true if the vote is valid, false otherwise
+     * 
+     * @description Validates a vote by checking if the token is valid and not expired.
+     * It also checks for duplicate votes based on the voter's email. 
+     * In addition, it adds the voter's email to the vote object for recording.
+     */
+    voteIsValid_: function (vote, votes, consumeMUT) {
+        console.log('Processing vote:', vote);
+        vote['Voter Email'] = '';
+
+        const email = consumeMUT(vote[TOKEN_ENTRY_FIELD_TITLE]);
+        delete vote[TOKEN_ENTRY_FIELD_TITLE]
+
+        if (!email) {
+            console.warn('Invalid vote: ', vote, ' - token not found or expired');
+            return false
+        }
+
+        vote['Voter Email'] = email; // Add the email to the vote object for recording
+        const duplicates = votes.some(entry => entry['Voter Email'] === email);
+        if (duplicates) {
+            console.warn(`Duplicate vote detected for email: ${email}. Vote will not be recorded.`);
+            return false
+        }
+        return true
+    },
+    /**
+     * @param {object} spreadsheet
+     * @param {function():string} spreadsheet.getName 
+     * @returns 
+     */
+    getElectionTitle_: function (spreadsheet) {
+        let electionTitle = spreadsheet.getName();
+        if (electionTitle.endsWith(RESULTS_SUFFIX)) {
+            electionTitle = electionTitle.slice(0, -RESULTS_SUFFIX.length).trim(); // Remove ' - Results' from the name
+        }
+        return electionTitle;
+    },
+    /**
+     * 
+     * @param {string} to comma separated list of emails to send the email to
+     * @param {string} electionTitle the title of the election to include in the email
+     * @description Sends an email to the specified recipients indicating that their vote has been recorded.
+     * This email serves as a confirmation that the user's vote has been successfully recorded in the election.
+     * It includes the election title for context.
+     * 
+     * @throws {Error} If there is an issue sending the email.  
+     */
+    sendValidVoteEmail_: function (to, electionTitle) {
+        const message = {
+            to: to,
+            subject: `SCCCC Election '${electionTitle}' - Vote is valid`,
+            body: `Your vote in the SCCCC election '${electionTitle}' has been successfully recorded and handled as a valid vote. Thank you for participating!`
+        };
+        MailApp.sendEmail(message);
+        console.log('Vote recorded email sent:', message);
+    },
+    /**
+     * 
+     * @param {string} to email to send the email to
+     * @param {string} electionTitle the title of the election to include in the email
+     * @description Sends an email to the specified recipient indicating that their vote was invalid.
+     * This email serves to inform the user that their vote was not counted .
+     * It includes the election title for context and explains that a manual count will be conducted.
+     * 
+     * @throws {Error} If there is an issue sending the email.
+     * 
+     */
+    sendInvalidVoteEmail_: function (to, electionTitle) {
+        const message = {
+            to: to,
+            subject: `SCCCC Election '${electionTitle}' - Vote invalid`,
+            body: `Your vote in the SCCCC election '${electionTitle}' was invalid (it either didn't have the necessary security token or was a duplicate vote). To ensure the integrity of the election process we will conduct a manual count, rejecting that vote. Thank you for your understanding!`.trim()
+        };
+        MailApp.sendEmail(message);
+        console.log('Invalid Vote email sent:', message);
+    },
+    /**
+     * 
+     * @param {Vote} vote the invalid vote to be recorded
+     * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} spreadsheet 
+     */
+    addInvalidVote_: function (vote, spreadsheet) {
+        try {
+            //@ts-ignore
+            const invalidFiddler = bmPreFiddler.PreFiddler().getFiddler({ id: spreadsheet.getId(), sheetName: 'Invalid Results', createIfMissing: true });
+            const votes = invalidFiddler.getData()
+            votes.push(vote);
+            invalidFiddler.setData(votes).dumpValues();
+            this.setAllSheetsBackgroundToLightRed_(spreadsheet)
+            const electionTitle = this.getElectionTitle_(spreadsheet)
+            this.sendManualCountNeededEmail_(this.getSpreadsheetUsers_(spreadsheet).join(','), vote, electionTitle);
+            this.sendInvalidVoteEmail_(vote['Voter Email'], electionTitle)
+        } catch (error) { 
+            console.error(error.stack)
+        }
+
+    },
+    /**
+     * 
+     * @param {string} to comma separated list of emails to send the email to
+     * @param {Vote} vote the invalid vote to be recorded
+     * @param {string} electionTitle the title of the election to include in the email
+     * 
+     * @description Sends an email to the specified recipients indicating that a manual count is needed for an invalid vote.
+     * This email serves to notify the users that a manual count will be conducted due to an invalid vote.
+     * It includes the election title and details of the invalid vote for context.
+     * 
+     * @throws {Error} If there is an issue sending the email.
+     */
+    sendManualCountNeededEmail_: function (to, vote, electionTitle) {
+        const message = {
+            to: to,
+            subject: `Election '${electionTitle}' - manual count needed`,
+            body: `In election ${electionTitle} this vote occurred with no token ${JSON.stringify(vote)}. A manual count will now be needed`.trim()
+        }
+        MailApp.sendEmail(message);
+        console.warn('Manual count needed email sent:', message);
+    },
+    /**
+     * 
+     * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} spreadsheet 
+     */
+    setAllSheetsBackgroundToLightRed_(spreadsheet) {
+
+        // Get all the sheets in the spreadsheet
+        const sheets = spreadsheet.getSheets();
+
+        // Define the light red color using a hex code
+        const lightRed = "#FFD9D9";
+
+        // Loop through each sheet
+        sheets.forEach(function (sheet) {
+            // Get the entire data range of the sheet
+            const range = sheet.getDataRange();
+
+            // Set the background color of the range
+            range.setBackground(lightRed);
         });
-
-        if (!submittedToken) {
-            console.log(`No token submitted in form ID: ${formId}, response: ${formResponse.getId()}`);
-            // Optionally mark as invalid in the form response sheet
-            return;
-        }
-
-        const tokenData = Common.Auth.TokenManager.getTokenData(submittedToken);
-
-        if (tokenData) {
-            const voterEmail = tokenData.Email; // Assuming email is in the second column
-
-            // Optional: Verify if the email is a registered member
-            if (Common.Data.Access.isMember(voterEmail)) {
-                this._recordVote(consolidatedSheet, voterEmail, responseValues);
-                Common.Auth.TokenStorage.markTokenAsUsed(submittedToken);
-                // this._replaceTokenWithEmail(responsesSheet, responseRow, headers, voterEmail, tokenQuestionTitle);
-                console.log(`Valid vote recorded for ${voterEmail} in form ID: ${formId}`);
+    },
+    /**
+     * 
+     * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} spreadsheet 
+     * @returns 
+     */
+    getSpreadsheetUsers_(spreadsheet) {
+        const fileId = spreadsheet.getId();
+        const file = DriveApp.getFileById(fileId);
+        const emails = file.getEditors().concat(file.getViewers()).map(user => user.getEmail());
+        return emails
+    },
+    /**
+    * Takes an object whose values are arrays and returns an object with the same keys,
+     * but each value is the first element of the original array.
+     * @param {Object} obj
+     * @returns {Object}
+     */
+    firstValues_: function (obj) {
+        const result = {};
+        for (const key in obj) {
+            if (Array.isArray(obj[key])) {
+                result[key] = obj[key][0];
             } else {
-                console.log(`Non-member email ${voterEmail} tried to vote in form ID: ${formId}`);
-                // Optionally mark as invalid
+                result[key] = obj[key];
             }
-        } else {
-            console.log(`Invalid token ${submittedToken} submitted in form ID: ${formId}`);
-            // Optionally mark as invalid
         }
+        return result;
     },
-    _recordVote: function (sheet, voterEmail, responseValues) {
-        const timestamp = new Date();
-        const voteData = [timestamp, voterEmail, ...responseValues];
-        sheet.appendRow(voteData);
-    },
-    _replaceTokenWithEmail: function (sheet, row, headers, email, tokenQuestionTitle) {
-        const tokenColumnIndex = headers.indexOf(tokenQuestionTitle) + 1;
-        if (tokenColumnIndex > 0) {
-            sheet.getRange(row, tokenColumnIndex).setValue(email);
-        }
-    }
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        Trigger: VotingService.Trigger
+    };
 }

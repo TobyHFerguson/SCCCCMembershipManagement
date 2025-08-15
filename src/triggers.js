@@ -2,13 +2,21 @@ function onOpen() {
     MembershipManagement.Menu.create();
     DocsService.Menu.create();
     EmailService.Menu.create();
+    VotingService.Menu.create();
 }
 
+/**
+ * 
+ * @param {GoogleAppsScript.Events.FormsOnFormSubmit} e 
+ */
 function onFormSubmit(e) {
     MembershipManagement.Trigger.onFormSubmit(e);
 }
 
-
+/**
+ * 
+ * @param {GoogleAppsScript.Events.SheetsOnEdit} e 
+ */
 function handleEditEvent(e) {
     const sheet = e.source.getActiveSheet();
     if (sheet.getName() === REGISTRATION_SHEET_NAME) {
@@ -17,8 +25,11 @@ function handleEditEvent(e) {
     }
 }
 
+/**
+ * 
+ * @param {GoogleAppsScript.Events.SheetsOnFormSubmit} e 
+ */
 function ballotSubmitHandler(e) {
-    console.log('Voting form submitted:', e);
     VotingService.Trigger.ballotSubmitHandler(e);
 }
 

@@ -99,8 +99,7 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
  * @throws {Error} If there is an issue generating the prefilled URL or storing the token.
  */
 VotingService.WebApp._getFormUrlWithTokenField = function (userEmail, election) {
-    const token = Common.Auth.TokenManager.generateToken();
-    Common.Auth.TokenStorage.storeToken(userEmail, token);
+    const token = Common.Auth.TokenManager.getMultiUseToken(userEmail);
     const preFilledUrl = VotingService.createPrefilledUrlWithTitle(election.ID, TOKEN_ENTRY_FIELD_TITLE, token);
     return preFilledUrl
 }

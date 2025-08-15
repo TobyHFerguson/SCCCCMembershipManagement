@@ -9,8 +9,8 @@
     "checkJs": true
   },
   "include": [
-    "./**/*.js",
-    "./**/*.gs",
+    "**/*.js",
+    "**/*.gs",
     "**/*.ts"
   ],
   "exclude": [
