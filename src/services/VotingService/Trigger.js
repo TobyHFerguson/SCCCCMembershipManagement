@@ -47,16 +47,12 @@ VotingService.Trigger = {
      */
     ballotSubmitHandler: function (e) {
         console.log('Ballot submit handler triggered', e.namedValues);
-        const trigger = ScriptApp.getProjectTriggers().find(t => t.getUniqueId() === e.triggerUid);
-        const spreadsheetId = trigger.getTriggerSourceId()
-        const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
         const vote = this.firstValues_(e.namedValues)
-        //@ts-ignore
-        const fiddler = bmPreFiddler.PreFiddler().getFiddler({ id: spreadsheet.getId(), sheetName: 'Validated Results', createIfMissing: true });
+        const fiddler = VotingService.Data.getFiddlerForValidResults(e.triggerUid)
         const votes = fiddler.getData();
 
         if (!this.voteIsValid_(vote, votes, Common.Auth.TokenManager.consumeMUT)) {
-            this.addInvalidVote_(vote, spreadsheet);
+            this.addInvalidVote_(vote, fiddler.getSheet().getParent());
             return
         }
 

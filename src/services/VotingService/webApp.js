@@ -56,7 +56,7 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
             result.title = election.Title;
             result.opens = election.Start;
             result.closes = election.End;
-            if (election.Voters.includes(userEmail)) {
+            if (VotingService.Data.hasVotedAlreadyInThisElection(userEmail, election)) {
                 result.status = "Inactive - you've already voted"
                 return result; // Skip further processing if user has already voted
             }
