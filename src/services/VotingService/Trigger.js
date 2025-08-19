@@ -16,26 +16,40 @@ VotingService.Trigger = {
         const editedRow = editedRange.getRow();
         const editedColumn = editedRange.getColumn();
         const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-        const formIdColumnIndex = headers.indexOf(FORM_ID_COLUMN_NAME) + 1;
-        const resultsRecipientColumnIndex = headers.indexOf(MANAGERS_COLUMN_NAME) + 1;
+        const formEditUrlColumnIndex = headers.indexOf(FORM_EDIT_URL_COLUMN_NAME) + 1;
+        const editorsColumnIndex = headers.indexOf(EDITORS_COLUMN_NAME) + 1;
         const triggerStatusColumnIndex = headers.indexOf(TRIGGER_STATUS_COLUMN_NAME) + 1;
+        const titleColumnIndex = headers.indexOf(VOTE_TITLE_COLUMN_NAME) + 1;
         console.log(`Edit detected in row: ${editedRow}, column: ${editedColumn} in sheet: ${sheet.getName()}`);
-        console.log(`Form ID column index: ${formIdColumnIndex}, Results Recipient column index: ${resultsRecipientColumnIndex}, Trigger Status column index: ${triggerStatusColumnIndex}`);
+        console.log(`Form edit URL column index: ${formEditUrlColumnIndex}, Editors column index: ${editorsColumnIndex}, Trigger Status column index: ${triggerStatusColumnIndex}`);
 
-        if (editedColumn === formIdColumnIndex && editedRow > 1) {
+        if (editedRow === 1) {
+            throw Error('Column headings edited in Elections sheet')
+        }
+        const editors = sheet.getRange(editedRow, editorsColumnIndex).getValue().split(',').map(email => email.trim());
+        const editUrl = sheet.getRange(editedRow, formEditUrlColumnIndex).getValue();
+        if (!editUrl) {
+            SpreadsheetApp.getUi().alert(`No valid Form ID found in row: ${editedRow}. No further processing will occur for this row.`, SpreadsheetApp.getUi().ButtonSet.OK);
+        }
+        if (editedColumn === formEditUrlColumnIndex) {
             console.log(`Form ID edited in row: ${editedRow}`);
-            const url = sheet.getRange(editedRow, formIdColumnIndex).getValue();
-            const formId = VotingService.extractGasFormId(url);
-            if (!formId) {
-                throw new Error(`No valid Form ID found in row: ${editedRow}`);
-            }
-            const resultsRecipients = sheet.getRange(editedRow, resultsRecipientColumnIndex).getValue().split(',').map(email => email.trim());
 
-            if (formId) {
-                console.log(`Creating a ballot from the source form: ${formId} in row: ${editedRow}`);
-                const newFormId = VotingService.createBallotForm(formId, resultsRecipients);
-                sheet.getRange(editedRow, formIdColumnIndex).setValue(newFormId);
-                console.log(`Created ballot form with ID: ${newFormId} and updated sheet.`);
+            if (editUrl) {
+                console.log(`Creating a ballot from the source form: ${editUrl} in row: ${editedRow}`);
+                const { title, url } = VotingService.createBallotForm(editUrl, editors);
+                sheet.getRange(editedRow, titleColumnIndex).setValue(title);
+                sheet.getRange(editedRow, formEditUrlColumnIndex).setValue(url);
+                SpreadsheetApp.getUi().alert(`Created ballot form for '${title}' and alerted any editors via email.`, SpreadsheetApp.getUi().ButtonSet.OK);
+            }
+        } else if (editedColumn === editorsColumnIndex) {
+            console.log(`Editors edited in row: ${editedRow}`);
+            const title = sheet.getRange(editedRow, titleColumnIndex).getValue();
+            // It is possible to enter both a Form URL and Editors quickly in the same edit and for two edit events to be called.
+            // This edit event might be called before the formEditUrlColumnIndex edit event, in which case the editUrl might be the 'seed ballot' URL.
+            // This can be detected by seeing if we have a form title yet!
+            if (title) {
+                VotingService.setEditors(editUrl, editors);
+                SpreadsheetApp.getUi().alert(`Updated editors for '${title}', and sent them emails`, SpreadsheetApp.getUi().ButtonSet.OK);
             }
         }
     },
@@ -62,7 +76,7 @@ VotingService.Trigger = {
         console.log('recording valid vote', vote);
         votes.push(vote);
         fiddler.setData(votes).dumpValues();
-        this.sendValidVoteEmail_(vote['Voter Email'], this.getElectionTitle_(fiddler.getSheet().getParent()));
+        this.sendValidVoteEmail_(vote[VOTER_EMAIL_COLUMN_NAME], this.getElectionTitle_(fiddler.getSheet().getParent()));
         return
 
     },
@@ -79,7 +93,7 @@ VotingService.Trigger = {
      */
     voteIsValid_: function (vote, votes, consumeMUT) {
         console.log('Processing vote:', vote);
-        vote['Voter Email'] = '';
+        vote[VOTER_EMAIL_COLUMN_NAME] = '';
 
         const email = consumeMUT(vote[TOKEN_ENTRY_FIELD_TITLE]);
         delete vote[TOKEN_ENTRY_FIELD_TITLE]
@@ -89,8 +103,8 @@ VotingService.Trigger = {
             return false
         }
 
-        vote['Voter Email'] = email; // Add the email to the vote object for recording
-        const duplicates = votes.some(entry => entry['Voter Email'] === email);
+        vote[VOTER_EMAIL_COLUMN_NAME] = email; // Add the email to the vote object for recording
+        const duplicates = votes.some(entry => entry[VOTER_EMAIL_COLUMN_NAME] === email);
         if (duplicates) {
             console.warn(`Duplicate vote detected for email: ${email}. Vote will not be recorded.`);
             return false
@@ -163,8 +177,8 @@ VotingService.Trigger = {
             this.setAllSheetsBackgroundToLightRed_(spreadsheet)
             const electionTitle = this.getElectionTitle_(spreadsheet)
             this.sendManualCountNeededEmail_(this.getSpreadsheetUsers_(spreadsheet).join(','), vote, electionTitle);
-            this.sendInvalidVoteEmail_(vote['Voter Email'], electionTitle)
-        } catch (error) { 
+            this.sendInvalidVoteEmail_(vote[VOTER_EMAIL_COLUMN_NAME], electionTitle)
+        } catch (error) {
             console.error(error.stack)
         }
 

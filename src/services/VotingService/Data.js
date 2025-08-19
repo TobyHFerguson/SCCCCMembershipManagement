@@ -43,7 +43,7 @@ VotingService.Data = {
         if (!fiddler) {
             return []
         }
-        const voters = fiddler.getData().map(vote => vote['Voter Email']);
+        const voters = fiddler.getData().map(vote => vote[VOTER_EMAIL_COLUMN_NAME]);
         return voters
     },
     /**

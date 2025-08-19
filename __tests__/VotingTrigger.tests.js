@@ -4,6 +4,8 @@ describe('Trigger', () => {
     beforeAll(() => {
         //@ts-ignore
         global.TOKEN_ENTRY_FIELD_TITLE = 'VOTING TOKEN'
+        //@ts-ignore
+        global.VOTER_EMAIL_COLUMN_NAME = 'Voter Email'
     });
     describe('firstValues_', () => {
         it('returns first element of array values', () => {
@@ -19,10 +21,10 @@ describe('Trigger', () => {
 
     describe('voteIsValid_', () => {
         const consumeMUT = jest.fn();
-        const votes = [{ 'Voter Email': 'test@example.com' }];
-
+        let votes;
         beforeEach(() => {
             consumeMUT.mockReset();
+            votes = [{ [VOTER_EMAIL_COLUMN_NAME]: 'test@example.com' }];
         });
 
         it('returns false if token is invalid', () => {
@@ -41,7 +43,7 @@ describe('Trigger', () => {
             consumeMUT.mockReturnValue('unique@example.com');
             const vote = { TOKEN: ['token'] };
             expect(Trigger.voteIsValid_(vote, votes, consumeMUT)).toBe(true);
-            expect(vote['Voter Email']).toBe('unique@example.com');
+            expect(vote[VOTER_EMAIL_COLUMN_NAME]).toBe('unique@example.com');
         });
     });
 

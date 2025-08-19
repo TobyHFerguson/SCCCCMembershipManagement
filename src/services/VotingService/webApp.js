@@ -61,7 +61,7 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
                 return result; // Skip further processing if user has already voted
             }
 
-            const ballot = VotingService.getBallot(election.ID);
+            const ballot = VotingService.getBallot(election[FORM_EDIT_URL_COLUMN_NAME]);
             console.log(`ballot ${ballot.getTitle()} is published: ${ballot.isPublished()}`);
             console.log(`ballot ${ballot.getTitle()} is accepting responses: ${ballot.isAcceptingResponses()}`);
             if (!ballot.isPublished()) {
@@ -100,23 +100,6 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
  */
 VotingService.WebApp._getFormUrlWithTokenField = function (userEmail, election) {
     const token = Common.Auth.TokenManager.getMultiUseToken(userEmail);
-    const preFilledUrl = VotingService.createPrefilledUrlWithTitle(election.ID, TOKEN_ENTRY_FIELD_TITLE, token);
+    const preFilledUrl = VotingService.createPrefilledUrlWithTitle(election[FORM_EDIT_URL_COLUMN_NAME], TOKEN_ENTRY_FIELD_TITLE, token);
     return preFilledUrl
-}
-
-/**
- * 
- * @returns {Array<Election>} - Returns an array of active Election objects.
- * Each object contains properties like Title, Form ID, Organizers, Start Date, End Date, and Voters.
- */
-VotingService.WebApp.getProcessedElections_ = function () {
-    const elections = VotingService.Data.getElectionData();
-
-    const today = new Date();
-    elections.forEach(election => {
-        const startDate = election.Start ? new Date(election.Start) : null;
-        const endDate = election.End ? new Date(election.End) : null;
-        election.ID = (startDate === null || startDate <= today) && (endDate === null || today <= endDate) ? election.ID : null;
-    });
-    return elections;
 }

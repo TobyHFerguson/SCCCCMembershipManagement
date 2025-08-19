@@ -2,8 +2,9 @@
 
 const BALLOT_FOLDER_ID = '1ncuM7AyS9HtqtM842SUjHnhLG6_Pa_RB';
 const VOTE_TITLE_COLUMN_NAME = 'Title';
-const FORM_ID_COLUMN_NAME = 'ID';
-const MANAGERS_COLUMN_NAME = 'Managers'; // Can be comma-separated
+const VOTER_EMAIL_COLUMN_NAME = 'Voter Email'
+const FORM_EDIT_URL_COLUMN_NAME = 'Form Edit URL';
+const EDITORS_COLUMN_NAME = 'Editors'; // Can be comma-separated
 const TRIGGER_STATUS_COLUMN_NAME = 'Trigger Status';
 const VOTE_DATA_SHEET_ID = '1FN1vogIDDWdqghflOF6hNuDDW1cqFQpSGX8GhXLYyyw'; // Replace with your central vote data sheet ID
 const REGISTRATION_SHEET_NAME = 'Elections'; // Update with your sheet name
@@ -12,78 +13,9 @@ const TOKEN_ENTRY_FIELD_TITLE = 'VOTING TOKEN'; // Adjust
 const TOKEN_HELP_TEXT = 'This question is used to validate your vote. Do not modify this field.';
 const CONFIRMATION_MESSAGE = 'Your vote has been recorded successfully. You will be sent an email indicating how your vote was handled. Thank you for participating!';
 // Helper to extract components from the pre-filled URL (used by handleSheetEdit and renderVotingOptions)
-VotingService.parsePrefilledFormUrlComponents = function (url) {
-    const result = {};
-    // Extract formId
-    const formIdMatch = url.match(/\/forms\/d\/e\/([a-zA-Z0-9_-]+)\/viewform/);
-    if (formIdMatch && formIdMatch[1]) {
-        result.formId = formIdMatch[1];
-    } else {
-        throw new Error(`Invalid pre-filled URL format: ${url}`);
-    }
-
-    // Extract entry.ID from query parameters
-    const queryStringIndex = url.indexOf('?');
-    if (queryStringIndex !== -1) {
-        const queryString = url.substring(queryStringIndex + 1);
-        // Split by '&' to get individual parameters
-        const params = queryString.split('&');
-        for (let i = 0; i < params.length; i++) {
-            const param = params[i];
-            // Look for a parameter that starts with 'entry.' and has an '=' sign
-            if (param.startsWith('entry.') && param.includes('=')) {
-                const parts = param.split('=');
-                if (parts.length > 1) {
-                    // Extract the ID part (e.g., '851578578' from 'entry.851578578')
-                    result.entryTokenId = parts[0].substring('entry.'.length);
-                    // Assuming the first such entry is our token field, we can break
-                    break;
-                }
-            }
-        }
-    }
-    return result;
-}
-
 VotingService.getBallotFolderId = function () {
     const ffi = PropertiesService.getScriptProperties().getProperty('BALLOT_FOLDER_ID') || BALLOT_FOLDER_ID;
     return ffi;
-}
-/**
- * Extracts the Form ID from a Google Forms URL.
- * This function handles 'edit', 'viewform', and base URLs.
- *
- * @param {string} url The URL of the Google Form.
- * @return {string|null} The extracted Form ID if found, otherwise null.
- */
-VotingService.extractGasFormId = function (url) {
-    // Regex for the 'viewform' URL (public-facing)
-    let match = url.match(/d\/e\/(.*?)\/viewform/);
-    if (match && match.length > 1) {
-        return match[1];
-    }
-
-    // Regex for the 'edit' URL (in the editor)
-    match = url.match(/d\/(.*?)\/edit/);
-    if (match && match.length > 1) {
-        return match[1];
-    }
-
-    // Regex for the base URL (e.g., https://docs.google.com/forms/d/ID)
-    match = url.match(/d\/(.*?)$/);
-    if (match && match.length > 1) {
-        // This regex is broad, so we'll check for a valid ID format.
-        // A Google Form ID is typically a long alphanumeric string.
-        // If there's a trailing slash or other characters, it won't be a valid ID.
-        // You can add more checks if needed, but this handles the common case.
-        const potentialId = match[1];
-        if (potentialId.indexOf('/') === -1) {
-            return potentialId;
-        }
-    }
-
-    // If no patterns match, return null.
-    return null;
 }
 
 /**
@@ -97,10 +29,14 @@ VotingService.manageElectionLifecycles = function () {
     const elections = VotingService.Data.getElectionData();
     let changesMade = false;
     elections.forEach(election => {
-        const ballotId = election.ID;
+        const ballotId = election[FORM_EDIT_URL_COLUMN_NAME];
         if (!ballotId) {
-            console.warn(`Election "${election.Title}" has no Form ID. Skipping lifecycle management.`);
+            console.warn(`Election "${election.Title}" has no Form ID. Skipping lifecycle management for this election.`);
             return;
+        }
+        if (!election.Start || !election.End) {
+            console.warn(`Election "${election.Title}" is missing a Start and/or an End date. Skipping lifecycle management for this election.`)
+            return
         }
 
         const ballot = VotingService.getBallot(ballotId);
@@ -109,18 +45,20 @@ VotingService.manageElectionLifecycles = function () {
             return;
         }
         const today = new Date();
-        if (!ballot.isPublished() && election.Start && new Date(election.Start) <= today) {
+        const start = new Date(election.Start);
+        const end = new Date(election.End);
+        if (!ballot.isPublished() && start <= today && today <= end) {
             // If the form is not published and the start date has passed, publish it.
             // Trigger IDs can overflow a spreadsheet number, so store as a string.
-            election.TriggerId = "'"+this.openElection_(ballot); 
+            election.TriggerId = "'" + this.openElection_(ballot);
             console.log(`Opened election "${election.Title}" with ID "${ballotId}" as the start date has passed. Attached trigger ID: ${election.TriggerId} `);
             changesMade = changesMade || true
             return
         }
 
-        if (ballot.isPublished() && ballot.isAcceptingResponses() && election.End && new Date(election.End) < today) {
+        if (ballot.isAcceptingResponses() && end < today) {
             // If the form is published and the end date has passed, close it.
-            this.closeElection_(this.getBallot(election.ID), election.TriggerId);
+            this.closeElection_(this.getBallot(election[FORM_EDIT_URL_COLUMN_NAME]), election.TriggerId);
             console.log(`Closed election "${election.Title}" with ID "${ballotId}" as the end date has passed.`);
             election.TriggerId = null; // Clear the trigger ID after closing
             changesMade = changesMade || true;
@@ -184,7 +122,7 @@ VotingService.attachOnSubmitTrigger_ = function (ballot) {
  * @throws {Error} If there is an issue removing the trigger.
  */
 VotingService.closeElection_ = function (ballot, triggerId) {
-    ballot.setAcceptingResponses(false);
+    ballot.setPublished(false);
     return this.removeOnSubmitTrigger_(triggerId)
 }
 
@@ -209,31 +147,18 @@ VotingService.removeOnSubmitTrigger_ = function (triggerId) {
     }
 }
 
-
-function runExtractGasFormId() {
-    const urls = [
-        'https://docs.google.com/forms/d/1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps/edit',
-        'https://docs.google.com/forms/d/e/1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps/viewform',
-        'https://docs.google.com/forms/d/1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps/',
-        'https://docs.google.com/forms/d/1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps',
-        'https://docs.google.com/forms/d/1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps/edit?usp=sharing'
-    ]
-    urls.forEach(url => {
-        const formId = VotingService.extractGasFormId(url);
-        console.log(`Extracted Form ID from "${url}": ${formId}`);
-    });
-}
-
 /**
- * 
+ * @memberof VotingService
  * @param {string} formId - The ID (ID or URL) of the Google Form to create a ballot from.
- * @param {Array<string>} managers - A list of email addresses to share the results spreadsheet with.
- * @return {string} The published URL of the new, public form.
+ * @param {string[]} editors - A list of email addresses to share the results spreadsheet with.
+ * @returns {object} The published URL of the new, public form.
+ * @property {string} title - the title of the ballot
+ * @property {string} url - the edit url of the ballot form
  */
-VotingService.createBallotForm = function (formId, managers) {
-    const newFormId = this.makePublishedCopyOfFormInFolder_(formId, this.getBallotFolderId());
+VotingService.createBallotForm = function (formId, editors) {
+    const url = this.makePublishedCopyOfFormInFolder_(formId, this.getBallotFolderId());
 
-    const form = FormApp.openByUrl(newFormId);
+    const form = FormApp.openByUrl(url);
 
     // Not a quiz
     form.setIsQuiz(false);
@@ -264,21 +189,23 @@ VotingService.createBallotForm = function (formId, managers) {
     this.addTokenQuestion_(form)
 
     // create and share a results spreadsheet
-    this.createResultsSpreadsheet_(newFormId, managers);
+    this.createResultsSpreadsheet_(url);
+    this.setEditors(url, editors)
 
     // unpublish the form
     form.setPublished(false);
 
-    console.log(`Ballot form created with ID: ${newFormId}`);
+    const title = form.getTitle()
 
-    return newFormId;
+    console.log(`Ballot form '${title}' created with url: ${url}`);
+
+    return { title, url };
 }
 
 /**
  * 
- * @param {string} id - The ID (ID or URL) of the ballot (a Google Form) to retrieve.
- * @description Retrieves a Google Form by its ID or URL.
- * If the ID is a URL, it will extract the ID from the URL.
+ * @param {string} id - The ID (ID or edit URL) of the ballot (a Google Form) to retrieve.
+ * @description Retrieves a Google Form by its ID or edit URL.
  * 
  * @throws {Error} If the form cannot be opened by either ID or URL.
  * @returns {GoogleAppsScript.Forms.Form} The ballot object.
@@ -337,26 +264,88 @@ VotingService.addTokenQuestion_ = function (form) {
  * Creates a spreadsheet for the results of the voting form.
  *
  * @param {string} formId The ID of the Google Form for which to create the results spreadsheet.
- * @param {Array<string>} managers - A list of email addresses to share the results spreadsheet with.
  * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet} The created results spreadsheet.
  */
-VotingService.createResultsSpreadsheet_ = function (formId, managers = []) {
+VotingService.createResultsSpreadsheet_ = function (formId) {
     const form = this.getBallot(formId);
     const formTitle = form.getTitle();
     const resultsSpreadsheet = SpreadsheetApp.create(`${formTitle} ${RESULTS_SUFFIX}`);
     form.setDestination(FormApp.DestinationType.SPREADSHEET, resultsSpreadsheet.getId());
-    managers.forEach(email => {
-        try {
-            resultsSpreadsheet.addViewer(email);
-            console.log(`Shared results sheet with: ${email}`);
-        } catch (error) {
-            console.log(`Error sharing results sheet with ${email}: ${error}`);
-            throw error;
-        }
-    })
     console.log(`Created results spreadsheet for form ID: ${formId} with title: ${formTitle}`);
     return resultsSpreadsheet;
 }
+
+/**
+ * Sets the editors for the ballot and its results spreadsheet.
+ * @param {string} editUrl the ballot's edit URL
+ * @param {string[]} editors list of editor emails to share the form with
+ * 
+ * @description Sets the editors of the ballot form and its results spreadsheet to the given list. Send editors an email detailing their change of status. 
+ */
+VotingService.setEditors = function (editUrl, editors = []) {
+    const newEditors = new Set(editors.filter(m => m)); //newEditors only contains non-empty email addresses
+    const form = this.getBallot(editUrl);
+    const resultsSpreadsheet = SpreadsheetApp.openById(form.getDestinationId())
+    const oldEditors = new Set([form, resultsSpreadsheet].flatMap(doc => doc.getEditors().map(e => e.getEmail())));
+    const add = newEditors.difference(oldEditors);
+    const remove = oldEditors.difference(newEditors)
+
+    // Get here with editors to actually share with!
+    const formTitle = form.getTitle();
+    add.forEach(email => {
+        try {
+            form.addEditor(email);
+            resultsSpreadsheet.addEditor(email);
+            this.sendEditorAddEmail_(email, formTitle, editUrl);
+            console.log(`Added '${email}' as editor to '${formTitle}'`);
+        } catch (error) {
+            console.log(`Error adding '${email}' as editor to '${formTitle}': ${error}`);
+        }
+    })
+    remove.forEach(email => {
+        try {
+            form.removeEditor(email);
+            resultsSpreadsheet.removeEditor(email);
+            this.sendEditorRemoveEmail_(email, formTitle);
+            console.log(`Removed '${email}' as editor from  '${formTitle}'`);
+        } catch (error) {
+            console.log(`Error removing '${email}' as editor from '${formTitle}': ${error}`);
+        }
+    })
+}
+
+/**
+ * 
+ * @param {string} email the email to send the message to
+ * @param {string} title the title of the document that is being shared
+ * @param {string} url the edit url of the document
+ * 
+ * @description Send a message to the given email letting them know that they've been given edit access to the document
+ */
+VotingService.sendEditorAddEmail_ = function (email, title, url) {
+    const message = {
+        to: email,
+        subject: `Form '${title}' shared with you`,
+        body: `You now have edit access to the Form '${title}' and its result sheet. It can be found at: ${url}`
+    }
+    MailApp.sendEmail(message)
+}
+/**
+ * 
+ * @param {string} email the email to send the message to
+ * @param {string} title the title of the document
+ * 
+ * @description send a message to the given email telling them that they no longer have access to the given document
+ */
+VotingService.sendEditorRemoveEmail_ = function (email, title) {
+    const message = {
+        to: email,
+        subject: `Document access removed`,
+        body: `Your edit access to the Form '${title}' and its result sheet has been removed`,
+    }
+    MailApp.sendEmail(message)
+}
+
 
 /**
  * 
@@ -371,7 +360,8 @@ VotingService.collectResponses = function (formId, active = true) {
 
 function runCreateResultsSpreadsheet() {
     const formId = '1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps'; // Replace with your actual form ID
-    const resultsSpreadsheet = VotingService.createResultsSpreadsheet_(formId, ["toby.ferguson@sc3.club"]);
+    const resultsSpreadsheet = VotingService.createResultsSpreadsheet_(formId);
+    VotingService.setEditors(formId, ["toby.ferguson@sc3.club"]);
     console.log(`Results spreadsheet created with ID: ${resultsSpreadsheet.getId()}`);
     console.log(`Results spreadsheet URL: ${resultsSpreadsheet.getUrl()}`);
 }
@@ -382,15 +372,12 @@ function runCreateResultsSpreadsheet() {
  * This function first finds the correct Entry ID for the question by
  * creating a temporary pre-filled URL and then parsing it.
  *
- * @param {string} formId The ID of the Google Form. This could be a full URL or just the ID.
+ * @param {string} formId The ID of the Google Form. This could be a full edit URL or just the ID.
  * @param {string} questionTitle The title of the question to pre-fill.
  * @param {string} answer The answer to pre-fill in the question. Defaults to '1234'.
  * @return {string} A pre-filled URL for the form.
  */
 VotingService.createPrefilledUrlWithTitle = function (formId, questionTitle, answer = '1234') {
-    if (formId.startsWith('https://')) {
-        formId = VotingService.extractGasFormId(formId);
-    }
     const form = this.getBallot(formId);
 
     // Find the question item by its title
@@ -450,8 +437,8 @@ function runAddTokenQuestion() {
 
 function runCreateBallotForm() {
     const formId = TEST_FORM_ID;
-    const url = VotingService.createBallotForm(formId, ["toby.ferguson@sc3.club"]);
-    console.log(`Ballot form created with URL: ${url}`);
+    const { title, url } = VotingService.createBallotForm(formId, ["toby.ferguson@sc3.club"]);
+    console.log(`Ballot form '${title}' created with URL: ${url}`);
 }
 
 function runGetForm() {
