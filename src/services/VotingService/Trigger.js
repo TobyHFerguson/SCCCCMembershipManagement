@@ -18,6 +18,8 @@ VotingService.Trigger = {
         const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
         const formEditUrlColumnIndex = headers.indexOf(FORM_EDIT_URL_COLUMN_NAME) + 1;
         const editorsColumnIndex = headers.indexOf(EDITORS_COLUMN_NAME) + 1;
+        const startColumnIndex = headers.indexOf('Start') + 1;
+        const endColumnIndex = headers.indexOf('End') + 1;
         const triggerStatusColumnIndex = headers.indexOf(TRIGGER_STATUS_COLUMN_NAME) + 1;
         const titleColumnIndex = headers.indexOf(VOTE_TITLE_COLUMN_NAME) + 1;
         console.log(`Edit detected in row: ${editedRow}, column: ${editedColumn} in sheet: ${sheet.getName()}`);
@@ -51,6 +53,10 @@ VotingService.Trigger = {
                 VotingService.setEditors(editUrl, editors);
                 SpreadsheetApp.getUi().alert(`Updated editors for '${title}', and sent them emails`, SpreadsheetApp.getUi().ButtonSet.OK);
             }
+        } else if (editedColumn === startColumnIndex || editedColumn === endColumnIndex) {
+            console.log(`Date edited in row: ${editedRow}`);
+            SpreadsheetApp.getUi().alert(`Date edited in row: ${editedRow} - running election lifecycle management`, SpreadsheetApp.getUi().ButtonSet.OK);
+            VotingService.manageElectionLifecycles();
         }
     },
 
