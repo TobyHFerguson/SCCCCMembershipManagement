@@ -83,7 +83,7 @@
       let electionTitleCell;
       if (hasFormUrl) {
         // Active election title: regular link, always underlined
-        electionTitleCell = '<a href="' + election.url + '">' + election.title + '</a>';
+        electionTitleCell = '<a href="' + election.url + '" target="_blank" rel="noopener noreferrer">' + election.title + '</a>';
       } else {
         // Inactive election title: disabled span with tooltip if voted
         electionTitleCell = '<span class="disabled-link">'+ election.title + '</span>';
