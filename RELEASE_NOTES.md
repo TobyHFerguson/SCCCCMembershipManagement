@@ -14,5 +14,14 @@ To the extent that these changes are driven by specific issues then those issues
 ### Triggers
   [ ] Configure `handleEditEvent` to run when **Spreadsheet** has an **on Edit event**
   [ ] Configure daily calendar to execute `manageElectionLifecycles()`
-## Bootstrap Sheet
+## Spreadsheet
+### Bootstrap Sheet
   [ ] Add row for **Elections** sheet
+### Elections Sheet
+  [ ] Add Elections sheet with columns:
+      * Title (string)
+      * Form Edit URL (string)
+      * Editors (string)
+      * Start (Date)
+      * End (Date)
+      * TriggerId (String)
