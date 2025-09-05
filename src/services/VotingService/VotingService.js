@@ -28,7 +28,6 @@ VotingService.getBallotFolderId = function () {
 VotingService.manageElectionLifecycles = function () {
     const elections = VotingService.Data.getElectionData();
     let changesMade = false;
-    const triggerIds = new Set();
     elections.forEach(election => {
         const ballotId = election[FORM_EDIT_URL_COLUMN_NAME];
         if (!ballotId) {
@@ -65,11 +64,9 @@ VotingService.manageElectionLifecycles = function () {
             changesMade = changesMade || true;
             return
         }
-        if (election.TriggerId) {
-            triggerIds.add(election.TriggerId);
-        }
+        
     });
-    VotingService.cleanUpOrphanedTriggers(triggerIds);
+    VotingService.cleanUpOrphanedTriggers(elections.filter(election => election.TriggerId).map(election => election.TriggerId));
     if (changesMade) {
         console.log('Changes made to elections during lifecycle management. Updating elections storage.');
         VotingService.Data.storeElectionData(elections);
@@ -116,14 +113,14 @@ VotingService.attachOnSubmitTrigger_ = function (ballot) {
 
 /**
  * 
- * @param {Set<string>} triggerIds 
+ * @param {string[]} triggerIds 
  */
 VotingService.cleanUpOrphanedTriggers = function (triggerIds) {
     console.log(`Cleaning up orphaned triggers. Current trigger IDs: ${Array.from(triggerIds).join(', ')}`);
     const allTriggers = ScriptApp.getProjectTriggers();
     allTriggers.forEach(trigger => {
         console.log(`Checking trigger with ID: ${trigger.getUniqueId()} and handler function: ${trigger.getHandlerFunction()}`);
-        if (trigger.getHandlerFunction() === 'ballotSubmitHandler' && !triggerIds.has(trigger.getUniqueId())) {
+        if (trigger.getHandlerFunction() === 'ballotSubmitHandler' && !triggerIds.includes(trigger.getUniqueId())) {
             ScriptApp.deleteTrigger(trigger);
             console.log(`Deleted orphaned ballotSubmitHandler trigger with ID: ${trigger.getUniqueId()}`);
         }
