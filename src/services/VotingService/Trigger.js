@@ -4,6 +4,7 @@ if (typeof require !== 'undefined') {
         Trigger: {}
     };
 }
+// @ts-check
 
 VotingService.Trigger = {
     handleRegistrationSheetEdit: function (e) {
@@ -38,10 +39,16 @@ VotingService.Trigger = {
 
             if (editUrl) {
                 console.log(`Creating a ballot from the source form: ${editUrl} in row: ${editedRow}`);
-                const { title, url } = VotingService.createBallotForm(editUrl, editors);
-                sheet.getRange(editedRow, titleColumnIndex).setValue(title);
-                sheet.getRange(editedRow, formEditUrlColumnIndex).setValue(url);
-                SpreadsheetApp.getUi().alert(`Created ballot form for '${title}' and alerted any editors via email.`, SpreadsheetApp.getUi().ButtonSet.OK);
+                try {
+                    const { title, url } = VotingService.createBallotForm(editUrl, editors);
+                    sheet.getRange(editedRow, titleColumnIndex).setValue(title);
+                    sheet.getRange(editedRow, formEditUrlColumnIndex).setValue(url);
+                    SpreadsheetApp.getUi().alert(`Created ballot form for '${title}' and alerted any editors via email.`, SpreadsheetApp.getUi().ButtonSet.OK);
+                } catch (error) {
+                    console.error(`Error creating ballot form for row ${editedRow}: ${error.message}`);
+                    SpreadsheetApp.getUi().alert(`Failed to create ballot form for row ${editedRow}: \n\n ${error.message}`, SpreadsheetApp.getUi().ButtonSet.OK);
+                    sheet.getRange(editedRow, formEditUrlColumnIndex).clear();
+                }
             }
         } else if (editedColumn === editorsColumnIndex) {
             console.log(`Editors edited in row: ${editedRow}`);
