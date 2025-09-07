@@ -50,7 +50,7 @@ VotingService.manageElectionLifecycles = function () {
         if (!ballot.isPublished() && start <= today && today <= end) {
             // If the form is not published and the start date has passed, publish it.
             // Trigger IDs can overflow a spreadsheet number, so store as a string.
-            election.TriggerId = "'" + this.openElection_(ballot);
+            election.TriggerId = this.openElection_(ballot);
             console.log(`Opened election "${election.Title}" with ID "${ballotId}" as the start date has passed. Attached trigger ID: ${election.TriggerId} `);
             changesMade = changesMade || true
             return
