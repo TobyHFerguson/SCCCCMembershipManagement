@@ -259,8 +259,15 @@ VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFo
     const copiedFile = sourceFile.makeCopy(sourceFile.getName(), destination);
     console.log('New Form: ', copiedFile.getName())
 
-    // 7. Return the Url of the new, public form.
+    // set the permissions so anyone can respond
     const newForm = this.getBallot(copiedFile.getId());
+    const newPermission = {
+    'role': 'reader',
+    'type': 'anyone'
+  };
+    // Use the Drive API to grant public permission to the form file.
+    // The 'reader' role allows people to view the form for responding.
+    Drive.Permissions.create(newPermission, newForm.getId(), { sendNotificationEmail: false });
     return newForm.getEditUrl();
 }
 /**
@@ -454,7 +461,7 @@ function runAddTokenQuestion() {
 }
 
 function runCreateBallotForm() {
-    const formId = TEST_FORM_ID;
+    const formId = 'https://docs.google.com/forms/d/1x9UrFNSBZvnzeu-_MwHYIUvDlWuD8xfvxAg-ceAb5jI/edit';
     const { title, url } = VotingService.createBallotForm(formId, ["toby.ferguson@sc3.club"]);
     console.log(`Ballot form '${title}' created with URL: ${url}`);
 }
