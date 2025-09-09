@@ -1,3 +1,4 @@
+// @ts-ignore
 if (typeof require !== 'undefined') {
     VotingService = {
         //@ts-ignore
