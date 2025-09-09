@@ -1,3 +1,4 @@
+/// <reference path="./VotingService.d.ts" />
 // @ts-check
 
 const BALLOT_FOLDER_ID = '1ncuM7AyS9HtqtM842SUjHnhLG6_Pa_RB';
@@ -12,6 +13,7 @@ const RESULTS_SUFFIX = '- Results';
 const TOKEN_ENTRY_FIELD_TITLE = 'VOTING TOKEN'; // Adjust
 const TOKEN_HELP_TEXT = 'This question is used to validate your vote. Do not modify this field.';
 const CONFIRMATION_MESSAGE = 'Your vote has been recorded successfully. You will be sent an email indicating how your vote was handled. Thank you for participating!';
+
 // Helper to extract components from the pre-filled URL (used by handleSheetEdit and renderVotingOptions)
 VotingService.getBallotFolderId = function () {
     const ffi = PropertiesService.getScriptProperties().getProperty('BALLOT_FOLDER_ID') || BALLOT_FOLDER_ID;
@@ -28,6 +30,7 @@ VotingService.getBallotFolderId = function () {
 VotingService.manageElectionLifecycles = function () {
     const elections = VotingService.Data.getElectionData();
     let changesMade = false;
+    const activeBallots = [];
     elections.forEach(election => {
         const ballotId = election[FORM_EDIT_URL_COLUMN_NAME];
         if (!ballotId) {
@@ -47,12 +50,16 @@ VotingService.manageElectionLifecycles = function () {
         const today = new Date();
         const start = new Date(election.Start);
         const end = new Date(election.End);
-        if (!ballot.isPublished() && start <= today && today <= end) {
-            // If the form is not published and the start date has passed, publish it.
-            // Trigger IDs can overflow a spreadsheet number, so store as a string.
-            election.TriggerId = this.openElection_(ballot);
-            console.log(`Opened election "${election.Title}" with ID "${ballotId}" as the start date has passed. Attached trigger ID: ${election.TriggerId} `);
-            changesMade = changesMade || true
+        if (start <= today && today <= end) {
+            // Active ballot
+            activeBallots.push(ballotId);
+            if (!ballot.isPublished()) {
+                // If the form is not published and the start date has passed, publish it.
+                // Trigger IDs can overflow a spreadsheet number, so store as a string.
+                election.TriggerId = this.openElection_(ballot);
+                console.log(`Opened election "${election.Title}" with ID "${ballotId}" as the start date has passed. Attached trigger ID: ${election.TriggerId} `);
+                changesMade = changesMade || true
+            }
             return
         }
 
@@ -64,9 +71,10 @@ VotingService.manageElectionLifecycles = function () {
             changesMade = changesMade || true;
             return
         }
-        
+
     });
-    VotingService.cleanUpOrphanedTriggers(elections.filter(election => election.TriggerId).map(election => election.TriggerId));
+    const activeTriggerIds = activeBallots.map(ballotId => VotingService.getTriggerIdForBallot_(ballotId)).filter(id => id !== null);
+    VotingService.cleanUpOrphanedTriggers(activeTriggerIds);
     if (changesMade) {
         console.log('Changes made to elections during lifecycle management. Updating elections storage.');
         VotingService.Data.storeElectionData(elections);
@@ -75,7 +83,7 @@ VotingService.manageElectionLifecycles = function () {
 
 /**
  * 
- * @param {GoogleAppsScript.Forms.Form} ballot Ballot for which the election is being opened.
+ * @param {VotingService.Ballot} ballot Ballot for which the election is being opened.
  * @returns {string} The unique ID of the created trigger.
  * 
  * @description Opens the election by setting the ballot to accept responses and attaching the onSubmit trigger.
@@ -113,14 +121,14 @@ VotingService.attachOnSubmitTrigger_ = function (ballot) {
 
 /**
  * 
- * @param {string[]} triggerIds 
+ * @param {string[]} activeTriggerIds 
  */
-VotingService.cleanUpOrphanedTriggers = function (triggerIds) {
-    console.log(`Cleaning up orphaned triggers. Current trigger IDs: ${Array.from(triggerIds).join(', ')}`);
+VotingService.cleanUpOrphanedTriggers = function (activeTriggerIds) {
+    console.log(`Cleaning up orphaned triggers. Current trigger IDs: ${Array.from(activeTriggerIds).join(', ')}`);
     const allTriggers = ScriptApp.getProjectTriggers();
     allTriggers.forEach(trigger => {
         console.log(`Checking trigger with ID: ${trigger.getUniqueId()} and handler function: ${trigger.getHandlerFunction()}`);
-        if (trigger.getHandlerFunction() === 'ballotSubmitHandler' && !triggerIds.includes(trigger.getUniqueId())) {
+        if (trigger.getHandlerFunction() === 'ballotSubmitHandler' && !activeTriggerIds.includes(trigger.getUniqueId())) {
             ScriptApp.deleteTrigger(trigger);
             console.log(`Deleted orphaned ballotSubmitHandler trigger with ID: ${trigger.getUniqueId()}`);
         }
@@ -129,7 +137,7 @@ VotingService.cleanUpOrphanedTriggers = function (triggerIds) {
 
 /**
  * 
- * @param {GoogleAppsScript.Forms.Form} ballot - the ballot whose election is being closed.
+ * @param {VotingService.Ballot} ballot - the ballot whose election is being closed.
  * @param {string} triggerId - the ID of the trigger associated with this election.
  * @returns true if the election was successfully closed, false otherwise.
  * 
@@ -221,12 +229,9 @@ VotingService.createBallotForm = function (formId, editors) {
 }
 
 /**
- * 
- * @param {string} id - The ID (ID or edit URL) of the ballot (a Google Form) to retrieve.
- * @description Retrieves a Google Form by its ID or edit URL.
- * 
- * @throws {Error} If the form cannot be opened by either ID or URL.
- * @returns {GoogleAppsScript.Forms.Form} The ballot object.
+ * Retrieves a ballot form by ID or URL.
+ * @param {string} id
+ * @returns {VotingService.Ballot}
  */
 VotingService.getBallot = function (id) {
     let form;
@@ -262,9 +267,9 @@ VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFo
     // set the permissions so anyone can respond
     const newForm = this.getBallot(copiedFile.getId());
     const newPermission = {
-    'role': 'reader',
-    'type': 'anyone'
-  };
+        'role': 'reader',
+        'type': 'anyone'
+    };
     // Use the Drive API to grant public permission to the form file.
     // The 'reader' role allows people to view the form for responding.
     Drive.Permissions.create(newPermission, newForm.getId(), { sendNotificationEmail: false });
@@ -443,6 +448,18 @@ VotingService.createPrefilledUrlWithTitle = function (formId, questionTitle, ans
     return finalPrefilledUrl;
 }
 
+VotingService.getTriggerIdForBallot_ = function (ballotId) {
+    const ballot = VotingService.getBallot(ballotId);
+    const triggerIds = ScriptApp.getProjectTriggers().filter(trigger =>
+        trigger.getHandlerFunction() === 'ballotSubmitHandler').
+        filter(trigger => trigger.getTriggerSourceId() === ballot.getDestinationId()).
+        map(trigger => trigger.getUniqueId());
+    if (triggerIds.length > 1) {
+        console.warn(`Multiple triggers found for ballot ID: ${ballotId}. Using the first one.`);
+    }
+    return triggerIds.length > 0 ? triggerIds[0] : null;
+}
+
 const TEST_FORM_ID = '1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps'; // Replace with your actual form ID
 // Example usage:
 // Replace 'YOUR_FORM_ID_HERE' with your actual form ID.
@@ -482,4 +499,10 @@ function runCollectResponses() {
 
 function runManageElectionLifecycles() {
     VotingService.manageElectionLifecycles();
+}
+
+
+function getTriggerIDForBallot() {
+    const ballotId = 'https://docs.google.com/forms/d/1eQdwc9Qc95sZlBQFsFW6lZdiyHIxL7flfguq86LAAiA/edit';
+    VotingService.getTriggerIdForBallot_(ballotId);
 }

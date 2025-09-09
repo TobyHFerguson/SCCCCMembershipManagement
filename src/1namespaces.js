@@ -1,4 +1,4 @@
-
+// @ts-check
 const Common = {
     Auth: {},
     Data: {},
@@ -32,6 +32,7 @@ const ProfileManagementService = {
 const VotingService = {
     name: 'Voting Service',
     service: 'VotingService',
+    Data: {},
     WebApp: {},
     Trigger: {}
 };

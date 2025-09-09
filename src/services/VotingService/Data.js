@@ -1,11 +1,14 @@
 //@ts-check
 VotingService.Data = {
+    /**
+     * @returns {any} Fiddler instance for the Elections sheet.
+     */
     getFiddler_: function () {
         return Common.Data.Storage.SpreadsheetManager.getFiddler('Elections');
     },
+
     /**
-     * 
-     * @returns {Election[]} - Returns an array of Election objects.
+     * @returns {VotingService.Election[]} - Returns an array of Election objects.
      * Each object contains properties like Title, Form ID, Organizers, Start Date, End Date, and Voters.
      * The data is retrieved from the Elections sheet.
      * 
@@ -21,7 +24,7 @@ VotingService.Data = {
      * Sets the election data in the Elections sheet.
      * This will overwrite the existing data in the sheet.
      * 
-     * @param {Array<Election>} elections - Array of election objects to be stored in the Elections sheet.
+     * @param {Array<VotingService.Election>} elections - Array of election objects to be stored in the Elections sheet.
      * Each object should have properties like Title, Form ID, Managers, Start Date, End Date, and Voters.
      */
     storeElectionData: function (elections) {
@@ -32,7 +35,7 @@ VotingService.Data = {
     },
     /**
      * 
-     * @param {Election} election the election to be searched
+     * @param {VotingService.Election} election the election to be searched
      * @returns {string[]} voters an array of the emails of voters
      */
     getVoters_: function (election) {
@@ -49,7 +52,7 @@ VotingService.Data = {
     /**
      * 
      * @param {string} triggerId The triggerId to be used
-     * @returns {string}  the id of the results spreadsheet for this trigger, or undefined if it can't be found
+     * @returns {string | undefined}  the id of the results spreadsheet for this trigger, or undefined if it can't be found
      */
     getResultIdForTrigger_: function(triggerId) {
         const trigger = ScriptApp.getProjectTriggers().find(t => t.getUniqueId() === triggerId)
