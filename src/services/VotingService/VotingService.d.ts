@@ -32,40 +32,12 @@ declare namespace VotingService {
      */
     function manageElectionLifecycles(): void;
 
-    /**
-     * Opens an election by publishing the ballot and attaching the onSubmit trigger.
-     * @param {Ballot} ballot
-     * @returns {string} The unique ID of the created trigger.
-     */
-    function openElection_(ballot: Ballot): string;
-
-    /**
-     * Attaches the ballotSubmitHandler trigger to the ballot's response spreadsheet.
-     * @param {Ballot} ballot
-     * @returns {string} The unique ID of the created trigger.
-     */
-    function attachOnSubmitTrigger_(ballot: Ballot): string;
 
     /**
      * Cleans up orphaned triggers not associated with active ballots.
      * @param {string[]} activeTriggerIds
      */
     function cleanUpOrphanedTriggers(activeTriggerIds: string[]): void;
-
-    /**
-     * Closes the election by unpublishing the ballot and removing the onSubmit trigger.
-     * @param {Ballot} ballot
-     * @param {string} triggerId
-     * @returns {boolean}
-     */
-    function closeElection_(ballot: Ballot, triggerId: string): boolean;
-
-    /**
-     * Removes the onSubmit trigger by its ID.
-     * @param {string} triggerId
-     * @returns {boolean}
-     */
-    function removeOnSubmitTrigger_(triggerId: string): boolean;
 
     /**
      * Creates a ballot form from a source form and shares results with editors.
