@@ -49,7 +49,7 @@ VotingService.WebApp._renderVotingOptions = function (userEmail, htmlTemplate) {
  */
 VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
     const elections = VotingService.Data.getElectionData();
-    const today = new Date();
+    console.log(`Raw elections data retrieved for user ${userEmail}:`, elections);
     const processedElections = elections.map(election => {
         const result = {};
         try {
@@ -65,21 +65,26 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
             const ballot = VotingService.getBallot(election[FORM_EDIT_URL_COLUMN_NAME]);
             console.log(`ballot ${ballot.getTitle()} is published: ${ballot.isPublished()}`);
             console.log(`ballot ${ballot.getTitle()} is accepting responses: ${ballot.isAcceptingResponses()}`);
-            if (!ballot.isPublished()) {
-                if (today < result.opens) {
+            switch (VotingService.getElectionState(election)) {
+                case ElectionState.UNOPENED:
                     result.status = "Inactive - election not open yet"
-                    return result; // Skip further processing if election has not started
-                }
-                if (today > result.closes) {
+                    break;
+                case ElectionState.CLOSED:
                     result.status = "Inactive - election has closed"
-                    return result; // Skip further processing if election has ended
-                }
-                result.status = "Inactive - election not published yet"   
+                    break;
+                case ElectionState.ACTIVE:
+                    if (!ballot.isPublished() || !ballot.isAcceptingResponses()) {
+                        result.status = "Inactive - ballot is not accepting responses"
+                    }
+                    // Ballot is published
+                    else {
+                        result.url = this._getFormUrlWithTokenField(userEmail, election);
+                        result.status = "Active";
+                    }
+                    break;
+                default:
+                    result.status = "Inactive - unknown status"
             }
-            // Ballot is published
-
-            result.url = this._getFormUrlWithTokenField(userEmail, election);
-            result.status = "Active";
         } catch (error) {
             console.error(`Error processing election  for user ${userEmail}:`, election, error);
             throw new Error(`Error processing election ${election.Title} for user ${userEmail}: ${error.message}`);

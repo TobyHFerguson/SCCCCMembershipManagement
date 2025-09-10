@@ -38,8 +38,8 @@ VotingService.manageElectionLifecycles = function () {
             return;
         }
         if (!election.Start || !election.End) {
-            console.warn(`Election "${election.Title}" is missing a Start and/or an End date. Skipping lifecycle management for this election.`)
-            return
+            console.warn(`Election "${election.Title}" is missing a Start and/or an End date. Skipping lifecycle management for this election.`);
+            return;
         }
 
         const ballot = VotingService.getBallot(ballotId);
@@ -47,29 +47,31 @@ VotingService.manageElectionLifecycles = function () {
             console.warn(`Ballot with ID "${ballotId}" not found for election "${election.Title}". Skipping lifecycle management.`);
             return;
         }
-        const today = new Date();
-        const start = new Date(election.Start);
-        const end = new Date(election.End);
-        if (start <= today && today <= end) {
-            // Active ballot
-            activeBallots.push(ballotId);
-            if (!ballot.isPublished()) {
-                // If the form is not published and the start date has passed, publish it.
-                // Trigger IDs can overflow a spreadsheet number, so store as a string.
-                election.TriggerId = this.openElection_(ballot);
-                console.log(`Opened election "${election.Title}" with ID "${ballotId}" as the start date has passed. Attached trigger ID: ${election.TriggerId} `);
-                changesMade = changesMade || true
-            }
-            return
-        }
-
-        if (ballot.isAcceptingResponses() && end < today) {
-            // If the form is published and the end date has passed, close it.
-            this.closeElection_(this.getBallot(election[FORM_EDIT_URL_COLUMN_NAME]), election.TriggerId);
-            console.log(`Closed election "${election.Title}" with ID "${ballotId}" as the end date has passed.`);
-            election.TriggerId = null; // Clear the trigger ID after closing
-            changesMade = changesMade || true;
-            return
+        switch (this.getElectionState(election)) {
+            case ElectionState.UNOPENED:
+                break;
+            case ElectionState.ACTIVE:
+                // Active ballot
+                activeBallots.push(ballotId);
+                if (!ballot.isPublished()) {
+                    // If the form is not published and the start date has passed, publish it.
+                    // Trigger IDs can overflow a spreadsheet number, so store as a string.
+                    election.TriggerId = this.openElection_(ballot);
+                    console.log(`Opened election "${election.Title}" with ID "${ballotId}" as the start date has passed. Attached trigger ID: ${election.TriggerId} `);
+                    changesMade = changesMade || true
+                }
+                break;
+            case ElectionState.CLOSED:
+                if (ballot.isPublished() || election.TriggerId) {
+                    this.closeElection_(this.getBallot(election[FORM_EDIT_URL_COLUMN_NAME]), election.TriggerId);
+                    console.log(`Closed election "${election.Title}" with ID "${ballotId}" as the end date has passed.`);
+                    election.TriggerId = null; // Clear the trigger ID after closing
+                    changesMade = changesMade || true;
+                }
+                break;
+            default:
+                console.warn(`Unknown state for election "${election.Title}". Skipping lifecycle management.`);
+                break;
         }
 
     });
@@ -77,9 +79,39 @@ VotingService.manageElectionLifecycles = function () {
     VotingService.cleanUpOrphanedTriggers(activeTriggerIds);
     if (changesMade) {
         console.log('Changes made to elections during lifecycle management. Updating elections storage.');
+        // @ts-ignore
         VotingService.Data.storeElectionData(elections);
     }
 }
+
+// @ts-ignore
+const ElectionState = {
+    UNOPENED: 'UNOPENED',
+    ACTIVE: 'ACTIVE',
+    CLOSED: 'CLOSED'
+};
+
+/**
+ *
+ * @param {VotingService.Election} election
+ * @returns {ElectionState}
+ */
+VotingService.getElectionState = function (election) {
+    console.log(`Getting election state for election: ${JSON.stringify(election)}`);
+    if (!election || !election.Start || !election.End) {
+        return ElectionState.UNOPENED;
+    }
+    const today = new Date();
+    const start = new Date(election.Start);
+    const end = new Date(election.End);
+    if (start <= today && today <= end) {
+        return ElectionState.ACTIVE;
+    }
+    if (end < today) {
+        return ElectionState.CLOSED;
+    }
+    return ElectionState.UNOPENED;
+};
 
 /**
  * 

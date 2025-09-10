@@ -1,4 +1,3 @@
-
 /**
  * VotingService namespace for election and ballot management.
 */
@@ -148,6 +147,14 @@ declare namespace VotingService {
      */
     function getTriggerIdForBallot_(ballotId: string): string | null;
 
+   
+    /**
+     * Gets the state of an election (UNOPENED, ACTIVE, CLOSED).
+     * @param {VotingService.Election} election The election object to check.
+     * @returns {ElectionState} The state of the election.
+     */
+    function getElectionState(election: VotingService.Election): ElectionState;
+
     type DataType = {
         /**
          * Gets the fiddler for the Elections sheet.
@@ -197,7 +204,11 @@ declare namespace VotingService {
          */
         getFiddlerForValidResults(triggerId: string): any | undefined;
     }
-   
-
 
 }
+
+ /**
+     * Represents the possible states of an election.
+     */
+   declare enum ElectionState { UNOPENED = "UNOPENED", ACTIVE = "ACTIVE", CLOSED = "CLOSED" }
+
