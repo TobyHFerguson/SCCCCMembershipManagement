@@ -13,6 +13,7 @@ const RESULTS_SUFFIX = '- Results';
 const TOKEN_ENTRY_FIELD_TITLE = 'VOTING TOKEN'; // Adjust
 const TOKEN_HELP_TEXT = 'This question is used to validate your vote. Do not modify this field.';
 const CONFIRMATION_MESSAGE = 'Your vote has been recorded successfully. You will be sent an email indicating how your vote was handled. Thank you for participating!';
+const INVALID_RESULTS_SHEET_NAME = 'Invalid Results';
 
 // Helper to extract components from the pre-filled URL (used by handleSheetEdit and renderVotingOptions)
 VotingService.getBallotFolderId = function () {
@@ -56,14 +57,14 @@ VotingService.manageElectionLifecycles = function () {
                 if (!ballot.isPublished()) {
                     // If the form is not published and the start date has passed, publish it.
                     // Trigger IDs can overflow a spreadsheet number, so store as a string.
-                    election.TriggerId = this.openElection_(ballot);
+                    election.TriggerId = this.openElection_(ballot, election);
                     console.log(`Opened election "${election.Title}" with ID "${ballotId}" as the start date has passed. Attached trigger ID: ${election.TriggerId} `);
                     changesMade = changesMade || true
                 }
                 break;
             case ElectionState.CLOSED:
                 if (ballot.isPublished() || election.TriggerId) {
-                    this.closeElection_(this.getBallot(election[FORM_EDIT_URL_COLUMN_NAME]), election.TriggerId);
+                    this.closeElection_(this.getBallot(election[FORM_EDIT_URL_COLUMN_NAME]), election);
                     console.log(`Closed election "${election.Title}" with ID "${ballotId}" as the end date has passed.`);
                     election.TriggerId = null; // Clear the trigger ID after closing
                     changesMade = changesMade || true;
@@ -116,6 +117,7 @@ VotingService.getElectionState = function (election) {
 /**
  * 
  * @param {VotingService.Ballot} ballot Ballot for which the election is being opened.
+ * @param {VotingService.Election} election Election being opened.
  * @returns {string} The unique ID of the created trigger.
  * 
  * @description Opens the election by setting the ballot to accept responses and attaching the onSubmit trigger.
@@ -124,13 +126,30 @@ VotingService.getElectionState = function (election) {
  * 
  * @throws {Error} If there is an issue attaching the trigger or if the form does not have a valid destination.
  */
-VotingService.openElection_ = function (ballot) {
+VotingService.openElection_ = function (ballot, election) {
+    const editors = election[EDITORS_COLUMN_NAME]
+    this.emailEditorsAboutOpening_(editors, ballot);
     ballot.setPublished(true);
     return this.attachOnSubmitTrigger_(ballot)
 }
+
 /**
- * 
- * @param {GoogleAppsScript.Forms.Form} ballot Ballot to which a trigger is to be attached.
+ *
+ * @param {string} editors - comma-separated list of editor emails
+ * @param {VotingService.Ballot} ballot
+ */
+VotingService.emailEditorsAboutOpening_ = function (editors, ballot) {
+    const message = {
+        to: editors,
+        subject: `Election '${ballot.getTitle()}' is now open`,
+        body: `The ${ballot.getTitle()} election is now open and accepting responses. You can view the form at: ${ballot.getEditUrl()}`
+    };
+    MailApp.sendEmail(message)
+}
+
+/**
+ *
+ * @param {VotingService.Ballot} ballot Ballot to which a trigger is to be attached.
  * @returns {string} The unique ID of the created trigger.
  * 
  * @description Attaches the votingFormSubmitHandler trigger to the specified ballot form's underlying response spreadsheet.
@@ -170,29 +189,72 @@ VotingService.cleanUpOrphanedTriggers = function (activeTriggerIds) {
 /**
  * 
  * @param {VotingService.Ballot} ballot - the ballot whose election is being closed.
- * @param {string} triggerId - the ID of the trigger associated with this election.
- * @returns true if the election was successfully closed, false otherwise.
+ * @param {VotingService.Election} election - the election being closed.
  * 
- * @description Closes the election by setting the ballot to not accept responses and removing the onSubmit trigger.
+ * @description Closes the election by setting the ballot to not accept responses, emailing the election editors, and removing the onSubmit trigger.
  * This is typically called when the election's end date has passed.
  * It updates the election's status and cleans up the trigger.
  * 
  * @throws {Error} If there is an issue removing the trigger.
  */
-VotingService.closeElection_ = function (ballot, triggerId) {
+VotingService.closeElection_ = function (ballot, election) {
     ballot.setPublished(false);
-    return this.removeOnSubmitTrigger_(triggerId)
+    const editors = election[EDITORS_COLUMN_NAME];
+    this.emailEditorsAboutClosure_(editors, ballot);
+    this.removeOnSubmitTrigger_(election.TriggerId)
 }
 
 /**
+ *
+ * @param {string} editors - comma-separated list of editor emails
+ * @param {VotingService.Ballot} ballot
+ */
+VotingService.emailEditorsAboutClosure_ = function (editors, ballot) {
+    const closureMessage = { to: editors, ...this.getClosureMessage_(ballot) };
+    MailApp.sendEmail(closureMessage);
+}
+
+/**
+ *
+ * @param {VotingService.Ballot} ballot
+ * @returns {GoogleAppsScript.Mail.MailAdvancedParameters}
+ */
+VotingService.getClosureMessage_ = function (ballot) {
+    if (this.manualCountingRequired_(ballot)) {
+        return {
+            subject: `Election '${ballot.getTitle()}' has closed - Manual Counting Required`,
+            body: `The ${ballot.getTitle()} election has now closed. The form is no longer accepting responses. The results sheet contains invalid votes that must be manually counted. You can view the form at: ${ballot.getEditUrl()}`
+        };
+    }
+    return {
+        subject: `Election '${ballot.getTitle()}' has closed`,
+        body: `The ${ballot.getTitle()} election has now closed. The form is no longer accepting responses. All votes are valid and you can use the Form Response graph as the results. You can view the form at: ${ballot.getEditUrl()}`
+    };
+}
+
+/**
+ *
+ * @param {VotingService.Ballot} ballot
+ * @returns {boolean}
+ */
+VotingService.manualCountingRequired_ = function (ballot) {
+    const spreadsheet = SpreadsheetApp.openById(ballot.getDestinationId());
+    const sheets = spreadsheet.getSheets();
+    return sheets.find(sheet => sheet.getName() === INVALID_RESULTS_SHEET_NAME) !== undefined;
+}
+/**
  * 
- * @param {string} triggerId - the trigger ID to remove.
+ * @param {string | undefined} triggerId - the trigger ID to remove.
  * @returns {boolean} - true if the trigger was successfully removed, false if it was not found.
  * 
  * @description Removes the onSubmit trigger associated with the given trigger ID.
  * This is useful for cleaning up triggers when an election ends or when a form is no longer needed.
  */
 VotingService.removeOnSubmitTrigger_ = function (triggerId) {
+    if (!triggerId) {
+        console.warn(`VotingService.removeOnSubmitTrigger_: No trigger ID provided.`);
+        return false;
+    }
     const triggers = ScriptApp.getProjectTriggers();
     const trigger = triggers.find(t => t.getUniqueId() === triggerId);
     if (trigger) {

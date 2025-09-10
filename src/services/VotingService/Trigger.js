@@ -184,7 +184,7 @@ VotingService.Trigger = {
     addInvalidVote_: function (vote, spreadsheet) {
         try {
             //@ts-ignore
-            const invalidFiddler = bmPreFiddler.PreFiddler().getFiddler({ id: spreadsheet.getId(), sheetName: 'Invalid Results', createIfMissing: true });
+            const invalidFiddler = bmPreFiddler.PreFiddler().getFiddler({ id: spreadsheet.getId(), sheetName: INVALID_RESULTS_SHEET_NAME, createIfMissing: true });
             const votes = invalidFiddler.getData()
             votes.push(vote);
             invalidFiddler.setData(votes).dumpValues();
