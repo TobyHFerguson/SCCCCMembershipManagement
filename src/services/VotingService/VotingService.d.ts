@@ -1,51 +1,3 @@
-/**
-     * The default ballot folder ID.
-     */
-declare const BALLOT_FOLDER_ID: string;
-/**
- * The column name for the vote title.
- */
-declare const VOTE_TITLE_COLUMN_NAME: string;
-/**
- * The column name for the voter email.
- */
-declare const VOTER_EMAIL_COLUMN_NAME: string;
-/**
- * The column name for the form edit URL.
- */
-declare const FORM_EDIT_URL_COLUMN_NAME: string;
-/**
- * The column name for editors.
- */
-declare const EDITORS_COLUMN_NAME: string;
-/**
- * The column name for trigger status.
- */
-declare const TRIGGER_STATUS_COLUMN_NAME: string;
-/**
- * The ID of the central vote data sheet.
- */
-declare const VOTE_DATA_SHEET_ID: string;
-/**
- * The name of the registration sheet.
- */
-declare const REGISTRATION_SHEET_NAME: string;
-/**
- * The suffix for results sheets.
- */
-declare const RESULTS_SUFFIX: string;
-/**
- * The title of the token entry field.
- */
-declare const TOKEN_ENTRY_FIELD_TITLE: string;
-/**
- * The help text for the token entry field.
- */
-declare const TOKEN_HELP_TEXT: string;
-/**
- * The confirmation message shown after voting.
- */
-declare const CONFIRMATION_MESSAGE: string;
 
 /**
  * VotingService namespace for election and ballot management.
@@ -56,7 +8,7 @@ declare namespace VotingService {
  */
     interface Election {
         Title: string;
-        [FORM_EDIT_URL_COLUMN_NAME]: string;
+        'Form Edit URL': string;
         Start?: string | Date;
         End?: string | Date;
         TriggerId?: string;
