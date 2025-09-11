@@ -1,13 +1,4 @@
-/**
- * @typedef Election
- * @property {string} [FORM_EDIT_URL_COLUMN_NAME] - The unique identifier for the election, typically the Google Form ID.
- * @property {string} Title - The title of the election to be displayed to users.
- * @property {Array<string>} Organizers - A list of email addresses of the election organizers.
- * @property {Date} Start - The start date of the election, when voting can commence.
- * @property {Date} End - The end date of the election, when voting stops.
- * @property {Array<string>} Voters - A list of email addresses of members who have voted in this election.
- * @property {String} TriggerId - The ID of the trigger associated with this election, if applicable.
- */
+
 
 /**
  * @typedef {Object} ProcessedElection
@@ -26,32 +17,6 @@
  * * @property {function(): Array<Election>} getElections - Retrieves a list of all elections.
  * * @property {function(Election): void} addElection - Adds a new election to the storage.
  * * @property {function(string): [Election]} storeElections - Stores a list of elections.
- */
-
-/**
- * @typedef {Object} VotingService
- * @property {string} TOKEN_QUESTION_TITLE - The title of the question in the voting form that holds the token.
- * @property {string} name - The name of the voting service.
- * @property {string} service - The service identifier for the voting service.
- * @property {Object} WebApp - Contains methods related to the web application interface of the voting service.
- * @property {Object} Trigger - Contains methods related to triggers and event handling for the voting service.
- * @property {Object} Data - An interface for managing election data, including retrieving and storing elections.
- * @property {function(string): GoogleAppsScript.Forms.Form} getBallot - Retrieves a ballot form by its ID.
- * @property {function(string): object} createBallotForm - Creates a new ballot form from a form edit URL and returns the title and new form's edit URL
- * @property {function(): void} manageElectionLifecycles - Manages the lifecycle of elections, opening and closing them based on their start and end dates.
- * @property {function(Election): string} attachOnSubmitTrigger - Attaches an on-submit trigger to a ballot form.
- * @property {function(Election, string): boolean} closeElection - Closes an election by setting it to not accepting responses and removing its trigger.
- * @property {function(string): boolean} removeOnSubmitTrigger - Removes the on-submit trigger associated with a given trigger ID.
- * @property {function(string): string} getTriggerId - Retrieves the unique ID of a trigger associated with a form.
- * @property {function(Election): void} openElection - Opens an election by setting it to accepting responses and attaching the necessary trigger.
- * @property {function(Election): void} closeElection_ - Closes an election by setting it to not accepting responses and removing its trigger.
- * @property {function(string): void} attachOnSubmitTrigger_ - Attaches the votingFormSubmitHandler trigger to a specified form ID.
- * @property {function(string): string} getForm - Retrieves a Google Form by its ID.
- * @property {function(string): boolean} isValidFormId - Checks if a given form ID is valid.
- * @property {function(): Array<ProcessedElection>} getProcessedElections - Retrieves a list of processed elections with formatted dates and statuses.
- * @property {ElectionRegistrationManager} Data - An interface for managing election registrations.
- * 
- * @description The VotingService provides functionalities for managing elections, collecting votes, and handling voting-related operations.
  */
 
 /**

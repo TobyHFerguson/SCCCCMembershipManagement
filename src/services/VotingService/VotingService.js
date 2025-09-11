@@ -1,6 +1,7 @@
-/// <reference path="./VotingService.d.ts" />
-// @ts-check
 
+/// <reference path="./VotingService.d.ts" />
+// // @ts-check
+// @ts-ignore
 const BALLOT_FOLDER_ID = '1ncuM7AyS9HtqtM842SUjHnhLG6_Pa_RB';
 const VOTE_TITLE_COLUMN_NAME = 'Title';
 const VOTER_EMAIL_COLUMN_NAME = 'Voter Email'
@@ -14,7 +15,8 @@ const TOKEN_ENTRY_FIELD_TITLE = 'VOTING TOKEN'; // Adjust
 const TOKEN_HELP_TEXT = 'This question is used to validate your vote. Do not modify this field.';
 const CONFIRMATION_MESSAGE = 'Your vote has been recorded successfully. You will be sent an email indicating how your vote was handled. Thank you for participating!';
 const INVALID_RESULTS_SHEET_NAME = 'Invalid Results';
-
+const FORM_RESPONSES_SHEET_NAME = 'Form Responses 1'; // Default name for form responses sheet
+const VALIDATED_RESULTS_SHEET_NAME = 'Validated Results';
 // Helper to extract components from the pre-filled URL (used by handleSheetEdit and renderVotingOptions)
 VotingService.getBallotFolderId = function () {
     const ffi = PropertiesService.getScriptProperties().getProperty('BALLOT_FOLDER_ID') || BALLOT_FOLDER_ID;
@@ -80,12 +82,10 @@ VotingService.manageElectionLifecycles = function () {
     VotingService.cleanUpOrphanedTriggers(activeTriggerIds);
     if (changesMade) {
         console.log('Changes made to elections during lifecycle management. Updating elections storage.');
-        // @ts-ignore
         VotingService.Data.storeElectionData(elections);
     }
 }
 
-// @ts-ignore
 const ElectionState = {
     UNOPENED: 'UNOPENED',
     ACTIVE: 'ACTIVE',
@@ -95,7 +95,7 @@ const ElectionState = {
 /**
  *
  * @param {VotingService.Election} election
- * @returns {ElectionState}
+ * @returns {ElectionState} 
  */
 VotingService.getElectionState = function (election) {
     console.log(`Getting election state for election: ${JSON.stringify(election)}`);
@@ -202,8 +202,15 @@ VotingService.closeElection_ = function (ballot, election) {
     const editors = election[EDITORS_COLUMN_NAME];
     this.emailEditorsAboutClosure_(editors, ballot);
     this.removeOnSubmitTrigger_(election.TriggerId)
+    this.deleteTokensForBallot_(ballot);
 }
 
+VotingService.deleteTokensForBallot_ = function (ballot) {
+    // Tokens are single-use, so no need to keep them after the election ends.
+    const spreadsheet = SpreadsheetApp.openById(ballot.getDestinationId());
+    const tokensToDelete = VotingService.Data.getTokens(spreadsheet.getId());
+    Common.Auth.TokenStorage.deleteTokens(tokensToDelete);
+}
 /**
  *
  * @param {string} editors - comma-separated list of editor emails

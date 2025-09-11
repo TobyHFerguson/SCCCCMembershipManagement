@@ -3,6 +3,8 @@
  */
 declare namespace Common.Data.Storage {
     namespace SpreadsheetManager {
+        function getFiddler(sheetName: 'Tokens'): Fiddler<TokenDataType>;
+        function getFiddler(sheetName: 'Elections'): Fiddler<VotingService.Election>;
         /**
          * Gets a fiddler based on the sheet name.
          * @param {string} sheetName - The name of the sheet.

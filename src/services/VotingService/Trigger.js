@@ -79,7 +79,7 @@ VotingService.Trigger = {
         const fiddler = VotingService.Data.getFiddlerForValidResults(e.triggerUid)
         const votes = fiddler.getData();
 
-        if (!this.voteIsValid_(vote, votes, Common.Auth.TokenManager.consumeMUT)) {
+        if (!this.voteIsValid_(vote, votes, Common.Auth.TokenStorage.consumeToken)) {
             this.addInvalidVote_(vote, fiddler.getSheet().getParent());
             return
         }
@@ -98,26 +98,31 @@ VotingService.Trigger = {
      * 
      * @param {Vote} vote - the vote to be validated
      * @param {Vote[]} votes - the array of votes already recorded
-     * @param {function} consumeMUT - function to consume the multi-use token
+     * @param {function} consumeToken - function to consume the multi-use token
      * @returns {boolean} true if the vote is valid, false otherwise
      * 
      * @description Validates a vote by checking if the token is valid and not expired.
      * It also checks for duplicate votes based on the voter's email. 
      * In addition, it adds the voter's email to the vote object for recording.
      */
-    voteIsValid_: function (vote, votes, consumeMUT) {
+    voteIsValid_: function (vote, votes, consumeToken) {
         console.log('Processing vote:', vote);
         vote[VOTER_EMAIL_COLUMN_NAME] = '';
-
-        const email = consumeMUT(vote[TOKEN_ENTRY_FIELD_TITLE]);
-        delete vote[TOKEN_ENTRY_FIELD_TITLE]
-
-        if (!email) {
-            console.warn('Invalid vote: ', vote, ' - token not found or expired');
+        const token = vote[TOKEN_ENTRY_FIELD_TITLE];
+        const tokenData = Common.Auth.TokenStorage.getTokenData().find((tokenData) => tokenData.Token === token) || null;
+        if (!tokenData) {
+            console.warn('Invalid vote: ', vote, ' - token not found');
             return false
         }
-
+        // We have a tokenData object 
+        const email = tokenData.Email;
         vote[VOTER_EMAIL_COLUMN_NAME] = email; // Add the email to the vote object for recording
+        delete vote[TOKEN_ENTRY_FIELD_TITLE] // no need to keep the token in the vote record
+        if (tokenData.Used) {
+            console.warn('Invalid vote: ', vote, ' - token already used');
+            return false
+        }
+        consumeToken(token); // Mark the token as used
         const duplicates = votes.some(entry => entry[VOTER_EMAIL_COLUMN_NAME] === email);
         if (duplicates) {
             console.warn(`Duplicate vote detected for email: ${email}. Vote will not be recorded.`);
@@ -191,7 +196,9 @@ VotingService.Trigger = {
             this.setAllSheetsBackgroundToLightRed_(spreadsheet)
             const electionTitle = this.getElectionTitle_(spreadsheet)
             this.sendManualCountNeededEmail_(this.getSpreadsheetUsers_(spreadsheet).join(','), vote, electionTitle);
-            this.sendInvalidVoteEmail_(vote[VOTER_EMAIL_COLUMN_NAME], electionTitle)
+            if (vote[VOTER_EMAIL_COLUMN_NAME]) {
+                this.sendInvalidVoteEmail_(vote[VOTER_EMAIL_COLUMN_NAME], electionTitle)
+            }
         } catch (error) {
             console.error(error.stack)
         }
@@ -213,7 +220,7 @@ VotingService.Trigger = {
         const message = {
             to: to,
             subject: `Election '${electionTitle}' - manual count needed`,
-            body: `In election ${electionTitle} this vote occurred with no token ${JSON.stringify(vote)}. A manual count will now be needed`.trim()
+            body: `In election ${electionTitle} this vote ${vote[TOKEN_ENTRY_FIELD_TITLE] ? 'is a duplicate' : 'has no token'} ${JSON.stringify(vote)}. A manual count will now be needed`.trim()
         }
         MailApp.sendEmail(message);
         console.warn('Manual count needed email sent:', message);
