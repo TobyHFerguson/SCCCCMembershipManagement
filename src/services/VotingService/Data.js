@@ -1,7 +1,10 @@
+/// <reference path="./VotingService.d.ts" />
+/// <reference path="../../common/data/storage/SpreadsheetManager.d.ts" />
+/// <reference path="../../fiddler.d.ts" />
 //@ts-check
 VotingService.Data = {
     /**
-     * @returns {any} Fiddler instance for the Elections sheet.
+     * @returns {Fiddler<VotingService.Election>} Fiddler instance for the Elections sheet.
      */
     getFiddler_: function () {
         return Common.Data.Storage.SpreadsheetManager.getFiddler('Elections');
@@ -51,10 +54,26 @@ VotingService.Data = {
     },
     /**
      * 
+     * @param {string} spreadsheetId | the id of the spreadsheet to be searched
+     * @returns {string[]} tokens an array of the tokens in the given spreadsheet
+     */
+    getTokens: function (spreadsheetId) {
+        const fiddler = bmPreFiddler.PreFiddler().getFiddler({ id: spreadsheetId, sheetName: FORM_RESPONSES_SHEET_NAME, createIfMissing: false });
+        if (!fiddler) {
+            return [];
+        }
+        if (!fiddler) {
+            return [];
+        }
+        const tokens = fiddler.getData().map(row => row[TOKEN_ENTRY_FIELD_TITLE]);
+        return tokens;
+    },
+    /**
+     * 
      * @param {string} triggerId The triggerId to be used
      * @returns {string | undefined}  the id of the results spreadsheet for this trigger, or undefined if it can't be found
      */
-    getResultIdForTrigger_: function(triggerId) {
+    getResultIdForTrigger_: function (triggerId) {
         const trigger = ScriptApp.getProjectTriggers().find(t => t.getUniqueId() === triggerId)
         if (!trigger) {
             return undefined
@@ -67,8 +86,8 @@ VotingService.Data = {
      * @param {string} triggerId the triggerId to be used
      * @returns A fiddler attached to the valid results sheet, or undefined
      */
-    getFiddlerForValidResults: function(triggerId) {
-         const resultsId = this.getResultIdForTrigger_(triggerId)
+    getFiddlerForValidResults: function (triggerId) {
+        const resultsId = this.getResultIdForTrigger_(triggerId)
         if (!resultsId) {
             return undefined
         }

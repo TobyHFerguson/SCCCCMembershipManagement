@@ -4,8 +4,7 @@ Common.Auth.Utils = {
         email = email.toLowerCase().trim(); // Normalize the email address
         const validEmails = Common.Data.Access.getEmailAddresses();
         if (validEmails.includes(email)) {
-            const token = Common.Auth.TokenManager.generateToken();
-            Common.Auth.TokenStorage.storeToken(email, token);
+            const token = Common.Auth.TokenStorage.generateAndStoreToken(email);
             const accessLink = ScriptApp.getService().getUrl() + '?token=' + token + '&service=' + service;
             this._sendEmail(email, accessLink, service);
         } else {

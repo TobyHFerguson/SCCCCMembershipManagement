@@ -18,5 +18,5 @@
     "include": [
         "**/*.js",
         "**/*.d.ts"
-    ]
+, "src/common/auth/Auth.ts"    ]
 }
