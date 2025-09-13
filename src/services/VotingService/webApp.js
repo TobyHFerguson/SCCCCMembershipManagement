@@ -1,6 +1,8 @@
 
 // @ts-check
 // Always arrive here with a validated token converted to the userEmail
+/// <reference path="./Auth.d.ts" />
+/// <reference path="./VotingService.d.ts" />
 /**
  * 
  * @param {GoogleAppsScript.Events.DoGet} e 
@@ -61,7 +63,6 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
                 return result; // Skip further processing if user has already voted
             }
 
-            // @ts-ignore
             const ballot = VotingService.getBallot(election[FORM_EDIT_URL_COLUMN_NAME]);
             console.log(`ballot ${ballot.getTitle()} is published: ${ballot.isPublished()}`);
             console.log(`ballot ${ballot.getTitle()} is accepting responses: ${ballot.isAcceptingResponses()}`);
@@ -108,8 +109,8 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
  * @throws {Error} If there is an issue generating the prefilled URL or storing the token.
  */
 VotingService.WebApp._getFormUrlWithTokenField = function (userEmail, election) {
-    const token = Common.Auth.TokenStorage.generateAndStoreToken(userEmail);
-    // @ts-ignore
+    const spreadsheetId = VotingService.getSpreadsheetIdFromElection(election);
+    const token = VotingService.Auth.generateAndStoreToken(userEmail,spreadsheetId).Token;
     const preFilledUrl = VotingService.createPrefilledUrlWithTitle(election[FORM_EDIT_URL_COLUMN_NAME], TOKEN_ENTRY_FIELD_TITLE, token);
     return preFilledUrl
 }

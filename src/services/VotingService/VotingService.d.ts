@@ -127,6 +127,14 @@ declare namespace VotingService {
      */
     function getElectionState(election: VotingService.Election): ElectionState;
 
+    /**
+     * 
+     * @param election The election object.
+     * @returns The spreadsheet ID from the election.
+     * @throws {Error} If no spreadsheet ID is found.
+     */
+    function getSpreadsheetIdFromElection(election: Election): string;
+
     type DataType = {
         /**
          * Gets the fiddler for the Elections sheet.
@@ -161,13 +169,6 @@ declare namespace VotingService {
          * @returns {string[]} Array of voter emails.
          */
         getVoters_(election: Election): string[];
-
-        /**
-         * Gets the result spreadsheet ID for the given trigger ID.
-         * @param {string} triggerId Trigger ID.
-         * @returns {string | undefined} Spreadsheet ID or undefined if not found.
-         */
-        getResultIdForTrigger_(triggerId: string): string | undefined;
 
         /**
          * Gets a fiddler attached to the valid results sheet for the given trigger ID.
