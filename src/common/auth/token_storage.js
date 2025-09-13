@@ -59,18 +59,19 @@ Common.Auth.TokenStorage = {
      * Consume a token by marking it as used.
      *
      * @param {string} token - The token string to consume.
-     * @returns {string | null} The email associated with the token if found and marked as used, otherwise null.
+     * @returns {TokenDataType | undefined} A copy of the token data if found, otherwise undefined.
+     * The underlying token entry is marked as used if it was found and not already used.
      */
     consumeToken:function (token) {
         const tokenFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens');
         const tokens = tokenFiddler.getData();
         const td = tokens.find((tokenData) => tokenData.Token === token)
+        const tokenToBeReturned = td ? { ...td } : undefined; // Return a copy to avoid external mutation
         if (td && !td.Used) {
             td.Used = true;
             tokenFiddler.setData(tokens).dumpValues();
-            return td.Email
         }
-        return null
+        return tokenToBeReturned
     },
     /**
      * Delete one or more tokens from storage.
