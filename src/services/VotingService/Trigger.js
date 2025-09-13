@@ -98,7 +98,7 @@ VotingService.Trigger = {
      * 
      * @param {Vote} vote - the vote to be validated
      * @param {Vote[]} votes - the array of votes already recorded
-     * @param {function} consumeToken - function to consume the multi-use token
+     * @param {function} consumeToken - function to consume the token
      * @returns {boolean} true if the vote is valid, false otherwise
      * 
      * @description Validates a vote by checking if the token is valid and not expired.
@@ -109,7 +109,7 @@ VotingService.Trigger = {
         console.log('Processing vote:', vote);
         vote[VOTER_EMAIL_COLUMN_NAME] = '';
         const token = vote[TOKEN_ENTRY_FIELD_TITLE];
-        const tokenData = Common.Auth.TokenStorage.getTokenData().find((tokenData) => tokenData.Token === token) || null;
+        const tokenData = consumeToken(token);
         if (!tokenData) {
             console.warn('Invalid vote: ', vote, ' - token not found');
             return false
@@ -117,12 +117,11 @@ VotingService.Trigger = {
         // We have a tokenData object 
         const email = tokenData.Email;
         vote[VOTER_EMAIL_COLUMN_NAME] = email; // Add the email to the vote object for recording
-        delete vote[TOKEN_ENTRY_FIELD_TITLE] // no need to keep the token in the vote record
         if (tokenData.Used) {
             console.warn('Invalid vote: ', vote, ' - token already used');
             return false
         }
-        consumeToken(token); // Mark the token as used
+        delete vote[TOKEN_ENTRY_FIELD_TITLE] // no need to keep the token in the vote record
         const duplicates = votes.some(entry => entry[VOTER_EMAIL_COLUMN_NAME] === email);
         if (duplicates) {
             console.warn(`Duplicate vote detected for email: ${email}. Vote will not be recorded.`);
