@@ -19,34 +19,6 @@ describe('Trigger', () => {
         });
     });
 
-    describe('voteIsValid_', () => {
-        const consumeMUT = jest.fn();
-        let votes;
-        beforeEach(() => {
-            consumeMUT.mockReset();
-            votes = [{ [VOTER_EMAIL_COLUMN_NAME]: 'test@example.com' }];
-        });
-
-        it('returns false if token is invalid', () => {
-            consumeMUT.mockReturnValue('');
-            const vote = { TOKEN: ['badtoken'] };
-            expect(Trigger.voteIsValid_(vote, votes, consumeMUT)).toBe(false);
-        });
-
-        it('returns false if duplicate vote', () => {
-            consumeMUT.mockReturnValue('test@example.com');
-            const vote = { TOKEN: ['token'] };
-            expect(Trigger.voteIsValid_(vote, votes, consumeMUT)).toBe(false);
-        });
-
-        it('returns true for valid vote', () => {
-            consumeMUT.mockReturnValue('unique@example.com');
-            const vote = { TOKEN: ['token'] };
-            expect(Trigger.voteIsValid_(vote, votes, consumeMUT)).toBe(true);
-            expect(vote[VOTER_EMAIL_COLUMN_NAME]).toBe('unique@example.com');
-        });
-    });
-
     describe('getElectionTitle_', () => {
         it('removes RESULTS_SUFFIX from spreadsheet name', () => {
             const spreadsheet = { getName: () => 'Election 2024 - Results' };

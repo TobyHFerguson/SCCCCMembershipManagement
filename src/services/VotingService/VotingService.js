@@ -114,6 +114,18 @@ VotingService.getElectionState = function (election) {
     return ElectionState.UNOPENED;
 };
 
+VotingService.getSpreadsheetIdFromElection = function (election) {
+    const ballot = this.getBallot(election[FORM_EDIT_URL_COLUMN_NAME]);
+    if (!ballot) {
+        throw new Error(`Ballot with ID "${election[FORM_EDIT_URL_COLUMN_NAME]}" not found for election "${election.Title}".`);
+    }
+    const destinationId = ballot.getDestinationId();
+    if (!destinationId) {
+        throw new Error(`Ballot with ID "${election[FORM_EDIT_URL_COLUMN_NAME]}" does not have a destination spreadsheet set.`);
+    }
+    return destinationId;
+}
+
 /**
  * 
  * @param {VotingService.Ballot} ballot Ballot for which the election is being opened.
@@ -199,18 +211,12 @@ VotingService.cleanUpOrphanedTriggers = function (activeTriggerIds) {
  */
 VotingService.closeElection_ = function (ballot, election) {
     ballot.setPublished(false);
+    this.removeOnSubmitTrigger_(election.TriggerId)
+    VotingService.Auth.deleteAllTokens(VotingService.getSpreadsheetIdFromElection(election));
     const editors = election[EDITORS_COLUMN_NAME];
     this.emailEditorsAboutClosure_(editors, ballot);
-    this.removeOnSubmitTrigger_(election.TriggerId)
-    this.deleteTokensForBallot_(ballot);
 }
 
-VotingService.deleteTokensForBallot_ = function (ballot) {
-    // Tokens are single-use, so no need to keep them after the election ends.
-    const spreadsheet = SpreadsheetApp.openById(ballot.getDestinationId());
-    const tokensToDelete = VotingService.Data.getTokens(spreadsheet.getId());
-    Common.Auth.TokenStorage.deleteTokens(tokensToDelete);
-}
 /**
  *
  * @param {string} editors - comma-separated list of editor emails
@@ -347,6 +353,7 @@ VotingService.getBallot = function (id) {
     }
     return form
 }
+
 /**
  * Creates a published copy of a Google Form in the given folder
  *

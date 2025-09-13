@@ -9,7 +9,9 @@
             "./"
         ],
         "types": [
-            "google-apps-script"
+            "google-apps-script",
+            "jest",
+            "node",
         ],
         "lib": [
             "esnext"
@@ -17,6 +19,7 @@
     },
     "include": [
         "**/*.js",
-        "**/*.d.ts"
-, "src/common/auth/Auth.ts"    ]
+        "**/*.d.ts",
+        "jest-globals.d.ts"
+    ]
 }

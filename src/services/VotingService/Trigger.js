@@ -75,60 +75,46 @@ VotingService.Trigger = {
      */
     ballotSubmitHandler: function (e) {
         console.log('Ballot submit handler triggered', e.namedValues);
+        console.log('Trigger event', e.source.getId(), e.triggerUid);
+        const spreadsheetId = e.source.getId();
         const vote = this.firstValues_(e.namedValues)
-        const fiddler = VotingService.Data.getFiddlerForValidResults(e.triggerUid)
-        const votes = fiddler.getData();
 
-        if (!this.voteIsValid_(vote, votes, Common.Auth.TokenStorage.consumeToken)) {
-            this.addInvalidVote_(vote, fiddler.getSheet().getParent());
-            return
-        }
-
-        // Get here with a valid vote
-
-        delete vote[TOKEN_ENTRY_FIELD_TITLE]; // Remove the token field from the vote object
-        console.log('recording valid vote', vote);
-        votes.push(vote);
-        fiddler.setData(votes).dumpValues();
-        this.sendValidVoteEmail_(vote[VOTER_EMAIL_COLUMN_NAME], this.getElectionTitle_(fiddler.getSheet().getParent()));
-        return
-
-    },
-    /**
-     * 
-     * @param {Vote} vote - the vote to be validated
-     * @param {Vote[]} votes - the array of votes already recorded
-     * @param {function} consumeToken - function to consume the token
-     * @returns {boolean} true if the vote is valid, false otherwise
-     * 
-     * @description Validates a vote by checking if the token is valid and not expired.
-     * It also checks for duplicate votes based on the voter's email. 
-     * In addition, it adds the voter's email to the vote object for recording.
-     */
-    voteIsValid_: function (vote, votes, consumeToken) {
-        console.log('Processing vote:', vote);
-        vote[VOTER_EMAIL_COLUMN_NAME] = '';
         const token = vote[TOKEN_ENTRY_FIELD_TITLE];
-        const tokenData = consumeToken(token);
+        const tokenData = VotingService.Auth.consumeToken(token, spreadsheetId);
+        const fiddler = VotingService.Data.getFiddlerForValidResults(spreadsheetId)
+
         if (!tokenData) {
             console.warn('Invalid vote: ', vote, ' - token not found');
-            return false
+            this.addInvalidVote_(vote, fiddler.getSheet().getParent());
+            return;
         }
         // We have a tokenData object 
         const email = tokenData.Email;
-        vote[VOTER_EMAIL_COLUMN_NAME] = email; // Add the email to the vote object for recording
         if (tokenData.Used) {
             console.warn('Invalid vote: ', vote, ' - token already used');
-            return false
+            this.addInvalidVote_(vote, fiddler.getSheet().getParent());
+            this.sendInvalidVoteEmail_(email, this.getElectionTitle_(fiddler.getSheet().getParent()));
+            return;
         }
-        delete vote[TOKEN_ENTRY_FIELD_TITLE] // no need to keep the token in the vote record
-        const duplicates = votes.some(entry => entry[VOTER_EMAIL_COLUMN_NAME] === email);
+
+        const allTokenData = VotingService.Auth.getAllTokens(spreadsheetId);
+        const duplicates = allTokenData.filter(td => td.Token !== token).some(td => td.Email === email);
         if (duplicates) {
             console.warn(`Duplicate vote detected for email: ${email}. Vote will not be recorded.`);
-            return false
+            this.addInvalidVote_(vote, fiddler.getSheet().getParent());
+            this.sendInvalidVoteEmail_(email, this.getElectionTitle_(fiddler.getSheet().getParent()));
+            return;
         }
-        return true
+
+        // console.log('recording valid vote', vote);
+        const votes = fiddler.getData();
+        votes.push(vote);
+        fiddler.setData(votes).dumpValues();
+        this.sendValidVoteEmail_(email, this.getElectionTitle_(fiddler.getSheet().getParent()));
+        return;
+
     },
+    
     /**
      * @param {object} spreadsheet
      * @param {function():string} spreadsheet.getName 
@@ -195,9 +181,6 @@ VotingService.Trigger = {
             this.setAllSheetsBackgroundToLightRed_(spreadsheet)
             const electionTitle = this.getElectionTitle_(spreadsheet)
             this.sendManualCountNeededEmail_(this.getSpreadsheetUsers_(spreadsheet).join(','), vote, electionTitle);
-            if (vote[VOTER_EMAIL_COLUMN_NAME]) {
-                this.sendInvalidVoteEmail_(vote[VOTER_EMAIL_COLUMN_NAME], electionTitle)
-            }
         } catch (error) {
             console.error(error.stack)
         }
