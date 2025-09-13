@@ -34,13 +34,13 @@ describe('Trigger', () => {
         });
 
         it('returns false if duplicate vote', () => {
-            consumeMUT.mockReturnValue('test@example.com');
+            consumeMUT.mockReturnValue({Email:'test@example.com', Used: true});
             const vote = { TOKEN: ['token'] };
             expect(Trigger.voteIsValid_(vote, votes, consumeMUT)).toBe(false);
         });
 
         it('returns true for valid vote', () => {
-            consumeMUT.mockReturnValue('unique@example.com');
+            consumeMUT.mockReturnValue({Email: 'unique@example.com', Used: false});
             const vote = { TOKEN: ['token'] };
             expect(Trigger.voteIsValid_(vote, votes, consumeMUT)).toBe(true);
             expect(vote[VOTER_EMAIL_COLUMN_NAME]).toBe('unique@example.com');

@@ -75,6 +75,7 @@ VotingService.Trigger = {
      */
     ballotSubmitHandler: function (e) {
         console.log('Ballot submit handler triggered', e.namedValues);
+        console.log('Trigger event', e.source.getId(), e.triggerUid);
         const vote = this.firstValues_(e.namedValues)
         const fiddler = VotingService.Data.getFiddlerForValidResults(e.triggerUid)
         const votes = fiddler.getData();
