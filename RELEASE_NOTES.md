@@ -24,14 +24,14 @@ To the extent that these changes are driven by specific issues then those issues
   - [X] Add `membership-automation@sc3.club` as member
   - [X] Set the group options to **invite only**
 ### Spreadsheet
-  [  ] Make `election.admin@sc3.club` an editor of the `SCCCC Membership (Responses)` spreadsheet
+  [  ] Make `election.admin@sc3.club` an election officer of the `SCCCC Membership (Responses)` spreadsheet
 #### Bootstrap Sheet
   [ ] Add row for **Elections** sheet
 #### Elections Sheet
   [ ] Add Elections sheet with columns:
       * Title (string)
       * Form Edit URL (string)
-      * Editors (string)
+      * Election Officers (string)
       * Start (Date)
       * End (Date)
       * TriggerId (String - hidden)
