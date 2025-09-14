@@ -19,18 +19,18 @@ VotingService.Trigger = {
         const editedColumn = editedRange.getColumn();
         const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
         const formEditUrlColumnIndex = headers.indexOf(FORM_EDIT_URL_COLUMN_NAME) + 1;
-        const editorsColumnIndex = headers.indexOf(EDITORS_COLUMN_NAME) + 1;
+        const electionOfficersColumnIndex = headers.indexOf(ELECTION_OFFICERS_COLUMN_NAME) + 1;
         const startColumnIndex = headers.indexOf('Start') + 1;
         const endColumnIndex = headers.indexOf('End') + 1;
         const triggerStatusColumnIndex = headers.indexOf(TRIGGER_STATUS_COLUMN_NAME) + 1;
         const titleColumnIndex = headers.indexOf(VOTE_TITLE_COLUMN_NAME) + 1;
         console.log(`Edit detected in row: ${editedRow}, column: ${editedColumn} in sheet: ${sheet.getName()}`);
-        console.log(`Form edit URL column index: ${formEditUrlColumnIndex}, Editors column index: ${editorsColumnIndex}, Trigger Status column index: ${triggerStatusColumnIndex}`);
+        console.log(`Form edit URL column index: ${formEditUrlColumnIndex}, Election Officers column index: ${electionOfficersColumnIndex}, Trigger Status column index: ${triggerStatusColumnIndex}`);
 
         if (editedRow === 1) {
             throw Error('Column headings edited in Elections sheet')
         }
-        const editors = sheet.getRange(editedRow, editorsColumnIndex).getValue().split(',').map(email => email.trim());
+        const electionOfficers = sheet.getRange(editedRow, electionOfficersColumnIndex).getValue().split(',').map(email => email.trim());
         const editUrl = sheet.getRange(editedRow, formEditUrlColumnIndex).getValue();
         if (!editUrl) {
             SpreadsheetApp.getUi().alert(`No valid Form ID found in row: ${editedRow}. No further processing will occur for this row.`, SpreadsheetApp.getUi().ButtonSet.OK);
@@ -41,25 +41,25 @@ VotingService.Trigger = {
             if (editUrl) {
                 console.log(`Creating a ballot from the source form: ${editUrl} in row: ${editedRow}`);
                 try {
-                    const { title, url } = VotingService.createBallotForm(editUrl, editors);
+                    const { title, url } = VotingService.createBallotForm(editUrl, electionOfficers);
                     sheet.getRange(editedRow, titleColumnIndex).setValue(title);
                     sheet.getRange(editedRow, formEditUrlColumnIndex).setValue(url);
-                    SpreadsheetApp.getUi().alert(`Created ballot form for '${title}' and alerted any editors via email.`, SpreadsheetApp.getUi().ButtonSet.OK);
+                    SpreadsheetApp.getUi().alert(`Created ballot form for '${title}' and alerted any Election Officers via email.`, SpreadsheetApp.getUi().ButtonSet.OK);
                 } catch (error) {
                     console.error(`Error creating ballot form for row ${editedRow}: ${error.message}`);
                     SpreadsheetApp.getUi().alert(`Failed to create ballot form for row ${editedRow}: \n\n ${error.message}`, SpreadsheetApp.getUi().ButtonSet.OK);
                     sheet.getRange(editedRow, formEditUrlColumnIndex).clear();
                 }
             }
-        } else if (editedColumn === editorsColumnIndex) {
-            console.log(`Editors edited in row: ${editedRow}`);
+        } else if (editedColumn === electionOfficersColumnIndex) {
+            console.log(`Election Officers edited in row: ${editedRow}`);
             const title = sheet.getRange(editedRow, titleColumnIndex).getValue();
-            // It is possible to enter both a Form URL and Editors quickly in the same edit and for two edit events to be called.
+            // It is possible to enter both a Form URL and Election Officers quickly in the same edit and for two edit events to be called.
             // This edit event might be called before the formEditUrlColumnIndex edit event, in which case the editUrl might be the 'seed ballot' URL.
             // This can be detected by seeing if we have a form title yet!
             if (title) {
-                VotingService.setEditors(editUrl, editors);
-                SpreadsheetApp.getUi().alert(`Updated editors for '${title}', and sent them emails`, SpreadsheetApp.getUi().ButtonSet.OK);
+                VotingService.setElectionOfficers(editUrl, electionOfficers);
+                SpreadsheetApp.getUi().alert(`Updated Election Officers for '${title}', and sent them emails`, SpreadsheetApp.getUi().ButtonSet.OK);
             }
         } else if (editedColumn === startColumnIndex || editedColumn === endColumnIndex) {
             console.log(`Date edited in row: ${editedRow}`);

@@ -40,12 +40,12 @@ declare namespace VotingService {
     function cleanUpOrphanedTriggers(activeTriggerIds: string[]): void;
 
     /**
-     * Creates a ballot form from a source form and shares results with editors.
+     * Creates a ballot form from a source form and shares results with election officers.
      * @param {string} formId
-     * @param {string[]} editors
+     * @param {string[]} electionOfficers
      * @returns {{ title: string, url: string }}
      */
-    function createBallotForm(formId: string, editors: string[]): { title: string, url: string };
+    function createBallotForm(formId: string, electionOfficers: string[]): { title: string, url: string };
 
     /**
      * Retrieves a ballot form by ID or URL.
@@ -76,26 +76,26 @@ declare namespace VotingService {
     function createResultsSpreadsheet_(formId: string): GoogleAppsScript.Spreadsheet.Spreadsheet;
 
     /**
-     * Sets the editors for the ballot and its results spreadsheet.
+     * Sets the Election Officers for the ballot and its results spreadsheet.
      * @param {string} editUrl
-     * @param {string[]} editors
+     * @param {string[]} electionOfficers
      */
-    function setEditors(editUrl: string, editors?: string[]): void;
+    function setElectionOfficers(editUrl: string, electionOfficers?: string[]): void;
 
     /**
-     * Sends an email to a new editor.
+     * Sends an email to a new election officer.
      * @param {string} email
      * @param {string} title
      * @param {string} url
      */
-    function sendEditorAddEmail_(email: string, title: string, url: string): void;
+    function sendElectionOfficerAddEmail_(email: string, title: string, url: string): void;
 
     /**
-     * Sends an email to a removed editor.
+     * Sends an email to a removed election officer.
      * @param {string} email
      * @param {string} title
      */
-    function sendEditorRemoveEmail_(email: string, title: string): void;
+    function sendElectionOfficerRemoveEmail_(email: string, title: string): void;
 
     /**
      * Sets the form to accept or not accept responses.
@@ -207,9 +207,9 @@ declare const VOTER_EMAIL_COLUMN_NAME: string;
  */
 declare const FORM_EDIT_URL_COLUMN_NAME: string;
 /**
- * The column name for editors.
+ * The column name for Election Officers.
  */
-declare const EDITORS_COLUMN_NAME: string;
+declare const ELECTION_OFFICERS_COLUMN_NAME: string;
 /**
  * The column name for trigger status.
  */

@@ -6,7 +6,7 @@ const BALLOT_FOLDER_ID = '1ncuM7AyS9HtqtM842SUjHnhLG6_Pa_RB';
 const VOTE_TITLE_COLUMN_NAME = 'Title';
 const VOTER_EMAIL_COLUMN_NAME = 'Voter Email'
 const FORM_EDIT_URL_COLUMN_NAME = 'Form Edit URL';
-const EDITORS_COLUMN_NAME = 'Editors'; // Can be comma-separated
+const ELECTION_OFFICERS_COLUMN_NAME = 'Election Officers'; // Can be comma-separated
 const TRIGGER_STATUS_COLUMN_NAME = 'Trigger Status';
 const VOTE_DATA_SHEET_ID = '1FN1vogIDDWdqghflOF6hNuDDW1cqFQpSGX8GhXLYyyw'; // Replace with your central vote data sheet ID
 const REGISTRATION_SHEET_NAME = 'Elections'; // Update with your sheet name
@@ -139,20 +139,20 @@ VotingService.getSpreadsheetIdFromElection = function (election) {
  * @throws {Error} If there is an issue attaching the trigger or if the form does not have a valid destination.
  */
 VotingService.openElection_ = function (ballot, election) {
-    const editors = election[EDITORS_COLUMN_NAME]
-    this.emailEditorsAboutOpening_(editors, ballot);
+    const electionOfficers = election[ELECTION_OFFICERS_COLUMN_NAME]
+    this.emailElectionOfficersAboutOpening_(electionOfficers, ballot);
     ballot.setPublished(true);
     return this.attachOnSubmitTrigger_(ballot)
 }
 
 /**
  *
- * @param {string} editors - comma-separated list of editor emails
+ * @param {string} electionOfficers - comma-separated list of election officer emails
  * @param {VotingService.Ballot} ballot
  */
-VotingService.emailEditorsAboutOpening_ = function (editors, ballot) {
+VotingService.emailElectionOfficersAboutOpening_ = function (electionOfficers, ballot) {
     const message = {
-        to: editors,
+        to: electionOfficers,
         subject: `Election '${ballot.getTitle()}' is now open`,
         body: `The ${ballot.getTitle()} election is now open and accepting responses. You can view the form at: ${ballot.getEditUrl()}`
     };
@@ -202,8 +202,8 @@ VotingService.cleanUpOrphanedTriggers = function (activeTriggerIds) {
  * 
  * @param {VotingService.Ballot} ballot - the ballot whose election is being closed.
  * @param {VotingService.Election} election - the election being closed.
- * 
- * @description Closes the election by setting the ballot to not accept responses, emailing the election editors, and removing the onSubmit trigger.
+ *
+ * @description Closes the election by setting the ballot to not accept responses, emailing the election officers, and removing the onSubmit trigger.
  * This is typically called when the election's end date has passed.
  * It updates the election's status and cleans up the trigger.
  * 
@@ -213,17 +213,17 @@ VotingService.closeElection_ = function (ballot, election) {
     ballot.setPublished(false);
     this.removeOnSubmitTrigger_(election.TriggerId)
     VotingService.Auth.deleteAllTokens(VotingService.getSpreadsheetIdFromElection(election));
-    const editors = election[EDITORS_COLUMN_NAME];
-    this.emailEditorsAboutClosure_(editors, ballot);
+    const electionOfficers = election[ELECTION_OFFICERS_COLUMN_NAME];
+    this.emailElectionOfficersAboutClosure_(electionOfficers, ballot);
 }
 
 /**
  *
- * @param {string} editors - comma-separated list of editor emails
+ * @param {string} electionOfficers - comma-separated list of election officer emails
  * @param {VotingService.Ballot} ballot
  */
-VotingService.emailEditorsAboutClosure_ = function (editors, ballot) {
-    const closureMessage = { to: editors, ...this.getClosureMessage_(ballot) };
+VotingService.emailElectionOfficersAboutClosure_ = function (electionOfficers, ballot) {
+    const closureMessage = { to: electionOfficers, ...this.getClosureMessage_(ballot) };
     MailApp.sendEmail(closureMessage);
 }
 
@@ -283,12 +283,12 @@ VotingService.removeOnSubmitTrigger_ = function (triggerId) {
 /**
  * @memberof VotingService
  * @param {string} formId - The ID (ID or URL) of the Google Form to create a ballot from.
- * @param {string[]} editors - A list of email addresses to share the results spreadsheet with.
+ * @param {string[]} electionOfficers - A list of email addresses to share the results spreadsheet with.
  * @returns {object} The published URL of the new, public form.
  * @property {string} title - the title of the ballot
  * @property {string} url - the edit url of the ballot form
  */
-VotingService.createBallotForm = function (formId, editors) {
+VotingService.createBallotForm = function (formId, electionOfficers) {
     const url = this.makePublishedCopyOfFormInFolder_(formId, this.getBallotFolderId());
 
     const form = FormApp.openByUrl(url);
@@ -323,7 +323,7 @@ VotingService.createBallotForm = function (formId, editors) {
 
     // create and share a results spreadsheet
     this.createResultsSpreadsheet_(url);
-    this.setEditors(url, editors)
+    this.setElectionOfficers(url, electionOfficers)
 
     // unpublish the form
     form.setPublished(false);
@@ -416,38 +416,39 @@ VotingService.createResultsSpreadsheet_ = function (formId) {
 /**
  * Sets the editors for the ballot and its results spreadsheet.
  * @param {string} editUrl the ballot's edit URL
- * @param {string[]} editors list of editor emails to share the form with
- * 
- * @description Sets the editors of the ballot form and its results spreadsheet to the given list. Send editors an email detailing their change of status. 
+ * @param {string[]} electionOfficers list of electionOfficer email addresses to share the form with
+ *
+ * @description Sets the election officers of the ballot form and its results spreadsheet to the given list. Send election officers an email detailing their change of status.
  */
-VotingService.setEditors = function (editUrl, editors = []) {
-    const newEditors = new Set(editors.filter(m => m)); //newEditors only contains non-empty email addresses
+VotingService.setElectionOfficers = function (editUrl, electionOfficers = []) {
+    const newElectionOfficers = new Set(electionOfficers.filter(m => m)); //newElectionOfficers only contains non-empty email addresses
     const form = this.getBallot(editUrl);
     const resultsSpreadsheet = SpreadsheetApp.openById(form.getDestinationId())
-    const oldEditors = new Set([form, resultsSpreadsheet].flatMap(doc => doc.getEditors().map(e => e.getEmail())));
-    const add = newEditors.difference(oldEditors);
-    const remove = oldEditors.difference(newEditors)
+    const oldElectionOfficers = new Set([form, resultsSpreadsheet].flatMap(doc => doc.getEditors().map(e => e.getEmail())));
+    const add = newElectionOfficers.difference(oldElectionOfficers);
+    const remove = oldElectionOfficers.difference(newElectionOfficers)
 
-    // Get here with editors to actually share with!
+    // Get here with election officers to actually share with!
+    // election Officers are given editor rights to the form
     const formTitle = form.getTitle();
     add.forEach(email => {
         try {
             form.addEditor(email);
             resultsSpreadsheet.addEditor(email);
-            this.sendEditorAddEmail_(email, formTitle, editUrl);
-            console.log(`Added '${email}' as editor to '${formTitle}'`);
+            this.sendElectionOfficerAddEmail_(email, formTitle, editUrl);
+            console.log(`Added '${email}' as election officer to '${formTitle}'`);
         } catch (error) {
-            console.log(`Error adding '${email}' as editor to '${formTitle}': ${error}`);
+            console.log(`Error adding '${email}' as election officer to '${formTitle}': ${error}`);
         }
     })
     remove.forEach(email => {
         try {
             form.removeEditor(email);
             resultsSpreadsheet.removeEditor(email);
-            this.sendEditorRemoveEmail_(email, formTitle);
-            console.log(`Removed '${email}' as editor from  '${formTitle}'`);
+            this.sendElectionOfficerRemoveEmail_(email, formTitle);
+            console.log(`Removed '${email}' as election officer from  '${formTitle}'`);
         } catch (error) {
-            console.log(`Error removing '${email}' as editor from '${formTitle}': ${error}`);
+            console.log(`Error removing '${email}' as election officer from '${formTitle}': ${error}`);
         }
     })
 }
@@ -460,11 +461,11 @@ VotingService.setEditors = function (editUrl, editors = []) {
  * 
  * @description Send a message to the given email letting them know that they've been given edit access to the document
  */
-VotingService.sendEditorAddEmail_ = function (email, title, url) {
+VotingService.sendElectionOfficerAddEmail_ = function (email, title, url) {
     const message = {
         to: email,
         subject: `Form '${title}' shared with you`,
-        body: `You now have edit access to the Form '${title}' and its result sheet. It can be found at: ${url}`
+        body: `You are now an Election Officer and have edit access to the Form '${title}' and its result sheet. It can be found at: ${url}`
     }
     MailApp.sendEmail(message)
 }
@@ -475,11 +476,11 @@ VotingService.sendEditorAddEmail_ = function (email, title, url) {
  * 
  * @description send a message to the given email telling them that they no longer have access to the given document
  */
-VotingService.sendEditorRemoveEmail_ = function (email, title) {
+VotingService.sendElectionOfficerRemoveEmail_ = function (email, title) {
     const message = {
         to: email,
         subject: `Document access removed`,
-        body: `Your edit access to the Form '${title}' and its result sheet has been removed`,
+        body: `You are no longer an Election Officer and your edit access to the Form '${title}' and its result sheet has been removed`,
     }
     MailApp.sendEmail(message)
 }
