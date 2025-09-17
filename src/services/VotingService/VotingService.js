@@ -424,7 +424,15 @@ VotingService.setElectionOfficers = function (editUrl, electionOfficers = []) {
     const newElectionOfficers = new Set(electionOfficers.filter(m => m)); //newElectionOfficers only contains non-empty email addresses
     const form = this.getBallot(editUrl);
     const resultsSpreadsheet = SpreadsheetApp.openById(form.getDestinationId())
-    const oldElectionOfficers = new Set([form, resultsSpreadsheet].flatMap(doc => doc.getEditors().map(e => e.getEmail())));
+    const formEditors = this.getEditorsExcludingOwner_(form);
+    const resultsEditors = this.getEditorsExcludingOwner_(resultsSpreadsheet);
+    // combine and deduplicate editors
+    // Use a Set to automatically handle duplicates
+    // This ensures that if an email is an editor on both the form and the results spreadsheet, it is only processed once.
+    // This prevents sending multiple emails to the same person and avoids redundant add/remove operations.
+    const oldElectionOfficers = new Set([...formEditors, ...resultsEditors]);
+
+    
     const add = newElectionOfficers.difference(oldElectionOfficers);
     const remove = oldElectionOfficers.difference(newElectionOfficers)
 
@@ -452,6 +460,13 @@ VotingService.setElectionOfficers = function (editUrl, electionOfficers = []) {
         }
     })
 }
+
+VotingService.getEditorsExcludingOwner_ = function (doc) {
+    const file = DriveApp.getFileById(doc.getId());
+    const ownerEmail = file.getOwner().getEmail();
+    return doc.getEditors().map(e => e.getEmail()).filter(email => email !== ownerEmail);
+}
+
 
 /**
  * 
