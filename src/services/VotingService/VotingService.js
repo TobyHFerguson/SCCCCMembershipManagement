@@ -381,6 +381,11 @@ VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFo
     // Use the Drive API to grant public permission to the form file.
     // The 'reader' role allows people to view the form for responding.
     Drive.Permissions.create(newPermission, newForm.getId(), { sendNotificationEmail: false });
+    const file = DriveApp.getFileById(newForm.getId());
+    
+    // This sets the Editor view to Restricted, Only people with access can open with the link
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.NONE);
+    
     return newForm.getEditUrl();
 }
 /**
