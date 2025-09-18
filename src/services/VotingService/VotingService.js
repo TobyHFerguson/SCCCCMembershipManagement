@@ -369,23 +369,12 @@ VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFo
 
     // 2. Define the metadata for the new form copy.
     const destination = DriveApp.getFolderById(destinationFolderId);
-    const copiedFile = sourceFile.makeCopy(sourceFile.getName(), destination);
-    console.log('New Form: ', copiedFile.getName())
+    const copiedFileId = sourceFile.makeCopy(sourceFile.getName(), destination).getId();
+    
+    // Share the copied file with anyone who has the link and make sure the editors cannot change sharing settings
+    DriveApp.getFileById(copiedFileId).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW).setShareableByEditors(false);
 
-    // set the permissions so anyone can respond
-    const newForm = this.getBallot(copiedFile.getId());
-    const newPermission = {
-        'role': 'reader',
-        'type': 'anyone'
-    };
-    // Use the Drive API to grant public permission to the form file.
-    // The 'reader' role allows people to view the form for responding.
-    Drive.Permissions.create(newPermission, newForm.getId(), { sendNotificationEmail: false });
-    const file = DriveApp.getFileById(newForm.getId());
-    
-    // This sets the Editor view to Restricted, Only people with access can open with the link
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.NONE);
-    
+    const newForm = this.getBallot(copiedFileId);
     return newForm.getEditUrl();
 }
 /**
@@ -437,7 +426,7 @@ VotingService.setElectionOfficers = function (editUrl, electionOfficers = []) {
     // This prevents sending multiple emails to the same person and avoids redundant add/remove operations.
     const oldElectionOfficers = new Set([...formEditors, ...resultsEditors]);
 
-    
+
     const add = newElectionOfficers.difference(oldElectionOfficers);
     const remove = oldElectionOfficers.difference(newElectionOfficers)
 
