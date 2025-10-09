@@ -32,3 +32,7 @@ function updateUserSubscriptions(updatedSubscriptions, userToken) {
 function updateProfile(userToken, updatedProfile ) {
     return ProfileManagementService.updateProfile(userToken, updatedProfile);
 }
+
+function isMember(email) {
+    return ElectionRegistrationService.isMember(email);
+}

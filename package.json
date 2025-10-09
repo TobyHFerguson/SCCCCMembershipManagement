@@ -23,6 +23,7 @@
     "BUILD_DIR": "./dist"
   },
   "scripts": {
+    "test": "jest",
     "postinstall": "echo '.clasp.json' >> .gitignore",
 
     "set-dev-env": "npx clasp-env --scriptId \"${npm_package_config_CLASP_DEV_SCRIPT_ID}\" --folder .",

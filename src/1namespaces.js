@@ -29,17 +29,24 @@ const ProfileManagementService = {
     service: 'ProfileManagementService'
 }
 
+const ElectionRegistrationService = {
+    name: 'Election Registration Service',
+    service: 'ElectionRegistrationService'
+}
+
 const WebServices = {
     DirectoryService: DirectoryService,
     EmailChangeService: EmailChangeService,
     GroupManagementService: GroupManagementService,
-    ProfileManagementService: ProfileManagementService
+    ProfileManagementService: ProfileManagementService,
+    ElectionRegistrationService: ElectionRegistrationService
 }
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         DocsService,
         MembershipManagement,
-        DirectoryService
+        DirectoryService,
+        ElectionRegistrationService
     };
 }
