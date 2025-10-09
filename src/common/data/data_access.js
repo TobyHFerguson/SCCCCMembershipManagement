@@ -1,3 +1,19 @@
+/// <reference path="../../types/global.d.ts" />
+
+/**
+ * @returns {Fiddler<VotingService.Election>}
+ */
+function getElectionsFiddler() {
+    return Common.Data.Storage.SpreadsheetManager.getFiddler('Elections');
+}
+
+/**
+ * @returns {Fiddler<TokenDataType>}
+ */
+function getTokensFiddler() {
+    return Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens');
+}
+
 Common.Data.Access = {
     getEmailAddresses: function () {
         const members = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').getData();
@@ -11,7 +27,7 @@ Common.Data.Access = {
     getActionSpecs: () => {
         Common.Data.Storage.SpreadsheetManager.convertLinks('Action Specs');
         // We use getDataWithFormulas_ because the Body of an ActionSpec may contain formulas with a URL.
-        const actionSpecsAsArray = Common.Data.Storage.SpreadsheetManager.getDataWithFormulas(Common.Data.Storage.SpreadsheetManager.getFiddler('ActionSpecs'))
+        const actionSpecsAsArray = /** @type {MembershipManagement.ActionSpec[]} */ (Common.Data.Storage.SpreadsheetManager.getDataWithFormulas(Common.Data.Storage.SpreadsheetManager.getFiddler('ActionSpecs')))
         const actionSpecs = Object.fromEntries(actionSpecsAsArray.map(spec => [spec.Type, spec]));
         for (const actionSpec of Object.values(actionSpecs)) {
             let match = actionSpec.Body.match(/=hyperlink\("(https:\/\/docs.google.com\/document\/d\/[^"]+)"/);

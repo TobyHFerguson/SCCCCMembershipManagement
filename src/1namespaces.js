@@ -1,7 +1,12 @@
+/// <reference path="./types/global.d.ts" />
 // @ts-check
 const Common = {
     Auth: {},
-    Data: {},
+    Data: {
+        Storage: {
+            SpreadsheetManager: {}
+        }
+    },
 };
 
 const GroupSubscription = {};

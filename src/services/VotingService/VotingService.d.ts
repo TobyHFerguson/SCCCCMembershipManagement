@@ -3,23 +3,26 @@
 */
 declare namespace VotingService {
     /**
- * Represents an election object.
- */
+     * Election state string literal type - matches the ElectionState object values in JavaScript
+     */
+    type ElectionState = 'UNOPENED' | 'ACTIVE' | 'CLOSED';
+
+    /**
+     * Represents an election object.
+     */
     interface Election {
         Title: string;
         'Form Edit URL': string;
+        'Election Officers': string; // Comma-separated emails
         Start?: string | Date;
         End?: string | Date;
         TriggerId?: string;
     }
 
     /**
-     * Represents a ballot form.
+     * Type alias for a ballot form (now using the augmented GoogleAppsScript.Forms.Form)
      */
-    interface Ballot extends GoogleAppsScript.Forms.Form {
-        setPublished(enabled: boolean): Ballot;
-        isPublished(): boolean;
-    }
+    type Ballot = GoogleAppsScript.Forms.Form;
     /**
      * Gets the ballot folder ID.
      * @returns {string}
@@ -123,9 +126,9 @@ declare namespace VotingService {
     /**
      * Gets the state of an election (UNOPENED, ACTIVE, CLOSED).
      * @param {VotingService.Election} election The election object to check.
-     * @returns {ElectionState} The state of the election.
+     * @returns {VotingService.ElectionState} The state of the election.
      */
-    function getElectionState(election: VotingService.Election): ElectionState;
+    function getElectionState(election: VotingService.Election): VotingService.ElectionState;
 
     /**
      * 
@@ -181,72 +184,3 @@ declare namespace VotingService {
 }
 
 
-/**
- * Represents the possible states of an election.
- */
-declare enum ElectionState {
-    UNOPENED = "UNOPENED",
-    ACTIVE = "ACTIVE",
-    CLOSED = "CLOSED"
-}
-
-/**
- * The default ballot folder ID.
- */
-declare const BALLOT_FOLDER_ID: string;
-/**
- * The column name for the vote title.
- */
-declare const VOTE_TITLE_COLUMN_NAME: string;
-/**
- * The column name for the voter email.
- */
-declare const VOTER_EMAIL_COLUMN_NAME: string;
-/**
- * The column name for the form edit URL.
- */
-declare const FORM_EDIT_URL_COLUMN_NAME: string;
-/**
- * The column name for Election Officers.
- */
-declare const ELECTION_OFFICERS_COLUMN_NAME: string;
-/**
- * The column name for trigger status.
- */
-declare const TRIGGER_STATUS_COLUMN_NAME: string;
-/**
- * The ID of the central vote data sheet.
- */
-declare const VOTE_DATA_SHEET_ID: string;
-/**
- * The name of the registration sheet.
- */
-declare const REGISTRATION_SHEET_NAME: string;
-/**
- * The suffix for results sheets.
- */
-declare const RESULTS_SUFFIX: string;
-/**
- * The title of the token entry field.
- */
-declare const TOKEN_ENTRY_FIELD_TITLE: string;
-/**
- * The help text for the token entry field.
- */
-declare const TOKEN_HELP_TEXT: string;
-/**
- * The confirmation message shown after voting.
- */
-declare const CONFIRMATION_MESSAGE: string;
-/**
- * The name of the invalid results sheet.
- */
-declare const INVALID_RESULTS_SHEET_NAME: string;
-/**
- * The name of the Form Responses sheet.
- */
-declare const FORM_RESPONSES_SHEET_NAME: string;
-/**
- * The name of the validated results sheet.
- */
-declare const VALIDATED_RESULTS_SHEET_NAME: string;
