@@ -4,34 +4,11 @@
 /// <reference path="./google-types.d.ts" />
 // @ts-check
 
-// VotingService Constants
-const BALLOT_FOLDER_ID = '1ncuM7AyS9HtqtM842SUjHnhLG6_Pa_RB';
-const VOTE_TITLE_COLUMN_NAME = 'Title';
-const VOTER_EMAIL_COLUMN_NAME = 'Voter Email';
-const FORM_EDIT_URL_COLUMN_NAME = 'Form Edit URL';
-const ELECTION_OFFICERS_COLUMN_NAME = 'Election Officers'; // Can be comma-separated
-const TRIGGER_STATUS_COLUMN_NAME = 'Trigger Status';
-const VOTE_DATA_SHEET_ID = '1FN1vogIDDWdqghflOF6hNuDDW1cqFQpSGX8GhXLYyyw'; // Replace with your central vote data sheet ID
-const REGISTRATION_SHEET_NAME = 'Elections'; // Update with your sheet name
-const RESULTS_SUFFIX = '- Results';
-const TOKEN_ENTRY_FIELD_TITLE = 'VOTING TOKEN'; // Adjust
-const TOKEN_HELP_TEXT = 'This question is used to validate your vote. Do not modify this field.';
-const CONFIRMATION_MESSAGE = 'Your vote has been recorded successfully. You will be sent an email indicating how your vote was handled. Thank you for participating!';
-const INVALID_RESULTS_SHEET_NAME = 'Invalid Results';
-const FORM_RESPONSES_SHEET_NAME = 'Form Responses 1'; // Default name for form responses sheet
-const VALIDATED_RESULTS_SHEET_NAME = 'Validated Results';
-
-// ElectionState enum equivalent for JavaScript
-/** @type {{UNOPENED: VotingService.ElectionState, ACTIVE: VotingService.ElectionState, CLOSED: VotingService.ElectionState}} */
-const ElectionState = {
-    UNOPENED: 'UNOPENED',
-    ACTIVE: 'ACTIVE',
-    CLOSED: 'CLOSED'
-};
+// Note: Constants are defined in Constants.js and accessed via VotingService.Constants
 
 // Helper to extract components from the pre-filled URL (used by handleSheetEdit and renderVotingOptions)
 VotingService.getBallotFolderId = function () {
-    const ffi = PropertiesService.getScriptProperties().getProperty('BALLOT_FOLDER_ID') || BALLOT_FOLDER_ID;
+    const ffi = PropertiesService.getScriptProperties().getProperty('BALLOT_FOLDER_ID') || VotingService.Constants.BALLOT_FOLDER_ID;
     return ffi;
 }
 
@@ -48,7 +25,7 @@ VotingService.manageElectionLifecycles = function () {
     /** @type {string[]} */
     const activeBallots = [];
     elections.forEach(election => {
-        const ballotId = election[FORM_EDIT_URL_COLUMN_NAME];
+        const ballotId = election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME];
         if (!ballotId) {
             console.warn(`Election "${election.Title}" has no Form ID. Skipping lifecycle management for this election.`);
             return;
@@ -64,9 +41,9 @@ VotingService.manageElectionLifecycles = function () {
             return;
         }
         switch (this.getElectionState(election)) {
-            case ElectionState.UNOPENED:
+            case VotingService.Constants.ElectionState.UNOPENED:
                 break;
-            case ElectionState.ACTIVE:
+            case VotingService.Constants.ElectionState.ACTIVE:
                 // Active ballot
                 activeBallots.push(ballotId);
                 if (!ballot.isPublished()) {
@@ -77,9 +54,9 @@ VotingService.manageElectionLifecycles = function () {
                     changesMade = changesMade || true
                 }
                 break;
-            case ElectionState.CLOSED:
+            case VotingService.Constants.ElectionState.CLOSED:
                 if (ballot.isPublished() || election.TriggerId) {
-                    this.closeElection_(this.getBallot(election[FORM_EDIT_URL_COLUMN_NAME]), election);
+                    this.closeElection_(this.getBallot(election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME]), election);
                     console.log(`Closed election "${election.Title}" with ID "${ballotId}" as the end date has passed.`);
                     election.TriggerId = ''; // Clear the trigger ID after closing
                     changesMade = changesMade || true;
@@ -107,18 +84,18 @@ VotingService.manageElectionLifecycles = function () {
 VotingService.getElectionState = function (election) {
     console.log(`Getting election state for election: ${JSON.stringify(election)}`);
     if (!election || !election.Start || !election.End) {
-        return ElectionState.UNOPENED;
+        return VotingService.Constants.ElectionState.UNOPENED;
     }
     const today = new Date();
     const start = new Date(election.Start);
     const end = new Date(election.End);
     if (start <= today && today <= end) {
-        return ElectionState.ACTIVE;
+        return VotingService.Constants.ElectionState.ACTIVE;
     }
     if (end < today) {
-        return ElectionState.CLOSED;
+        return VotingService.Constants.ElectionState.CLOSED;
     }
-    return ElectionState.UNOPENED;
+    return VotingService.Constants.ElectionState.UNOPENED;
 };
 
 /**
@@ -127,13 +104,13 @@ VotingService.getElectionState = function (election) {
  * @returns {string}
  */
 VotingService.getSpreadsheetIdFromElection = function (election) {
-    const ballot = this.getBallot(election[FORM_EDIT_URL_COLUMN_NAME]);
+    const ballot = this.getBallot(election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME]);
     if (!ballot) {
-        throw new Error(`Ballot with ID "${election[FORM_EDIT_URL_COLUMN_NAME]}" not found for election "${election.Title}".`);
+        throw new Error(`Ballot with ID "${election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME]}" not found for election "${election.Title}".`);
     }
     const destinationId = ballot.getDestinationId();
     if (!destinationId) {
-        throw new Error(`Ballot with ID "${election[FORM_EDIT_URL_COLUMN_NAME]}" does not have a destination spreadsheet set.`);
+        throw new Error(`Ballot with ID "${election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME]}" does not have a destination spreadsheet set.`);
     }
     return destinationId;
 }
@@ -151,7 +128,7 @@ VotingService.getSpreadsheetIdFromElection = function (election) {
  * @throws {Error} If there is an issue attaching the trigger or if the form does not have a valid destination.
  */
 VotingService.openElection_ = function (ballot, election) {
-    const electionOfficers = election[ELECTION_OFFICERS_COLUMN_NAME]
+    const electionOfficers = election[VotingService.Constants.ELECTION_OFFICERS_COLUMN_NAME]
     this.emailElectionOfficersAboutOpening_(electionOfficers, ballot);
     ballot.setPublished(true);
     return this.attachOnSubmitTrigger_(ballot)
@@ -225,7 +202,7 @@ VotingService.closeElection_ = function (ballot, election) {
     ballot.setPublished(false);
     this.removeOnSubmitTrigger_(election.TriggerId)
     VotingService.Auth.deleteAllTokens(VotingService.getSpreadsheetIdFromElection(election));
-    const electionOfficers = election[ELECTION_OFFICERS_COLUMN_NAME];
+    const electionOfficers = election[VotingService.Constants.ELECTION_OFFICERS_COLUMN_NAME];
     this.emailElectionOfficersAboutClosure_(electionOfficers, ballot);
 }
 
@@ -265,7 +242,7 @@ VotingService.getClosureMessage_ = function (ballot) {
 VotingService.manualCountingRequired_ = function (ballot) {
     const spreadsheet = SpreadsheetApp.openById(ballot.getDestinationId());
     const sheets = spreadsheet.getSheets();
-    return sheets.find(sheet => sheet.getName() === INVALID_RESULTS_SHEET_NAME) !== undefined;
+    return sheets.find(sheet => sheet.getName() === VotingService.Constants.INVALID_RESULTS_SHEET_NAME) !== undefined;
 }
 /**
  * 
@@ -327,7 +304,7 @@ VotingService.createBallotForm = function (formId, electionOfficers) {
 
     // After Submission settings
     // Configure confirmation message
-    form.setConfirmationMessage(CONFIRMATION_MESSAGE);
+    form.setConfirmationMessage(VotingService.Constants.CONFIRMATION_MESSAGE);
     // Disable further votes
     form.setShowLinkToRespondAgain(false)
     // Don't allow viewing of results
@@ -404,8 +381,8 @@ VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFo
  */
 VotingService.addTokenQuestion_ = function (form) {
     // Add a new short text item at the end of the form
-    const tokenItem = form.addTextItem().setTitle(TOKEN_ENTRY_FIELD_TITLE);
-    tokenItem.setHelpText(TOKEN_HELP_TEXT);
+    const tokenItem = form.addTextItem().setTitle(VotingService.Constants.TOKEN_ENTRY_FIELD_TITLE);
+    tokenItem.setHelpText(VotingService.Constants.TOKEN_HELP_TEXT);
 
     // Set the question to be required
     tokenItem.setRequired(true);
@@ -421,7 +398,7 @@ VotingService.addTokenQuestion_ = function (form) {
 VotingService.createResultsSpreadsheet_ = function (formId) {
     const form = this.getBallot(formId);
     const formTitle = form.getTitle();
-    const resultsSpreadsheet = SpreadsheetApp.create(`${formTitle} ${RESULTS_SUFFIX}`);
+    const resultsSpreadsheet = SpreadsheetApp.create(`${formTitle} ${VotingService.Constants.RESULTS_SUFFIX}`);
     form.setDestination(FormApp.DestinationType.SPREADSHEET, resultsSpreadsheet.getId());
     console.log(`Created results spreadsheet for form ID: ${formId} with title: ${formTitle}`);
     return resultsSpreadsheet;
@@ -620,7 +597,7 @@ const TEST_FORM_ID = '1zJi3Wt_AXZ3W5ML2wJ3zxYS923r-NTlBb863Ur-b_Ps'; // Replace 
 // Replace 'YOUR_FORM_ID_HERE' with your actual form ID.
 function runCreatePrefilledUrl() {
     const formId = TEST_FORM_ID;
-    const prefilledLink = VotingService.createPrefilledUrlWithTitle(formId, TOKEN_ENTRY_FIELD_TITLE, '1234');
+    const prefilledLink = VotingService.createPrefilledUrlWithTitle(formId, VotingService.Constants.TOKEN_ENTRY_FIELD_TITLE, '1234');
     console.log('prefilled Link: ', prefilledLink)
 }
 // To use the function, call it with your form's ID.

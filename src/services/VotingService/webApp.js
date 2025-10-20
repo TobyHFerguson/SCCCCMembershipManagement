@@ -3,6 +3,7 @@
 // Always arrive here with a validated token converted to the userEmail
 /// <reference path="./Auth.d.ts" />
 /// <reference path="./VotingService.d.ts" />
+
 /**
  * 
  * @param {GoogleAppsScript.Events.DoGet} e 
@@ -63,17 +64,17 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
                 return result; // Skip further processing if user has already voted
             }
 
-            const ballot = VotingService.getBallot(election[FORM_EDIT_URL_COLUMN_NAME]);
+            const ballot = VotingService.getBallot(election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME]);
             console.log(`ballot ${ballot.getTitle()} is published: ${ballot.isPublished()}`);
             console.log(`ballot ${ballot.getTitle()} is accepting responses: ${ballot.isAcceptingResponses()}`);
             switch (VotingService.getElectionState(election)) {
-                case ElectionState.UNOPENED:
+                case VotingService.Constants.ElectionState.UNOPENED:
                     result.status = "Inactive - election not open yet"
                     break;
-                case ElectionState.CLOSED:
+                case VotingService.Constants.ElectionState.CLOSED:
                     result.status = "Inactive - election has closed"
                     break;
-                case ElectionState.ACTIVE:
+                case VotingService.Constants.ElectionState.ACTIVE:
                     if (!ballot.isPublished() || !ballot.isAcceptingResponses()) {
                         result.status = "Inactive - ballot is not accepting responses"
                     }
@@ -111,6 +112,6 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
 VotingService.WebApp._getFormUrlWithTokenField = function (userEmail, election) {
     const spreadsheetId = VotingService.getSpreadsheetIdFromElection(election);
     const token = VotingService.Auth.generateAndStoreToken(userEmail,spreadsheetId).Token;
-    const preFilledUrl = VotingService.createPrefilledUrlWithTitle(election[FORM_EDIT_URL_COLUMN_NAME], TOKEN_ENTRY_FIELD_TITLE, token);
+    const preFilledUrl = VotingService.createPrefilledUrlWithTitle(election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME], VotingService.Constants.TOKEN_ENTRY_FIELD_TITLE, token);
     return preFilledUrl
 }

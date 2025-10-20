@@ -57,6 +57,8 @@ interface Fiddler<T = any> {
     getRowCount(): number;
     clearData(): Fiddler<T>;
     mapRows(mapper: (row: T) => T): Fiddler<T>;
+    needFormulas(): Fiddler<T>;
+    getFormulaData(): T[];
 }
 
 // Fiddler options interfaces
@@ -134,8 +136,98 @@ declare namespace Common {
                 function convertLinks(sheetName: string): void;
             }
         }
+        
+        namespace Access {
+            /**
+             * Gets Bootstrap configuration data
+             * @returns Array of Bootstrap configuration entries
+             */
+            function getBootstrapData(): BootstrapData[];
+            
+            /**
+             * Gets all email addresses from active members
+             * @returns Array of lowercase email addresses
+             */
+            function getEmailAddresses(): string[];
+            
+            /**
+             * Gets all active members (filtered by Status === 'Active')
+             * @returns Array of active member objects
+             */
+            function getActiveMembers(): Member[];
+            
+            /**
+             * Gets action specifications with processed body content
+             * @returns Object with action specs keyed by Type
+             */
+            function getActionSpecs(): Record<string, MembershipManagement.ActionSpec>;
+            
+            /**
+             * Gets public groups configuration
+             * @returns Array of public group objects
+             */
+            function getPublicGroups(): any[];
+            
+            /**
+             * Gets a specific member by email address
+             * @param email - Member's email address (case insensitive)
+             * @returns Member object or undefined if not found
+             */
+            function getMember(email: string): Member | undefined;
+            
+            /**
+             * Updates a member's information
+             * @param email - Current email address (case insensitive)
+             * @param newMember - Updated member object
+             * @returns True if update was successful
+             */
+            function updateMember(email: string, newMember: Member): boolean;
+            
+            /**
+             * Checks if an email address belongs to a member
+             * @param email - Email address to check (case insensitive)
+             * @returns True if email belongs to a member
+             */
+            function isMember(email: string): boolean;
+            
+            /**
+             * Gets all elections data
+             * @returns Array of election objects
+             */
+            function getElections(): VotingService.Election[];
+        }
     }
 }
+
+// Group management types
+interface GroupByType {
+    email: string;
+    type: string;
+}
+
+interface GroupSettings {
+    email: string;
+    type: string;
+    [key: string]: any;
+}
+
+// Google Apps Script Advanced Services
+declare namespace GroupsSettings {
+    namespace Groups {
+        function get(groupEmail: string): any;
+        function update(group: any, groupEmail: string): any;
+    }
+}
+
+// WebServices global definition
+declare const WebServices: {
+    DirectoryService: any;
+    EmailChangeService: any;
+    GroupManagementService: any;
+    ProfileManagementService: any;
+    VotingService: any;
+    [key: string]: { name?: string; [key: string]: any };
+};
 
 // bmPreFiddler namespace - consolidated from fiddler.d.ts
 declare namespace bmPreFiddler {

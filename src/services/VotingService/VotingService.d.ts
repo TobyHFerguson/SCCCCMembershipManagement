@@ -17,12 +17,40 @@ declare namespace VotingService {
         Start?: string | Date;
         End?: string | Date;
         TriggerId?: string;
+        [key: string]: any; // Allow string indexing for column names
     }
 
     /**
      * Type alias for a ballot form (now using the augmented GoogleAppsScript.Forms.Form)
      */
     type Ballot = GoogleAppsScript.Forms.Form;
+
+    /**
+     * Shared constants for the VotingService
+     */
+    interface Constants {
+        VOTE_TITLE_COLUMN_NAME: string;
+        FORM_EDIT_URL_COLUMN_NAME: string;
+        ELECTION_OFFICERS_COLUMN_NAME: string;
+        TRIGGER_STATUS_COLUMN_NAME: string;
+        REGISTRATION_SHEET_NAME: string;
+        RESULTS_SUFFIX: string;
+        INVALID_RESULTS_SHEET_NAME: string;
+        TOKEN_ENTRY_FIELD_TITLE: string;
+        TOKEN_HELP_TEXT: string;
+        CONFIRMATION_MESSAGE: string;
+        BALLOT_FOLDER_ID: string;
+        ElectionState: {
+            UNOPENED: ElectionState;
+            ACTIVE: ElectionState;
+            CLOSED: ElectionState;
+        };
+    }
+
+    /**
+     * Constants namespace
+     */
+    const Constants: Constants;
     /**
      * Gets the ballot folder ID.
      * @returns {string}

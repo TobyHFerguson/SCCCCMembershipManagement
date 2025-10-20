@@ -86,19 +86,19 @@ function testGetActiveGroupSettings() {
 
 
 function writeGroupEmailSettingsByType() {
-  const groupsByType = SpreadsheetManager.getFiddler('GroupsByType');
+  const groupsByType = Common.Data.Storage.SpreadsheetManager.getFiddler('GroupsByType').getData();
 
   const settingsToBeWritten = groupsByType.map(gbt => {
-    const settings = getActiveGroupSettings(gbt.email)[0];
+    const settings = getActiveGroupSettings_(gbt.email)[0];
     settings.type = gbt.type;
     return settings;
   });
-  const groupSettingsFiddler = SpreadsheetManager.getFiddler('GroupSettings');
+  const groupSettingsFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('GroupSettings');
   groupSettingsFiddler.setData(settingsToBeWritten).dumpValues();
 }
 
 function updateGroupsFromGroupSettings() {
-  const groups = SpreadsheetManager.getFiddler('GroupSettings').getData()
+  const groups = Common.Data.Storage.SpreadsheetManager.getFiddler('GroupSettings').getData()
  groups.filter(group => group.email === 'rides@sc3.club').forEach(group => GroupsSettings.Groups.update(group, group.email))
 }
 

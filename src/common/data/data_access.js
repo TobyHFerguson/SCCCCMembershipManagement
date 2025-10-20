@@ -15,6 +15,10 @@ function getTokensFiddler() {
 }
 
 Common.Data.Access = {
+    getBootstrapData: () => {
+        const bootStrapFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Bootstrap');
+        return bootStrapFiddler.getData();
+    },
     getEmailAddresses: function () {
         const members = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').getData();
         const emails = members.map(member => member.Email.toLowerCase());

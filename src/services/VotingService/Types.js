@@ -22,7 +22,6 @@
 /**
  * @typedef {Object} Vote
  * @ts-nocheck - the [''] below causes a ts 10003 error  
- * @property {string} [VOTER_EMAIL_COLUMN_NAME] - The email address of the voter.
  * @property {string} [TOKEN_ENTRY_FIELD_TITLE] - The token field title, if applicable.
  * @property {string} Timestamp - timestamp of vote.
  *
