@@ -39,7 +39,6 @@ declare namespace VotingService {
         TOKEN_ENTRY_FIELD_TITLE: string;
         TOKEN_HELP_TEXT: string;
         CONFIRMATION_MESSAGE: string;
-        BALLOT_FOLDER_ID: string;
         ElectionState: {
             UNOPENED: ElectionState;
             ACTIVE: ElectionState;
@@ -52,10 +51,18 @@ declare namespace VotingService {
      */
     const Constants: Constants;
     /**
-     * Gets the ballot folder ID.
-     * @returns {string}
+     * Gets the ballot folder ID from ElectionConfiguration sheet.
+     * @returns {string} The Google Drive folder ID for storing ballot forms
+     * @throws {Error} If the configuration is missing or invalid
      */
     function getBallotFolderId(): string;
+
+    /**
+     * Safely gets the ballot folder ID with user-friendly error handling.
+     * @returns {string} The ballot folder ID
+     * @throws {Error} User-friendly error message for configuration issues
+     */
+    function getBallotFolderIdSafe(): string;
 
     /**
      * Manages the lifecycle of elections by opening/closing ballots and attaching/removing triggers.
