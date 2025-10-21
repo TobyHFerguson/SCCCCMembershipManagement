@@ -451,9 +451,25 @@ VotingService.addTokenQuestion_ = function (form) {
 VotingService.createResultsSpreadsheet_ = function (formId) {
     const form = this.getBallot(formId);
     const formTitle = form.getTitle();
+    
+    // Get the form's file to determine its folder location
+    const formFile = DriveApp.getFileById(form.getId());
+    const formParents = formFile.getParents();
+    
+    // Create the spreadsheet in the same folder as the form
     const resultsSpreadsheet = SpreadsheetApp.create(`${formTitle} ${VotingService.Constants.RESULTS_SUFFIX}`);
+    const spreadsheetFile = DriveApp.getFileById(resultsSpreadsheet.getId());
+    
+    // If the form has parent folders, move the spreadsheet to the first one
+    if (formParents.hasNext()) {
+        const targetFolder = formParents.next();
+        targetFolder.addFile(spreadsheetFile);
+        // Remove from the default location (root or My Drive)
+        DriveApp.getRootFolder().removeFile(spreadsheetFile);
+    }
+    
     form.setDestination(FormApp.DestinationType.SPREADSHEET, resultsSpreadsheet.getId());
-    console.log(`Created results spreadsheet for form ID: ${formId} with title: ${formTitle}`);
+    console.log(`Created results spreadsheet for form ID: ${formId} with title: ${formTitle} in same folder as form`);
     return resultsSpreadsheet;
 }
 
