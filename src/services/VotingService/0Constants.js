@@ -21,9 +21,6 @@ const TOKEN_ENTRY_FIELD_TITLE = 'VOTING TOKEN';
 const TOKEN_HELP_TEXT = 'This question is used to validate your vote. Do not modify this field.';
 const CONFIRMATION_MESSAGE = 'Your vote has been recorded successfully. You will be sent an email indicating how your vote was handled. Thank you for participating!';
 
-// Configuration IDs
-const BALLOT_FOLDER_ID = '1ncuM7AyS9HtqtM842SUjHnhLG6_Pa_RB';
-
 // ElectionState enum equivalent for JavaScript
 /** @type {{UNOPENED: VotingService.ElectionState, ACTIVE: VotingService.ElectionState, CLOSED: VotingService.ElectionState}} */
 const ElectionState = {
@@ -50,6 +47,5 @@ VotingService.Constants = {
     TOKEN_ENTRY_FIELD_TITLE,
     TOKEN_HELP_TEXT,
     CONFIRMATION_MESSAGE,
-    BALLOT_FOLDER_ID,
     ElectionState
 };

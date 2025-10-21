@@ -15,7 +15,6 @@ describe('Trigger', () => {
                 TOKEN_ENTRY_FIELD_TITLE: 'VOTING TOKEN',
                 TOKEN_HELP_TEXT: 'This question is used to validate your vote. Do not modify this field.',
                 CONFIRMATION_MESSAGE: 'Your vote has been recorded successfully. You will be sent an email indicating how your vote was handled. Thank you for participating!',
-                BALLOT_FOLDER_ID: '1ncuM7AyS9HtqtM842SUjHnhLG6_Pa_RB',
                 ElectionState: {
                     UNOPENED: 'UNOPENED',
                     ACTIVE: 'ACTIVE',

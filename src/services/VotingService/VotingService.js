@@ -6,10 +6,63 @@
 
 // Note: Constants are defined in Constants.js and accessed via VotingService.Constants
 
-// Helper to extract components from the pre-filled URL (used by handleSheetEdit and renderVotingOptions)
+/**
+ * Gets the ballot folder ID from ElectionConfiguration sheet
+ * @returns {string} The Google Drive folder ID for storing ballot forms
+ * @throws {Error} If the configuration is missing or invalid
+ */
 VotingService.getBallotFolderId = function () {
-    const ffi = PropertiesService.getScriptProperties().getProperty('BALLOT_FOLDER_ID') || VotingService.Constants.BALLOT_FOLDER_ID;
-    return ffi;
+    try {
+        // @ts-ignore - Common namespace is available at runtime
+        const configFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ElectionConfiguration');
+        /** @type {any[]} */
+        const config = configFiddler.getData();
+        
+        // Look for a ballot folder URL configuration
+        /** @type {any} */
+        const ballotFolderConfig = config.find(/** @param {any} row */ row => row.Key === 'BALLOT_FOLDER_URL' || row.Setting === 'BALLOT_FOLDER_URL');
+        
+        if (ballotFolderConfig && ballotFolderConfig.Value) {
+            // Extract folder ID from Google Drive folder URL
+            // URL format: https://drive.google.com/drive/folders/{FOLDER_ID}
+            const folderUrl = ballotFolderConfig.Value;
+            const folderIdMatch = folderUrl.match(/\/folders\/([a-zA-Z0-9-_]+)/);
+            
+            if (folderIdMatch) {
+                return folderIdMatch[1];
+            }
+        }
+    } catch (error) {
+        /** @type {Error} */
+        const err = error instanceof Error ? error : new Error(String(error));
+        console.error('Failed to retrieve ballot folder ID from ElectionConfiguration:', err.message);
+        throw new Error(`Ballot folder configuration not found. Please ensure the ElectionConfiguration sheet contains a row with Key='BALLOT_FOLDER_URL' and a valid Google Drive folder URL as the Value. Original error: ${err.message}`);
+    }
+    
+    // If we get here, no valid configuration was found
+    throw new Error('Ballot folder configuration missing. Please configure BALLOT_FOLDER_URL in the ElectionConfiguration sheet with a valid Google Drive folder URL (e.g., https://drive.google.com/drive/folders/YOUR_FOLDER_ID).');
+}
+
+/**
+ * Safely gets the ballot folder ID with user-friendly error handling
+ * @returns {string} The ballot folder ID
+ * @throws {Error} User-friendly error message for configuration issues
+ */
+VotingService.getBallotFolderIdSafe = function() {
+    try {
+        return this.getBallotFolderId();
+    } catch (error) {
+        /** @type {Error} */
+        const err = error instanceof Error ? error : new Error(String(error));
+        
+        // Check if this is a configuration error
+        if (err.message.includes('configuration')) {
+            throw new Error('The Voting Service is not properly configured. Please contact your system administrator to set up the ballot folder configuration in the ElectionConfiguration sheet.');
+        }
+        
+        // Re-throw other errors as-is
+        throw err;
+    }
 }
 
 /**
@@ -282,7 +335,7 @@ VotingService.removeOnSubmitTrigger_ = function (triggerId) {
  * @returns {BallotFormResult} Object containing the ballot title and edit URL
  */
 VotingService.createBallotForm = function (formId, electionOfficers) {
-    const url = this.makePublishedCopyOfFormInFolder_(formId, this.getBallotFolderId());
+    const url = this.makePublishedCopyOfFormInFolder_(formId, this.getBallotFolderIdSafe());
 
     /** @type {GoogleAppsScript.Forms.Form} */
     const form = FormApp.openByUrl(url);
