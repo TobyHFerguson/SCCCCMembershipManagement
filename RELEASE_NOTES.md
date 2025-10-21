@@ -15,7 +15,7 @@ To the extent that these changes are driven by specific issues then those issues
   [ ] Add **Drive** as an Apps Script Service
   [ ] Accept new permissions
 ### Triggers
-  [ ] Configure `handleEditEvent` to run when **Spreadsheet** has an **on Edit event**
+  [ ] Configure `handleEditEvent` to run when **Election Spreadsheet** has an **on Edit event**
   [ ] Configure daily calendar to execute `manageElectionLifecycles()`
 ### Groups
   - [X] Add a group `Election Administrators` (election.admin@sc3.club)
@@ -25,13 +25,14 @@ To the extent that these changes are driven by specific issues then those issues
   - [X] Set the group options to **invite only**
 ### Spreadsheet
   [  ] Make `election.admin@sc3.club` an election officer of the `SCCCC Membership (Responses)` spreadsheet
-#### Bootstrap Sheet
-  [ ] Add row for **Elections** sheet
 #### Elections Sheet
-  [ ] Add Elections sheet with columns:
+  [ ] Add Elections spreadsheet with columns:
       * Title (string)
       * Form Edit URL (string)
       * Election Officers (string)
       * Start (Date)
       * End (Date)
       * TriggerId (String - hidden)
+#### Bootstrap Sheet
+  [ ] Add row for **Elections** spreadsheet
+  [ ] Add row for **Bootstrap** sheet

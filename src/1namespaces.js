@@ -1,7 +1,12 @@
+/// <reference path="./types/global.d.ts" />
 // @ts-check
 const Common = {
     Auth: {},
-    Data: {},
+    Data: {
+        Storage: {
+            SpreadsheetManager: {}
+        }
+    },
 };
 
 const GroupSubscription = {};
@@ -29,13 +34,19 @@ const ProfileManagementService = {
     service: 'ProfileManagementService'
 }
 
-const VotingService = {
+// Extend VotingService if it already exists (from 0Constants.js), otherwise create it
+if (typeof VotingService === 'undefined') {
+    var VotingService = {};
+}
+
+// Add service properties to VotingService
+Object.assign(VotingService, {
     name: 'Voting Service',
     service: 'VotingService',
-    Data: {},
-    WebApp: {},
-    Trigger: {}
-};
+    Data: VotingService.Data || {},
+    WebApp: VotingService.WebApp || {},
+    Trigger: VotingService.Trigger || {}
+});
 
 const WebServices = {
     DirectoryService: DirectoryService,

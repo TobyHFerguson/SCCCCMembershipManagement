@@ -2,7 +2,7 @@
 /// <reference path="./Auth.d.ts" />
 /// <reference path
 /// <reference path="../../common/data/storage/SpreadsheetManager.d.ts" />
-/// <reference path="../../fiddler.d.ts" />
+/// <reference path="../../types/global.d.ts" />
 //@ts-check
 VotingService.Data = {
     /**

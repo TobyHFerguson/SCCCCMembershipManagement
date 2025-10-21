@@ -1,10 +1,18 @@
-/**
- * Common.Data.Storage.SpreadsheetManager type definitions
- */
+/// <reference path="../../../types/global.d.ts" />
+
+// All SpreadsheetManager types are now defined in global.d.ts
+// This file exists for backward compatibility and explicit referencing
+
 declare namespace Common.Data.Storage {
     namespace SpreadsheetManager {
+        // Most specific overloads first
         function getFiddler(sheetName: 'Tokens'): Fiddler<TokenDataType>;
         function getFiddler(sheetName: 'Elections'): Fiddler<VotingService.Election>;
+        function getFiddler(sheetName: 'Form Responses 1'): Fiddler<FormResponse>;
+        function getFiddler(sheetName: 'Validated Results'): Fiddler<Result>;
+        function getFiddler(sheetName: 'Invalid Results'): Fiddler<Result>;
+        function getFiddler(sheetName: 'Bootstrap'): Fiddler<BootstrapData>;
+        
         /**
          * Gets a fiddler based on the sheet name.
          * @param {string} sheetName - The name of the sheet.
@@ -14,8 +22,9 @@ declare namespace Common.Data.Storage {
 
         /**
          * Returns the data from a fiddler with formulas merged into it.
-         * @param {Fiddler} fiddler - The fiddler instance.
-         * @returns {object[]} The merged data array.
+         * @template T
+         * @param {Fiddler<T>} fiddler - The fiddler instance.
+         * @returns {T[]} The merged data array.
          */
         function getDataWithFormulas(fiddler: Fiddler<object>): object[];
 

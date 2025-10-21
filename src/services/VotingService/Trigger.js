@@ -11,19 +11,19 @@ VotingService.Trigger = {
     handleRegistrationSheetEdit: function (e) {
         const editedRange = e.range;
         const sheet = editedRange.getSheet();
-        if (sheet.getName() !== REGISTRATION_SHEET_NAME) {
-            console.log(`Edit detected in sheet: ${sheet.getName()}, but not in registration sheet (${REGISTRATION_SHEET_NAME}).`);
+        if (sheet.getName() !== VotingService.Constants.REGISTRATION_SHEET_NAME) {
+            console.log(`Edit detected in sheet: ${sheet.getName()}, but not in registration sheet (${VotingService.Constants.REGISTRATION_SHEET_NAME}).`);
             return; // Only process edits in the registration sheet
         }
         const editedRow = editedRange.getRow();
         const editedColumn = editedRange.getColumn();
         const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-        const formEditUrlColumnIndex = headers.indexOf(FORM_EDIT_URL_COLUMN_NAME) + 1;
-        const electionOfficersColumnIndex = headers.indexOf(ELECTION_OFFICERS_COLUMN_NAME) + 1;
+        const formEditUrlColumnIndex = headers.indexOf(VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME) + 1;
+        const electionOfficersColumnIndex = headers.indexOf(VotingService.Constants.ELECTION_OFFICERS_COLUMN_NAME) + 1;
         const startColumnIndex = headers.indexOf('Start') + 1;
         const endColumnIndex = headers.indexOf('End') + 1;
-        const triggerStatusColumnIndex = headers.indexOf(TRIGGER_STATUS_COLUMN_NAME) + 1;
-        const titleColumnIndex = headers.indexOf(VOTE_TITLE_COLUMN_NAME) + 1;
+        const triggerStatusColumnIndex = headers.indexOf(VotingService.Constants.TRIGGER_STATUS_COLUMN_NAME) + 1;
+        const titleColumnIndex = headers.indexOf(VotingService.Constants.VOTE_TITLE_COLUMN_NAME) + 1;
         console.log(`Edit detected in row: ${editedRow}, column: ${editedColumn} in sheet: ${sheet.getName()}`);
         console.log(`Form edit URL column index: ${formEditUrlColumnIndex}, Election Officers column index: ${electionOfficersColumnIndex}, Trigger Status column index: ${triggerStatusColumnIndex}`);
 
@@ -79,7 +79,7 @@ VotingService.Trigger = {
         const spreadsheetId = e.source.getId();
         const vote = this.firstValues_(e.namedValues)
 
-        const token = vote[TOKEN_ENTRY_FIELD_TITLE];
+        const token = vote[VotingService.Constants.TOKEN_ENTRY_FIELD_TITLE];
         const tokenData = VotingService.Auth.consumeToken(token, spreadsheetId);
         const fiddler = VotingService.Data.getFiddlerForValidResults(spreadsheetId)
 
@@ -122,8 +122,8 @@ VotingService.Trigger = {
      */
     getElectionTitle_: function (spreadsheet) {
         let electionTitle = spreadsheet.getName();
-        if (electionTitle.endsWith(RESULTS_SUFFIX)) {
-            electionTitle = electionTitle.slice(0, -RESULTS_SUFFIX.length).trim(); // Remove ' - Results' from the name
+        if (electionTitle.endsWith(VotingService.Constants.RESULTS_SUFFIX)) {
+            electionTitle = electionTitle.slice(0, -VotingService.Constants.RESULTS_SUFFIX.length).trim(); // Remove ' - Results' from the name
         }
         return electionTitle;
     },
@@ -174,7 +174,7 @@ VotingService.Trigger = {
     addInvalidVote_: function (vote, spreadsheet) {
         try {
             //@ts-ignore
-            const invalidFiddler = bmPreFiddler.PreFiddler().getFiddler({ id: spreadsheet.getId(), sheetName: INVALID_RESULTS_SHEET_NAME, createIfMissing: true });
+            const invalidFiddler = bmPreFiddler.PreFiddler().getFiddler({ id: spreadsheet.getId(), sheetName: VotingService.Constants.INVALID_RESULTS_SHEET_NAME, createIfMissing: true });
             const votes = invalidFiddler.getData()
             votes.push(vote);
             invalidFiddler.setData(votes).dumpValues();
@@ -202,7 +202,7 @@ VotingService.Trigger = {
         const message = {
             to: to,
             subject: `Election '${electionTitle}' - manual count needed`,
-            body: `In election ${electionTitle} this vote ${vote[TOKEN_ENTRY_FIELD_TITLE] ? 'is a duplicate' : 'has no token'} ${JSON.stringify(vote)}. A manual count will now be needed`.trim()
+            body: `In election ${electionTitle} this vote ${vote[VotingService.Constants.TOKEN_ENTRY_FIELD_TITLE] ? 'is a duplicate' : 'has no token'} ${JSON.stringify(vote)}. A manual count will now be needed`.trim()
         }
         MailApp.sendEmail(message);
         console.warn('Manual count needed email sent:', message);

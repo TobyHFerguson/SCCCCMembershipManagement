@@ -2,10 +2,27 @@ const { Trigger } = require('../src/services/VotingService/Trigger');
 
 describe('Trigger', () => {
     beforeAll(() => {
-        //@ts-ignore
-        global.TOKEN_ENTRY_FIELD_TITLE = 'VOTING TOKEN'
-        //@ts-ignore
-        global.VOTER_EMAIL_COLUMN_NAME = 'Voter Email'
+        // Mock VotingService.Constants for testing
+        global.VotingService = {
+            Constants: {
+                VOTE_TITLE_COLUMN_NAME: 'Title',
+                FORM_EDIT_URL_COLUMN_NAME: 'Form Edit URL',
+                ELECTION_OFFICERS_COLUMN_NAME: 'Election Officers',
+                TRIGGER_STATUS_COLUMN_NAME: 'Trigger Status',
+                REGISTRATION_SHEET_NAME: 'Elections',
+                RESULTS_SUFFIX: '- Results',
+                INVALID_RESULTS_SHEET_NAME: 'Invalid Results',
+                TOKEN_ENTRY_FIELD_TITLE: 'VOTING TOKEN',
+                TOKEN_HELP_TEXT: 'This question is used to validate your vote. Do not modify this field.',
+                CONFIRMATION_MESSAGE: 'Your vote has been recorded successfully. You will be sent an email indicating how your vote was handled. Thank you for participating!',
+                BALLOT_FOLDER_ID: '1ncuM7AyS9HtqtM842SUjHnhLG6_Pa_RB',
+                ElectionState: {
+                    UNOPENED: 'UNOPENED',
+                    ACTIVE: 'ACTIVE',
+                    CLOSED: 'CLOSED'
+                }
+            }
+        };
     });
     describe('firstValues_', () => {
         it('returns first element of array values', () => {
@@ -22,15 +39,11 @@ describe('Trigger', () => {
     describe('getElectionTitle_', () => {
         it('removes RESULTS_SUFFIX from spreadsheet name', () => {
             const spreadsheet = { getName: () => 'Election 2024 - Results' };
-            //@ts-ignore
-            global.RESULTS_SUFFIX = ' - Results';
             expect(Trigger.getElectionTitle_(spreadsheet)).toBe('Election 2024');
         });
 
         it('returns name if no suffix', () => {
             const spreadsheet = { getName: () => 'Election 2024' };
-            //@ts-ignore
-            global.RESULTS_SUFFIX = ' - Results';
             expect(Trigger.getElectionTitle_(spreadsheet)).toBe('Election 2024');
         });
     });

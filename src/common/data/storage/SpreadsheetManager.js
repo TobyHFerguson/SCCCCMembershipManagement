@@ -56,8 +56,9 @@ Common.Data.Storage.SpreadsheetManager = (function () {
 
     /**
       * Returns the data from a fiddler with formulas merged into it.
-     * @param {fiddler} fiddler 
-     * @returns {Array} - The merged data.
+      * @template
+     * @param {Fiddler<T>} fiddler 
+     * @returns {T[]} - The merged data.
      */
 
     getDataWithFormulas: (fiddler) => {
