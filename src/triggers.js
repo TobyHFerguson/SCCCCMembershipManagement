@@ -65,9 +65,10 @@ function getElectionsSpreadsheetId() {
 }
 
 /**
- * Sets up edit triggers for external Elections spreadsheet
+ * Sets up edit triggers for external Elections spreadsheet and daily calendar trigger
  * Uses Bootstrap configuration to determine the external spreadsheet ID
  * Creates an installable onEdit trigger from THIS project that monitors the external spreadsheet
+ * Also creates a daily calendar trigger to process election lifecycle changes
  */
 function setupElectionsTriggers() {
     try {
@@ -76,11 +77,12 @@ function setupElectionsTriggers() {
         const electionsSpreadsheetId = getElectionsSpreadsheetId();
         console.log(`Found Elections spreadsheet ID: ${electionsSpreadsheetId}`);
         
-        // Remove any existing triggers for this function to avoid duplicates
+        // Remove any existing triggers for these functions to avoid duplicates
         const existingTriggers = ScriptApp.getProjectTriggers();
         existingTriggers.forEach(trigger => {
-            if (trigger.getHandlerFunction() === 'handleElectionsSheetEdit') {
-                console.log(`Removing existing trigger: ${trigger.getUniqueId()}`);
+            if (trigger.getHandlerFunction() === 'handleElectionsSheetEdit' || 
+                trigger.getHandlerFunction() === 'processElectionsChanges') {
+                console.log(`Removing existing trigger: ${trigger.getUniqueId()} for ${trigger.getHandlerFunction()}`);
                 ScriptApp.deleteTrigger(trigger);
             }
         });
@@ -91,22 +93,32 @@ function setupElectionsTriggers() {
         
         // Create installable edit trigger for the external Elections spreadsheet
         // The trigger function will be in THIS project but will monitor the external spreadsheet
-        const trigger = ScriptApp.newTrigger('handleElectionsSheetEdit')
+        const editTrigger = ScriptApp.newTrigger('handleElectionsSheetEdit')
             .forSpreadsheet(electionsSpreadsheetId)
             .onEdit()
+            .create();
+        
+        // Create daily calendar trigger for election lifecycle management
+        // This runs in the context of THIS project (container spreadsheet) which has Bootstrap access
+        const calendarTrigger = ScriptApp.newTrigger('processElectionsChanges')
+            .timeBased()
+            .everyDays(1)
+            .atHour(0) // 00:00 (midnight)
             .create();
         
         // Store the external spreadsheet ID in script properties for reference
         PropertiesService.getScriptProperties().setProperty('ELECTIONS_SPREADSHEET_ID', electionsSpreadsheetId);
         
-        console.log(`Successfully created Elections edit trigger: ${trigger.getUniqueId()}`);
+        console.log(`Successfully created Elections edit trigger: ${editTrigger.getUniqueId()}`);
+        console.log(`Successfully created daily calendar trigger: ${calendarTrigger.getUniqueId()}`);
         console.log('Elections triggers setup complete!');
         
         return {
             success: true,
             spreadsheetId: electionsSpreadsheetId,
             spreadsheetName: electionsSpreadsheet.getName(),
-            triggerId: trigger.getUniqueId()
+            editTriggerId: editTrigger.getUniqueId(),
+            calendarTriggerId: calendarTrigger.getUniqueId()
         };
         
     } catch (error) {
