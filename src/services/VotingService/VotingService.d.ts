@@ -3,6 +3,22 @@
 */
 declare namespace VotingService {
     /**
+     * Creates a published copy of a Google Form in the given folder with Shared Drive detection.
+     * @param {string} formId
+     * @param {string} destinationFolderId
+     * @returns {{url: string, isSharedDrive: boolean}} Object containing the edit URL and Shared Drive status.
+     */
+    function makePublishedCopyOfFormInFolder_(formId: string, destinationFolderId: string): {url: string, isSharedDrive: boolean};
+
+    /**
+     * Sets the editors for the ballot and its results spreadsheet.
+     * @param {string} editUrl
+     * @param {string[]} electionOfficers
+     * @param {boolean} [isSharedDrive=false]
+     */
+    function setElectionOfficers(editUrl: string, electionOfficers?: string[], isSharedDrive?: boolean): void;
+
+    /**
      * Sends an email to an added election officer.
      * @param {string} email
      * @param {string} title
@@ -136,14 +152,6 @@ declare namespace VotingService {
      * @param {string[]} electionOfficers
      */
     function setElectionOfficers(editUrl: string, electionOfficers?: string[]): void;
-
-    /**
-     * Checks if a file or form is located in a Shared Drive
-     * @param {VotingService.Ballot | GoogleAppsScript.Spreadsheet.Spreadsheet} doc The document to check
-     * @returns {boolean} True if the document is in a Shared Drive, false if in My Drive
-     */
-    function isInSharedDrive_(doc: Ballot | GoogleAppsScript.Spreadsheet.Spreadsheet): boolean;
-
 
     /**
      * Sets the form to accept or not accept responses.
