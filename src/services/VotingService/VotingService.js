@@ -421,8 +421,23 @@ VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFo
     const destination = DriveApp.getFolderById(destinationFolderId);
     const copiedFileId = sourceFile.makeCopy(sourceFile.getName(), destination).getId();
     
-    // Share the copied file with anyone who has the link and make sure the editors cannot change sharing settings
-    DriveApp.getFileById(copiedFileId).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW).setShareableByEditors(false);
+    // Check if we're in a Shared Drive by examining the destination folder's parents
+    const isSharedDrive = !destination.getParents().hasNext();
+    
+    if (isSharedDrive) {
+        console.log(`File created in Shared Drive - individual file sharing not supported. Election Officers must be managed at the Shared Drive level.`);
+        // For Shared Drives, we can only set basic sharing settings
+        try {
+            DriveApp.getFileById(copiedFileId).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        } catch (error) {
+            /** @type {Error} */
+            const err = error instanceof Error ? error : new Error(String(error));
+            console.warn(`Could not set sharing for Shared Drive file: ${err.message}`);
+        }
+    } else {
+        // For My Drive files, we can set full sharing settings
+        DriveApp.getFileById(copiedFileId).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW).setShareableByEditors(false);
+    }
 
     const newForm = this.getBallot(copiedFileId);
     return newForm.getEditUrl();
@@ -479,6 +494,7 @@ VotingService.createResultsSpreadsheet_ = function (formId) {
  * @param {string[]} electionOfficers list of electionOfficer email addresses to share the form with
  *
  * @description Sets the election officers of the ballot form and its results spreadsheet to the given list. Send election officers an email detailing their change of status.
+ * For Shared Drive files, individual editor permissions may be limited by drive-level permissions.
  */
 VotingService.setElectionOfficers = function (editUrl, electionOfficers = []) {
     /**
@@ -493,6 +509,15 @@ VotingService.setElectionOfficers = function (editUrl, electionOfficers = []) {
     const newElectionOfficers = new Set(electionOfficers.filter(m => m)); //newElectionOfficers only contains non-empty email addresses
     const form = this.getBallot(editUrl);
     const resultsSpreadsheet = SpreadsheetApp.openById(form.getDestinationId())
+    
+    // Check if we're working with Shared Drive files
+    const formInSharedDrive = this.isInSharedDrive_(form);
+    const spreadsheetInSharedDrive = this.isInSharedDrive_(resultsSpreadsheet);
+    
+    if (formInSharedDrive || spreadsheetInSharedDrive) {
+        console.log(`Working with Shared Drive files. Election Officer permissions will be limited to what's allowed by the Shared Drive settings.`);
+    }
+    
     const formEditors = this.getEditorsExcludingOwner_(form);
     const resultsEditors = this.getEditorsExcludingOwner_(resultsSpreadsheet);
     // combine and deduplicate editors
@@ -512,23 +537,64 @@ VotingService.setElectionOfficers = function (editUrl, electionOfficers = []) {
         try {
             form.addEditor(email);
             resultsSpreadsheet.addEditor(email);
-            this.sendElectionOfficerAddEmail_(email, formTitle, editUrl);
+            this.sendElectionOfficerAddEmail_(email, formTitle, editUrl, formInSharedDrive || spreadsheetInSharedDrive);
             console.log(`Added '${email}' as election officer to '${formTitle}'`);
         } catch (error) {
-            console.log(`Error adding '${email}' as election officer to '${formTitle}': ${error}`);
+            /** @type {Error} */
+            const err = error instanceof Error ? error : new Error(String(error));
+            if (formInSharedDrive || spreadsheetInSharedDrive) {
+                console.log(`Note: Could not add '${email}' as editor to '${formTitle}' (Shared Drive limitation). They may need to be added at the Shared Drive level. Error: ${err.message}`);
+                // Still send the notification email, but with different messaging
+                this.sendElectionOfficerAddEmail_(email, formTitle, editUrl, true);
+            } else {
+                console.log(`Error adding '${email}' as election officer to '${formTitle}': ${err.message}`);
+            }
         }
     })
     remove.forEach(email => {
         try {
             form.removeEditor(email);
             resultsSpreadsheet.removeEditor(email);
-            this.sendElectionOfficerRemoveEmail_(email, formTitle);
+            this.sendElectionOfficerRemoveEmail_(email, formTitle, formInSharedDrive || spreadsheetInSharedDrive);
             console.log(`Removed '${email}' as election officer from  '${formTitle}'`);
         } catch (error) {
-            console.log(`Error removing '${email}' as election officer from '${formTitle}': ${error}`);
+            /** @type {Error} */
+            const err = error instanceof Error ? error : new Error(String(error));
+            if (formInSharedDrive || spreadsheetInSharedDrive) {
+                console.log(`Note: Could not remove '${email}' from '${formTitle}' (Shared Drive limitation). They may need to be removed at the Shared Drive level. Error: ${err.message}`);
+                // Still send the notification email
+                this.sendElectionOfficerRemoveEmail_(email, formTitle, true);
+            } else {
+                console.log(`Error removing '${email}' as election officer from '${formTitle}': ${err.message}`);
+            }
         }
     })
 }
+/**
+ * Checks if a file or form is located in a Shared Drive
+ * @param {VotingService.Ballot | GoogleAppsScript.Spreadsheet.Spreadsheet} doc The document to check
+ * @returns {boolean} True if the document is in a Shared Drive, false if in My Drive
+ */
+VotingService.isInSharedDrive_ = function (doc) {
+    const file = DriveApp.getFileById(doc.getId());
+    const parents = file.getParents();
+    
+    if (!parents.hasNext()) {
+        // No parent folders means it's likely in a Shared Drive root
+        return true;
+    }
+    
+    // Check if any parent folder has no parent (indicating Shared Drive)
+    while (parents.hasNext()) {
+        const parent = parents.next();
+        if (!parent.getParents().hasNext()) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
 /**
  * 
  * @param {VotingService.Ballot | GoogleAppsScript.Spreadsheet.Spreadsheet} doc 
@@ -546,14 +612,19 @@ VotingService.getEditorsExcludingOwner_ = function (doc) {
  * @param {string} email the email to send the message to
  * @param {string} title the title of the document that is being shared
  * @param {string} url the edit url of the document
+ * @param {boolean} [isSharedDrive=false] whether the files are in a Shared Drive
  * 
  * @description Send a message to the given email letting them know that they've been given edit access to the document
  */
-VotingService.sendElectionOfficerAddEmail_ = function (email, title, url) {
+VotingService.sendElectionOfficerAddEmail_ = function (email, title, url, isSharedDrive = false) {
+    const baseMessage = `You are now an Election Officer and have edit access to the Form '${title}' and its result sheet. It can be found at: ${url}`;
+    const sharedDriveNote = isSharedDrive ? 
+        `\n\nNote: These files are located in a Shared Drive. If you cannot edit them, please contact your Shared Drive administrator to ensure you have the appropriate permissions.` : '';
+    
     const message = {
         to: email,
         subject: `Form '${title}' shared with you`,
-        body: `You are now an Election Officer and have edit access to the Form '${title}' and its result sheet. It can be found at: ${url}`
+        body: baseMessage + sharedDriveNote
     }
     MailApp.sendEmail(message)
 }
@@ -561,14 +632,19 @@ VotingService.sendElectionOfficerAddEmail_ = function (email, title, url) {
  * 
  * @param {string} email the email to send the message to
  * @param {string} title the title of the document
+ * @param {boolean} [isSharedDrive=false] whether the files are in a Shared Drive
  * 
  * @description send a message to the given email telling them that they no longer have access to the given document
  */
-VotingService.sendElectionOfficerRemoveEmail_ = function (email, title) {
+VotingService.sendElectionOfficerRemoveEmail_ = function (email, title, isSharedDrive = false) {
+    const baseMessage = `You are no longer an Election Officer and your edit access to the Form '${title}' and its result sheet has been removed`;
+    const sharedDriveNote = isSharedDrive ? 
+        `\n\nNote: These files are located in a Shared Drive. Access may also be controlled at the Shared Drive level.` : '';
+    
     const message = {
         to: email,
         subject: `Document access removed`,
-        body: `You are no longer an Election Officer and your edit access to the Form '${title}' and its result sheet has been removed`,
+        body: baseMessage + sharedDriveNote,
     }
     MailApp.sendEmail(message)
 }
@@ -583,6 +659,45 @@ VotingService.collectResponses = function (formId, active = true) {
     // console.log(`Setting form ID: ${formId} to ${active ? 'accept' : 'not accept'} responses.`);
     const form = this.getBallot(formId);
     form.setAcceptingResponses(active);
+}
+
+/**
+ * Provides information about managing Election Officers for ballots in Shared Drives
+ * @param {string} editUrl the ballot's edit URL
+ * @returns {{isSharedDrive: boolean, driveInfo: string, recommendations: string[]}}
+ */
+VotingService.getElectionOfficerManagementInfo = function (editUrl) {
+    const form = this.getBallot(editUrl);
+    const resultsSpreadsheet = SpreadsheetApp.openById(form.getDestinationId());
+    
+    const formInSharedDrive = this.isInSharedDrive_(form);
+    const spreadsheetInSharedDrive = this.isInSharedDrive_(resultsSpreadsheet);
+    const isSharedDrive = formInSharedDrive || spreadsheetInSharedDrive;
+    
+    const driveInfo = isSharedDrive ? 
+        'Files are located in a Shared Drive where individual file permissions are limited.' :
+        'Files are located in My Drive where individual file permissions can be managed directly.';
+    
+    const recommendations = [];
+    
+    if (isSharedDrive) {
+        recommendations.push('Add Election Officers to the Shared Drive with Editor or Content Manager permissions');
+        recommendations.push('Election Officers can then edit ballots and results spreadsheets');
+        recommendations.push('Use the Shared Drive\'s member management interface to add/remove Election Officers');
+        recommendations.push('Consider creating a dedicated folder within the Shared Drive for elections');
+        recommendations.push('Individual file sharing is limited in Shared Drives - permissions are inherited from drive level');
+    } else {
+        recommendations.push('Election Officers can be added directly to individual ballot forms and results spreadsheets');
+        recommendations.push('Use the setElectionOfficers function to manage access automatically');
+        recommendations.push('Individual file permissions provide granular control over access');
+        recommendations.push('Election Officers will receive email notifications when added or removed');
+    }
+    
+    return {
+        isSharedDrive,
+        driveInfo,
+        recommendations
+    };
 }
 
 function runCreateResultsSpreadsheet() {
@@ -700,6 +815,22 @@ function runCollectResponses() {
 
 function runManageElectionLifecycles() {
     VotingService.manageElectionLifecycles();
+}
+
+function runGetElectionOfficerManagementInfo() {
+    // Replace with an actual ballot edit URL
+    const ballotUrl = TEST_FORM_ID;
+    const info = VotingService.getElectionOfficerManagementInfo(ballotUrl);
+    
+    console.log('Election Officer Management Information:');
+    console.log(`Is Shared Drive: ${info.isSharedDrive}`);
+    console.log(`Drive Info: ${info.driveInfo}`);
+    console.log('Recommendations:');
+    info.recommendations.forEach((rec, index) => {
+        console.log(`  ${index + 1}. ${rec}`);
+    });
+    
+    return info;
 }
 
 

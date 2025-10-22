@@ -3,7 +3,24 @@
 */
 declare namespace VotingService {
     /**
-     * Election state string literal type - matches the ElectionState object values in JavaScript
+     * Sends an email to an added election officer.
+     * @param {string} email
+     * @param {string} title
+     * @param {string} url
+     * @param {boolean} [isSharedDrive=false]
+     */
+    function sendElectionOfficerAddEmail_(email: string, title: string, url: string, isSharedDrive?: boolean): void;
+
+    /**
+     * Sends an email to a removed election officer.
+     * @param {string} email
+     * @param {string} title
+     * @param {boolean} [isSharedDrive=false]
+     */
+    function sendElectionOfficerRemoveEmail_(email: string, title: string, isSharedDrive?: boolean): void;
+
+    /**
+     * Represents the state of an election as a string literal type - matches the ElectionState object values in JavaScript
      */
     type ElectionState = 'UNOPENED' | 'ACTIVE' | 'CLOSED';
 
@@ -121,19 +138,12 @@ declare namespace VotingService {
     function setElectionOfficers(editUrl: string, electionOfficers?: string[]): void;
 
     /**
-     * Sends an email to a new election officer.
-     * @param {string} email
-     * @param {string} title
-     * @param {string} url
+     * Checks if a file or form is located in a Shared Drive
+     * @param {VotingService.Ballot | GoogleAppsScript.Spreadsheet.Spreadsheet} doc The document to check
+     * @returns {boolean} True if the document is in a Shared Drive, false if in My Drive
      */
-    function sendElectionOfficerAddEmail_(email: string, title: string, url: string): void;
+    function isInSharedDrive_(doc: Ballot | GoogleAppsScript.Spreadsheet.Spreadsheet): boolean;
 
-    /**
-     * Sends an email to a removed election officer.
-     * @param {string} email
-     * @param {string} title
-     */
-    function sendElectionOfficerRemoveEmail_(email: string, title: string): void;
 
     /**
      * Sets the form to accept or not accept responses.
@@ -141,6 +151,17 @@ declare namespace VotingService {
      * @param {boolean} active
      */
     function collectResponses(formId: string, active?: boolean): void;
+
+    /**
+     * Provides information about managing Election Officers for ballots in Shared Drives
+     * @param {string} editUrl
+     * @returns {{isSharedDrive: boolean, driveInfo: string, recommendations: string[]}}
+     */
+    function getElectionOfficerManagementInfo(editUrl: string): {
+        isSharedDrive: boolean;
+        driveInfo: string;
+        recommendations: string[];
+    };
 
     /**
      * Creates a pre-filled URL for a question in a form.
