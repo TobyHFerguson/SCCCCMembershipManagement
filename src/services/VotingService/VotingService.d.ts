@@ -3,7 +3,40 @@
 */
 declare namespace VotingService {
     /**
-     * Election state string literal type - matches the ElectionState object values in JavaScript
+     * Creates a published copy of a Google Form in the given folder with Shared Drive detection.
+     * @param {string} formId
+     * @param {string} destinationFolderId
+     * @returns {{url: string, isSharedDrive: boolean}} Object containing the edit URL and Shared Drive status.
+     */
+    function makePublishedCopyOfFormInFolder_(formId: string, destinationFolderId: string): {url: string, isSharedDrive: boolean};
+
+    /**
+     * Sets the editors for the ballot and its results spreadsheet.
+     * @param {string} editUrl
+     * @param {string[]} electionOfficers
+     * @param {boolean} [isSharedDrive=false]
+     */
+    function setElectionOfficers(editUrl: string, electionOfficers?: string[], isSharedDrive?: boolean): void;
+
+    /**
+     * Sends an email to an added election officer.
+     * @param {string} email
+     * @param {string} title
+     * @param {string} url
+     * @param {boolean} [isSharedDrive=false]
+     */
+    function sendElectionOfficerAddEmail_(email: string, title: string, url: string, isSharedDrive?: boolean): void;
+
+    /**
+     * Sends an email to a removed election officer.
+     * @param {string} email
+     * @param {string} title
+     * @param {boolean} [isSharedDrive=false]
+     */
+    function sendElectionOfficerRemoveEmail_(email: string, title: string, isSharedDrive?: boolean): void;
+
+    /**
+     * Represents the state of an election as a string literal type - matches the ElectionState object values in JavaScript
      */
     type ElectionState = 'UNOPENED' | 'ACTIVE' | 'CLOSED';
 
@@ -121,26 +154,22 @@ declare namespace VotingService {
     function setElectionOfficers(editUrl: string, electionOfficers?: string[]): void;
 
     /**
-     * Sends an email to a new election officer.
-     * @param {string} email
-     * @param {string} title
-     * @param {string} url
-     */
-    function sendElectionOfficerAddEmail_(email: string, title: string, url: string): void;
-
-    /**
-     * Sends an email to a removed election officer.
-     * @param {string} email
-     * @param {string} title
-     */
-    function sendElectionOfficerRemoveEmail_(email: string, title: string): void;
-
-    /**
      * Sets the form to accept or not accept responses.
      * @param {string} formId
      * @param {boolean} active
      */
     function collectResponses(formId: string, active?: boolean): void;
+
+    /**
+     * Provides information about managing Election Officers for ballots in Shared Drives
+     * @param {string} editUrl
+     * @returns {{isSharedDrive: boolean, driveInfo: string, recommendations: string[]}}
+     */
+    function getElectionOfficerManagementInfo(editUrl: string): {
+        isSharedDrive: boolean;
+        driveInfo: string;
+        recommendations: string[];
+    };
 
     /**
      * Creates a pre-filled URL for a question in a form.
