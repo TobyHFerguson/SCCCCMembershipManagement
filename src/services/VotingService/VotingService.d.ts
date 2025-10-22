@@ -126,14 +126,6 @@ declare namespace VotingService {
     function getBallot(id: string): Ballot;
 
     /**
-     * Makes a published copy of a Google Form in the given folder.
-     * @param {string} formId
-     * @param {string} destinationFolderId
-     * @returns {string} The edit URL of the new form.
-     */
-    function makePublishedCopyOfFormInFolder_(formId: string, destinationFolderId: string): string;
-
-    /**
      * Adds a required token question to the form.
      * @param {Ballot} form
      */
