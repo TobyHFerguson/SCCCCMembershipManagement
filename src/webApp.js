@@ -1,9 +1,15 @@
 const MAGIC_LINK_INPUT = 'common/auth/magicLinkInput.html'; // Name of the HTML file for input form
 const _LAYOUT_FILE = 'common/html/_Layout.html'; // Name of the layout file
 
+// @ts-check
+/**
+ * 
+ * @param {GoogleAppsScript.Events.DoGet} e 
+ * @returns 
+ */
 function doGet(e) {
     if (!e.parameter.service) {
-        return createTextResponse('No service parameter given. The url must have a service parameter!', 400);
+        return createTextResponse('No service parameter given. The url must have a service parameter!');
     }
     const service = WebServices[e.parameter.service];
     if (!service) {
@@ -23,24 +29,24 @@ function doGet(e) {
         tabletMax: tabletMaxBreakpoint
     };
     template.include = _includeHtml; 
+    template.serviceName = service.name
 
     if (page === 'request') {
         template.contentFileName = MAGIC_LINK_INPUT;
         template.service = service.service;
-        template.serviceName = service.name
         const output = template.evaluate()
             .setTitle(`Request Access - ${MAGIC_LINK_INPUT}`)
         return output;
     }
     const token = e.parameter.token;
-    const tokenData = Common.Auth.TokenStorage.getTokenData(token);
+    const tokenData = Common.Auth.TokenStorage.consumeToken(token);
+    console.log('doGet() called with token: ', token, ' and tokenData: ', tokenData);
     if (!tokenData || tokenData.Used) {
-        return createTextResponse('Invalid or Used Link - The access link is either invalid or has already been used.', 400);
+        return createTextResponse('Invalid or Used Link - The access link is either invalid or has already been used.');
     }
     if (!tokenData.Email) {
-        throw new Error('tokenData.email === null')
+        throw new Error('tokenData.Email === null')
     }
-    Common.Auth.TokenStorage.markTokenAsUsed(token);
     
     return service.WebApp.doGet(e, tokenData.Email, template);
 }
