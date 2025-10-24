@@ -1,5 +1,6 @@
 
 if (typeof require !== 'undefined') {
+  //@ts-ignore
   ProfileManagementService = {};
 }
 ProfileManagementService._checkForForbiddenUpdates = function (originalObject, updatedObject, forbiddenFields) {
@@ -37,14 +38,11 @@ ProfileManagementService._checkForForbiddenUpdates = function (originalObject, u
   return; // Only allowed updates (or no updates)
 }
 
-ProfileManagementService.getProfile = function (email) {
-  return Commmon.Data.getMember(email);
-}
 ProfileManagementService.updateProfile = function (userToken, updatedProfile) {
   const forbiddenFields = ["Status", "Email", "Joined", "Expires", "Period", "Migrated", "Renewed On"]; // Define the fields that are forbidden to update
   const userEmail = Common.Auth.TokenManager.getEmailFromMUT(userToken);
   if (!userEmail) {
-    console.warning(`Invalid or expired token: ${userToken}`);
+    console.warn(`Invalid or expired token: ${userToken}`);
     return JSON.stringify({ success: false, message: "Invalid session. Please refresh the page." });
   }
   if (!updatedProfile) {
@@ -67,6 +65,7 @@ ProfileManagementService.updateProfile = function (userToken, updatedProfile) {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    //@ts-ignore
     ProfileManagementService
   };
 }

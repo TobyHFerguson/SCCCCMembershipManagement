@@ -18,6 +18,11 @@
         "userSymbol": "GroupsSettings",
         "version": "v1",
         "serviceId": "groupssettings"
+      },
+      {
+        "userSymbol": "Drive",
+        "version": "v3",
+        "serviceId": "drive"
       }
     ]
   },
@@ -37,7 +42,9 @@
     "https://www.googleapis.com/auth/groups",
     "https://www.googleapis.com/auth/script.scriptapp",
     "https://www.googleapis.com/auth/drive.readonly",
-    "https://www.googleapis.com/auth/apps.groups.settings"
+    "https://www.googleapis.com/auth/apps.groups.settings",
+    "https://www.googleapis.com/auth/forms",
+    "https://www.googleapis.com/auth/drive"
   ],
   "webapp": {
     "executeAs": "USER_DEPLOYING",

@@ -1,0 +1,25 @@
+{
+    "compilerOptions": {
+        "allowJs": true,
+        "checkJs": true,
+        "noEmit": true,
+        "noImplicitAny": false,
+        "typeRoots": [
+            "./node_modules/@types",
+            "./"
+        ],
+        "types": [
+            "google-apps-script",
+            "jest",
+            "node",
+        ],
+        "lib": [
+            "esnext"
+        ]
+    },
+    "include": [
+        "**/*.js",
+        "**/*.d.ts",
+        "jest-globals.d.ts"
+    ]
+}

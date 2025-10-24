@@ -2,7 +2,7 @@ Common.Data.Storage = {}
 Common.Data.Storage.SpreadsheetManager = (function () {
   let sheets;
   function _initializeSheets() {
-    const bootStrap = bmPreFiddler.PreFiddler().getFiddler({ sheetName: 'Bootstrap', createIfMissing: false }).getData();
+    const bootStrap = bmPreFiddler.PreFiddler().getFiddler({id: '1EF3swXKvLv6jPz0cxC7J1al8m0vk9cWOx5t9W0LEy2g', sheetName: 'Bootstrap', createIfMissing: false }).getData();
     sheets = Object.fromEntries(bootStrap.map(row => [row.Reference, row]));
   }
   /**
@@ -56,8 +56,9 @@ Common.Data.Storage.SpreadsheetManager = (function () {
 
     /**
       * Returns the data from a fiddler with formulas merged into it.
-     * @param {fiddler} fiddler 
-     * @returns {Array} - The merged data.
+      * @template
+     * @param {Fiddler<T>} fiddler 
+     * @returns {T[]} - The merged data.
      */
 
     getDataWithFormulas: (fiddler) => {

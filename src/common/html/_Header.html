@@ -1,7 +1,6 @@
-
 <!-- Purpose of <base target="_top">: It tells the browser that all relative links within the document should open in the topmost Browse context (i.e., the entire browser window), rather than staying within the iframe that might contain the web app. This prevents "frame busting" issues and ensures a consistent navigation experience. -->
 
-<base target="_top"> 
+<base target="_top">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
     /* Base Styles (for Desktop) */
@@ -120,6 +119,25 @@
 
     .error {
         color: red;
+    }
+
+    /* Data Tables  Styles */
+    #data-table {
+        width: 100%;
+        /* Ensure the table fills its container */
+        border-collapse: collapse;
+    }
+
+    #data-table th,
+    #data-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+        /* Remove width: auto; */
+    }
+
+    #data-table th {
+        background-color: #f2f2f2;
     }
 
     /* --- Responsive Styles (Applied by JavaScript classes on <html>) --- */
@@ -272,65 +290,65 @@
         }
     }
 
-      /**
-   * Disables all input, button, select, and textarea elements within a given form,
-   * and optionally adds a CSS class for visual feedback.
-   * Also prevents subsequent form submissions by stopping default behavior.
-   * @param {HTMLElement} formElement The form to disable.
-   */
-  function disableForm(formElement) {
-    if (!formElement) {
-      console.warn("Attempted to disable a non-existent form element.");
-      return;
-    }
-
-    // Disable all form control elements
-    for (let i = 0; i < formElement.elements.length; i++) {
-      const element = formElement.elements[i];
-      // Check if the element is a standard form control that can be disabled
-      if (element.tagName === 'INPUT' || element.tagName === 'BUTTON' ||
-          element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') { //
-        element.disabled = true; //
-      }
-    }
-
-    // Add a class for visual styling
-    formElement.classList.add('form-disabled');
-
-    // Add a property to track if the form is disabled via this function
-    formElement.dataset.customDisabled = 'true';
-  }
-
-/**
- * Enables all input, button, select, and textarea elements within a given form,
- * and removes the visual disabled class.
- * @param {HTMLElement} formElement The form to enable.
- * @param {string[]} [exceptions=[]] An optional array of element IDs to skip enabling.
+    /**
+ * Disables all input, button, select, and textarea elements within a given form,
+ * and optionally adds a CSS class for visual feedback.
+ * Also prevents subsequent form submissions by stopping default behavior.
+ * @param {HTMLElement} formElement The form to disable.
  */
-function enableForm(formElement, exceptions = []) {
-  if (!formElement) {
-    console.warn("Attempted to enable a non-existent form element.");
-    return;
-  }
+    function disableForm(formElement) {
+        if (!formElement) {
+            console.warn("Attempted to disable a non-existent form element.");
+            return;
+        }
 
-  // Only enable if it was disabled by our custom function
-  if (formElement.dataset.customDisabled === 'true') {
-    for (let i = 0; i < formElement.elements.length; i++) {
-      const element = formElement.elements[i];
-      // Skip the element if its ID is in the exceptions array
-      if (exceptions.includes(element.id)) {
-        continue;
-      }
+        // Disable all form control elements
+        for (let i = 0; i < formElement.elements.length; i++) {
+            const element = formElement.elements[i];
+            // Check if the element is a standard form control that can be disabled
+            if (element.tagName === 'INPUT' || element.tagName === 'BUTTON' ||
+                element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') { //
+                element.disabled = true; //
+            }
+        }
 
-      if (element.tagName === 'INPUT' || element.tagName === 'BUTTON' ||
-          element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') {
-        element.disabled = false;
-      }
+        // Add a class for visual styling
+        formElement.classList.add('form-disabled');
+
+        // Add a property to track if the form is disabled via this function
+        formElement.dataset.customDisabled = 'true';
     }
-    formElement.classList.remove('form-disabled');
-    delete formElement.dataset.customDisabled;
-  }
-}
+
+    /**
+     * Enables all input, button, select, and textarea elements within a given form,
+     * and removes the visual disabled class.
+     * @param {HTMLElement} formElement The form to enable.
+     * @param {string[]} [exceptions=[]] An optional array of element IDs to skip enabling.
+     */
+    function enableForm(formElement, exceptions = []) {
+        if (!formElement) {
+            console.warn("Attempted to enable a non-existent form element.");
+            return;
+        }
+
+        // Only enable if it was disabled by our custom function
+        if (formElement.dataset.customDisabled === 'true') {
+            for (let i = 0; i < formElement.elements.length; i++) {
+                const element = formElement.elements[i];
+                // Skip the element if its ID is in the exceptions array
+                if (exceptions.includes(element.id)) {
+                    continue;
+                }
+
+                if (element.tagName === 'INPUT' || element.tagName === 'BUTTON' ||
+                    element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') {
+                    element.disabled = false;
+                }
+            }
+            formElement.classList.remove('form-disabled');
+            delete formElement.dataset.customDisabled;
+        }
+    }
     // Initial check on load
     checkViewportAndApplyClasses();
     // Re-check on window resize (for orientation changes)

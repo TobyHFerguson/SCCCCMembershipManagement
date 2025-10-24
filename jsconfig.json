@@ -1,13 +1,19 @@
 {
-    "compilerOptions": {
-      "target": "ES2021",
-    
-      "allowJs": true       // Make sure JS files are included
-    },
-    "include": [
-      "./**/*"             // Include all files in the project
+  "compilerOptions": {
+    "target": "esnext",
+    "noImplicitAny": false,
+    "lib": [
+      "esnext"
     ],
-    "exclude": [
-      "node_modules"
-    ]
-  }
+    "allowJs": true,
+    "checkJs": true
+  },
+  "include": [
+    "**/*.js",
+    "**/*.gs",
+    "**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
