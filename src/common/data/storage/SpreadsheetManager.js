@@ -1,13 +1,58 @@
 Common.Data.Storage = {}
 Common.Data.Storage.SpreadsheetManager = (function () {
   let sheets;
+  
+  /**
+   * Gets the container spreadsheet ID from script properties or current binding
+   * @returns {string|null} The container spreadsheet ID
+   */
+  function getContainerSpreadsheetId() {
+    try {
+      // First try to get from script properties (if set during setup)
+      const properties = PropertiesService.getScriptProperties();
+      let containerId = properties.getProperty('CONTAINER_SPREADSHEET_ID');
+      
+      if (!containerId) {
+        // Fallback: try to get from current active spreadsheet if we're in normal context
+        try {
+          const activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+          if (activeSpreadsheet) {
+            containerId = activeSpreadsheet.getId();
+            // Cache it for future use
+            properties.setProperty('CONTAINER_SPREADSHEET_ID', containerId);
+          }
+        } catch (e) {
+          // We might be in a trigger context where getActiveSpreadsheet() doesn't work reliably
+          // @ts-ignore - Logger is implemented in separate file
+          Common.Logger.warn('SpreadsheetManager', 'Could not get active spreadsheet in current context', e);
+        }
+      }
+      
+      return containerId;
+    } catch (error) {
+      // @ts-ignore - Logger is implemented in separate file
+      Common.Logger.error('SpreadsheetManager', 'Failed to get container spreadsheet ID', error);
+      return null;
+    }
+  }
+  
   function _initializeSheets() {
     try {
       // @ts-ignore - Logger is implemented in separate file
       Common.Logger.info('SpreadsheetManager', 'Starting _initializeSheets - getting Bootstrap fiddler');
       
-      // Use the container spreadsheet instead of hardcoded ID
-      const bootStrap = bmPreFiddler.PreFiddler().getFiddler({sheetName: 'Bootstrap', createIfMissing: false }).getData();
+      // Get the container spreadsheet ID to ensure we're accessing the correct spreadsheet
+      const containerSpreadsheetId = getContainerSpreadsheetId();
+      
+      // @ts-ignore - Logger is implemented in separate file
+      Common.Logger.info('SpreadsheetManager', 'Using container spreadsheet ID', {containerSpreadsheetId});
+      
+      // Use the container spreadsheet instead of current context
+      const fiddlerConfig = containerSpreadsheetId 
+        ? {id: containerSpreadsheetId, sheetName: 'Bootstrap', createIfMissing: false}
+        : {sheetName: 'Bootstrap', createIfMissing: false};
+        
+      const bootStrap = bmPreFiddler.PreFiddler().getFiddler(fiddlerConfig).getData();
       
       // @ts-ignore - Logger is implemented in separate file
       Common.Logger.info('SpreadsheetManager', 'Successfully got Bootstrap data', {
@@ -84,7 +129,25 @@ Common.Data.Storage.SpreadsheetManager = (function () {
         // @ts-ignore - Logger is implemented in separate file
         Common.Logger.info('SpreadsheetManager', `Found sheet configuration for ${sheetName}`, sheet);
         
-        const fiddler = bmPreFiddler.PreFiddler().getFiddler(sheets[sheetName]).needFormulas();
+        // Ensure we use the correct spreadsheet context
+        const sheetConfig = sheets[sheetName];
+        let fiddlerConfig;
+        
+        if (sheetConfig.id) {
+          // If the sheet config has an ID, use it (external spreadsheet)
+          fiddlerConfig = sheetConfig;
+        } else {
+          // If no ID in config, add container spreadsheet ID (local sheet)
+          const containerSpreadsheetId = getContainerSpreadsheetId();
+          fiddlerConfig = containerSpreadsheetId 
+            ? {...sheetConfig, id: containerSpreadsheetId}
+            : sheetConfig;
+        }
+        
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.info('SpreadsheetManager', `Using fiddler configuration for ${sheetName}`, fiddlerConfig);
+        
+        const fiddler = bmPreFiddler.PreFiddler().getFiddler(fiddlerConfig).needFormulas();
         
         // @ts-ignore - Logger is implemented in separate file
         Common.Logger.info('SpreadsheetManager', `Successfully created fiddler for ${sheetName}`);
