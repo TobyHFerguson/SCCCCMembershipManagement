@@ -33,6 +33,13 @@ VotingService.Trigger = {
         const electionOfficers = sheet.getRange(editedRow, electionOfficersColumnIndex).getValue().split(',').map(email => email.trim());
         const editUrl = sheet.getRange(editedRow, formEditUrlColumnIndex).getValue();
         if (!editUrl) {
+            // Visual feedback for missing URL
+            sheet.getRange(editedRow, formEditUrlColumnIndex).setBackground('#FFE6CC'); // Light orange
+            sheet.getRange(editedRow, formEditUrlColumnIndex).setNote('⚠️ No Form URL provided\n\nPlease enter a valid Google Form URL to create a ballot');
+            
+            // User notification
+            sheet.getParent().toast('⚠️ No Form URL provided in this row - please enter a valid Google Form URL', 'Elections System', 4);
+            
             // @ts-ignore - Logger is implemented in separate file
             Common.Logger.warn('VotingTrigger', `No valid Form ID found in row ${editedRow} - no processing will occur`);
             return; // Exit early if no URL to process
@@ -43,6 +50,10 @@ VotingService.Trigger = {
             if (editUrl) {
                 console.log(`Creating a ballot from the source form: ${editUrl} in row: ${editedRow}`);
                 try {
+                    // Show processing status to user
+                    sheet.getRange(editedRow, formEditUrlColumnIndex).setBackground('#FFF2CC'); // Light yellow
+                    sheet.getRange(editedRow, formEditUrlColumnIndex).setNote('Processing ballot creation...');
+                    
                     // @ts-ignore - Logger is implemented in separate file
                     Common.Logger.info('VotingTrigger', `Creating ballot form from source: ${editUrl} for row ${editedRow}`);
                     
@@ -50,13 +61,18 @@ VotingService.Trigger = {
                     sheet.getRange(editedRow, titleColumnIndex).setValue(title);
                     sheet.getRange(editedRow, formEditUrlColumnIndex).setValue(url);
                     
+                    // Success feedback
+                    sheet.getRange(editedRow, formEditUrlColumnIndex).setBackground('#D5E8D4'); // Light green
+                    sheet.getRange(editedRow, formEditUrlColumnIndex).setNote(`✅ Ballot form '${title}' created successfully\nEdit URL: ${url}\nElection Officers notified: ${electionOfficers.join(', ')}`);
+                    
+                    // Non-blocking success notification
+                    sheet.getParent().toast(`✅ Ballot form '${title}' created successfully and Election Officers notified`, 'Elections System', 5);
+                    
                     // @ts-ignore - Logger is implemented in separate file
                     Common.Logger.info('VotingTrigger', `Successfully created ballot form '${title}' for row ${editedRow}`, {
                         ballotUrl: url,
                         electionOfficers: electionOfficers
                     });
-                    
-                    // No UI alert during trigger - this would interrupt user workflow
                 } catch (error) {
                     // @ts-ignore - Logger is implemented in separate file
                     Common.Logger.error('VotingTrigger', `Error creating ballot form for row ${editedRow}`, {
@@ -68,14 +84,14 @@ VotingService.Trigger = {
                     // Clear the problematic URL so user knows it failed
                     sheet.getRange(editedRow, formEditUrlColumnIndex).clear();
                     
-                    // Add error indicator in a safe way that doesn't interrupt workflow
-                    try {
-                        const errorNote = `Error: ${error.message.substring(0, 100)}...`;
-                        sheet.getRange(editedRow, formEditUrlColumnIndex).setNote(errorNote);
-                    } catch (noteError) {
-                        // @ts-ignore - Logger is implemented in separate file
-                        Common.Logger.warn('VotingTrigger', 'Could not set error note on cell', noteError);
-                    }
+                    // Visual error feedback
+                    sheet.getRange(editedRow, formEditUrlColumnIndex).setBackground('#FFD9D9'); // Light red
+                    const errorNote = `❌ ERROR: ${error.message}\n\nPlease check the source form URL is valid and accessible.\nSee System_Logs sheet in main spreadsheet for technical details.`;
+                    sheet.getRange(editedRow, formEditUrlColumnIndex).setNote(errorNote);
+                    
+                    // User-friendly error notification
+                    const shortError = error.message.length > 50 ? error.message.substring(0, 50) + '...' : error.message;
+                    sheet.getParent().toast(`❌ Failed to create ballot form: ${shortError}. Check cell note for details.`, 'Elections System Error', 8);
                 }
             }
         } else if (editedColumn === electionOfficersColumnIndex) {
@@ -86,13 +102,32 @@ VotingService.Trigger = {
             // This can be detected by seeing if we have a form title yet!
             if (title) {
                 try {
+                    // Show processing status
+                    sheet.getRange(editedRow, electionOfficersColumnIndex).setBackground('#FFF2CC'); // Light yellow
+                    sheet.getRange(editedRow, electionOfficersColumnIndex).setNote('Updating Election Officers...');
+                    
                     VotingService.setElectionOfficers(editUrl, electionOfficers);
+                    
+                    // Success feedback
+                    sheet.getRange(editedRow, electionOfficersColumnIndex).setBackground('#D5E8D4'); // Light green
+                    sheet.getRange(editedRow, electionOfficersColumnIndex).setNote(`✅ Election Officers updated for '${title}'\nOfficers: ${electionOfficers.join(', ')}\nNotification emails sent successfully`);
+                    
+                    // Success toast
+                    sheet.getParent().toast(`✅ Election Officers updated for '${title}' and notifications sent`, 'Elections System', 4);
+                    
                     // @ts-ignore - Logger is implemented in separate file
                     Common.Logger.info('VotingTrigger', `Updated Election Officers for '${title}' and sent notification emails`, {
                         title: title,
                         electionOfficers: electionOfficers
                     });
                 } catch (error) {
+                    // Error feedback
+                    sheet.getRange(editedRow, electionOfficersColumnIndex).setBackground('#FFD9D9'); // Light red
+                    sheet.getRange(editedRow, electionOfficersColumnIndex).setNote(`❌ ERROR updating Election Officers for '${title}': ${error.message}`);
+                    
+                    // Error toast
+                    sheet.getParent().toast(`❌ Failed to update Election Officers for '${title}': ${error.message}`, 'Elections System Error', 6);
+                    
                     // @ts-ignore - Logger is implemented in separate file
                     Common.Logger.error('VotingTrigger', `Error updating Election Officers for '${title}'`, error);
                 }
@@ -100,11 +135,36 @@ VotingService.Trigger = {
         } else if (editedColumn === startColumnIndex || editedColumn === endColumnIndex) {
             // @ts-ignore - Logger is implemented in separate file
             Common.Logger.info('VotingTrigger', `Date edited in row ${editedRow} - triggering election lifecycle management`);
+            
             try {
+                // Show processing status
+                const dateCell = sheet.getRange(editedRow, editedColumn);
+                dateCell.setBackground('#FFF2CC'); // Light yellow
+                dateCell.setNote('Processing election lifecycle changes...');
+                
+                // General processing notification
+                sheet.getParent().toast('Processing election lifecycle changes for all elections...', 'Elections System', 3);
+                
                 VotingService.manageElectionLifecycles();
+                
+                // Success feedback
+                dateCell.setBackground('#D5E8D4'); // Light green
+                dateCell.setNote(`✅ Election lifecycle management completed\nAll election dates processed successfully`);
+                
+                // Success notification
+                sheet.getParent().toast('✅ Election lifecycle management completed successfully', 'Elections System', 4);
+                
                 // @ts-ignore - Logger is implemented in separate file
                 Common.Logger.info('VotingTrigger', 'Election lifecycle management completed successfully');
             } catch (error) {
+                // Error feedback
+                const dateCell = sheet.getRange(editedRow, editedColumn);
+                dateCell.setBackground('#FFD9D9'); // Light red
+                dateCell.setNote(`❌ ERROR in election lifecycle management: ${error.message}`);
+                
+                // Error notification
+                sheet.getParent().toast(`❌ Election lifecycle management failed: ${error.message}`, 'Elections System Error', 6);
+                
                 // @ts-ignore - Logger is implemented in separate file
                 Common.Logger.error('VotingTrigger', 'Error in election lifecycle management', error);
             }
