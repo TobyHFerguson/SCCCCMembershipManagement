@@ -217,11 +217,17 @@ function handleElectionsSheetEdit(e) {
             // @ts-ignore - Logger is implemented in separate file
             Common.Logger.info('Triggers', `Processing Elections sheet edit: Row ${e.range.getRow()}, Column ${e.range.getColumn()}`);
             
-            // Call the existing VotingService handler with the real event
-            VotingService.Trigger.handleRegistrationSheetEdit(e);
-            
-            // @ts-ignore - Logger is implemented in separate file
-            Common.Logger.info('Triggers', 'Elections sheet edit processed successfully');
+            try {
+                // Call the existing VotingService handler with the real event
+                VotingService.Trigger.handleRegistrationSheetEdit(e);
+                
+                // @ts-ignore - Logger is implemented in separate file
+                Common.Logger.info('Triggers', 'Elections sheet edit processed successfully');
+            } catch (handlerError) {
+                // @ts-ignore - Logger is implemented in separate file
+                Common.Logger.error('Triggers', 'Error in Elections sheet handler - operation failed', handlerError);
+                throw handlerError; // Re-throw to be caught by outer catch
+            }
             
         } catch (error) {
             // @ts-ignore - Logger is implemented in separate file
