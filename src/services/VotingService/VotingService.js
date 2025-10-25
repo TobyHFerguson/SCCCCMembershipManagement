@@ -414,14 +414,16 @@ VotingService.getBallot = function (id) {
 VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFolderId) {
     // 1. Get the source form file from Drive.
     const sourceFormId = VotingService.getBallot(formId).getId();
-    console.log(`Creating ballot copy from source form: ${sourceFormId} to folder: ${destinationFolderId}`);
+    // @ts-ignore - Logger is implemented in separate file
+    Common.Logger.info('VotingService', `Creating ballot copy from source form: ${sourceFormId} to folder: ${destinationFolderId}`);
 
     const sourceFile = DriveApp.getFileById(sourceFormId);
 
     // 2. Create the form copy in the destination folder.
     const destination = DriveApp.getFolderById(destinationFolderId);
     const copiedFileId = sourceFile.makeCopy(sourceFile.getName(), destination).getId();
-    console.log(`Created copy with ID: ${copiedFileId}`);
+    // @ts-ignore - Logger is implemented in separate file
+    Common.Logger.info('VotingService', `Created copy with ID: ${copiedFileId}`);
     
     // 3. Set sharing settings with automatic Shared Drive detection
     let isSharedDrive = false;
