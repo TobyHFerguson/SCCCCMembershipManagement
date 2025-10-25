@@ -1,5 +1,14 @@
  // @ts-check
  function onOpen() {
+    // Initialize Logger with container spreadsheet for cross-spreadsheet logging
+    try {
+        const containerSpreadsheetId = SpreadsheetApp.getActiveSpreadsheet().getId();
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.setContainerSpreadsheet(containerSpreadsheetId);
+    } catch (error) {
+        console.error('Failed to initialize Logger container:', error);
+    }
+    
     MembershipManagement.Menu.create();
     DocsService.Menu.create();
     EmailService.Menu.create();

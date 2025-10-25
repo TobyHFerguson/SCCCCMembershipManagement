@@ -208,6 +208,7 @@ declare namespace Common {
         configure(config: any): void;
         getLogs(): any[][];
         clearLogs(): void;
+        setContainerSpreadsheet(spreadsheetId: string): void;
     }
 }
 

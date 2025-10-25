@@ -42,12 +42,60 @@
   }
   
   /**
+   * Gets the container spreadsheet ID from script properties or current binding
+   * @returns {string|null} The container spreadsheet ID
+   */
+  function getContainerSpreadsheetId() {
+    try {
+      // First try to get from script properties (if set during setup)
+      const properties = PropertiesService.getScriptProperties();
+      let containerId = properties.getProperty('CONTAINER_SPREADSHEET_ID');
+      
+      if (!containerId) {
+        // Fallback: try to get from current active spreadsheet if we're in normal context
+        try {
+          const activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+          if (activeSpreadsheet) {
+            containerId = activeSpreadsheet.getId();
+            // Cache it for future use
+            properties.setProperty('CONTAINER_SPREADSHEET_ID', containerId);
+          }
+        } catch (e) {
+          // We might be in a trigger context where getActiveSpreadsheet() doesn't work
+        }
+      }
+      
+      return containerId;
+    } catch (error) {
+      console.error('Failed to get container spreadsheet ID:', error);
+      return null;
+    }
+  }
+
+  /**
    * Gets or creates the logging sheet in the container spreadsheet
    * @returns {GoogleAppsScript.Spreadsheet.Sheet|null} The log sheet
    */
   function getLogSheet() {
     try {
-      const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+      let spreadsheet;
+      
+      // Try to get the container spreadsheet ID
+      const containerId = getContainerSpreadsheetId();
+      
+      if (containerId) {
+        try {
+          // Open the specific container spreadsheet by ID
+          spreadsheet = SpreadsheetApp.openById(containerId);
+        } catch (e) {
+          // If that fails, fall back to active spreadsheet
+          spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+        }
+      } else {
+        // Fallback to active spreadsheet
+        spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+      }
+      
       let logSheet = spreadsheet.getSheetByName('System_Logs');
       
       if (!logSheet) {
@@ -240,6 +288,16 @@
     const logSheet = getLogSheet();
     if (logSheet && logSheet.getLastRow() > 1) {
       logSheet.getRange(2, 1, logSheet.getLastRow() - 1, 5).clearContent();
+    }
+  };
+  
+  // @ts-ignore
+  Common.Logger.setContainerSpreadsheet = function(spreadsheetId) {
+    try {
+      const properties = PropertiesService.getScriptProperties();
+      properties.setProperty('CONTAINER_SPREADSHEET_ID', spreadsheetId);
+    } catch (error) {
+      console.error('Failed to set container spreadsheet ID:', error);
     }
   };
 })();
