@@ -9,6 +9,29 @@
         console.error('Failed to initialize Logger container:', error);
     }
     
+    // Auto-setup all triggers if not already configured
+    try {
+        const properties = PropertiesService.getScriptProperties();
+        const electionsTriggerId = properties.getProperty('ELECTIONS_TRIGGER_ID');
+        const formSubmitTriggerId = properties.getProperty('FORM_SUBMIT_TRIGGER_ID');
+        
+        if (!electionsTriggerId || !formSubmitTriggerId) {
+            console.log('System triggers not found - setting up automatically...');
+            const result = setupAllTriggers();
+            
+            // Store trigger IDs for future reference
+            properties.setProperty('ELECTIONS_TRIGGER_ID', result.editTriggerId);
+            properties.setProperty('FORM_SUBMIT_TRIGGER_ID', result.formSubmitTriggerId);
+            
+            console.log('System triggers auto-configured on deployment');
+        } else {
+            console.log('System triggers already configured');
+        }
+    } catch (error) {
+        console.warn('Could not auto-setup system triggers:', error);
+        // Continue without failing - triggers can be set up manually later
+    }
+    
     MembershipManagement.Menu.create();
     DocsService.Menu.create();
     EmailService.Menu.create();
@@ -53,6 +76,36 @@ function manageElectionLifecycles() {
 }
 
 /**
+ * Processes membership expirations - called daily by trigger at 6:00 AM
+ * Uses Logger for production visibility and sends error notifications to membership-automation
+ */
+function processMembershipExpirations() {
+    withLock_(() => {
+        try {
+            // Initialize Logger with container spreadsheet for cross-spreadsheet logging
+            const containerSpreadsheetId = SpreadsheetApp.getActiveSpreadsheet().getId();
+            // @ts-ignore - Logger is implemented in separate file
+            Common.Logger.setContainerSpreadsheet(containerSpreadsheetId);
+            
+            // @ts-ignore - Logger is implemented in separate file
+            Common.Logger.info('Triggers', 'Starting daily membership expiration processing');
+            
+            // Call the main expiration processing function
+            MembershipManagement.processExpirations();
+            
+            // @ts-ignore - Logger is implemented in separate file
+            Common.Logger.info('Triggers', 'Daily membership expiration processing completed successfully');
+            
+        } catch (error) {
+            // @ts-ignore - Logger is implemented in separate file
+            Common.Logger.error('Triggers', 'Daily membership expiration processing failed', error);
+            console.error(`Daily membership expiration processing failed: ${error.message}\nStack trace: ${error.stack}`);
+            throw error; // Re-throw to ensure trigger system records the failure
+        }
+    })();
+}
+
+/**
  * Gets the external Elections spreadsheet ID from Bootstrap configuration
  * @returns {string} The external Elections spreadsheet ID
  */
@@ -92,14 +145,22 @@ function getElectionsSpreadsheetId() {
 }
 
 /**
- * Sets up edit triggers for external Elections spreadsheet and daily calendar trigger
- * Uses Bootstrap configuration to determine the external spreadsheet ID
- * Creates an installable onEdit trigger from THIS project that monitors the external spreadsheet
- * Also creates a daily calendar trigger to process election lifecycle changes
+ * Legacy function for backward compatibility - now calls setupAllTriggers
+ * @deprecated Use setupAllTriggers() instead
  */
 function setupElectionsTriggers() {
+    return setupAllTriggers();
+}
+
+/**
+ * Sets up all installable triggers for the system:
+ * 1. External Elections spreadsheet edit trigger and daily calendar trigger
+ * 2. Container spreadsheet form submission trigger for membership payments
+ * Uses Bootstrap configuration to determine the external spreadsheet ID
+ */
+function setupAllTriggers() {
     try {
-        console.log('Setting up triggers for external Elections spreadsheet...');
+        console.log('Setting up all system triggers...');
         
         const electionsSpreadsheetId = getElectionsSpreadsheetId();
         console.log(`Found Elections spreadsheet ID: ${electionsSpreadsheetId}`);
@@ -108,7 +169,9 @@ function setupElectionsTriggers() {
         const existingTriggers = ScriptApp.getProjectTriggers();
         existingTriggers.forEach(trigger => {
             if (trigger.getHandlerFunction() === 'handleElectionsSheetEdit' || 
-                trigger.getHandlerFunction() === 'processElectionsChanges') {
+                trigger.getHandlerFunction() === 'processElectionsChanges' ||
+                trigger.getHandlerFunction() === 'onFormSubmit' ||
+                trigger.getHandlerFunction() === 'processMembershipExpirations') {
                 console.log(`Removing existing trigger: ${trigger.getUniqueId()} for ${trigger.getHandlerFunction()}`);
                 ScriptApp.deleteTrigger(trigger);
             }
@@ -133,24 +196,46 @@ function setupElectionsTriggers() {
             .atHour(0) // 00:00 (midnight)
             .create();
         
-        // Store the external spreadsheet ID in script properties for reference
+        // Create membership form submission trigger for the container spreadsheet
+        // This handles new membership payment submissions in the Transactions sheet
+        const containerSpreadsheetId = SpreadsheetApp.getActiveSpreadsheet().getId();
+        const formSubmitTrigger = ScriptApp.newTrigger('onFormSubmit')
+            .forSpreadsheet(containerSpreadsheetId)
+            .onFormSubmit()
+            .create();
+        
+        // Create daily membership expiration processing trigger
+        // This runs at 6:00 AM daily to process membership expirations
+        const membershipExpirationTrigger = ScriptApp.newTrigger('processMembershipExpirations')
+            .timeBased()
+            .everyDays(1)
+            .atHour(6) // 06:00 (6:00 AM)
+            .create();
+        
+        // Store the spreadsheet IDs in script properties for reference
         PropertiesService.getScriptProperties().setProperty('ELECTIONS_SPREADSHEET_ID', electionsSpreadsheetId);
+        PropertiesService.getScriptProperties().setProperty('CONTAINER_SPREADSHEET_ID', containerSpreadsheetId);
         
         console.log(`Successfully created Elections edit trigger: ${editTrigger.getUniqueId()}`);
         console.log(`Successfully created daily calendar trigger: ${calendarTrigger.getUniqueId()}`);
-        console.log('Elections triggers setup complete!');
+        console.log(`Successfully created membership form submit trigger: ${formSubmitTrigger.getUniqueId()}`);
+        console.log(`Successfully created membership expiration trigger: ${membershipExpirationTrigger.getUniqueId()}`);
+        console.log('All triggers setup complete!');
         
         return {
             success: true,
-            spreadsheetId: electionsSpreadsheetId,
-            spreadsheetName: electionsSpreadsheet.getName(),
+            electionsSpreadsheetId: electionsSpreadsheetId,
+            electionsSpreadsheetName: electionsSpreadsheet.getName(),
+            containerSpreadsheetId: containerSpreadsheetId,
             editTriggerId: editTrigger.getUniqueId(),
-            calendarTriggerId: calendarTrigger.getUniqueId()
+            calendarTriggerId: calendarTrigger.getUniqueId(),
+            formSubmitTriggerId: formSubmitTrigger.getUniqueId(),
+            membershipExpirationTriggerId: membershipExpirationTrigger.getUniqueId()
         };
         
     } catch (error) {
         // @ts-ignore - Logger is implemented in separate file  
-        Common.Logger.error('Triggers', 'Error setting up Elections triggers', error);
+        Common.Logger.error('Triggers', 'Error setting up triggers', error);
         throw error;
     }
 }
