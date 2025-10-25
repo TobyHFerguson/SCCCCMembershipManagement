@@ -58,13 +58,30 @@ function manageElectionLifecycles() {
  */
 function getElectionsSpreadsheetId() {
     try {
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.info('Triggers', 'Starting getElectionsSpreadsheetId - attempting to get Bootstrap data');
+        
         // Get Bootstrap configuration to find Elections spreadsheet ID
         const bootstrapData = Common.Data.Access.getBootstrapData();
+        
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.info('Triggers', 'Successfully retrieved Bootstrap data', {rowCount: bootstrapData ? bootstrapData.length : 0});
+        
         const electionsConfig = bootstrapData.find(row => row.Reference === 'Elections');
         
         if (!electionsConfig) {
+            // @ts-ignore - Logger is implemented in separate file
+            Common.Logger.error('Triggers', 'Elections configuration not found in Bootstrap data', {
+                availableReferences: bootstrapData.map(row => row.Reference)
+            });
             throw new Error('Elections configuration not found in Bootstrap data');
         }
+        
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.info('Triggers', 'Found Elections configuration', {
+            electionsId: electionsConfig.id,
+            electionsConfig: electionsConfig
+        });
         
         return electionsConfig.id;
     } catch (error) {

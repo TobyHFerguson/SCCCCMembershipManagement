@@ -2,9 +2,30 @@ Common.Data.Storage = {}
 Common.Data.Storage.SpreadsheetManager = (function () {
   let sheets;
   function _initializeSheets() {
-    // Use the container spreadsheet instead of hardcoded ID
-    const bootStrap = bmPreFiddler.PreFiddler().getFiddler({sheetName: 'Bootstrap', createIfMissing: false }).getData();
-    sheets = Object.fromEntries(bootStrap.map(row => [row.Reference, row]));
+    try {
+      // @ts-ignore - Logger is implemented in separate file
+      Common.Logger.info('SpreadsheetManager', 'Starting _initializeSheets - getting Bootstrap fiddler');
+      
+      // Use the container spreadsheet instead of hardcoded ID
+      const bootStrap = bmPreFiddler.PreFiddler().getFiddler({sheetName: 'Bootstrap', createIfMissing: false }).getData();
+      
+      // @ts-ignore - Logger is implemented in separate file
+      Common.Logger.info('SpreadsheetManager', 'Successfully got Bootstrap data', {
+        rowCount: bootStrap ? bootStrap.length : 0,
+        sampleData: bootStrap ? bootStrap.slice(0, 2) : null
+      });
+      
+      sheets = Object.fromEntries(bootStrap.map(row => [row.Reference, row]));
+      
+      // @ts-ignore - Logger is implemented in separate file
+      Common.Logger.info('SpreadsheetManager', 'Successfully initialized sheets', {
+        sheetNames: Object.keys(sheets)
+      });
+    } catch (error) {
+      // @ts-ignore - Logger is implemented in separate file
+      Common.Logger.error('SpreadsheetManager', 'Error in _initializeSheets', error);
+      throw error;
+    }
   }
   /**
 * Combines two arrays of objects by merging the properties of objects at the same index.
@@ -40,14 +61,40 @@ Common.Data.Storage.SpreadsheetManager = (function () {
   * @returns {Fiddler} - The fiddler.
   */
     getFiddler: (sheetName) => {
-      if (!sheets) {
-        _initializeSheets();
+      try {
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.info('SpreadsheetManager', `Getting fiddler for sheet: ${sheetName}`);
+        
+        if (!sheets) {
+          // @ts-ignore - Logger is implemented in separate file
+          Common.Logger.info('SpreadsheetManager', 'Initializing sheets from Bootstrap');
+          _initializeSheets();
+        }
+        
+        const sheet = sheets[sheetName];
+        if (!sheet) {
+          // @ts-ignore - Logger is implemented in separate file
+          Common.Logger.error('SpreadsheetManager', `Sheet name ${sheetName} not found in Bootstrap`, {
+            requestedSheet: sheetName,
+            availableSheets: Object.keys(sheets)
+          });
+          throw new Error(`Sheet name ${sheetName} not found in Bootstrap`);
+        }
+        
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.info('SpreadsheetManager', `Found sheet configuration for ${sheetName}`, sheet);
+        
+        const fiddler = bmPreFiddler.PreFiddler().getFiddler(sheets[sheetName]).needFormulas();
+        
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.info('SpreadsheetManager', `Successfully created fiddler for ${sheetName}`);
+        
+        return fiddler;
+      } catch (error) {
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.error('SpreadsheetManager', `Error getting fiddler for ${sheetName}`, error);
+        throw error;
       }
-      const sheet = sheets[sheetName];
-      if (!sheet) {
-        throw new Error(`Sheet name ${sheetName} not found in Bootstrap`);
-      }
-      return bmPreFiddler.PreFiddler().getFiddler(sheets[sheetName]).needFormulas();
     },
 
 
