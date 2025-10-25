@@ -59,7 +59,8 @@ function getElectionsSpreadsheetId() {
         
         return electionsConfig.id;
     } catch (error) {
-        console.error('Error getting Elections spreadsheet ID:', error);
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.error('Triggers', 'Error getting Elections spreadsheet ID', error);
         throw error;
     }
 }
@@ -122,7 +123,8 @@ function setupElectionsTriggers() {
         };
         
     } catch (error) {
-        console.error('Error setting up Elections triggers:', error);
+        // @ts-ignore - Logger is implemented in separate file  
+        Common.Logger.error('Triggers', 'Error setting up Elections triggers', error);
         throw error;
     }
 }
@@ -155,7 +157,8 @@ function processElectionsChanges() {
         };
         
     } catch (error) {
-        console.error('Error processing Elections changes:', error);
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.error('Triggers', 'Error processing Elections changes', error);
         throw error;
     }
 }
@@ -168,7 +171,8 @@ function processElectionsChanges() {
 function handleElectionsSheetEdit(e) {
     withLock_((e) => {
         try {
-            console.log('Elections spreadsheet edit detected');
+            // @ts-ignore - Logger is implemented in separate file
+            Common.Logger.info('Triggers', 'Elections spreadsheet edit detected');
             const sheet = e.range.getSheet();
             const spreadsheetId = e.source.getId();
             
@@ -184,15 +188,18 @@ function handleElectionsSheetEdit(e) {
                 return;
             }
             
-            console.log(`Processing Elections sheet edit: Row ${e.range.getRow()}, Column ${e.range.getColumn()}`);
+            // @ts-ignore - Logger is implemented in separate file
+            Common.Logger.info('Triggers', `Processing Elections sheet edit: Row ${e.range.getRow()}, Column ${e.range.getColumn()}`);
             
             // Call the existing VotingService handler with the real event
             VotingService.Trigger.handleRegistrationSheetEdit(e);
             
-            console.log('Elections sheet edit processed successfully');
+            // @ts-ignore - Logger is implemented in separate file
+            Common.Logger.info('Triggers', 'Elections sheet edit processed successfully');
             
         } catch (error) {
-            console.error('Error handling Elections sheet edit:', error);
+            // @ts-ignore - Logger is implemented in separate file
+            Common.Logger.error('Triggers', 'Error handling Elections sheet edit', error);
             throw error;
         }
     })(e);
