@@ -1,5 +1,5 @@
 // --- Configuration ---
-const SPREADSHEET_ID = '1WifVsHmL6pyI4J8j1-8xI3eKnGdY9WemA3UL9jCTaJI'; // Replace with your spreadsheet ID
+const SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId(); // Use container spreadsheet
 const DATA_SHEET_NAME = 'Members';           // Replace with your data sheet name
 const TOKEN_SHEET_NAME = 'MagicLinkTokens'; // Sheet to store tokens (create this sheet)
 const ACCESS_LINK_BASE_URL = ScriptApp.getService().getUrl(); // Base URL of your web app
