@@ -33,7 +33,9 @@ VotingService.Trigger = {
         const electionOfficers = sheet.getRange(editedRow, electionOfficersColumnIndex).getValue().split(',').map(email => email.trim());
         const editUrl = sheet.getRange(editedRow, formEditUrlColumnIndex).getValue();
         if (!editUrl) {
-            SpreadsheetApp.getUi().alert(`No valid Form ID found in row: ${editedRow}. No further processing will occur for this row.`, SpreadsheetApp.getUi().ButtonSet.OK);
+            // @ts-ignore - Logger is implemented in separate file
+            Common.Logger.warn('VotingTrigger', `No valid Form ID found in row ${editedRow} - no processing will occur`);
+            return; // Exit early if no URL to process
         }
         if (editedColumn === formEditUrlColumnIndex) {
             console.log(`Form ID edited in row: ${editedRow}`);
@@ -41,14 +43,39 @@ VotingService.Trigger = {
             if (editUrl) {
                 console.log(`Creating a ballot from the source form: ${editUrl} in row: ${editedRow}`);
                 try {
+                    // @ts-ignore - Logger is implemented in separate file
+                    Common.Logger.info('VotingTrigger', `Creating ballot form from source: ${editUrl} for row ${editedRow}`);
+                    
                     const { title, url } = VotingService.createBallotForm(editUrl, electionOfficers);
                     sheet.getRange(editedRow, titleColumnIndex).setValue(title);
                     sheet.getRange(editedRow, formEditUrlColumnIndex).setValue(url);
-                    SpreadsheetApp.getUi().alert(`Created ballot form for '${title}' and alerted any Election Officers via email.`, SpreadsheetApp.getUi().ButtonSet.OK);
+                    
+                    // @ts-ignore - Logger is implemented in separate file
+                    Common.Logger.info('VotingTrigger', `Successfully created ballot form '${title}' for row ${editedRow}`, {
+                        ballotUrl: url,
+                        electionOfficers: electionOfficers
+                    });
+                    
+                    // No UI alert during trigger - this would interrupt user workflow
                 } catch (error) {
-                    console.error(`Error creating ballot form for row ${editedRow}: ${error.message}`);
-                    SpreadsheetApp.getUi().alert(`Failed to create ballot form for row ${editedRow}: \n\n ${error.message}`, SpreadsheetApp.getUi().ButtonSet.OK);
+                    // @ts-ignore - Logger is implemented in separate file
+                    Common.Logger.error('VotingTrigger', `Error creating ballot form for row ${editedRow}`, {
+                        sourceUrl: editUrl,
+                        error: error.message,
+                        stack: error.stack
+                    });
+                    
+                    // Clear the problematic URL so user knows it failed
                     sheet.getRange(editedRow, formEditUrlColumnIndex).clear();
+                    
+                    // Add error indicator in a safe way that doesn't interrupt workflow
+                    try {
+                        const errorNote = `Error: ${error.message.substring(0, 100)}...`;
+                        sheet.getRange(editedRow, formEditUrlColumnIndex).setNote(errorNote);
+                    } catch (noteError) {
+                        // @ts-ignore - Logger is implemented in separate file
+                        Common.Logger.warn('VotingTrigger', 'Could not set error note on cell', noteError);
+                    }
                 }
             }
         } else if (editedColumn === electionOfficersColumnIndex) {
@@ -58,13 +85,29 @@ VotingService.Trigger = {
             // This edit event might be called before the formEditUrlColumnIndex edit event, in which case the editUrl might be the 'seed ballot' URL.
             // This can be detected by seeing if we have a form title yet!
             if (title) {
-                VotingService.setElectionOfficers(editUrl, electionOfficers);
-                SpreadsheetApp.getUi().alert(`Updated Election Officers for '${title}', and sent them emails`, SpreadsheetApp.getUi().ButtonSet.OK);
+                try {
+                    VotingService.setElectionOfficers(editUrl, electionOfficers);
+                    // @ts-ignore - Logger is implemented in separate file
+                    Common.Logger.info('VotingTrigger', `Updated Election Officers for '${title}' and sent notification emails`, {
+                        title: title,
+                        electionOfficers: electionOfficers
+                    });
+                } catch (error) {
+                    // @ts-ignore - Logger is implemented in separate file
+                    Common.Logger.error('VotingTrigger', `Error updating Election Officers for '${title}'`, error);
+                }
             }
         } else if (editedColumn === startColumnIndex || editedColumn === endColumnIndex) {
-            console.log(`Date edited in row: ${editedRow}`);
-            SpreadsheetApp.getUi().alert(`Date edited in row: ${editedRow} - running election lifecycle management`, SpreadsheetApp.getUi().ButtonSet.OK);
-            VotingService.manageElectionLifecycles();
+            // @ts-ignore - Logger is implemented in separate file
+            Common.Logger.info('VotingTrigger', `Date edited in row ${editedRow} - triggering election lifecycle management`);
+            try {
+                VotingService.manageElectionLifecycles();
+                // @ts-ignore - Logger is implemented in separate file
+                Common.Logger.info('VotingTrigger', 'Election lifecycle management completed successfully');
+            } catch (error) {
+                // @ts-ignore - Logger is implemented in separate file
+                Common.Logger.error('VotingTrigger', 'Error in election lifecycle management', error);
+            }
         }
     },
 
