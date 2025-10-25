@@ -51,7 +51,7 @@
     "prod:open": "npm run set-prod-env && npx @google/clasp open-script",
     "prod:deployments": "npm run set-prod-env && npx @google/clasp deployments",
     "prod:versions": "npm run set-prod-env && echo \"Git Tag: $(git describe --tags --always)\" && echo \"Git Commit: $(git rev-parse --short HEAD)\" && echo \"\\n--- GAS Versions ---\" && npx @google/clasp versions",
-    "prod:redeploy-live": "npm run set-prod-env  && npx @google/clasp deploy --deploymentId \"${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}\" --versionNumber \"$(npx @google/clasp versions | tail -n 1 | awk '{print $1}')\" --description \"Production\"",
+    "prod:redeploy-live": "npm run set-prod-env  && npx @google/clasp deploy --deploymentId \"${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}\" --versionNumber \"$(npx @google/clasp versions | tail -n 1 | awk '{print $1}')\" --description \"Production $(git describe --tags --always)\"",
     "prod:deploy-live": "npm run prod:push && npm run clasp:create-version && npm run prod:redeploy-live && echo \"\\nProduction deployment updated to $(git describe --tags --always) - GAS Version: $(npx @google/clasp versions | tail -n 1 | awk '{print $1}') - Access via: ${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}${npm_package_config_GAS_EXEC_PATH}\\n\"",
     "prod:group-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}GroupManagementService\"",
     "prod:profile-test": "open \"${npm_package_config_GAS_BASE_DOMAIN}/${npm_package_config_CLASP_PROD_LIVE_DEPLOYMENT_ID}${npm_package_config_GAS_DEV_PATH}${npm_package_config_GAS_SERVICE_PARAM}ProfileManagementService\"",
