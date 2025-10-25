@@ -38,7 +38,7 @@ VotingService.Trigger = {
             sheet.getRange(editedRow, formEditUrlColumnIndex).setNote('⚠️ No Form URL provided\n\nPlease enter a valid Google Form URL to create a ballot');
             
             // User notification
-            sheet.getParent().toast('⚠️ No Form URL provided in this row - please enter a valid Google Form URL', 'Elections System', 4);
+            sheet.getParent().toast(`⚠️ No Form URL provided in row ${editedRow} - please enter a valid Google Form URL`, 'Elections System', 4);
             
             // @ts-ignore - Logger is implemented in separate file
             Common.Logger.warn('VotingTrigger', `No valid Form ID found in row ${editedRow} - no processing will occur`);
@@ -96,10 +96,10 @@ VotingService.Trigger = {
                     
                     if (isServerError) {
                         userMessage = `⚠️ TEMPORARY SERVER ERROR\n\nGoogle's servers are temporarily unavailable. This is not a problem with your form URL.\n\n🔄 ACTION REQUIRED:\n1. Wait 30-60 seconds\n2. Re-enter the Form URL in this cell\n3. The system will automatically retry\n\nIf the problem persists after several attempts, try again later.`;
-                        toastMessage = `⚠️ Temporary server error - please wait 30-60 seconds and re-enter the Form URL to retry`;
+                        toastMessage = `⚠️ Temporary server error in row ${editedRow} - please wait 30-60 seconds and re-enter the Form URL to retry`;
                     } else {
                         userMessage = `❌ FORM ACCESS ERROR\n\nError: ${error.message}\n\n🔍 TROUBLESHOOTING:\n1. Check that the Form URL is correct and complete\n2. Ensure you have access to the source form\n3. Verify the form is not deleted or restricted\n\nSee System_Logs sheet in main spreadsheet for technical details.`;
-                        toastMessage = `❌ Form access error - please check the Form URL and your permissions`;
+                        toastMessage = `❌ Form access error in row ${editedRow} - please check the Form URL and your permissions`;
                     }
                     
                     sheet.getRange(editedRow, formEditUrlColumnIndex).setNote(userMessage);
@@ -147,10 +147,10 @@ VotingService.Trigger = {
                     
                     if (isServerError) {
                         userMessage = `⚠️ TEMPORARY SERVER ERROR\n\nGoogle's servers are temporarily unavailable.\n\n🔄 ACTION: Wait 30-60 seconds and re-edit this cell to retry updating Election Officers for '${title}'`;
-                        toastMessage = `⚠️ Temporary server error - please wait and retry updating Election Officers`;
+                        toastMessage = `⚠️ Temporary server error in row ${editedRow} - please wait and retry updating Election Officers`;
                     } else {
                         userMessage = `❌ ERROR updating Election Officers for '${title}'\n\nError: ${error.message}\n\n🔍 Check:\n- Email addresses are valid\n- You have permission to modify the ballot form\n- The ballot form still exists`;
-                        toastMessage = `❌ Failed to update Election Officers - check email addresses and form permissions`;
+                        toastMessage = `❌ Failed to update Election Officers in row ${editedRow} - check email addresses and form permissions`;
                     }
                     
                     sheet.getRange(editedRow, electionOfficersColumnIndex).setNote(userMessage);
@@ -197,10 +197,10 @@ VotingService.Trigger = {
                 
                 if (isServerError) {
                     userMessage = `⚠️ TEMPORARY SERVER ERROR\n\nGoogle's servers are temporarily unavailable during election lifecycle processing.\n\n🔄 ACTION: Wait 30-60 seconds and re-edit this date cell to retry processing all election lifecycles.`;
-                    toastMessage = `⚠️ Temporary server error - please wait and retry by editing the date cell again`;
+                    toastMessage = `⚠️ Temporary server error in row ${editedRow} - please wait and retry by editing the date cell again`;
                 } else {
                     userMessage = `❌ ERROR in election lifecycle management\n\nError: ${error.message}\n\n🔍 This may indicate issues with:\n- Ballot form permissions\n- Drive folder access\n- Form configuration\n\nCheck System_Logs for technical details.`;
-                    toastMessage = `❌ Election lifecycle management failed - check form permissions and configuration`;
+                    toastMessage = `❌ Election lifecycle management failed in row ${editedRow} - check form permissions and configuration`;
                 }
                 
                 dateCell.setNote(userMessage);
