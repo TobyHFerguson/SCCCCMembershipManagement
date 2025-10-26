@@ -7,6 +7,7 @@ const Common = {
             SpreadsheetManager: {}
         }
     },
+    Logger: {}
 };
 
 const GroupSubscription = {};

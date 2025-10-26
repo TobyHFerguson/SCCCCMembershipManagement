@@ -1,10 +1,76 @@
 Common.Data.Storage = {}
 Common.Data.Storage.SpreadsheetManager = (function () {
   let sheets;
+  
+  /**
+   * Gets the container spreadsheet ID from script properties or current binding
+   * @returns {string|null} The container spreadsheet ID
+   */
+  function getContainerSpreadsheetId() {
+    try {
+      // First try to get from script properties (if set during setup)
+      const properties = PropertiesService.getScriptProperties();
+      let containerId = properties.getProperty('CONTAINER_SPREADSHEET_ID');
+      
+      if (!containerId) {
+        // Fallback: try to get from current active spreadsheet if we're in normal context
+        try {
+          const activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+          if (activeSpreadsheet) {
+            containerId = activeSpreadsheet.getId();
+            // Cache it for future use
+            properties.setProperty('CONTAINER_SPREADSHEET_ID', containerId);
+          }
+        } catch (e) {
+          // We might be in a trigger context where getActiveSpreadsheet() doesn't work reliably
+          // @ts-ignore - Logger is implemented in separate file
+          Common.Logger.warn('SpreadsheetManager', 'Could not get active spreadsheet in current context', e);
+        }
+      }
+      
+      return containerId;
+    } catch (error) {
+      // @ts-ignore - Logger is implemented in separate file
+      Common.Logger.error('SpreadsheetManager', 'Failed to get container spreadsheet ID', error);
+      return null;
+    }
+  }
+  
   function _initializeSheets() {
-    // Use the container spreadsheet instead of hardcoded ID
-    const bootStrap = bmPreFiddler.PreFiddler().getFiddler({sheetName: 'Bootstrap', createIfMissing: false }).getData();
-    sheets = Object.fromEntries(bootStrap.map(row => [row.Reference, row]));
+    try {
+      // @ts-ignore - Logger is implemented in separate file
+      Common.Logger.info('SpreadsheetManager', 'Starting _initializeSheets - getting Bootstrap fiddler');
+      
+      // Get the container spreadsheet ID to ensure we're accessing the correct spreadsheet
+      const containerSpreadsheetId = getContainerSpreadsheetId();
+      
+      // @ts-ignore - Logger is implemented in separate file
+      Common.Logger.info('SpreadsheetManager', 'Using container spreadsheet ID', {containerSpreadsheetId});
+      
+      // Use the container spreadsheet instead of current context
+      const fiddlerConfig = containerSpreadsheetId 
+        ? {id: containerSpreadsheetId, sheetName: 'Bootstrap', createIfMissing: false}
+        : {sheetName: 'Bootstrap', createIfMissing: false};
+        
+      const bootStrap = bmPreFiddler.PreFiddler().getFiddler(fiddlerConfig).getData();
+      
+      // @ts-ignore - Logger is implemented in separate file
+      Common.Logger.info('SpreadsheetManager', 'Successfully got Bootstrap data', {
+        rowCount: bootStrap ? bootStrap.length : 0,
+        sampleData: bootStrap ? bootStrap.slice(0, 2) : null
+      });
+      
+      sheets = Object.fromEntries(bootStrap.map(row => [row.Reference, row]));
+      
+      // @ts-ignore - Logger is implemented in separate file
+      Common.Logger.info('SpreadsheetManager', 'Successfully initialized sheets', {
+        sheetNames: Object.keys(sheets)
+      });
+    } catch (error) {
+      // @ts-ignore - Logger is implemented in separate file
+      Common.Logger.error('SpreadsheetManager', 'Error in _initializeSheets', error);
+      throw error;
+    }
   }
   /**
 * Combines two arrays of objects by merging the properties of objects at the same index.
@@ -40,14 +106,58 @@ Common.Data.Storage.SpreadsheetManager = (function () {
   * @returns {Fiddler} - The fiddler.
   */
     getFiddler: (sheetName) => {
-      if (!sheets) {
-        _initializeSheets();
+      try {
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.info('SpreadsheetManager', `Getting fiddler for sheet: ${sheetName}`);
+        
+        if (!sheets) {
+          // @ts-ignore - Logger is implemented in separate file
+          Common.Logger.info('SpreadsheetManager', 'Initializing sheets from Bootstrap');
+          _initializeSheets();
+        }
+        
+        const sheet = sheets[sheetName];
+        if (!sheet) {
+          // @ts-ignore - Logger is implemented in separate file
+          Common.Logger.error('SpreadsheetManager', `Sheet name ${sheetName} not found in Bootstrap`, {
+            requestedSheet: sheetName,
+            availableSheets: Object.keys(sheets)
+          });
+          throw new Error(`Sheet name ${sheetName} not found in Bootstrap`);
+        }
+        
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.info('SpreadsheetManager', `Found sheet configuration for ${sheetName}`, sheet);
+        
+        // Ensure we use the correct spreadsheet context
+        const sheetConfig = sheets[sheetName];
+        let fiddlerConfig;
+        
+        if (sheetConfig.id) {
+          // If the sheet config has an ID, use it (external spreadsheet)
+          fiddlerConfig = sheetConfig;
+        } else {
+          // If no ID in config, add container spreadsheet ID (local sheet)
+          const containerSpreadsheetId = getContainerSpreadsheetId();
+          fiddlerConfig = containerSpreadsheetId 
+            ? {...sheetConfig, id: containerSpreadsheetId}
+            : sheetConfig;
+        }
+        
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.info('SpreadsheetManager', `Using fiddler configuration for ${sheetName}`, fiddlerConfig);
+        
+        const fiddler = bmPreFiddler.PreFiddler().getFiddler(fiddlerConfig).needFormulas();
+        
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.info('SpreadsheetManager', `Successfully created fiddler for ${sheetName}`);
+        
+        return fiddler;
+      } catch (error) {
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.error('SpreadsheetManager', `Error getting fiddler for ${sheetName}`, error);
+        throw error;
       }
-      const sheet = sheets[sheetName];
-      if (!sheet) {
-        throw new Error(`Sheet name ${sheetName} not found in Bootstrap`);
-      }
-      return bmPreFiddler.PreFiddler().getFiddler(sheets[sheetName]).needFormulas();
     },
 
 

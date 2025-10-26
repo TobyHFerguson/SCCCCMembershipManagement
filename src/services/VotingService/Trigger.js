@@ -33,7 +33,16 @@ VotingService.Trigger = {
         const electionOfficers = sheet.getRange(editedRow, electionOfficersColumnIndex).getValue().split(',').map(email => email.trim());
         const editUrl = sheet.getRange(editedRow, formEditUrlColumnIndex).getValue();
         if (!editUrl) {
-            SpreadsheetApp.getUi().alert(`No valid Form ID found in row: ${editedRow}. No further processing will occur for this row.`, SpreadsheetApp.getUi().ButtonSet.OK);
+            // Visual feedback for missing URL
+            sheet.getRange(editedRow, formEditUrlColumnIndex).setBackground('#FFE6CC'); // Light orange
+            sheet.getRange(editedRow, formEditUrlColumnIndex).setNote('⚠️ No Form URL provided\n\nPlease enter a valid Google Form URL to create a ballot');
+            
+            // User notification
+            sheet.getParent().toast(`⚠️ No Form URL provided in row ${editedRow} - please enter a valid Google Form URL`, 'Elections System', 4);
+            
+            // @ts-ignore - Logger is implemented in separate file
+            Common.Logger.warn('VotingTrigger', `No valid Form ID found in row ${editedRow} - no processing will occur`);
+            return; // Exit early if no URL to process
         }
         if (editedColumn === formEditUrlColumnIndex) {
             console.log(`Form ID edited in row: ${editedRow}`);
@@ -41,14 +50,60 @@ VotingService.Trigger = {
             if (editUrl) {
                 console.log(`Creating a ballot from the source form: ${editUrl} in row: ${editedRow}`);
                 try {
+                    // Show processing status to user
+                    sheet.getRange(editedRow, formEditUrlColumnIndex).setBackground('#FFF2CC'); // Light yellow
+                    sheet.getRange(editedRow, formEditUrlColumnIndex).setNote('Processing ballot creation...');
+                    
+                    // @ts-ignore - Logger is implemented in separate file
+                    Common.Logger.info('VotingTrigger', `Creating ballot form from source: ${editUrl} for row ${editedRow}`);
+                    
                     const { title, url } = VotingService.createBallotForm(editUrl, electionOfficers);
                     sheet.getRange(editedRow, titleColumnIndex).setValue(title);
                     sheet.getRange(editedRow, formEditUrlColumnIndex).setValue(url);
-                    SpreadsheetApp.getUi().alert(`Created ballot form for '${title}' and alerted any Election Officers via email.`, SpreadsheetApp.getUi().ButtonSet.OK);
+                    
+                    // Success feedback
+                    sheet.getRange(editedRow, formEditUrlColumnIndex).setBackground('#D5E8D4'); // Light green
+                    sheet.getRange(editedRow, formEditUrlColumnIndex).setNote(`✅ Ballot form '${title}' created successfully\nEdit URL: ${url}\nElection Officers notified: ${electionOfficers.join(', ')}`);
+                    
+                    // Non-blocking success notification
+                    sheet.getParent().toast(`✅ Ballot form '${title}' created successfully and Election Officers notified`, 'Elections System', 5);
+                    
+                    // @ts-ignore - Logger is implemented in separate file
+                    Common.Logger.info('VotingTrigger', `Successfully created ballot form '${title}' for row ${editedRow}`, {
+                        ballotUrl: url,
+                        electionOfficers: electionOfficers
+                    });
                 } catch (error) {
-                    console.error(`Error creating ballot form for row ${editedRow}: ${error.message}`);
-                    SpreadsheetApp.getUi().alert(`Failed to create ballot form for row ${editedRow}: \n\n ${error.message}`, SpreadsheetApp.getUi().ButtonSet.OK);
+                    // @ts-ignore - Logger is implemented in separate file
+                    Common.Logger.error('VotingTrigger', `Error creating ballot form for row ${editedRow}`, {
+                        sourceUrl: editUrl,
+                        error: error.message,
+                        stack: error.stack
+                    });
+                    
+                    // Clear the problematic URL so user knows it failed
                     sheet.getRange(editedRow, formEditUrlColumnIndex).clear();
+                    
+                    // Determine error type and provide appropriate user guidance
+                    const isServerError = error.message.includes('server error occurred') || 
+                                         error.message.includes('Try again') ||
+                                         error.message.includes('temporarily unavailable');
+                    
+                    // Visual error feedback
+                    sheet.getRange(editedRow, formEditUrlColumnIndex).setBackground('#FFD9D9'); // Light red
+                    
+                    let userMessage, toastMessage;
+                    
+                    if (isServerError) {
+                        userMessage = `⚠️ TEMPORARY SERVER ERROR\n\nGoogle's servers are temporarily unavailable. This is not a problem with your form URL.\n\n🔄 ACTION REQUIRED:\n1. Wait 30-60 seconds\n2. Re-enter the Form URL in this cell\n3. The system will automatically retry\n\nIf the problem persists after several attempts, try again later.`;
+                        toastMessage = `⚠️ Temporary server error in row ${editedRow} - please wait 30-60 seconds and re-enter the Form URL to retry`;
+                    } else {
+                        userMessage = `❌ FORM ACCESS ERROR\n\nError: ${error.message}\n\n🔍 TROUBLESHOOTING:\n1. Check that the Form URL is correct and complete\n2. Ensure you have access to the source form\n3. Verify the form is not deleted or restricted\n\nSee System_Logs sheet in main spreadsheet for technical details.`;
+                        toastMessage = `❌ Form access error in row ${editedRow} - please check the Form URL and your permissions`;
+                    }
+                    
+                    sheet.getRange(editedRow, formEditUrlColumnIndex).setNote(userMessage);
+                    sheet.getParent().toast(toastMessage, 'Elections System Error', 8);
                 }
             }
         } else if (editedColumn === electionOfficersColumnIndex) {
@@ -58,13 +113,99 @@ VotingService.Trigger = {
             // This edit event might be called before the formEditUrlColumnIndex edit event, in which case the editUrl might be the 'seed ballot' URL.
             // This can be detected by seeing if we have a form title yet!
             if (title) {
-                VotingService.setElectionOfficers(editUrl, electionOfficers);
-                SpreadsheetApp.getUi().alert(`Updated Election Officers for '${title}', and sent them emails`, SpreadsheetApp.getUi().ButtonSet.OK);
+                try {
+                    // Show processing status
+                    sheet.getRange(editedRow, electionOfficersColumnIndex).setBackground('#FFF2CC'); // Light yellow
+                    sheet.getRange(editedRow, electionOfficersColumnIndex).setNote('Updating Election Officers...');
+                    
+                    VotingService.setElectionOfficers(editUrl, electionOfficers);
+                    
+                    // Success feedback
+                    sheet.getRange(editedRow, electionOfficersColumnIndex).setBackground('#D5E8D4'); // Light green
+                    sheet.getRange(editedRow, electionOfficersColumnIndex).setNote(`✅ Election Officers updated for '${title}'\nOfficers: ${electionOfficers.join(', ')}\nNotification emails sent successfully`);
+                    
+                    // Success toast
+                    sheet.getParent().toast(`✅ Election Officers updated for '${title}' and notifications sent`, 'Elections System', 4);
+                    
+                    // @ts-ignore - Logger is implemented in separate file
+                    Common.Logger.info('VotingTrigger', `Updated Election Officers for '${title}' and sent notification emails`, {
+                        title: title,
+                        electionOfficers: electionOfficers
+                    });
+                } catch (error) {
+                    // @ts-ignore - Logger is implemented in separate file
+                    Common.Logger.error('VotingTrigger', `Error updating Election Officers for '${title}'`, error);
+                    
+                    const isServerError = error.message.includes('server error occurred') || 
+                                         error.message.includes('Try again') ||
+                                         error.message.includes('temporarily unavailable');
+                    
+                    // Error feedback
+                    sheet.getRange(editedRow, electionOfficersColumnIndex).setBackground('#FFD9D9'); // Light red
+                    
+                    let userMessage, toastMessage;
+                    
+                    if (isServerError) {
+                        userMessage = `⚠️ TEMPORARY SERVER ERROR\n\nGoogle's servers are temporarily unavailable.\n\n🔄 ACTION: Wait 30-60 seconds and re-edit this cell to retry updating Election Officers for '${title}'`;
+                        toastMessage = `⚠️ Temporary server error in row ${editedRow} - please wait and retry updating Election Officers`;
+                    } else {
+                        userMessage = `❌ ERROR updating Election Officers for '${title}'\n\nError: ${error.message}\n\n🔍 Check:\n- Email addresses are valid\n- You have permission to modify the ballot form\n- The ballot form still exists`;
+                        toastMessage = `❌ Failed to update Election Officers in row ${editedRow} - check email addresses and form permissions`;
+                    }
+                    
+                    sheet.getRange(editedRow, electionOfficersColumnIndex).setNote(userMessage);
+                    sheet.getParent().toast(toastMessage, 'Elections System Error', 6);
+                }
             }
         } else if (editedColumn === startColumnIndex || editedColumn === endColumnIndex) {
-            console.log(`Date edited in row: ${editedRow}`);
-            SpreadsheetApp.getUi().alert(`Date edited in row: ${editedRow} - running election lifecycle management`, SpreadsheetApp.getUi().ButtonSet.OK);
-            VotingService.manageElectionLifecycles();
+            // @ts-ignore - Logger is implemented in separate file
+            Common.Logger.info('VotingTrigger', `Date edited in row ${editedRow} - triggering election lifecycle management`);
+            
+            try {
+                // Show processing status
+                const dateCell = sheet.getRange(editedRow, editedColumn);
+                dateCell.setBackground('#FFF2CC'); // Light yellow
+                dateCell.setNote('Processing election lifecycle changes...');
+                
+                // General processing notification
+                sheet.getParent().toast('Processing election lifecycle changes for all elections...', 'Elections System', 3);
+                
+                VotingService.manageElectionLifecycles();
+                
+                // Success feedback
+                dateCell.setBackground('#D5E8D4'); // Light green
+                dateCell.setNote(`✅ Election lifecycle management completed\nAll election dates processed successfully`);
+                
+                // Success notification
+                sheet.getParent().toast('✅ Election lifecycle management completed successfully', 'Elections System', 4);
+                
+                // @ts-ignore - Logger is implemented in separate file
+                Common.Logger.info('VotingTrigger', 'Election lifecycle management completed successfully');
+            } catch (error) {
+                // @ts-ignore - Logger is implemented in separate file
+                Common.Logger.error('VotingTrigger', 'Error in election lifecycle management', error);
+                
+                const isServerError = error.message.includes('server error occurred') || 
+                                     error.message.includes('Try again') ||
+                                     error.message.includes('temporarily unavailable');
+                
+                // Error feedback
+                const dateCell = sheet.getRange(editedRow, editedColumn);
+                dateCell.setBackground('#FFD9D9'); // Light red
+                
+                let userMessage, toastMessage;
+                
+                if (isServerError) {
+                    userMessage = `⚠️ TEMPORARY SERVER ERROR\n\nGoogle's servers are temporarily unavailable during election lifecycle processing.\n\n🔄 ACTION: Wait 30-60 seconds and re-edit this date cell to retry processing all election lifecycles.`;
+                    toastMessage = `⚠️ Temporary server error in row ${editedRow} - please wait and retry by editing the date cell again`;
+                } else {
+                    userMessage = `❌ ERROR in election lifecycle management\n\nError: ${error.message}\n\n🔍 This may indicate issues with:\n- Ballot form permissions\n- Drive folder access\n- Form configuration\n\nCheck System_Logs for technical details.`;
+                    toastMessage = `❌ Election lifecycle management failed in row ${editedRow} - check form permissions and configuration`;
+                }
+                
+                dateCell.setNote(userMessage);
+                sheet.getParent().toast(toastMessage, 'Elections System Error', 6);
+            }
         }
     },
 
