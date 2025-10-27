@@ -65,7 +65,7 @@ declare namespace VotingService {
         VOTE_TITLE_COLUMN_NAME: string;
         FORM_EDIT_URL_COLUMN_NAME: string;
         ELECTION_OFFICERS_COLUMN_NAME: string;
-        TRIGGER_STATUS_COLUMN_NAME: string;
+        TRIGGER_ID_COLUMN_NAME: string;
         REGISTRATION_SHEET_NAME: string;
         RESULTS_SUFFIX: string;
         INVALID_RESULTS_SHEET_NAME: string;
