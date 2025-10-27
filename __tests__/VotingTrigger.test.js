@@ -8,7 +8,7 @@ describe('Trigger', () => {
                 VOTE_TITLE_COLUMN_NAME: 'Title',
                 FORM_EDIT_URL_COLUMN_NAME: 'Form Edit URL',
                 ELECTION_OFFICERS_COLUMN_NAME: 'Election Officers',
-                TRIGGER_STATUS_COLUMN_NAME: 'Trigger Status',
+                TRIGGER_ID_COLUMN_NAME: 'TriggerId',
                 REGISTRATION_SHEET_NAME: 'Elections',
                 RESULTS_SUFFIX: '- Results',
                 INVALID_RESULTS_SHEET_NAME: 'Invalid Results',
