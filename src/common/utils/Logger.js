@@ -126,8 +126,30 @@
       if (!logSheet) return;
       
       const timestamp = new Date();
-      const dataStr = data !== undefined ? JSON.stringify(data) : '';
-      
+      // If data is an Error object, include additional error details
+
+      let dataStr = '';
+      if (data !== undefined && data !== null) {
+        // If data has error-like properties prefer a compact object with message/stack (and name if present)
+        if (typeof data === 'object' && (data.message || data.stack)) {
+          const errPart = {};
+          if (data.name) errPart.name = data.name;
+          if (data.message) errPart.message = data.message;
+          if (data.stack) errPart.stack = data.stack;
+          try {
+        dataStr = JSON.stringify(errPart);
+          } catch (e) {
+        dataStr = String(errPart);
+          }
+        } else {
+          try {
+        dataStr = JSON.stringify(data);
+          } catch (e) {
+        dataStr = String(data);
+          }
+        }
+      }
+
       logSheet.appendRow([timestamp, level, service, message, dataStr]);
       
       // Auto-rotate logs if they get too long (keep last 1000 entries)
@@ -204,6 +226,17 @@
     }
   }
   
+  function getCallerFunctionName() {
+  const err = new Error();
+  const stack = err.stack.split('\n');
+  // stack[4] is usually the caller of the logger (may vary by environment)
+  if (stack[4]) {
+    // Example stack line: "    at MyNamespace.MyFunction (file.js:123:45)"
+    const match = stack[4].match(/at\s+([^\s]+)\s/);
+    return match ? match[1] : 'unknown';
+  }
+  return 'unknown';
+}
   /**
    * Core logging function
    * @param {string} level - Log level
@@ -213,7 +246,8 @@
    */
   function log(level, service, message, data) {
     const levelValue = LOG_LEVELS[level] || LOG_LEVELS.INFO;
-    
+    const callerName = getCallerFunctionName();
+    service = `${service}.${callerName}`;
     // Check if we should log this level
     if (levelValue < currentLogLevel) return;
     
@@ -222,6 +256,7 @@
       const formattedMessage = formatMessage(level, service, message, data);
       console.log(formattedMessage);
     }
+    
     
     // Sheet logging
     if (CONFIG.SHEET_LOGGING) {
@@ -257,6 +292,13 @@
   
   // @ts-ignore
   Common.Logger.error = function(service, message, data) {
+    // if (data instanceof Error) {
+    //   data = {
+    //     name: data.name,
+    //     message: data.message,
+    //     stack: data.stack
+    //   };
+    // }
     log('ERROR', service, message, data);
   };
   
