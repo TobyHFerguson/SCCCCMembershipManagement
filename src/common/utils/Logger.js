@@ -126,8 +126,30 @@
       if (!logSheet) return;
       
       const timestamp = new Date();
-      const dataStr = data !== undefined ? JSON.stringify(data) : '';
-      
+      // If data is an Error object, include additional error details
+
+      let dataStr = '';
+      if (data !== undefined && data !== null) {
+        // If data has error-like properties prefer a compact object with message/stack (and name if present)
+        if (typeof data === 'object' && (data.message || data.stack)) {
+          const errPart = {};
+          if (data.name) errPart.name = data.name;
+          if (data.message) errPart.message = data.message;
+          if (data.stack) errPart.stack = data.stack;
+          try {
+        dataStr = JSON.stringify(errPart);
+          } catch (e) {
+        dataStr = String(errPart);
+          }
+        } else {
+          try {
+        dataStr = JSON.stringify(data);
+          } catch (e) {
+        dataStr = String(data);
+          }
+        }
+      }
+
       logSheet.appendRow([timestamp, level, service, message, dataStr]);
       
       // Auto-rotate logs if they get too long (keep last 1000 entries)
@@ -270,6 +292,13 @@
   
   // @ts-ignore
   Common.Logger.error = function(service, message, data) {
+    // if (data instanceof Error) {
+    //   data = {
+    //     name: data.name,
+    //     message: data.message,
+    //     stack: data.stack
+    //   };
+    // }
     log('ERROR', service, message, data);
   };
   
