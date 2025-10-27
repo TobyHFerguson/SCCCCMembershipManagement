@@ -1,6 +1,7 @@
 DocsService.Menu = {
     create: () => {
         SpreadsheetApp.getUi().createMenu('Utilities')
+        .addItem('Initialize Triggers', initializeTriggers.name)
             .addItem('testConvert', 'testConvert')
             .addItem('Convert Google Doc to HTML', 'showConversionDialog')
             .addToUi();

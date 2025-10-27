@@ -22,7 +22,7 @@ VotingService.Trigger = {
         const electionOfficersColumnIndex = headers.indexOf(VotingService.Constants.ELECTION_OFFICERS_COLUMN_NAME) + 1;
         const startColumnIndex = headers.indexOf('Start') + 1;
         const endColumnIndex = headers.indexOf('End') + 1;
-        const triggerStatusColumnIndex = headers.indexOf(VotingService.Constants.TRIGGER_STATUS_COLUMN_NAME) + 1;
+        const triggerStatusColumnIndex = headers.indexOf(VotingService.Constants.TRIGGER_ID_COLUMN_NAME) + 1;
         const titleColumnIndex = headers.indexOf(VotingService.Constants.VOTE_TITLE_COLUMN_NAME) + 1;
         console.log(`Edit detected in row: ${editedRow}, column: ${editedColumn} in sheet: ${sheet.getName()}`);
         console.log(`Form edit URL column index: ${formEditUrlColumnIndex}, Election Officers column index: ${electionOfficersColumnIndex}, Trigger Status column index: ${triggerStatusColumnIndex}`);
@@ -58,6 +58,7 @@ VotingService.Trigger = {
                     Common.Logger.info('VotingTrigger', `Creating ballot form from source: ${editUrl} for row ${editedRow}`);
                     
                     const { title, url } = VotingService.createBallotForm(editUrl, electionOfficers);
+                    console.log(`editedRow=${editedRow}, titleColumnIndex=${titleColumnIndex}, title=${title}, url=${url}`);
                     sheet.getRange(editedRow, titleColumnIndex).setValue(title);
                     sheet.getRange(editedRow, formEditUrlColumnIndex).setValue(url);
                     

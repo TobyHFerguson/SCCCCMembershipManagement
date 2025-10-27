@@ -10,32 +10,39 @@
     }
     
     // Auto-setup all triggers if not already configured
-    try {
-        const properties = PropertiesService.getScriptProperties();
-        const electionsTriggerId = properties.getProperty('ELECTIONS_TRIGGER_ID');
-        const formSubmitTriggerId = properties.getProperty('FORM_SUBMIT_TRIGGER_ID');
-        
-        if (!electionsTriggerId || !formSubmitTriggerId) {
-            console.log('System triggers not found - setting up automatically...');
-            const result = setupAllTriggers();
-            
-            // Store trigger IDs for future reference
-            properties.setProperty('ELECTIONS_TRIGGER_ID', result.editTriggerId);
-            properties.setProperty('FORM_SUBMIT_TRIGGER_ID', result.formSubmitTriggerId);
-            
-            console.log('System triggers auto-configured on deployment');
-        } else {
-            console.log('System triggers already configured');
-        }
-    } catch (error) {
-        console.warn('Could not auto-setup system triggers:', error);
-        // Continue without failing - triggers can be set up manually later
-    }
+
     
     MembershipManagement.Menu.create();
     DocsService.Menu.create();
     EmailService.Menu.create();
     VotingService.Menu.create();
+}
+
+/**
+ * Initialize All triggers for the system
+ */
+function initializeTriggers() {
+      try {
+        const properties = PropertiesService.getScriptProperties();
+        const electionsTriggerId = properties.getProperty('ELECTIONS_TRIGGER_ID');
+        const formSubmitTriggerId = properties.getProperty('FORM_SUBMIT_TRIGGER_ID');
+        
+        if (!electionsTriggerId || !formSubmitTriggerId) {
+            Common.Logger.info('', 'System triggers not found - setting up automatically...');
+            const result = setupAllTriggers();
+            
+            // Store trigger IDs for future reference
+            properties.setProperty('ELECTIONS_TRIGGER_ID', result.editTriggerId);
+            properties.setProperty('FORM_SUBMIT_TRIGGER_ID', result.formSubmitTriggerId);
+
+            Common.Logger.info('', 'System triggers auto-configured on deployment');
+        } else {
+            Common.Logger.info('', 'System triggers already configured');
+        }
+    } catch (error) {
+        Common.Logger.warn('', 'Could not auto-setup system triggers:', error);
+        // Continue without failing - triggers can be set up manually later
+    }
 }
 
 /**
