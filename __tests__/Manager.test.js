@@ -1,4 +1,4 @@
-const {MembershipManagement} = require('../src/services/MembershipManagement/Manager');
+const { MembershipManagement } = require('../src/services/MembershipManagement/Manager');
 const utils = MembershipManagement.Utils;
 
 const transactionsFixture = {
@@ -156,6 +156,7 @@ describe('Manager tests', () => {
       })
     })
     describe('multiple expiry schedules on the same day for the same address', () => {
+      let expectedActiveMembers;
       beforeEach(() => {
         activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "", Status: 'Active' }];
         expirySchedule = [
@@ -215,11 +216,18 @@ describe('Manager tests', () => {
   describe('processMigrations', () => {
     describe('Active Members only', () => {
       let migrators;
+      let migratorsPre;
+      let migratorsPost;
+      let expectedMigrators;
+      let members;
+      let expectedMembers;
       beforeEach(() => {
         migrators = [
-          { Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, "Migrate Me": true, Status: "Active", 
-            "board_announcements@sc3.club": false, "member_discussions@sc3.club": true },
-        { Email: "a@b.com", Period: 1, First: "Not", Last: "Me", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, Status: "Active" }
+          {
+            Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, "Migrate Me": true, Status: "Active",
+            "board_announcements@sc3.club": false, "member_discussions@sc3.club": true
+          },
+          { Email: "a@b.com", Period: 1, First: "Not", Last: "Me", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, Status: "Active" }
         ];
       });
       it('should migrate only marked members, record the date of migration and removing any unused keys', () => {
@@ -251,8 +259,8 @@ describe('Manager tests', () => {
       it('should not migrate members who have no email address, & log that fact', () => {
         const m = { ...migrators[0] };
         delete m.Email
-        migratorsPre = [{ ...m }];
-        migratorsPost = [{ ...m }]
+         migratorsPre = [{ ...m }];
+        migratorsPost = [{ ...m }];
         manager.migrateCEMembers(migratorsPre, activeMembers, expirySchedule);
         expect(migratorsPost).toEqual(migratorsPre)
         expect(activeMembers).toEqual([]);
@@ -260,14 +268,16 @@ describe('Manager tests', () => {
         expect(consoleSpy).toHaveBeenCalledWith(`Skipping row 2, no email address`);
       });
       it('should migrate expired members, and log the fact', () => {
-        members = [{Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "1900-03-10", Expires: "1901-01-10", Directory: 'Yes', Status: "Expired"}];
+        let members = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "1900-03-10", Expires: "1901-01-10", Directory: 'Yes', Status: "Expired" }];
         migrators = [
-          { Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, "Migrate Me": true, Status: "Active", 
-            "board_announcements@sc3.club": false, "member_discussions@sc3.club": true },
+          {
+            Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, "Migrate Me": true, Status: "Active",
+            "board_announcements@sc3.club": false, "member_discussions@sc3.club": true
+          },
         ];
-        expectedMigrators = [{ ...migrators[0], Migrated: today }];
-        expectedMembers = [members[0],
-          {Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: 'Yes', Migrated: today, Status: "Active"}
+        let expectedMigrators = [{ ...migrators[0], Migrated: today }];
+        let expectedMembers = [members[0],
+        { Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: 'Yes', Migrated: today, Status: "Active" }
         ];
         manager.migrateCEMembers(migrators, members, expirySchedule);
         expect(migrators).toEqual(expectedMigrators);
@@ -275,13 +285,15 @@ describe('Manager tests', () => {
         expect(groupAddFun).toHaveBeenCalledTimes(1);
       });
       it('should not migrate members that are already recorded as being active, and log the fact', () => {
-        members = [{Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "1900-03-10", Expires: "1901-01-10", Directory: 'Yes', Status: "Active"}];
+        members = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "1900-03-10", Expires: "1901-01-10", Directory: 'Yes', Status: "Active" }];
         migrators = [
-          { Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, "Migrate Me": true, Status: "Active", 
-            "board_announcements@sc3.club": false, "member_discussions@sc3.club": true },
+          {
+            Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: true, "Migrate Me": true, Status: "Active",
+            "board_announcements@sc3.club": false, "member_discussions@sc3.club": true
+          },
         ];
-        expectedMigrators = [{ ...migrators[0]}];
-        expectedMembers = [{...members[0]}];
+        expectedMigrators = [{ ...migrators[0] }];
+        expectedMembers = [{ ...members[0] }];
         manager.migrateCEMembers(migrators, members, expirySchedule);
         expect(migrators).toEqual(expectedMigrators);
         expect(members).toEqual(expectedMembers);
@@ -355,7 +367,7 @@ describe('Manager tests', () => {
         manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
         expect(expirySchedule).toEqual([]);
       })
-      it('should not add expired members to any groups', () => {  
+      it('should not add expired members to any groups', () => {
         manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
         expect(groupAddFun).toHaveBeenCalledTimes(0);
       })
@@ -365,7 +377,7 @@ describe('Manager tests', () => {
       })
       it('should provide logging information', () => {
         manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-        expect(consoleSpy).toHaveBeenCalledWith('Migrating Inactive member a@b.com, row 2 - no groups will be joined or emails sent'); 
+        expect(consoleSpy).toHaveBeenCalledWith('Migrating Inactive member a@b.com, row 2 - no groups will be joined or emails sent');
         expect(consoleSpy).toHaveBeenCalledWith(expect.anything());
       })
     });
@@ -377,7 +389,7 @@ describe('Manager tests', () => {
         const txns = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
         const expectedMembers = [
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": "", Status: "Active", "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false },
-          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '', Joined: today, Expires: utils.addYearsToDate(today, 2), "Renewed On": "", Status: "Active","Directory Share Name": true, "Directory Share Email": false, "Directory Share Phone": true },
+          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '', Joined: today, Expires: utils.addYearsToDate(today, 2), "Renewed On": "", Status: "Active", "Directory Share Name": true, "Directory Share Email": false, "Directory Share Phone": true },
           { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '', Joined: today, Expires: utils.addYearsToDate(today, 3), "Renewed On": "", Status: "Active", "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false }]
 
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
@@ -410,9 +422,9 @@ describe('Manager tests', () => {
         expect(hasPendingPayments).toBe(false);
       })
       it('should handle membership renewals for active members', () => {
-        const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year",  "Directory": "Share Email"  },
+        const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year", "Directory": "Share Email" },
         ]
-        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Active" , "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false },]
+        const members = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Active", "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false },]
         const expectedMembers = [
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: utils.addYearsToDate("2025-03-10", 1), "Renewed On": today, Status: "Active", "Directory Share Email": true, "Directory Share Name": false, "Directory Share Phone": false },
         ]
@@ -439,7 +451,7 @@ describe('Manager tests', () => {
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(groupAddFun).toHaveBeenCalledTimes(2);
         expect(groupAddFun).toHaveBeenCalledWith("test1@example.com", "a@b.com");
-        expect(groupAddFun).toHaveBeenCalledWith("test1@example.com", "member_discussions@sc3.club"); 
+        expect(groupAddFun).toHaveBeenCalledWith("test1@example.com", "member_discussions@sc3.club");
       })
 
       it('should not add a member to a group when the member is renewed', () => {
@@ -497,16 +509,18 @@ describe('Manager tests', () => {
         txns = [{ ...transactionsFixture.paid[0] }];
         activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: joinDate, Expires: utils.addDaysToDate(today, 10), "Renewed On": "", Status: "Active" },]
         const expectedMembers = [
-          { Email: "test1@example.com", 
-            Period: 1, First: "John", 
-            Last: "Doe", 
-            Joined: joinDate, 
-            Expires: utils.addYearsToDate(activeMembers[0].Expires, 1), 
-            "Renewed On": manager.today(), 
-            Status: "Active" ,
+          {
+            Email: "test1@example.com",
+            Period: 1, First: "John",
+            Last: "Doe",
+            Joined: joinDate,
+            Expires: utils.addYearsToDate(activeMembers[0].Expires, 1),
+            "Renewed On": manager.today(),
+            Status: "Active",
             "Directory Share Name": false,
             "Directory Share Email": false,
-            "Directory Share Phone": false},
+            "Directory Share Phone": false
+          },
         ]
         manager.processPaidTransactions(txns, activeMembers, expirySchedule);
         expect(activeMembers).toEqual(expectedMembers);
@@ -515,17 +529,19 @@ describe('Manager tests', () => {
       it('if renewal is after expiry then new expiry is today + period', () => {
         activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: joinDate, Expires: utils.addDaysToDate(joinDate, -10), "Renewed On": "", Status: "Active" },]
         const expectedMembers = [
-          { Email: "test1@example.com", 
-            Period: 1, 
-            First: "John", 
-            Last: "Doe", 
-            Joined: joinDate, 
-            Expires: utils.addYearsToDate(manager.today(), 1), 
-            "Renewed On": manager.today(), 
+          {
+            Email: "test1@example.com",
+            Period: 1,
+            First: "John",
+            Last: "Doe",
+            Joined: joinDate,
+            Expires: utils.addYearsToDate(manager.today(), 1),
+            "Renewed On": manager.today(),
             Status: "Active",
             "Directory Share Name": false,
             "Directory Share Email": false,
-            "Directory Share Phone": false},
+            "Directory Share Phone": false
+          },
         ]
         manager.processPaidTransactions(txns, activeMembers, expirySchedule);
         expect(activeMembers).toEqual(expectedMembers);
@@ -533,6 +549,7 @@ describe('Manager tests', () => {
     })
 
     describe('period calculation', () => {
+      let txns
       it('should return correct period for transactions with different payment terms', () => {
         const expectedMembers = [{ Email: "test1@example.com", Period: 3, first: "John", last: "Doe" },
         { Email: "test2@example.com", Period: 1, first: "Jane", last: "Smith", },
@@ -668,12 +685,12 @@ describe('convertJoinToRenew utility (additional tests)', () => {
   beforeEach(() => {
     const actionSpecs = {};
     const groups = [{ Email: "a@b.com" }];
-    manager = new MembershipManagement.Manager(actionSpecs, groups, () => {}, () => {}, () => {}, today);
+    manager = new MembershipManagement.Manager(actionSpecs, groups, () => { }, () => { }, () => { }, today);
   });
 
   it('merges INITIAL into LATEST when LATEST.Joined <= INITIAL.Expires', () => {
     const membershipData = [
-      { Status: 'Active', Email: 'captenphil@aol.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '8/8/2017', Expires: '12/31/2026', Period: 3, 'Directory Share Name': false, 'Directory Share Email': false, 'Directory Share Phone': false, Migrated: '3/17/2025','Renewed On': ''},
+      { Status: 'Active', Email: 'captenphil@aol.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '8/8/2017', Expires: '12/31/2026', Period: 3, 'Directory Share Name': false, 'Directory Share Email': false, 'Directory Share Phone': false, Migrated: '3/17/2025', 'Renewed On': '' },
       { Status: 'Active', Email: 'phil.stotts@gmail.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '10/23/2025', Expires: '10/23/2027', Period: 2, 'Directory Share Name': true, 'Directory Share Email': true, 'Directory Share Phone': true, Migrated: '', 'Renewed On': '' }
     ];
 

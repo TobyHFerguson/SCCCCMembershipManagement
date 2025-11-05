@@ -85,6 +85,7 @@ MembershipManagement.processExpirations = function() {
 MembershipManagement.Internal.initializeManagerData_ = function(membershipFiddler, expiryScheduleFiddler,) {
   const membershipData = membershipFiddler.getData();
   const expiryScheduleData = expiryScheduleFiddler.getData();
+  //@ts-ignore
   const autoGroups = Common.Data.Access.getPublicGroups().filter(group => group.Subscription.toLowerCase() === 'auto');
   const manager = new MembershipManagement.Manager(Common.Data.Access.getActionSpecs(), autoGroups, this.getGroupAdder_(), this.getGroupRemover_(), this.getEmailSender_());
 

@@ -437,5 +437,6 @@ MembershipManagement.Manager = class {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
+  //@ts-ignore
   module.exports = { MembershipManagement };
 }
