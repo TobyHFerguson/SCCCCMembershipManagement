@@ -372,8 +372,8 @@ MembershipManagement.Manager = class {
       console.log('convertJoinToRenew: resolved INITIAL and LATEST', {
         initialIdx,
         latestIdx,
-        INITIAL: { Email: INITIAL.Email, Joined: INITIAL.Joined, Expires: INITIAL.Expires, Period: INITIAL.Period },
-        LATEST: { Email: LATEST.Email, Joined: LATEST.Joined, Expires: LATEST.Expires, Period: LATEST.Period }
+        INITIAL: { Email: INITIAL.Email, Joined: INITIAL.Joined, Expires: INITIAL.Expires, Period: INITIAL.Period, 'Directory Share Name': INITIAL['Directory Share Name'], 'Directory Share Email': INITIAL['Directory Share Email'], 'Directory Share Phone': INITIAL['Directory Share Phone'], Migrated: INITIAL['Migrated'], 'Renewed On': INITIAL['Renewed On']  },
+        LATEST: { Email: LATEST.Email, Joined: LATEST.Joined, Expires: LATEST.Expires, Period: LATEST.Period, 'Directory Share Name': LATEST['Directory Share Name'], 'Directory Share Email': LATEST['Directory Share Email'], 'Directory Share Phone': LATEST['Directory Share Phone'], Migrated: LATEST['Migrated'], 'Renewed On': LATEST['Renewed On'] }
       });
     } catch (logErr) {
       // logging should never block main flow
@@ -391,6 +391,8 @@ MembershipManagement.Manager = class {
         const newExpires = MembershipManagement.Utils.addYearsToDate(initialExpires, periodYears);
         const before = { ...membershipData[latestIdx] };
         LATEST.Expires = newExpires;
+        LATEST.Migrated = MembershipManagement.Utils.dateOnly(INITIAL.Migrated || INITIAL['Migrated'] || '');
+        LATEST['Renewed On'] = MembershipManagement.Utils.dateOnly(LATEST.Joined);
 
         // set LATEST.Joined to INITIAL.Joined (only when join falls within initial expires)
         LATEST.Joined = MembershipManagement.Utils.dateOnly(INITIAL.Joined);

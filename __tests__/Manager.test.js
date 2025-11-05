@@ -673,18 +673,31 @@ describe('convertJoinToRenew utility (additional tests)', () => {
 
   it('merges INITIAL into LATEST when LATEST.Joined <= INITIAL.Expires', () => {
     const membershipData = [
-      { Status: 'Active', Email: 'captenphil@aol.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '8/8/2017', Expires: '12/31/2026', Period: 3 },
-      { Status: 'Active', Email: 'phil.stotts@gmail.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '10/23/2025', Expires: '10/23/2027', Period: 2 }
+      { Status: 'Active', Email: 'captenphil@aol.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '8/8/2017', Expires: '12/31/2026', Period: 3, 'Directory Share Name': false, 'Directory Share Email': false, 'Directory Share Phone': false, Migrated: '3/17/2025','Renewed On': ''},
+      { Status: 'Active', Email: 'phil.stotts@gmail.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '10/23/2025', Expires: '10/23/2027', Period: 2, 'Directory Share Name': true, 'Directory Share Email': true, 'Directory Share Phone': true, Migrated: '', 'Renewed On': '' }
     ];
+
+    const expectedMembershipData = {
+      Status: 'Active',
+      Email: 'phil.stotts@gmail.com',
+      First: 'Phil',
+      Last: 'Stotts',
+      Phone: '(831) 345-9634',
+      Joined: new Date('8/8/2017'),
+      Expires: new Date('12/31/2028'),
+      Period: 2,
+      'Directory Share Name': true,
+      'Directory Share Email': true,
+      'Directory Share Phone': true,
+      Migrated: new Date('3/17/2025'),
+      'Renewed On': new Date('10/23/2025')
+    };
 
     const result = manager.convertJoinToRenew(0, 1, membershipData);
     expect(result.success).toBe(true);
     expect(membershipData.length).toBe(1);
     const merged = membershipData[0];
-    expect(merged.Email).toBe('phil.stotts@gmail.com');
-    expect(utils.dateOnly(merged.Joined).getTime()).toBe(utils.dateOnly('8/8/2017').getTime());
-    const expectedExpires = utils.addYearsToDate(utils.dateOnly('12/31/2026'), 2);
-    expect(utils.dateOnly(merged.Expires).getTime()).toBe(expectedExpires.getTime());
+    expect(merged).toEqual(expectedMembershipData);
   });
 
   it('does not merge or delete INITIAL when LATEST.Joined > INITIAL.Expires', () => {
