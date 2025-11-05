@@ -661,3 +661,45 @@ describe('Manager tests', () => {
 
   });
 })
+
+describe('convertJoinToRenew utility (additional tests)', () => {
+  const today = utils.dateOnly("2025-03-01");
+  let manager;
+  beforeEach(() => {
+    const actionSpecs = {};
+    const groups = [{ Email: "a@b.com" }];
+    manager = new MembershipManagement.Manager(actionSpecs, groups, () => {}, () => {}, () => {}, today);
+  });
+
+  it('merges INITIAL into LATEST when LATEST.Joined <= INITIAL.Expires', () => {
+    const membershipData = [
+      { Status: 'Active', Email: 'captenphil@aol.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '8/8/2017', Expires: '12/31/2026', Period: 3 },
+      { Status: 'Active', Email: 'phil.stotts@gmail.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '10/23/2025', Expires: '10/23/2027', Period: 2 }
+    ];
+
+    const result = manager.convertJoinToRenew(0, 1, membershipData);
+    expect(result.success).toBe(true);
+    expect(membershipData.length).toBe(1);
+    const merged = membershipData[0];
+    expect(merged.Email).toBe('phil.stotts@gmail.com');
+    expect(utils.dateOnly(merged.Joined).getTime()).toBe(utils.dateOnly('8/8/2017').getTime());
+    const expectedExpires = utils.addYearsToDate(utils.dateOnly('12/31/2026'), 2);
+    expect(utils.dateOnly(merged.Expires).getTime()).toBe(expectedExpires.getTime());
+  });
+
+  it('does not merge or delete INITIAL when LATEST.Joined > INITIAL.Expires', () => {
+    const membershipData = [
+      { Status: 'Active', Email: 'old@example.com', Joined: '1/1/2010', Expires: '1/1/2011', Period: 1 },
+      { Status: 'Active', Email: 'new@example.com', Joined: '1/1/2015', Expires: '1/1/2016', Period: 2 }
+    ];
+
+    const result = manager.convertJoinToRenew(0, 1, membershipData);
+    expect(result.success).toBe(false);
+    // No mutation should have occurred
+    expect(membershipData.length).toBe(2);
+    expect(membershipData[0].Email).toBe('old@example.com');
+    expect(utils.dateOnly(membershipData[0].Joined).getTime()).toBe(utils.dateOnly('1/1/2010').getTime());
+    expect(membershipData[1].Email).toBe('new@example.com');
+    expect(utils.dateOnly(membershipData[1].Joined).getTime()).toBe(utils.dateOnly('1/1/2015').getTime());
+  });
+});

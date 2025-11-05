@@ -219,6 +219,59 @@ MembershipManagement.Manager = class {
       "Directory Share Phone": txn.Directory ? txn.Directory.toLowerCase().includes('share phone') : false,
     }
   }
+
+  /**
+   * Find membershipData indices for two identity objects and verify they share at least
+   * one identity characteristic (email, phone, first, last).
+   * identityA and identityB are objects with optional keys: email, phone, first, last
+   * membershipData is the array of member rows to search.
+   * Returns: { success: boolean, indices: [idxA, idxB], shareIdentity: boolean, message: string }
+   */
+  static findAndValidateIdentities(identityA, identityB, membershipData) {
+    function norm(v) { return v ? String(v).trim().toLowerCase() : ''; }
+    const a = {
+      email: norm(identityA && identityA.email),
+      phone: norm(identityA && identityA.phone),
+      first: norm(identityA && identityA.first),
+      last: norm(identityA && identityA.last)
+    };
+    const b = {
+      email: norm(identityB && identityB.email),
+      phone: norm(identityB && identityB.phone),
+      first: norm(identityB && identityB.first),
+      last: norm(identityB && identityB.last)
+    };
+
+    if (!membershipData || !Array.isArray(membershipData)) {
+      return { success: false, indices: [-1, -1], shareIdentity: false, message: 'Invalid membershipData' };
+    }
+
+    const findIndexFor = (id) => membershipData.findIndex(m => {
+      try {
+        if (id.email && m.Email && String(m.Email).trim().toLowerCase() === id.email) return true;
+        if (id.phone && m.Phone && String(m.Phone).trim().toLowerCase() === id.phone) return true;
+        if (id.first && m.First && String(m.First).trim().toLowerCase() === id.first) return true;
+        if (id.last && m.Last && String(m.Last).trim().toLowerCase() === id.last) return true;
+      } catch (e) { /* ignore */ }
+      return false;
+    });
+
+    const idxA = findIndexFor(a);
+    const idxB = findIndexFor(b);
+
+    if (idxA === -1 || idxB === -1) {
+      return { success: false, indices: [idxA, idxB], shareIdentity: false, message: 'Could not resolve one or both selected rows to membershipData indices' };
+    }
+
+    const shareIdentity = (
+      (a.email && b.email && a.email === b.email) ||
+      (a.phone && b.phone && a.phone === b.phone) ||
+      (a.first && b.first && a.first === b.first) ||
+      (a.last && b.last && a.last === b.last)
+    );
+
+    return { success: true, indices: [idxA, idxB], shareIdentity, message: shareIdentity ? 'Resolved and share identity' : 'Resolved but do not share identity' };
+  }
   addNewMember_(txn, expirySchedule, membershipData) {
     const newMember = {
       Email: txn["Email Address"],
@@ -240,6 +293,142 @@ MembershipManagement.Manager = class {
   addNewMemberToActionSchedule_(member, expirySchedule) {
     const scheduleEntries = this.createScheduleEntries_(member.Email, member.Expires);
     expirySchedule.push(...scheduleEntries);
+  }
+
+  /**
+   * Combine two member rows where one is an initial join and the other is a later join
+   * selectedA and selectedB may be indices into membershipData, email strings, or member objects.
+   * The earlier-joined row is treated as INITIAL and the later as LATEST.
+   * Rules:
+   *  - If LATEST.Joined <= INITIAL.Expires then
+   *      LATEST.Expires = INITIAL.Expires + (LATEST.Period) years
+   *  - LATEST.Joined = INITIAL.Joined
+   *  - Remove the INITIAL entry from membershipData
+   *
+   * @param {number|string|Object} a - index, email, or member object for first selected row
+   * @param {number|string|Object} b - index, email, or member object for second selected row
+   * @param {Array<Object>} membershipData - the array of member rows (modified in place)
+   * @returns {Object} - { success: boolean, message: string }
+   */
+  convertJoinToRenew(a, b, membershipData) {
+    function resolveIndex(sel) {
+      if (typeof sel === 'number') return sel;
+      if (typeof sel === 'string' && sel.includes('@')) return membershipData.findIndex(m => m.Email === sel);
+      if (sel && typeof sel === 'object') {
+        // Try email first
+        if (sel.Email) {
+          const byEmail = membershipData.findIndex(m => m.Email === sel.Email);
+          if (byEmail !== -1) return byEmail;
+        }
+        // Try phone
+        if (sel.Phone) {
+          const byPhone = membershipData.findIndex(m => m.Phone && String(m.Phone).trim() === String(sel.Phone).trim());
+          if (byPhone !== -1) return byPhone;
+        }
+        // Try first+last
+        if (sel.First || sel.Last) {
+          const firstNorm = sel.First ? String(sel.First).trim().toLowerCase() : '';
+          const lastNorm = sel.Last ? String(sel.Last).trim().toLowerCase() : '';
+          const byName = membershipData.findIndex(m => {
+            try {
+              const mf = m.First ? String(m.First).trim().toLowerCase() : '';
+              const ml = m.Last ? String(m.Last).trim().toLowerCase() : '';
+              if (firstNorm && lastNorm) return mf === firstNorm && ml === lastNorm;
+            } catch (e) { /* ignore */ }
+            return false;
+          });
+          if (byName !== -1) return byName;
+        }
+      }
+      return -1;
+    }
+
+    const idxA = resolveIndex(a);
+    const idxB = resolveIndex(b);
+    if (idxA < 0 || idxB < 0) {
+      return { success: false, message: 'Could not resolve both selected rows to membershipData indices' };
+    }
+
+    if (idxA === idxB) return { success: false, message: 'Selections refer to the same row' };
+
+    // Ensure we work with copies to avoid mutation surprises
+    const rowA = { ...membershipData[idxA] };
+    const rowB = { ...membershipData[idxB] };
+
+    const dateA = MembershipManagement.Utils.dateOnly(rowA.Joined);
+    const dateB = MembershipManagement.Utils.dateOnly(rowB.Joined);
+
+    let INITIAL, LATEST, initialIdx, latestIdx;
+    if (dateA <= dateB) {
+      INITIAL = rowA; INITIAL.Joined = dateA; initialIdx = idxA;
+      LATEST = rowB; LATEST.Joined = dateB; latestIdx = idxB;
+    } else {
+      INITIAL = rowB; INITIAL.Joined = dateB; initialIdx = idxB;
+      LATEST = rowA; LATEST.Joined = dateA; latestIdx = idxA;
+    }
+
+    // Audit log: resolved rows
+    try {
+      console.log('convertJoinToRenew: resolved INITIAL and LATEST', {
+        initialIdx,
+        latestIdx,
+        INITIAL: { Email: INITIAL.Email, Joined: INITIAL.Joined, Expires: INITIAL.Expires, Period: INITIAL.Period },
+        LATEST: { Email: LATEST.Email, Joined: LATEST.Joined, Expires: LATEST.Expires, Period: LATEST.Period }
+      });
+    } catch (logErr) {
+      // logging should never block main flow
+      console.log('convertJoinToRenew: logging error', logErr && logErr.toString ? logErr.toString() : logErr);
+    }
+
+    // Normalize Expires to Date
+    const initialExpires = MembershipManagement.Utils.dateOnly(INITIAL.Expires || INITIAL['Expires']);
+    const latestJoined = MembershipManagement.Utils.dateOnly(LATEST.Joined || LATEST['Joined']);
+
+    // If LATEST.Joined <= INITIAL.Expires then extend latest expires by LATEST.Period years from INITIAL.Expires
+    try {
+      if (latestJoined <= initialExpires) {
+        const periodYears = Number(LATEST.Period || LATEST['Period']) || 0;
+        const newExpires = MembershipManagement.Utils.addYearsToDate(initialExpires, periodYears);
+        const before = { ...membershipData[latestIdx] };
+        LATEST.Expires = newExpires;
+
+        // set LATEST.Joined to INITIAL.Joined (only when join falls within initial expires)
+        LATEST.Joined = MembershipManagement.Utils.dateOnly(INITIAL.Joined);
+
+        // Write LATEST back into membershipData at latestIdx
+        membershipData[latestIdx] = { ...membershipData[latestIdx], ...LATEST };
+
+        // Remove INITIAL entry
+        const removeIdx = initialIdx;
+        membershipData.splice(removeIdx, 1);
+
+        try {
+          console.log('convertJoinToRenew: merged rows', {
+            mergedIntoIndex: latestIdx > removeIdx ? latestIdx - 1 : latestIdx,
+            before,
+            after: membershipData[latestIdx > removeIdx ? latestIdx - 1 : latestIdx]
+          });
+        } catch (logErr) {
+          console.log('convertJoinToRenew: logging error after merge', logErr && logErr.toString ? logErr.toString() : logErr);
+        }
+
+        return { success: true, message: 'Rows merged successfully', mergedIntoIndex: latestIdx > removeIdx ? latestIdx - 1 : latestIdx };
+      }
+
+      // Condition not met: do not modify membershipData
+      try {
+        console.log('convertJoinToRenew: no merge - LATEST.Joined is after INITIAL.Expires', {
+          INITIAL: { Email: INITIAL.Email, Expires: initialExpires },
+          LATEST: { Email: LATEST.Email, Joined: latestJoined }
+        });
+      } catch (logErr) {
+        console.log('convertJoinToRenew: logging error for no-merge case', logErr && logErr.toString ? logErr.toString() : logErr);
+      }
+
+      return { success: false, message: 'No merge performed: LATEST.Joined is after INITIAL.Expires' };
+    } catch (err) {
+      return { success: false, message: `Failed to merge rows: ${err && err.toString ? err.toString() : String(err)}` };
+    }
   }
 
 
