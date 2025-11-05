@@ -687,7 +687,6 @@ describe('convertJoinToRenew utility (additional tests)', () => {
     const groups = [{ Email: "a@b.com" }];
     manager = new MembershipManagement.Manager(actionSpecs, groups, () => { }, () => { }, () => { }, today);
   });
-
   it('merges INITIAL into LATEST when LATEST.Joined <= INITIAL.Expires', () => {
     const membershipData = [
       { Status: 'Active', Email: 'captenphil@aol.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '8/8/2017', Expires: '12/31/2026', Period: 3, 'Directory Share Name': false, 'Directory Share Email': false, 'Directory Share Phone': false, Migrated: '3/17/2025', 'Renewed On': '' },

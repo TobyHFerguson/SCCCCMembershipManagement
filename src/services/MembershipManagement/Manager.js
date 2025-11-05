@@ -1,5 +1,5 @@
 if (typeof require !== 'undefined') {
-   (MembershipManagement = require('./utils.js'));
+  (MembershipManagement = require('./utils.js'));
 }
 
 MembershipManagement.Manager = class {
@@ -305,52 +305,31 @@ MembershipManagement.Manager = class {
    *  - LATEST.Joined = INITIAL.Joined
    *  - Remove the INITIAL entry from membershipData
    *
-   * @param {number|string|Object} a - index, email, or member object for first selected row
-   * @param {number|string|Object} b - index, email, or member object for second selected row
+   * @param {number} idxA - index for first selected row
+   * @param {number} idxB - index for second selected row
    * @param {Array<Object>} membershipData - the array of member rows (modified in place)
    * @returns {Object} - { success: boolean, message: string }
    */
-  convertJoinToRenew(a, b, membershipData) {
-    function resolveIndex(sel) {
-      if (typeof sel === 'number') return sel;
-      if (typeof sel === 'string' && sel.includes('@')) return membershipData.findIndex(m => m.Email === sel);
-      if (sel && typeof sel === 'object') {
-        // Try email first
-        if (sel.Email) {
-          const byEmail = membershipData.findIndex(m => m.Email === sel.Email);
-          if (byEmail !== -1) return byEmail;
-        }
-        // Try phone
-        if (sel.Phone) {
-          const byPhone = membershipData.findIndex(m => m.Phone && String(m.Phone).trim() === String(sel.Phone).trim());
-          if (byPhone !== -1) return byPhone;
-        }
-        // Try first+last
-        if (sel.First || sel.Last) {
-          const firstNorm = sel.First ? String(sel.First).trim().toLowerCase() : '';
-          const lastNorm = sel.Last ? String(sel.Last).trim().toLowerCase() : '';
-          const byName = membershipData.findIndex(m => {
-            try {
-              const mf = m.First ? String(m.First).trim().toLowerCase() : '';
-              const ml = m.Last ? String(m.Last).trim().toLowerCase() : '';
-              if (firstNorm && lastNorm) return mf === firstNorm && ml === lastNorm;
-            } catch (e) { /* ignore */ }
-            return false;
-          });
-          if (byName !== -1) return byName;
-        }
-      }
-      return -1;
+  convertJoinToRenew(idxA, idxB, membershipData) {
+    if (!(0 <= idxA && idxA < membershipData.length) || !(0 <= idxB && idxB < membershipData.length)) {
+      return { success: false, message: `Invalid indices for membershipData: ${idxA}, ${idxB}` };
     }
-
-    const idxA = resolveIndex(a);
-    const idxB = resolveIndex(b);
-    if (idxA < 0 || idxB < 0) {
-      return { success: false, message: 'Could not resolve both selected rows to membershipData indices' };
-    }
-
     if (idxA === idxB) return { success: false, message: 'Selections refer to the same row' };
 
+    const normalize = v => v ? String(v).trim().toLowerCase() : '';
+    const a = membershipData[idxA];
+    const b = membershipData[idxB];
+    const shareIdentity = (
+      (normalize(a.Email) && normalize(b.Email) && normalize(a.Email) === normalize(b.Email)) ||
+      (normalize(a.Phone) && normalize(b.Phone) && normalize(a.Phone) === normalize(b.Phone)) ||
+      (normalize(a.First) && normalize(b.First) && normalize(a.First) === normalize(b.First)) ||
+      (normalize(a.Last) && normalize(b.Last) && normalize(a.Last) === normalize(b.Last))
+    );
+
+    if (!shareIdentity) {
+      console.error('convertJoinToRenew: selected rows do not share identity', { idxA, idxB, a: { Email: a.Email, Phone: a.Phone, First: a.First, Last: a.Last }, b: { Email: b.Email, Phone: b.Phone, First: b.First, Last: b.Last } });
+      return {success: false, message: 'Selected rows do not share any identity characteristic with one another (email, phone, first, or last name)'};
+    }
     // Ensure we work with copies to avoid mutation surprises
     const rowA = { ...membershipData[idxA] };
     const rowB = { ...membershipData[idxB] };
@@ -372,7 +351,7 @@ MembershipManagement.Manager = class {
       console.log('convertJoinToRenew: resolved INITIAL and LATEST', {
         initialIdx,
         latestIdx,
-        INITIAL: { Email: INITIAL.Email, Joined: INITIAL.Joined, Expires: INITIAL.Expires, Period: INITIAL.Period, 'Directory Share Name': INITIAL['Directory Share Name'], 'Directory Share Email': INITIAL['Directory Share Email'], 'Directory Share Phone': INITIAL['Directory Share Phone'], Migrated: INITIAL['Migrated'], 'Renewed On': INITIAL['Renewed On']  },
+        INITIAL: { Email: INITIAL.Email, Joined: INITIAL.Joined, Expires: INITIAL.Expires, Period: INITIAL.Period, 'Directory Share Name': INITIAL['Directory Share Name'], 'Directory Share Email': INITIAL['Directory Share Email'], 'Directory Share Phone': INITIAL['Directory Share Phone'], Migrated: INITIAL['Migrated'], 'Renewed On': INITIAL['Renewed On'] },
         LATEST: { Email: LATEST.Email, Joined: LATEST.Joined, Expires: LATEST.Expires, Period: LATEST.Period, 'Directory Share Name': LATEST['Directory Share Name'], 'Directory Share Email': LATEST['Directory Share Email'], 'Directory Share Phone': LATEST['Directory Share Phone'], Migrated: LATEST['Migrated'], 'Renewed On': LATEST['Renewed On'] }
       });
     } catch (logErr) {

@@ -1,5 +1,18 @@
 
-MembershipManagement.processTransactions = function() {
+MembershipManagement.convertJoinToRenew = function (rowAIndex, rowBIndex) {
+  const membershipFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
+  const expiryFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
+  const init = MembershipManagement.Internal.initializeManagerData_(membershipFiddler, expiryFiddler);
+  const manager = init.manager;
+  const membershipData = init.membershipData;
+  const result = manager.convertJoinToRenew(rowAIndex, rowBIndex, membershipData);
+  if (result.success) {
+    membershipFiddler.setData(membershipData).dumpValues();
+  }
+  return result
+}
+
+MembershipManagement.processTransactions = function () {
   Common.Data.Storage.SpreadsheetManager.convertLinks('Transactions');
   const transactionsFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Transactions').needFormulas();
   const transactions = Common.Data.Storage.SpreadsheetManager.getDataWithFormulas(transactionsFiddler);
@@ -11,16 +24,16 @@ MembershipManagement.processTransactions = function() {
   const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
   const { recordsChanged, hasPendingPayments, errors } = manager.processPaidTransactions(transactions, membershipData, expiryScheduleData);
-    if (recordsChanged) {
-      transactionsFiddler.setData(transactions).dumpValues();
-      membershipFiddler.setData(membershipData).dumpValues();
-      expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
-    }
+  if (recordsChanged) {
+    transactionsFiddler.setData(transactions).dumpValues();
+    membershipFiddler.setData(membershipData).dumpValues();
+    expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
+  }
   errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack}`));
-  return {hasPendingPayments, errors};
+  return { hasPendingPayments, errors };
 }
 
-MembershipManagement.processMigrations = function() {
+MembershipManagement.processMigrations = function () {
   const migratingMembersFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('MigratingMembers').needFormulas();
   const migratingMembers = Common.Data.Storage.SpreadsheetManager.getDataWithFormulas(migratingMembersFiddler);
   if (migratingMembers.length === 0) { return; }
@@ -31,7 +44,7 @@ MembershipManagement.processMigrations = function() {
   const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
   const mdLength = membershipData.length;
   const esdLength = expiryScheduleData.length;
- 
+
   try {
     manager.migrateCEMembers(migratingMembers, membershipData, expiryScheduleData);
   } catch (error) {
@@ -50,10 +63,10 @@ MembershipManagement.processMigrations = function() {
   expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
 }
 
-MembershipManagement.processExpirations = function() {
+MembershipManagement.processExpirations = function () {
   try {
     MembershipManagement.Utils.log('Starting membership expiration processing...');
-    
+
     const membershipFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
     const expiryScheduleFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
 
@@ -68,21 +81,21 @@ MembershipManagement.processExpirations = function() {
 
     membershipFiddler.setData(membershipData).dumpValues();
     expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
-    
+
     MembershipManagement.Utils.log(`Successfully processed ${numProcessed} membership expirations`);
   } catch (error) {
     const errorMessage = `Membership expiration processing failed: ${error.message}`;
     MembershipManagement.Utils.log(`ERROR: ${errorMessage}`);
     console.error(`${errorMessage}\nStack trace: ${error.stack}`);
-    
+
     // Send email notification to membership automation
     this.Internal.sendExpirationErrorNotification_(error);
-    
+
     throw error; // Re-throw to ensure trigger system knows about the failure
   }
 }
 
-MembershipManagement.Internal.initializeManagerData_ = function(membershipFiddler, expiryScheduleFiddler,) {
+MembershipManagement.Internal.initializeManagerData_ = function (membershipFiddler, expiryScheduleFiddler,) {
   const membershipData = membershipFiddler.getData();
   const expiryScheduleData = expiryScheduleFiddler.getData();
   //@ts-ignore
@@ -92,7 +105,7 @@ MembershipManagement.Internal.initializeManagerData_ = function(membershipFiddle
   return { manager, membershipData, expiryScheduleData };
 }
 
-MembershipManagement.Internal.getGroupAdder_ = function() {
+MembershipManagement.Internal.getGroupAdder_ = function () {
   if (PropertiesService.getScriptProperties().getProperty('testGroupAdds') === 'true') {
     return (memberEmail, groupEmail) => MembershipManagement.Utils.log(`testGroupAdds: true. Would have added: `, memberEmail, ' to group:', groupEmail);
   } else {
@@ -100,7 +113,7 @@ MembershipManagement.Internal.getGroupAdder_ = function() {
   }
 }
 
-MembershipManagement.Internal.getGroupRemover_ = function() {
+MembershipManagement.Internal.getGroupRemover_ = function () {
   if (PropertiesService.getScriptProperties().getProperty('testGroupRemoves') === 'true') {
     return (memberEmail, groupEmail) => MembershipManagement.Utils.log(`testGroupRemoves: true. Would have removed: `, memberEmail, ' from group:', groupEmail);
   } else {
@@ -115,7 +128,7 @@ MembershipManagement.Internal.getGroupRemover_ = function() {
  * @param {string} memberEmail The email address of the member to add.
  * @customfunction
  */
-MembershipManagement.Internal.addMemberToGroup_ = function(memberEmail, groupEmail) {
+MembershipManagement.Internal.addMemberToGroup_ = function (memberEmail, groupEmail) {
   try {
     AdminDirectory.Members.insert({ email: memberEmail, role: "MEMBER" }, groupEmail);
     MembershipManagement.Utils.log(`Successfully added ${memberEmail} to ${groupEmail}`);
@@ -135,7 +148,7 @@ MembershipManagement.Internal.addMemberToGroup_ = function(memberEmail, groupEma
  * @param {string} memberEmail The email address of the member to remove.
  * @customfunction
  */
-MembershipManagement.Internal.removeMemberFromGroup_ = function(memberEmail, groupEmail) {
+MembershipManagement.Internal.removeMemberFromGroup_ = function (memberEmail, groupEmail) {
   try {
     AdminDirectory.Members.remove(groupEmail, memberEmail);
     MembershipManagement.Utils.log(`Successfully removed ${memberEmail} from ${groupEmail}`);
@@ -150,7 +163,7 @@ MembershipManagement.Internal.removeMemberFromGroup_ = function(memberEmail, gro
   }
 }
 
-MembershipManagement.Internal.getEmailSender_ = function() {
+MembershipManagement.Internal.getEmailSender_ = function () {
   const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails') === 'true';
   const domain = PropertiesService.getScriptProperties().getProperty('domain') || 'sc3.club';
   return (email) => {
@@ -163,7 +176,7 @@ MembershipManagement.Internal.getEmailSender_ = function() {
   };
 }
 
-MembershipManagement.Internal.sendSingleEmail_ = function(email) {
+MembershipManagement.Internal.sendSingleEmail_ = function (email) {
   MembershipManagement.Utils.log(`Email Sent: :`, email);
   try {
     MailApp.sendEmail(email);
@@ -173,11 +186,11 @@ MembershipManagement.Internal.sendSingleEmail_ = function(email) {
   }
 }
 
-MembershipManagement.Internal.sendExpirationErrorNotification_ = function(error) {
+MembershipManagement.Internal.sendExpirationErrorNotification_ = function (error) {
   try {
     const domain = PropertiesService.getScriptProperties().getProperty('domain') || 'sc3.club';
     const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails') === 'true';
-    
+
     const email = {
       to: `membership-automation@${domain}`,
       subject: `🚨 Membership Expiration Processing Failed`,
@@ -200,7 +213,7 @@ MembershipManagement.Internal.sendExpirationErrorNotification_ = function(error)
       `,
       replyTo: `membership@${domain}`
     };
-    
+
     if (testEmails) {
       MembershipManagement.Utils.log('testEmails is set to true - logging error notification only: ', email);
     } else {
