@@ -3,12 +3,13 @@ if (typeof require !== 'undefined') {
 }
 
 MembershipManagement.Manager = class {
-  constructor(actionSpecs, groups, groupAddFun, groupRemoveFun, sendEmailFun, today) {
+  constructor(actionSpecs, groups, groupManager, sendEmailFun, today) {
     if (!groups || groups.length === 0) { throw new Error('MembershipManager requires a non-empty array of group emails'); }
     this._actionSpecs = actionSpecs;
     this._groups = groups;
-    this._groupAddFun = groupAddFun || (() => { });
-    this._groupRemoveFun = groupRemoveFun || (() => { });
+    this._groupAddFun = groupManager && groupManager.groupAddFun || (() => { });
+    this._groupRemoveFun = groupManager && groupManager.groupRemoveFun || (() => { });
+    this._groupEmailReplaceFun = groupManager && groupManager.groupEmailReplaceFun || (() => { });
     this._sendEmailFun = sendEmailFun || (() => { });
     this._today = MembershipManagement.Utils.dateOnly(today)
   }
@@ -179,14 +180,14 @@ MembershipManagement.Manager = class {
   renewMember_(txn, member, expirySchedule,) {
     member.Period = MembershipManagement.Manager.getPeriod_(txn);
     member["Renewed On"] = this._today;
-    member.Expires = MembershipManagement.Utils.calculateExpirationDate(this._today, member.Expires, member.period);
+    member.Expires = MembershipManagement.Utils.calculateExpirationDate(this._today, member.Expires, member.Period);
     Object.assign(member, MembershipManagement.Manager.extractDirectorySharing_(txn));
     this.addRenewedMemberToActionSchedule_(member, expirySchedule);
   }
 
   addRenewedMemberToActionSchedule_(member, expirySchedule) {
     const email = member.Email;
-    MembershipManagement.Manager.removeEmails_(email, expirySchedule);
+    this.removeMemberFromExpirySchedule_(email, expirySchedule);
     const scheduleEntries = this.createScheduleEntries_(email, member.Expires);
     expirySchedule.push(...scheduleEntries);
   }
@@ -203,7 +204,7 @@ MembershipManagement.Manager = class {
     return scheduleEntries;
   }
 
-  static removeEmails_(email, expirySchedule) {
+  removeMemberFromExpirySchedule_(email, expirySchedule) {
     for (let i = expirySchedule.length - 1; i >= 0; i--) {
       if (expirySchedule[i].Email === email) {
         expirySchedule.splice(i, 1);
@@ -308,9 +309,10 @@ MembershipManagement.Manager = class {
    * @param {number} idxA - index for first selected row
    * @param {number} idxB - index for second selected row
    * @param {Array<Object>} membershipData - the array of member rows (modified in place)
+   * @param {Array<Object>} expirySchedule - the expiry schedule array (modified in place)
    * @returns {Object} - { success: boolean, message: string }
    */
-  convertJoinToRenew(idxA, idxB, membershipData) {
+  convertJoinToRenew(idxA, idxB, membershipData, expirySchedule) {
     if (!(0 <= idxA && idxA < membershipData.length) || !(0 <= idxB && idxB < membershipData.length)) {
       return { success: false, message: `Invalid indices for membershipData: ${idxA}, ${idxB}` };
     }
@@ -328,7 +330,7 @@ MembershipManagement.Manager = class {
 
     if (!shareIdentity) {
       console.error('convertJoinToRenew: selected rows do not share identity', { idxA, idxB, a: { Email: a.Email, Phone: a.Phone, First: a.First, Last: a.Last }, b: { Email: b.Email, Phone: b.Phone, First: b.First, Last: b.Last } });
-      return {success: false, message: 'Selected rows do not share any identity characteristic with one another (email, phone, first, or last name)'};
+      return { success: false, message: 'Selected rows do not share any identity characteristic with one another (email, phone, first, or last name)' };
     }
     // Ensure we work with copies to avoid mutation surprises
     const rowA = { ...membershipData[idxA] };
@@ -337,6 +339,7 @@ MembershipManagement.Manager = class {
     const dateA = MembershipManagement.Utils.dateOnly(rowA.Joined);
     const dateB = MembershipManagement.Utils.dateOnly(rowB.Joined);
 
+    // Ensure we know which of the two rows is INITIAL and which is LATEST - we want to update LATEST and drop INITIAL
     let INITIAL, LATEST, initialIdx, latestIdx;
     if (dateA <= dateB) {
       INITIAL = rowA; INITIAL.Joined = dateA; initialIdx = idxA;
@@ -379,6 +382,21 @@ MembershipManagement.Manager = class {
         // Write LATEST back into membershipData at latestIdx
         membershipData[latestIdx] = { ...membershipData[latestIdx], ...LATEST };
 
+        // Now we need to update expirySchedule entries for LATEST
+        this.addRenewedMemberToActionSchedule_(LATEST, expirySchedule);
+
+        // Now we need to delete the INITIAL entry from expirySchedule
+        this.removeMemberFromExpirySchedule_(INITIAL.Email, expirySchedule);
+
+        // change email in all groups if different
+        if (INITIAL.Email !== LATEST.Email) {
+          let result = this._groupEmailReplaceFun(INITIAL.Email, LATEST.Email);
+          if (result && !result.success) {
+            console.error(`Error changing email in groups: ${result.message}`);
+          }
+        }
+
+
         // Remove INITIAL entry
         const removeIdx = initialIdx;
         membershipData.splice(removeIdx, 1);
@@ -393,7 +411,7 @@ MembershipManagement.Manager = class {
           console.log('convertJoinToRenew: logging error after merge', logErr && logErr.toString ? logErr.toString() : logErr);
         }
 
-        return { success: true, message: 'Rows merged successfully', mergedIntoIndex: latestIdx > removeIdx ? latestIdx - 1 : latestIdx };
+        return { success: true, message: 'Rows merged successfully', initialEmail: INITIAL.Email, latestEmail: LATEST.Email };
       }
 
       // Condition not met: do not modify membershipData
@@ -412,7 +430,7 @@ MembershipManagement.Manager = class {
     }
   }
 
-
+  
 }
 
 if (typeof module !== 'undefined' && module.exports) {

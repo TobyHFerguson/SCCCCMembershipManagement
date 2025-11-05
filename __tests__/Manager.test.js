@@ -64,7 +64,7 @@ describe('Manager tests', () => {
   let activeMembers;
   let expiredMembers;
   let expirySchedule;
-  let groupAddFun;
+  let groupManager = {};
   let groupRemoveFun;
   let sendEmailFun;
   let groups;
@@ -72,11 +72,11 @@ describe('Manager tests', () => {
   let consoleSpy;
 
   beforeEach(() => {
-    groupRemoveFun = jest.fn();
-    groupAddFun = jest.fn();
+    groupManager.groupRemoveFun = jest.fn();
+    groupManager.groupAddFun = jest.fn();
     sendEmailFun = jest.fn();
     groups = [{ Email: "a@b.com" }, { Email: "member_discussions@sc3.club" }];
-    manager = new MembershipManagement.Manager(actionSpecs, groups, groupAddFun, groupRemoveFun, sendEmailFun, today);
+    manager = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today);
     activeMembers = [];
     expiredMembers = [];
     expirySchedule = [];
@@ -176,9 +176,9 @@ describe('Manager tests', () => {
         expectedActiveMembers = [{ ...activeMembers[0], Status: 'Expired' }];
         manager.processExpirations(activeMembers, expirySchedule);
         expect(activeMembers).toEqual(expectedActiveMembers);
-        expect(groupRemoveFun).toHaveBeenCalledTimes(2);
-        expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groups[0].Email);
-        expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groups[1].Email);
+        expect(groupManager.groupRemoveFun).toHaveBeenCalledTimes(2);
+        expect(groupManager.groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groups[0].Email);
+        expect(groupManager.groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groups[1].Email);
         expect(sendEmailFun).toHaveBeenCalledTimes(1);
         expect(sendEmailFun).toHaveBeenCalledWith({ to: expectedActiveMembers[0].Email, subject: actionSpecs.Expiry4.Subject, htmlBody: actionSpecs.Expiry4.Body.replace('{First}', expectedActiveMembers[0].First).replace('{Last}', expectedActiveMembers[0].Last) });
       })
@@ -201,9 +201,9 @@ describe('Manager tests', () => {
       })
       it('should remove the member from all groups once Expiry4 has been met', () => {
         manager.processExpirations(activeMembers, expirySchedule);
-        expect(groupRemoveFun).toHaveBeenCalledTimes(2);
-        expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groups[0].Email);
-        expect(groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groups[1].Email);
+        expect(groupManager.groupRemoveFun).toHaveBeenCalledTimes(2);
+        expect(groupManager.groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groups[0].Email);
+        expect(groupManager.groupRemoveFun).toHaveBeenCalledWith(expectedActiveMembers[0].Email, groups[1].Email);
       })
       it('should send an email to the member once Expiry4 has been met', () => {
         manager.processExpirations(activeMembers, expirySchedule);
@@ -242,8 +242,8 @@ describe('Manager tests', () => {
         expect(migrators).toEqual(expectedMigrators);
       });
       it('should not migrate members if an error is thrown', () => {
-        groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
-        manager = new MembershipManagement.Manager(actionSpecs, groups, groupAddFun, groupRemoveFun, sendEmailFun, today);
+        groupManager.groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
+        manager = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today);
         try {
           manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
           fail('Expected error not thrown');
@@ -282,7 +282,7 @@ describe('Manager tests', () => {
         manager.migrateCEMembers(migrators, members, expirySchedule);
         expect(migrators).toEqual(expectedMigrators);
         expect(members).toEqual(expectedMembers);
-        expect(groupAddFun).toHaveBeenCalledTimes(1);
+        expect(groupManager.groupAddFun).toHaveBeenCalledTimes(1);
       });
       it('should not migrate members that are already recorded as being active, and log the fact', () => {
         members = [{ Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "1900-03-10", Expires: "1901-01-10", Directory: 'Yes', Status: "Active" }];
@@ -310,8 +310,8 @@ describe('Manager tests', () => {
 
       it('should add migrated members to groups in keys', () => {
         manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-        expect(groupAddFun).toHaveBeenCalledTimes(1);
-        expect(groupAddFun).toHaveBeenCalledWith(migrators[0].Email, "member_discussions@sc3.club");
+        expect(groupManager.groupAddFun).toHaveBeenCalledTimes(1);
+        expect(groupManager.groupAddFun).toHaveBeenCalledWith(migrators[0].Email, "member_discussions@sc3.club");
       });
 
       it('should send emails to the members', () => {
@@ -328,8 +328,8 @@ describe('Manager tests', () => {
       });
 
       it('should continue even when there are errors', () => {
-        groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
-        manager = new MembershipManagement.Manager(actionSpecs, groups, groupAddFun, groupRemoveFun, sendEmailFun, today);
+        groupManager.groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
+        manager = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today);
         try {
           manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
           fail('Expected error not thrown');
@@ -369,7 +369,7 @@ describe('Manager tests', () => {
       })
       it('should not add expired members to any groups', () => {
         manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-        expect(groupAddFun).toHaveBeenCalledTimes(0);
+        expect(groupManager.groupAddFun).toHaveBeenCalledTimes(0);
       })
       it('should not send any emails to inactive members', () => {
         manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
@@ -449,16 +449,16 @@ describe('Manager tests', () => {
       it('should add a member to a group when the member is added', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
-        expect(groupAddFun).toHaveBeenCalledTimes(2);
-        expect(groupAddFun).toHaveBeenCalledWith("test1@example.com", "a@b.com");
-        expect(groupAddFun).toHaveBeenCalledWith("test1@example.com", "member_discussions@sc3.club");
+        expect(groupManager.groupAddFun).toHaveBeenCalledTimes(2);
+        expect(groupManager.groupAddFun).toHaveBeenCalledWith("test1@example.com", "a@b.com");
+        expect(groupManager.groupAddFun).toHaveBeenCalledWith("test1@example.com", "member_discussions@sc3.club");
       })
 
       it('should not add a member to a group when the member is renewed', () => {
         const txns = [{ "Payable Status": "paid", "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Payment": "1 year" }]
         activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: 'Active' },]
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
-        expect(groupAddFun).toHaveBeenCalledTimes(0);
+        expect(groupManager.groupAddFun).toHaveBeenCalledTimes(0);
       });
     });
 
@@ -570,7 +570,7 @@ describe('Manager tests', () => {
         it('should return errors if there are any', () => {
           const transactions = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
           sendEmailFun = jest.fn(() => { throw new Error('This is a test error') });
-          manager = new MembershipManagement.Manager(actionSpecs, groups, groupAddFun, groupRemoveFun, sendEmailFun, today);
+          manager = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today);
           const { _, __, errors } = manager.processPaidTransactions(transactions, activeMembers, expirySchedule,);
           expect(errors.length).toEqual(3);
           expect(errors[0].message).toEqual('This is a test error');
@@ -677,58 +677,66 @@ describe('Manager tests', () => {
     });
 
   });
+  describe('convertJoinToRenew utility (additional tests)', () => {
+    it('merges INITIAL into LATEST when LATEST.Joined <= INITIAL.Expires', () => {
+      const membershipData = [
+        { Status: 'Active', Email: 'captenphil@aol.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '8/8/2017', Expires: '12/15/2026', Period: 3, 'Directory Share Name': false, 'Directory Share Email': false, 'Directory Share Phone': false, Migrated: '3/17/2025', 'Renewed On': '' },
+        { Status: 'Active', Email: 'phil.stotts@gmail.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '10/23/2025', Expires: '10/23/2027', Period: 2, 'Directory Share Name': true, 'Directory Share Email': true, 'Directory Share Phone': true, Migrated: '', 'Renewed On': '' }
+      ];
+  
+      const expirySchedule = [
+        { Email: 'captenphil@aol.com', Type: utils.ActionType.Expiry1, Date: utils.dateOnly('12/1/2026') },
+        { Email: 'captenphil@aol.com', Type: utils.ActionType.Expiry2, Date: utils.dateOnly('12/16/2026') },
+        { Email: 'captenphil@aol.com', Type: utils.ActionType.Expiry3, Date: utils.dateOnly('12/31/2026') },
+        { Email: 'captenphil@aol.com', Type: utils.ActionType.Expiry4, Date: utils.dateOnly('1/15/2027') }
+      ];
+  
+      const expectedExpirySchedule = [
+        { Email: 'phil.stotts@gmail.com', Type: utils.ActionType.Expiry1, Date: utils.dateOnly('12/5/2028') },
+        { Email: 'phil.stotts@gmail.com', Type: utils.ActionType.Expiry2, Date: utils.dateOnly('12/10/2028') },
+        { Email: 'phil.stotts@gmail.com', Type: utils.ActionType.Expiry3, Date: utils.dateOnly('12/15/2028') },
+        { Email: 'phil.stotts@gmail.com', Type: utils.ActionType.Expiry4, Date: utils.dateOnly('12/25/2028') }
+      ];
+  
+      const expectedMembershipData = {
+        Status: 'Active',
+        Email: 'phil.stotts@gmail.com',
+        First: 'Phil',
+        Last: 'Stotts',
+        Phone: '(831) 345-9634',
+        Joined: new Date('8/8/2017'),
+        Expires: new Date('12/15/2028'),
+        Period: 2,
+        'Directory Share Name': true,
+        'Directory Share Email': true,
+        'Directory Share Phone': true,
+        Migrated: new Date('3/17/2025'),
+        'Renewed On': new Date('10/23/2025')
+      };
+  
+      const result = manager.convertJoinToRenew(0, 1, membershipData, expirySchedule);
+      expect(result.success).toBe(true);
+      expect(membershipData.length).toBe(1);
+      const merged = membershipData[0];
+      expect(merged).toEqual(expectedMembershipData);
+  
+      expect(expirySchedule).toEqual(expectedExpirySchedule);
+    });
+  
+    it('does not merge or delete INITIAL when LATEST.Joined > INITIAL.Expires', () => {
+      const membershipData = [
+        { Status: 'Active', Email: 'old@example.com', Joined: '1/1/2010', Expires: '1/1/2011', Period: 1 },
+        { Status: 'Active', Email: 'new@example.com', Joined: '1/1/2015', Expires: '1/1/2016', Period: 2 }
+      ];
+  
+      const result = manager.convertJoinToRenew(0, 1, membershipData);
+      expect(result.success).toBe(false);
+      // No mutation should have occurred
+      expect(membershipData.length).toBe(2);
+      expect(membershipData[0].Email).toBe('old@example.com');
+      expect(utils.dateOnly(membershipData[0].Joined).getTime()).toBe(utils.dateOnly('1/1/2010').getTime());
+      expect(membershipData[1].Email).toBe('new@example.com');
+      expect(utils.dateOnly(membershipData[1].Joined).getTime()).toBe(utils.dateOnly('1/1/2015').getTime());
+    });
+  });
 })
-
-describe('convertJoinToRenew utility (additional tests)', () => {
-  const today = utils.dateOnly("2025-03-01");
-  let manager;
-  beforeEach(() => {
-    const actionSpecs = {};
-    const groups = [{ Email: "a@b.com" }];
-    manager = new MembershipManagement.Manager(actionSpecs, groups, () => { }, () => { }, () => { }, today);
-  });
-  it('merges INITIAL into LATEST when LATEST.Joined <= INITIAL.Expires', () => {
-    const membershipData = [
-      { Status: 'Active', Email: 'captenphil@aol.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '8/8/2017', Expires: '12/31/2026', Period: 3, 'Directory Share Name': false, 'Directory Share Email': false, 'Directory Share Phone': false, Migrated: '3/17/2025', 'Renewed On': '' },
-      { Status: 'Active', Email: 'phil.stotts@gmail.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '10/23/2025', Expires: '10/23/2027', Period: 2, 'Directory Share Name': true, 'Directory Share Email': true, 'Directory Share Phone': true, Migrated: '', 'Renewed On': '' }
-    ];
-
-    const expectedMembershipData = {
-      Status: 'Active',
-      Email: 'phil.stotts@gmail.com',
-      First: 'Phil',
-      Last: 'Stotts',
-      Phone: '(831) 345-9634',
-      Joined: new Date('8/8/2017'),
-      Expires: new Date('12/31/2028'),
-      Period: 2,
-      'Directory Share Name': true,
-      'Directory Share Email': true,
-      'Directory Share Phone': true,
-      Migrated: new Date('3/17/2025'),
-      'Renewed On': new Date('10/23/2025')
-    };
-
-    const result = manager.convertJoinToRenew(0, 1, membershipData);
-    expect(result.success).toBe(true);
-    expect(membershipData.length).toBe(1);
-    const merged = membershipData[0];
-    expect(merged).toEqual(expectedMembershipData);
-  });
-
-  it('does not merge or delete INITIAL when LATEST.Joined > INITIAL.Expires', () => {
-    const membershipData = [
-      { Status: 'Active', Email: 'old@example.com', Joined: '1/1/2010', Expires: '1/1/2011', Period: 1 },
-      { Status: 'Active', Email: 'new@example.com', Joined: '1/1/2015', Expires: '1/1/2016', Period: 2 }
-    ];
-
-    const result = manager.convertJoinToRenew(0, 1, membershipData);
-    expect(result.success).toBe(false);
-    // No mutation should have occurred
-    expect(membershipData.length).toBe(2);
-    expect(membershipData[0].Email).toBe('old@example.com');
-    expect(utils.dateOnly(membershipData[0].Joined).getTime()).toBe(utils.dateOnly('1/1/2010').getTime());
-    expect(membershipData[1].Email).toBe('new@example.com');
-    expect(utils.dateOnly(membershipData[1].Joined).getTime()).toBe(utils.dateOnly('1/1/2015').getTime());
-  });
-});

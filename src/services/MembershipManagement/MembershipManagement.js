@@ -5,9 +5,11 @@ MembershipManagement.convertJoinToRenew = function (rowAIndex, rowBIndex) {
   const init = MembershipManagement.Internal.initializeManagerData_(membershipFiddler, expiryFiddler);
   const manager = init.manager;
   const membershipData = init.membershipData;
-  const result = manager.convertJoinToRenew(rowAIndex, rowBIndex, membershipData);
+  const expiryScheduleData = init.expiryScheduleData;
+  const result = manager.convertJoinToRenew(rowAIndex, rowBIndex, membershipData, expiryScheduleData);
   if (result.success) {
     membershipFiddler.setData(membershipData).dumpValues();
+    expiryFiddler.setData(expiryScheduleData).dumpValues();
   }
   return result
 }
@@ -100,7 +102,12 @@ MembershipManagement.Internal.initializeManagerData_ = function (membershipFiddl
   const expiryScheduleData = expiryScheduleFiddler.getData();
   //@ts-ignore
   const autoGroups = Common.Data.Access.getPublicGroups().filter(group => group.Subscription.toLowerCase() === 'auto');
-  const manager = new MembershipManagement.Manager(Common.Data.Access.getActionSpecs(), autoGroups, this.getGroupAdder_(), this.getGroupRemover_(), this.getEmailSender_());
+  const groupManager = {
+    groupAddFun: this.getGroupAdder_(),
+    groupRemoveFun: this.getGroupRemover_(),
+    groupEmailReplaceFun: this.getGroupEmailReplacer_()
+  }
+  const manager = new MembershipManagement.Manager(Common.Data.Access.getActionSpecs(), autoGroups, groupManager, this.getEmailSender_());
 
   return { manager, membershipData, expiryScheduleData };
 }
@@ -119,6 +126,43 @@ MembershipManagement.Internal.getGroupRemover_ = function () {
   } else {
     return (memberEmail, groupEmail) => this.removeMemberFromGroup_(memberEmail, groupEmail);
   }
+}
+
+MembershipManagement.Internal.getGroupEmailReplacer_ = function () {
+  if (PropertiesService.getScriptProperties().getProperty('testGroupEmailReplacements') === 'true') {
+    return (originalEmail, newEmail) => {
+      MembershipManagement.Utils.log(`testGroupEmailReplacements: true. Would have replaced: `, originalEmail, ' with:', newEmail);
+      return { success: true, message: 'Test mode - no changes made.' };
+    }
+  } else {
+    return (originalEmail, newEmail) => {return this.changeSubscribersEmailInAllGroups_(originalEmail, newEmail)};
+  }
+}
+
+/**
+ * 
+ * @param {string} originalEmail 
+ * @param {string} newEmail 
+ * @returns {{success: boolean, message: string}}
+ */
+MembershipManagement.Internal.changeSubscribersEmailInAllGroups_ = function (originalEmail, newEmail) {
+  let errors = []
+  const groups = GroupSubscription.listGroupsFor(originalEmail);
+  for (var i = 0; i < groups.length; i++) {
+    var groupEmail = groups[i].email;
+    try {
+      GroupSubscription.changeMembersEmail(groupEmail, originalEmail, newEmail);
+    } catch (e) {
+      errors.push(`group ${groupEmail}: ${e && e.toString ? e.toString() : e}`);
+      console.error(`changeSubscribersEmailInAllGroups: error changing email in group ${groupEmail}`, e && e.toString ? e.toString() : e);
+    }
+  }
+  if (errors.length > 0) {
+    let errMsg = `Errors while updating ${originalEmail} to ${newEmail} in groups: ${errors.join('; ')}`;
+    console.error(`changeSubscribersEmailInAllGroups: ${errMsg}`);
+    return { success: false, message: errMsg };
+  }
+  return { success: true, message: `Successfully updated email from ${originalEmail} to ${newEmail} in all groups.` };
 }
 
 /**
@@ -153,11 +197,8 @@ MembershipManagement.Internal.removeMemberFromGroup_ = function (memberEmail, gr
     AdminDirectory.Members.remove(groupEmail, memberEmail);
     MembershipManagement.Utils.log(`Successfully removed ${memberEmail} from ${groupEmail}`);
   } catch (e) {
-    if (e.message && e.message.includes("Resource Not Found")) {
-      MembershipManagement.Utils.log(`Error: ${memberEmail} not found in ${groupEmail} - one or both of those resources do not exist. Check the addresses and try again`);
-    } else if (e.message && e.message === 'API call to directory.members.delete failed with error: Missing required field: ') {
-      throw new Error(`Removing member ${memberEmail} from group ${groupEmail} - one or both of those addresses are not valid email addresses.`);
-    } else {
+    // ignore "Resource Not Found" errors when the member is not in the group
+    if (e.message && !e.message.includes("Resource Not Found")) {
       throw e;
     }
   }
