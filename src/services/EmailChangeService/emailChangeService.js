@@ -4,14 +4,14 @@ const SCRIPT_PROP = PropertiesService.getScriptProperties();
 EmailChangeService.handleSendVerificationCode = function (originalEmail, newEmail) {
   console.log('handleSendVerificationCode(originalEmail, newEmail): ', originalEmail, newEmail)
   if (!newEmail) {
-    throw new Error("Missing new email.", 400);
+    throw new Error("Missing new email.");
   }
   if (!originalEmail) {
     throw new Error("Missing original email");
   }
   // 2.  Basic email validation (This is now done in the HTML, but we keep it here for defense in depth)
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
-    throw new Error("Invalid email address.", 400);
+    throw new Error("Invalid email address.");
   }
 
 

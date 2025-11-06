@@ -23,3 +23,4 @@ function testConvert() {
         .setHeight(400);
     SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Converted HTML');
 }
+
