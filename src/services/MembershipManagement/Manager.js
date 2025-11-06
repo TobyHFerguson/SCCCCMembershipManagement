@@ -296,6 +296,27 @@ MembershipManagement.Manager = class {
     expirySchedule.push(...scheduleEntries);
   }
 
+  static isSimilarMember(memberA, memberB) {
+    const normalize = v => v ? String(v).trim().toLowerCase() : '';
+    const a = {
+      email: normalize(memberA && memberA.Email),
+      phone: normalize(memberA && memberA.Phone),
+      name: normalize(memberA && memberA.First + ' ' + memberA && memberA.Last),
+    };
+    const b = {
+      email: normalize(memberB && memberB.Email),
+      phone: normalize(memberB && memberB.Phone),
+      name: normalize(memberB && memberB.First + ' ' + memberB && memberB.Last),
+    };
+
+    // If they share any identity characteristics, they are similar
+    let similarityIndex = 0;
+    if (a.email && b.email && a.email === b.email) similarityIndex++;
+    if (a.phone && b.phone && a.phone === b.phone) similarityIndex++;
+    if (a.name && b.name && a.name === b.name) similarityIndex++;
+    return 0 < similarityIndex && similarityIndex < 3;
+  }
+
   /**
    * Combine two member rows where one is an initial join and the other is a later join
    * selectedA and selectedB may be indices into membershipData, email strings, or member objects.
@@ -318,17 +339,10 @@ MembershipManagement.Manager = class {
     }
     if (idxA === idxB) return { success: false, message: 'Selections refer to the same row' };
 
-    const normalize = v => v ? String(v).trim().toLowerCase() : '';
     const a = membershipData[idxA];
     const b = membershipData[idxB];
-    const shareIdentity = (
-      (normalize(a.Email) && normalize(b.Email) && normalize(a.Email) === normalize(b.Email)) ||
-      (normalize(a.Phone) && normalize(b.Phone) && normalize(a.Phone) === normalize(b.Phone)) ||
-      (normalize(a.First) && normalize(b.First) && normalize(a.First) === normalize(b.First)) ||
-      (normalize(a.Last) && normalize(b.Last) && normalize(a.Last) === normalize(b.Last))
-    );
 
-    if (!shareIdentity) {
+    if (!MembershipManagement.Manager.isSimilarMember(a, b)) {
       console.error('convertJoinToRenew: selected rows do not share identity', { idxA, idxB, a: { Email: a.Email, Phone: a.Phone, First: a.First, Last: a.Last }, b: { Email: b.Email, Phone: b.Phone, First: b.First, Last: b.Last } });
       return { success: false, message: 'Selected rows do not share any identity characteristic with one another (email, phone, first, or last name)' };
     }
@@ -430,7 +444,24 @@ MembershipManagement.Manager = class {
     }
   }
 
-  
+  static findPossibleRenewals(membershipData) {
+    function joinedBeforeExpired(a, b) {
+      return ((new Date(a.Joined)) > (new Date(b.Joined)) && new Date(a.Joined) <= new Date(b.Expires)) || (new Date(b.Joined) > new Date(a.Joined) && new Date(b.Joined) <= new Date(a.Expires));
+    }
+    const similarPairs = [];
+    for (let i = 0; i < membershipData.length; i++) {
+      if (membershipData[i].Status !== 'Active') continue;
+      for (let j = i + 1; j < membershipData.length; j++) {
+        if (membershipData[j].Status !== 'Active') continue;
+        if (!joinedBeforeExpired(membershipData[i], membershipData[j])) continue;
+        if (MembershipManagement.Manager.isSimilarMember(membershipData[i], membershipData[j])) {
+          similarPairs.push([i, j]);
+        }
+      }
+    }
+    return similarPairs;
+  }
+
 }
 
 if (typeof module !== 'undefined' && module.exports) {

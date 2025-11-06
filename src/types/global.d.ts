@@ -151,10 +151,10 @@ declare namespace Common {
             function getEmailAddresses(): string[];
             
             /**
-             * Gets all active members (filtered by Status === 'Active')
-             * @returns Array of active member objects
+             * Gets all members
+             * @returns Array of member objects
              */
-            function getActiveMembers(): Member[];
+            function getMembers(): Member[];
             
             /**
              * Gets action specifications with processed body content

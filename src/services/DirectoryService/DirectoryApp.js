@@ -11,7 +11,7 @@ const ACCESS_LINK_BASE_URL = ScriptApp.getService().getUrl(); // Base URL of you
 
 
  DirectoryService.getDirectoryEntries = () => {
-  const activeMembers = Common.Data.Access.getActiveMembers();
+  const activeMembers = Common.Data.Access.getMembers().filter(member => member.Status === 'Active');
   const publicMembers = activeMembers.filter(member => member['Directory Share Name'])
   const tableData = publicMembers.map(member => {
     return {
