@@ -259,7 +259,7 @@ describe('Manager tests', () => {
       it('should not migrate members who have no email address, & log that fact', () => {
         const m = { ...migrators[0] };
         delete m.Email
-         migratorsPre = [{ ...m }];
+        migratorsPre = [{ ...m }];
         migratorsPost = [{ ...m }];
         manager.migrateCEMembers(migratorsPre, activeMembers, expirySchedule);
         expect(migratorsPost).toEqual(migratorsPre)
@@ -683,21 +683,21 @@ describe('Manager tests', () => {
         { Status: 'Active', Email: 'captenphil@aol.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '8/8/2017', Expires: '12/15/2026', Period: 3, 'Directory Share Name': false, 'Directory Share Email': false, 'Directory Share Phone': false, Migrated: '3/17/2025', 'Renewed On': '' },
         { Status: 'Active', Email: 'phil.stotts@gmail.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '10/23/2025', Expires: '10/23/2027', Period: 2, 'Directory Share Name': true, 'Directory Share Email': true, 'Directory Share Phone': true, Migrated: '', 'Renewed On': '' }
       ];
-  
+
       const expirySchedule = [
         { Email: 'captenphil@aol.com', Type: utils.ActionType.Expiry1, Date: utils.dateOnly('12/1/2026') },
         { Email: 'captenphil@aol.com', Type: utils.ActionType.Expiry2, Date: utils.dateOnly('12/16/2026') },
         { Email: 'captenphil@aol.com', Type: utils.ActionType.Expiry3, Date: utils.dateOnly('12/31/2026') },
         { Email: 'captenphil@aol.com', Type: utils.ActionType.Expiry4, Date: utils.dateOnly('1/15/2027') }
       ];
-  
+
       const expectedExpirySchedule = [
         { Email: 'phil.stotts@gmail.com', Type: utils.ActionType.Expiry1, Date: utils.dateOnly('12/5/2028') },
         { Email: 'phil.stotts@gmail.com', Type: utils.ActionType.Expiry2, Date: utils.dateOnly('12/10/2028') },
         { Email: 'phil.stotts@gmail.com', Type: utils.ActionType.Expiry3, Date: utils.dateOnly('12/15/2028') },
         { Email: 'phil.stotts@gmail.com', Type: utils.ActionType.Expiry4, Date: utils.dateOnly('12/25/2028') }
       ];
-  
+
       const expectedMembershipData = {
         Status: 'Active',
         Email: 'phil.stotts@gmail.com',
@@ -713,22 +713,22 @@ describe('Manager tests', () => {
         Migrated: new Date('3/17/2025'),
         'Renewed On': new Date('10/23/2025')
       };
-  
+
       const result = manager.convertJoinToRenew(0, 1, membershipData, expirySchedule);
       expect(result.success).toBe(true);
       expect(membershipData.length).toBe(1);
       const merged = membershipData[0];
       expect(merged).toEqual(expectedMembershipData);
-  
+
       expect(expirySchedule).toEqual(expectedExpirySchedule);
     });
-  
+
     it('does not merge or delete INITIAL when LATEST.Joined > INITIAL.Expires', () => {
       const membershipData = [
         { Status: 'Active', Email: 'old@example.com', Joined: '1/1/2010', Expires: '1/1/2011', Period: 1 },
         { Status: 'Active', Email: 'new@example.com', Joined: '1/1/2015', Expires: '1/1/2016', Period: 2 }
       ];
-  
+
       const result = manager.convertJoinToRenew(0, 1, membershipData);
       expect(result.success).toBe(false);
       // No mutation should have occurred
@@ -739,4 +739,61 @@ describe('Manager tests', () => {
       expect(utils.dateOnly(membershipData[1].Joined).getTime()).toBe(utils.dateOnly('1/1/2015').getTime());
     });
   });
-})
+
+  describe('similarity', () => {
+    it('should detect similar members', () => {
+      const member = { Email: "test@example.com", First: "John", Last: "Doe", Phone: "123-456-7890" };
+      const otherMember = { Email: "test@example.com", First: "Jane", Last: "Smith", Phone: "098-765-4321" };
+      const similar = MembershipManagement.Manager.isSimilarMember(member, otherMember);
+      expect(similar).toBe(true);
+    });
+    it('should not detect dissimilar members', () => {
+      const member = { Email: "test@example.com", First: "John", Last: "Doe", Phone: "123-456-7890" };
+      const otherMember = { Email: "test2@example.com", First: "Jane", Last: "Smith", Phone: "098-765-4321" };
+      const similar = MembershipManagement.Manager.isSimilarMember(member, otherMember);
+      expect(similar).toBe(false);
+    });
+    it('should not detect identity as similarity', () => {
+      const member = { Email: "test@example.com", First: "John", Last: "Doe", Phone: "123-456-7890" };
+      const similar = MembershipManagement.Manager.isSimilarMember(member, member);
+      expect(similar).toBe(false);
+    });
+  });
+
+  describe('test findPossibleRenewals()', () => {
+    it('should find similar active member pairs where they joined again before their membership expired and which are active ', () => {
+      const members = [
+        { Email: "test@example.com", First: "John", Last: "Smith", Phone: "123-456-7890", Status: "Active", Joined: "2020-01-01", Expires: "2030-01-01" },
+        { Email: 'foo@example.com', First: "John", Last: "Smith", Phone: "27", Status: "Active", Joined: "2025-01-01", Expires: "2040-01-01" },
+        // { Email: "test2@example.com", First: "John", Last: "Smith", Phone: "098-765-4321", Status: "Active", Joined: "2020-01-01", Expires: "2023-01-01" },
+        // { Email: "test3@example.com", First: "Jane", Last: "Blah", Phone: "098-765-4321", Status: "Active", Joined: "2021-01-01", Expires: "2024-01-01" }
+      ];
+      const pairs = MembershipManagement.Manager.findPossibleRenewals(members);
+      expect(pairs).toEqual([[0, 1]]);
+    });
+    it('should not find similar member pairs where the second join is after the first expiry', () => {
+      const members = [
+        { Email: 'foo@example.com', First: "John", Last: "Smith", Phone: "27", Status: "Active", Joined: "2025-01-01", Expires: "2040-01-01" },
+        { Email: "test@example.com", First: "John", Last: "Smith", Phone: "123-456-7890", Status: "Active", Joined: "2020-01-01", Expires: "2022-01-01" },
+      ];
+      const pairs = MembershipManagement.Manager.findPossibleRenewals(members);
+      expect(pairs).toEqual([]);
+    });
+    it('should not find dissimilar member pairs', () => {
+      const members = [
+        { Email: "test@example.com", First: "John", Last: "Doe", Phone: "123-456-7890", Status: "Active" },
+        { Email: "test2@example.com", First: "Jane", Last: "Smith", Phone: "098-765-4321", Status: "Active" }
+      ];
+      const pairs = MembershipManagement.Manager.findPossibleRenewals(members);
+      expect(pairs).toEqual([]);
+    });
+    it('should ignore inactive members', () => {
+      const members = [
+        { Email: "inactive@example.com", First: "Inactive", Last: "Member", Phone: "123-456-7890", Status: "Inactive" },
+        { Email: "active@example.com", First: "Active", Last: "Member", Phone: "0123-456-7890", Status: "Active" }
+      ];
+      const pairs = MembershipManagement.Manager.findPossibleRenewals(members);
+      expect(pairs).toEqual([]);
+    });
+  });
+});

@@ -24,8 +24,8 @@ Common.Data.Access = {
         const emails = members.map(member => member.Email.toLowerCase());
         return emails;
     },
-    getActiveMembers: () => {
-        const members = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').getData().filter(member => member.Status === 'Active')
+    getMembers: () => {
+        const members = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').getData()
         return members;
     },
     getActionSpecs: () => {

@@ -5,7 +5,8 @@ MembershipManagement.Menu = {
             .addItem('Process Transactions', processTransactions.name)
             .addItem('Process Expirations', processExpirations.name)
             .addSeparator()
-            .addItem('Merge Selected Members', 'mergeSelectedMembers')
+            .addItem('Merge Selected Members', mergeSelectedMembers.name)
+            .addItem('Find possible renewals', findPossibleRenewalsFromMenu.name)
             .addSeparator()
             .addItem('Process Migrations', processMigrations.name)
             .addToUi();
@@ -23,6 +24,22 @@ function processExpirations() {
 }
 function processMigrations() {
     MembershipManagement.processMigrations()
+}
+
+function findPossibleRenewalsFromMenu() {
+    const activeMembers = Common.Data.Access.getMembers();
+    const similarMemberPairs = MembershipManagement.Manager.findPossibleRenewals(activeMembers);
+    console.log(similarMemberPairs);
+    const msg = similarMemberPairs.map(p => `${p[0] + 2} & ${p[1] + 2}`).join('\n');
+    SpreadsheetApp.getUi().alert(
+        `The following row pairs look as if they might be a join when they should be a renewal.
+
+        They have some identity data in common and the join date of one is before the expiry date of the other:
+
+        ${msg}
+
+    Review these pairs and merge as needed using the "Merge Selected Members" menu item.`,
+        SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
 /**
@@ -54,7 +71,7 @@ function mergeSelectedMembers() {
         }
 
         if (selectedRowNums.size !== 2) { ui.alert('Invalid selection', 'Please select exactly 2 rows (they may be non-contiguous).', ui.ButtonSet.OK); return; }
-        
+
         const iter = selectedRowNums.values();
         // Call convertJoinToRenew with member objects (Manager will resolve indices in membershipData)
         const result = MembershipManagement.convertJoinToRenew(iter.next().value, iter.next().value);
@@ -62,7 +79,7 @@ function mergeSelectedMembers() {
             ui.alert('Merge not performed', result.message, ui.ButtonSet.OK);
             return;
         }
-        ui.alert('Merge successful', `Rows merged successfully. ${result.message}`, ui.ButtonSet.OK);    
+        ui.alert('Merge successful', `Rows merged successfully. ${result.message}`, ui.ButtonSet.OK);
     } catch (error) {
         console.error('mergeSelectedMembers failed:', error);
         SpreadsheetApp.getUi().alert('Error', `Failed to merge selected members: ${error && error.message ? error.message : error}`, SpreadsheetApp.getUi().ButtonSet.OK);
