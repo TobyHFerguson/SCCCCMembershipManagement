@@ -3,6 +3,7 @@ const { Trigger } = require('../src/services/VotingService/Trigger');
 describe('Trigger', () => {
     beforeAll(() => {
         // Mock VotingService.Constants for testing
+        // @ts-ignore
         global.VotingService = {
             Constants: {
                 VOTE_TITLE_COLUMN_NAME: 'Title',
