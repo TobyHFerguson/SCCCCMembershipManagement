@@ -741,22 +741,22 @@ describe('Manager tests', () => {
   });
 
   describe('similarity', () => {
-    it('should detect similar members', () => {
+    it('should detect identical emails', () => {
       const member = { Email: "test@example.com", First: "John", Last: "Doe", Phone: "123-456-7890" };
       const otherMember = { Email: "test@example.com", First: "Jane", Last: "Smith", Phone: "098-765-4321" };
-      const similar = MembershipManagement.Manager.isSimilarMember(member, otherMember);
-      expect(similar).toBe(true);
+      const similar = MembershipManagement.Manager.getSimilarityMeasure(member, otherMember);
+      expect(similar).toEqual(4);
     });
-    it('should not detect dissimilar members', () => {
+    it('should detect dissimilar members', () => {
       const member = { Email: "test@example.com", First: "John", Last: "Doe", Phone: "123-456-7890" };
       const otherMember = { Email: "test2@example.com", First: "Jane", Last: "Smith", Phone: "098-765-4321" };
-      const similar = MembershipManagement.Manager.isSimilarMember(member, otherMember);
-      expect(similar).toBe(false);
+      const similar = MembershipManagement.Manager.getSimilarityMeasure(member, otherMember);
+      expect(similar).toBe(0);
     });
-    it('should not detect identity as similarity', () => {
+    it('should identical members', () => {
       const member = { Email: "test@example.com", First: "John", Last: "Doe", Phone: "123-456-7890" };
-      const similar = MembershipManagement.Manager.isSimilarMember(member, member);
-      expect(similar).toBe(false);
+      const similar = MembershipManagement.Manager.getSimilarityMeasure(member, member);
+      expect(similar).toBe(7);
     });
   });
 
@@ -796,4 +796,22 @@ describe('Manager tests', () => {
       expect(pairs).toEqual([]);
     });
   });
+
+  describe('multi-maps', () => {
+    it('should create and use multi-maps correctly', () => {
+      const multiMap = new MembershipManagement.MultiMap();
+      multiMap.add('key1', 'value1');
+      multiMap.add('key1', 'value2');
+      multiMap.add('key2', 'value3');
+
+      expect(multiMap.get('key1')).toEqual(['value1', 'value2']);
+      expect(multiMap.get('key2')).toEqual(['value3']);
+      expect(multiMap.get('key3')).toEqual([]);
+
+      multiMap.remove('key1', 'value1');
+      expect(multiMap.get('key1')).toEqual(['value2']);
+
+      multiMap.remove('key1', 'value2');
+      expect(multiMap.get('key1')).toEqual([]);
+    }
 });

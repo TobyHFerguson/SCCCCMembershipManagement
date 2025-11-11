@@ -296,7 +296,7 @@ MembershipManagement.Manager = class {
     expirySchedule.push(...scheduleEntries);
   }
 
-  static isSimilarMember(memberA, memberB) {
+  static getSimilarityMeasure(memberA, memberB) {
     const normalize = v => v ? String(v).trim().toLowerCase() : '';
     const a = {
       email: normalize(memberA && memberA.Email),
@@ -310,11 +310,8 @@ MembershipManagement.Manager = class {
     };
 
     // If they share any identity characteristics, they are similar
-    let similarityIndex = 0;
-    if (a.email && b.email && a.email === b.email) similarityIndex++;
-    if (a.phone && b.phone && a.phone === b.phone) similarityIndex++;
-    if (a.name && b.name && a.name === b.name) similarityIndex++;
-    return 0 < similarityIndex && similarityIndex < 3;
+    //@ts-ignore
+    return (a.email && b.email && a.email === b.email) * 4 + (a.phone && b.phone && a.phone === b.phone) * 2 + (a.name && b.name && a.name === b.name);
   }
 
   /**
@@ -342,7 +339,7 @@ MembershipManagement.Manager = class {
     const a = membershipData[idxA];
     const b = membershipData[idxB];
 
-    if (!MembershipManagement.Manager.isSimilarMember(a, b)) {
+    if (!MembershipManagement.Manager.getSimilarityMeasure(a, b)) {
       console.error('convertJoinToRenew: selected rows do not share identity', { idxA, idxB, a: { Email: a.Email, Phone: a.Phone, First: a.First, Last: a.Last }, b: { Email: b.Email, Phone: b.Phone, First: b.First, Last: b.Last } });
       return { success: false, message: 'Selected rows do not share any identity characteristic with one another (email, phone, first, or last name)' };
     }
@@ -454,7 +451,7 @@ MembershipManagement.Manager = class {
       for (let j = i + 1; j < membershipData.length; j++) {
         if (membershipData[j].Status !== 'Active') continue;
         if (!joinedBeforeExpired(membershipData[i], membershipData[j])) continue;
-        if (MembershipManagement.Manager.isSimilarMember(membershipData[i], membershipData[j])) {
+        if (MembershipManagement.Manager.getSimilarityMeasure(membershipData[i], membershipData[j])) {
           similarPairs.push([i, j]);
         }
       }
