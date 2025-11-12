@@ -1,7 +1,7 @@
-
-if (typeof require !== 'undefined') {
-  //@ts-ignore
-  ProfileManagementService = {};
+// Guarded initializer so this file can define `ProfileManagementService` safely in GAS and Node tests.
+if (typeof ProfileManagementService === 'undefined') {
+  // @ts-ignore - intentionally creating global namespace
+  var ProfileManagementService = {};
 }
 ProfileManagementService._checkForForbiddenUpdates = function (originalObject, updatedObject, forbiddenFields) {
   for (const field of forbiddenFields) {

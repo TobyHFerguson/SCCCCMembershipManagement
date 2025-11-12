@@ -1,3 +1,12 @@
+// Guarded initializer so this file can be loaded independently of other VotingService files
+if (typeof VotingService === 'undefined') {
+    // @ts-ignore - create global namespace in GAS environment
+    var VotingService = {};
+}
+// Ensure sub-objects exist (do not overwrite if already defined)
+VotingService.Data = VotingService.Data || {};
+VotingService.Constants = VotingService.Constants || {};
+
 /// <reference path="./VotingService.d.ts" />
 /// <reference path="./Auth.d.ts" />
 /// <reference path

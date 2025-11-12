@@ -1,3 +1,9 @@
+// Guarded initializer for DirectoryService
+if (typeof DirectoryService === 'undefined') {
+  // @ts-ignore - create global namespace in GAS environment
+  var DirectoryService = {};
+}
+
 // --- Configuration ---
 const SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId(); // Use container spreadsheet
 const DATA_SHEET_NAME = 'Members';           // Replace with your data sheet name

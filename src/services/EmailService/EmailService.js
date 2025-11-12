@@ -1,3 +1,9 @@
+// Guarded initializer for EmailService
+if (typeof EmailService === 'undefined') {
+  // @ts-ignore - create global namespace in GAS environment
+  var EmailService = { Menu: {} };
+}
+
 EmailService.sendTestEmail = function (form) {
   const lookupEmail = form.lookupEmail;
   const sendToEmail = form.sendToEmail;
@@ -10,6 +16,7 @@ EmailService.sendTestEmail = function (form) {
     console.error(`sending an email but the member ${lookupEmail} was not found`)
     return;
   }
+  let spec;
   selectedKeys.forEach(function (key) {
     spec = actionSpecs[key];
     if (spec) {

@@ -1,3 +1,10 @@
+// Guarded initializer so this file can be safely loaded in any order
+if (typeof EmailService === 'undefined') {
+    // @ts-ignore - create namespace in GAS
+    var EmailService = {};
+}
+EmailService.UI = EmailService.UI || {};
+
 EmailService.UI = {
     showEmailDialog: function () {
         var actionSpecTypes = this._getActionSpecTypes();

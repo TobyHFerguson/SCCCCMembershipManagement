@@ -1,3 +1,9 @@
+// Guarded initializer so this file can be safely loaded in any order
+if (typeof DocsService === 'undefined') {
+    // @ts-ignore - create namespace in GAS
+    var DocsService = {};
+}
+DocsService.UI = DocsService.UI || {};
 
 DocsService.UI = {
 

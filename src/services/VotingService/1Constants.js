@@ -1,3 +1,10 @@
+// Guarded initializer so constants can be loaded safely regardless of file load order
+if (typeof VotingService === 'undefined') {
+  // @ts-ignore - create namespace in GAS
+  var VotingService = {};
+}
+VotingService.Constants = VotingService.Constants || {};
+
 // @ts-check
 /**
  * Shared constants for the VotingService
@@ -29,9 +36,8 @@ const ElectionState = {
     CLOSED: 'CLOSED'
 };
 
-// Assign constants onto the pre-defined VotingService namespace (must be created earlier)
-// @ts-ignore
-VotingService.Constants = {
+// Merge constants onto the VotingService.Constants object without overwriting other properties
+VotingService.Constants = Object.assign(VotingService.Constants, {
     VOTE_TITLE_COLUMN_NAME,
     FORM_EDIT_URL_COLUMN_NAME,
     ELECTION_OFFICERS_COLUMN_NAME,
@@ -43,4 +49,4 @@ VotingService.Constants = {
     TOKEN_HELP_TEXT,
     CONFIRMATION_MESSAGE,
     ElectionState
-};
+});

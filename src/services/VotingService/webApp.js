@@ -1,4 +1,11 @@
 
+// Guarded initializer so this file can be safely loaded in any order
+if (typeof VotingService === 'undefined') {
+    // @ts-ignore - create global namespace in GAS environment
+    var VotingService = {};
+}
+VotingService.WebApp = VotingService.WebApp || {};
+
 // @ts-check
 // Always arrive here with a validated token converted to the userEmail
 /// <reference path="./Auth.d.ts" />

@@ -10,15 +10,9 @@ const Common = {
     Logger: {}
 };
 
-const GroupSubscription = {};
-
-const EmailChangeService = {
-    name: 'Email Change Service',
-    service: 'EmailChangeService'
-}
-
-const EmailService = { Menu: {} }
-const DocsService = { Internal: {} };
+// Service-specific globals are intentionally NOT declared here. Each service
+// file should create its own guarded namespace. That avoids duplicate
+// declarations when files are loaded in different orders in GAS.
 // Ensure MembershipManagement exists without redeclaring in environments where
 // another script may already declare it (GAS loads files into a single global scope).
 if (typeof MembershipManagement === 'undefined') {
@@ -27,51 +21,28 @@ if (typeof MembershipManagement === 'undefined') {
     MembershipManagement.Internal = MembershipManagement.Internal || {};
     MembershipManagement.Utils = MembershipManagement.Utils || {};
 }
-const DirectoryService = {
-    name: 'Directory Service',
-    service: 'DirectoryService'
-};
 
-const GroupManagementService = {
-    name: 'Group Management Service',
-    service: 'GroupManagementService'
-};
+// ProfileManagementService is defined in its own module; do not redeclare here.
 
-// Ensure ProfileManagementService exists (guarded) - some environments reference it
-if (typeof ProfileManagementService === 'undefined') {
-    var ProfileManagementService = { name: 'Profile Management Service', service: 'ProfileManagementService' };
-} else {
-    ProfileManagementService = ProfileManagementService || {};
-}
-
-// Ensure VotingService exists in the global namespace (guarded)
+// VotingService may be created by its own file; ensure we don't redeclare it
 if (typeof VotingService === 'undefined') {
-    var VotingService = {};
-} else {
-    VotingService = VotingService || {};
+    // leave undefined; individual service file will create it
 }
 
-// Add service properties to VotingService
-Object.assign(VotingService, {
-    name: 'Voting Service',
-    service: 'VotingService',
-    Data: VotingService.Data || {},
-    WebApp: VotingService.WebApp || {},
-    Trigger: VotingService.Trigger || {}
-});
-
+// Build a safe map of available services without referencing undeclared
+// identifiers directly (use typeof checks to avoid ReferenceError at runtime).
 const WebServices = {
-    DirectoryService: DirectoryService,
-    EmailChangeService: EmailChangeService,
-    GroupManagementService: GroupManagementService,
-    ProfileManagementService: ProfileManagementService,
-    VotingService: VotingService,
+    DirectoryService: (typeof DirectoryService !== 'undefined') ? DirectoryService : undefined,
+    EmailChangeService: (typeof EmailChangeService !== 'undefined') ? EmailChangeService : undefined,
+    GroupManagementService: (typeof GroupManagementService !== 'undefined') ? GroupManagementService : undefined,
+    ProfileManagementService: (typeof ProfileManagementService !== 'undefined') ? ProfileManagementService : undefined,
+    VotingService: (typeof VotingService !== 'undefined') ? VotingService : undefined,
 }
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        DocsService,
-        MembershipManagement,
-        DirectoryService
+        DocsService: (typeof DocsService !== 'undefined') ? DocsService : undefined,
+        MembershipManagement: (typeof MembershipManagement !== 'undefined') ? MembershipManagement : undefined,
+        DirectoryService: (typeof DirectoryService !== 'undefined') ? DirectoryService : undefined
     };
 }

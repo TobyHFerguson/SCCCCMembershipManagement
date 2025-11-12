@@ -11,6 +11,24 @@ DocsService.Menu = {
 
 
 
+// Guarded initializer so this file can be safely loaded in any order
+if (typeof DocsService === 'undefined') {
+  // @ts-ignore - create namespace in GAS
+  var DocsService = {};
+}
+DocsService.Menu = DocsService.Menu || {};
+
+DocsService.Menu = {
+    create: () => {
+        SpreadsheetApp.getUi().createMenu('Utilities')
+            .addItem('Initialize Triggers', initializeTriggers.name)
+            .addItem('testConvert', 'testConvert')
+            .addItem('Convert Google Doc to HTML', 'showConversionDialog')
+            .addToUi();
+    }
+}
+
+
 function showConversionDialog() {
     DocsService.UI.showConversionDialog();
 }

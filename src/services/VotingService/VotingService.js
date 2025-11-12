@@ -4,6 +4,17 @@
 /// <reference path="./google-types.d.ts" />
 // @ts-check
 
+// Guarded initializer so this file can be edited independently of any central namespace loader.
+if (typeof VotingService === 'undefined') {
+    // @ts-ignore - create global namespace in GAS environment
+    var VotingService = {};
+}
+// Do not reassign when VotingService already exists to avoid widening its type in TS
+// Ensure common sub-objects exist at runtime
+VotingService.Data = VotingService.Data || {};
+VotingService.Trigger = VotingService.Trigger || {};
+VotingService.WebApp = VotingService.WebApp || {};
+
 // Note: Constants are defined in Constants.js and accessed via VotingService.Constants
 
 /**

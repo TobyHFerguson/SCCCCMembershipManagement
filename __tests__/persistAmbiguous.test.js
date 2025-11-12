@@ -1,3 +1,4 @@
+// @ts-nocheck - test uses dynamic JS globals and Jest mocks that TypeScript cannot easily infer
 const { MembershipManagement } = require('../src/services/MembershipManagement/Manager');
 
 describe('persistAmbiguousTransactions', () => {
