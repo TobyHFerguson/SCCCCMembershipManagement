@@ -804,14 +804,54 @@ describe('Manager tests', () => {
       multiMap.add('key1', 'value2');
       multiMap.add('key2', 'value3');
 
-      expect(multiMap.get('key1')).toEqual(['value1', 'value2']);
-      expect(multiMap.get('key2')).toEqual(['value3']);
-      expect(multiMap.get('key3')).toEqual([]);
+  expect(multiMap.get('key1')).toBeInstanceOf(Set);
+  expect(Array.from(multiMap.get('key1'))).toEqual(['value1', 'value2']);
+  expect(multiMap.get('key2')).toBeInstanceOf(Set);
+  expect(Array.from(multiMap.get('key2'))).toEqual(['value3']);
+  expect(multiMap.get('key3')).toBeInstanceOf(Set);
+  expect(Array.from(multiMap.get('key3'))).toEqual([]);
 
       multiMap.remove('key1', 'value1');
-      expect(multiMap.get('key1')).toEqual(['value2']);
+  expect(multiMap.get('key1')).toBeInstanceOf(Set);
+  expect(Array.from(multiMap.get('key1'))).toEqual(['value2']);
 
       multiMap.remove('key1', 'value2');
-      expect(multiMap.get('key1')).toEqual([]);
-    }
+  expect(multiMap.get('key1')).toBeInstanceOf(Set);
+  expect(Array.from(multiMap.get('key1'))).toEqual([]);
+    });
+    it('should handle removing non-existent keys/values gracefully', () => {
+      const multiMap = new MembershipManagement.MultiMap();
+      multiMap.add('key1', 'value1');
+
+      // Removing a non-existent value from an existing key
+  multiMap.remove('key1', 'value2');
+  expect(multiMap.get('key1')).toBeInstanceOf(Set);
+  expect(Array.from(multiMap.get('key1'))).toEqual(['value1']);
+
+      // Removing a value from a non-existent key
+  multiMap.remove('key2', 'value1');
+  expect(multiMap.get('key2')).toBeInstanceOf(Set);
+  expect(Array.from(multiMap.get('key2'))).toEqual([]);
+    });
+    describe('buildMultiMaps from members', () => {
+      it('should build multi-maps for email and phone correctly', () => {
+        const members = [
+          { Email: "test@example.com", Phone: "123-456-7890" },
+          { Email: "test2@example.com", Phone: "123-456-7890" },
+          { Email: "test3@example.com", Phone: "098-765-4321" }
+        ];
+        const multiMaps = MembershipManagement.Manager.buildMultiMaps(members);
+  expect(multiMaps.emailMap.get("test@example.com")).toBeInstanceOf(Set);
+  expect(Array.from(multiMaps.emailMap.get("test@example.com"))).toEqual([0]);
+  expect(multiMaps.emailMap.get("test2@example.com")).toBeInstanceOf(Set);
+  expect(Array.from(multiMaps.emailMap.get("test2@example.com"))).toEqual([1]);
+  expect(multiMaps.emailMap.get("test3@example.com")).toBeInstanceOf(Set);
+  expect(Array.from(multiMaps.emailMap.get("test3@example.com"))).toEqual([2]);
+  expect(multiMaps.phoneMap.get("123-456-7890")).toBeInstanceOf(Set);
+  expect(Array.from(multiMaps.phoneMap.get("123-456-7890"))).toEqual([0, 1]);
+  expect(multiMaps.phoneMap.get("098-765-4321")).toBeInstanceOf(Set);
+  expect(Array.from(multiMaps.phoneMap.get("098-765-4321"))).toEqual([2]);
+      });
+    });
+  });
 });

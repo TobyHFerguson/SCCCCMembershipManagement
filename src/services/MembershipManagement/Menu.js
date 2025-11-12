@@ -4,6 +4,7 @@ MembershipManagement.Menu = {
         ui.createMenu('Membership Management')
             .addItem('Process Transactions', processTransactions.name)
             .addItem('Process Expirations', processExpirations.name)
+            .addItem('Show Ambiguous Transactions', showAmbiguousTransactions.name)
             .addSeparator()
             .addItem('Merge Selected Members', mergeSelectedMembers.name)
             .addItem('Find possible renewals', findPossibleRenewalsFromMenu.name)
@@ -40,6 +41,22 @@ function findPossibleRenewalsFromMenu() {
 
     Review these pairs and merge as needed using the "Merge Selected Members" menu item.`,
         SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+function showAmbiguousTransactions() {
+    const ui = SpreadsheetApp.getUi();
+    try {
+        const rows = MembershipManagement.getAmbiguousTransactions();
+        if (!rows || rows.length === 0) {
+            ui.alert('No ambiguous transactions', 'There are no persisted ambiguous transactions to review.', ui.ButtonSet.OK);
+            return;
+        }
+        const msg = rows.map(r => `Row ${r['Txn Row']}: ${r.Email || ''} - Candidates: ${r.Candidates || ''}`).join('\n');
+        ui.alert(`Ambiguous transactions:\n\n${msg}`, ui.ButtonSet.OK);
+    } catch (e) {
+        console.error('showAmbiguousTransactions failed:', e);
+        ui.alert('Error', `Failed to read ambiguous transactions: ${e && e.message ? e.message : e}`, ui.ButtonSet.OK);
+    }
 }
 
 /**

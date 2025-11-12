@@ -3,8 +3,7 @@
     // Initialize Logger with container spreadsheet for cross-spreadsheet logging
     try {
         const containerSpreadsheetId = SpreadsheetApp.getActiveSpreadsheet().getId();
-        // @ts-ignore - Logger is implemented in separate file
-        Common.Logger.setContainerSpreadsheet(containerSpreadsheetId);
+    Common.Logger.setContainerSpreadsheet(containerSpreadsheetId);
     } catch (error) {
         console.error('Failed to initialize Logger container:', error);
     }
@@ -40,7 +39,7 @@ function initializeTriggers() {
             Common.Logger.info('', 'System triggers already configured');
         }
     } catch (error) {
-        Common.Logger.warn('', 'Could not auto-setup system triggers:', error);
+    Common.Logger.warn('', 'Could not auto-setup system triggers:', error);
         // Continue without failing - triggers can be set up manually later
     }
 }

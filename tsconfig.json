@@ -4,6 +4,8 @@
         "checkJs": true,
         "noEmit": true,
         "noImplicitAny": false,
+        "target": "es2015",
+        "downlevelIteration": true,
         "typeRoots": [
             "./node_modules/@types",
             "./"
@@ -11,10 +13,11 @@
         "types": [
             "google-apps-script",
             "jest",
-            "node",
+            "node"
         ],
         "lib": [
-            "esnext"
+            "es2015",
+            "es2021"
         ]
     },
     "include": [
