@@ -1,0 +1,7 @@
+Status	Email	First	Last	Phone	Joined	Expires	Period	Directory Share Name	Directory Share Email	Directory Share Phone	Migrated	Renewed On
+Active	renewer@example.com	Renew	Member	555-0100	2024-03-01	2025-03-01	1	No	No	No		
+Active	johnA@example.com	John	Doe	555-0300	2023-05-10	2024-05-10	1	No	No	No		
+Active	johnB@example.com	John	Doe	555-0300	2023-06-12	2024-06-12	1	No	No	No		
+Active	alice@example.com	Alice	New	555-0400	2024-07-01	2025-07-01	1	No	No	No		
+Active	carol@example.com	Carol	Clark	555-0500	2023-10-01	2025-10-01	2	No	No	No	2024-10-01	2024-10-01
+Active	frank@example.com	Frank	Foster	555-0600	2024-06-15	2025-06-15	1	No	No	No		

@@ -1,7 +1,0 @@
-Status,Email,First,Last,Phone,Joined,Expires,Period,Directory Share Name,Directory Share Email,Directory Share Phone,Migrated,Renewed On
-Active,john1@example.com,John,Smith,555-1000,2024-01-01,2025-01-01,1,No,No,No,,
-Active,john2@example.com,John,Smith,555-1000,2024-02-01,2025-02-01,1,No,No,No,,
-Active,bob@example.com,Bob,Brown,555-2000,2024-03-01,2025-03-01,1,No,No,No,,
-Active,carol@example.com,Carol,Clark,555-3000,2023-10-01,2025-10-01,2,No,No,No,2024-10-01,2024-10-01
-Active,newmemberphone@example.com,New,Phone,555-4000,2025-01-01,2026-01-01,1,No,No,No,,
-Active,frank@example.com,Frank,Foster,555-0006,2024-06-15,2025-06-15,1,No,No,No,,

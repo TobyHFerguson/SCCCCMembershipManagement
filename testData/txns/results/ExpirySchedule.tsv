@@ -1,0 +1,13 @@
+Date	Type	Email
+11/9/2026	Expiry1	renewer@example.com
+11/11/2026	Expiry2	renewer@example.com
+11/13/2026	Expiry3	renewer@example.com
+11/15/2026	Expiry4	renewer@example.com
+11/9/2026	Expiry1	newuser@example.com
+11/11/2026	Expiry2	newuser@example.com
+11/13/2026	Expiry3	newuser@example.com
+11/15/2026	Expiry4	newuser@example.com
+11/9/2026	Expiry1	alice@example.com
+11/11/2026	Expiry2	alice@example.com
+11/13/2026	Expiry3	alice@example.com
+11/15/2026	Expiry4	alice@example.com

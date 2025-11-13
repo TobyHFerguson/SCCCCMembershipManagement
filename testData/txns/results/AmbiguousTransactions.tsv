@@ -1,0 +1,2 @@
+Txn Row	Email	First	Last	Phone	Candidates	TxnJSON
+4	newjohn@example.com	John	Doe	555-0300	3,4	{"Timestamp":"2025-11-10T09:10:00Z","Email Address":"newjohn@example.com","Are you 18 years of age or older?":"Yes","Privacy":"Yes","Membership Agreement":"Yes","Directory":"No","First Name":"John","Last Name":"Doe","Phone":"555-0300","Payment":"1 year","Payable Order ID":"ORD-A003","Payable Total":50,"Payable Status":"paid","Payable Payment Method":"card","Payable Transaction ID":"TXN-A003","Payable Last Updated":"2025-11-10T09:11:00Z","Processed":""}
