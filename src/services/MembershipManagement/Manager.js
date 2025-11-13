@@ -600,104 +600,49 @@ MembershipManagement.Manager = class {
  * are equally plausible and manual resolution is required.
  */
 static findMemberIndex(newMember, membershipData, emailMap, phoneMap) {
-    // Normalize transaction keys to match map storage
+    // Simplified, email-first resolution with phone fallback.
+    // Name (first+last) is only used as a tie-breaker when multiple candidates exist for the same channel.
     const normalizeEmail = e => e ? String(e).trim().toLowerCase() : '';
     const normalizePhone = p => p ? String(p).trim() : '';
-    const newEmail = normalizeEmail(newMember.Email);
-    const newPhone = normalizePhone(newMember.Phone);
-    
-    // Get the candidate Sets directly, defaulting to an empty Set if no match
-  const emailSet = emailMap.get(newEmail) || new Set();
-  const phoneSet = phoneMap.get(newPhone) || new Set();
-
-    // Combine all potential candidates into a single Set
-    const allCandidates = new Set([...emailSet, ...phoneSet]);
-
-    // --- CASE 5: No Match (Zero candidates) ---
-    if (allCandidates.size === 0) {
-        return null;
-    }
-
-    // --- CASE 1: Unique Match ---
-    if (allCandidates.size === 1) {
-        return allCandidates.values().next().value;
-    }
-
-  // --- CASE 2: Overlapping Match (Intersection) ---
-  if (emailSet.size > 0 && phoneSet.size > 0) {
-    // Use the supported Set.intersection() for efficiency and readability
-    const intersection = emailSet.intersection(phoneSet);
-
-    if (intersection.size === 1) {
-      return intersection.values().next().value;
-    }
-    if (intersection.size > 1) {
-      // Multiple candidates in intersection -> ambiguous
-      return intersection;
-    }
-  }
-
-    // --- Cases 3 & 4: Strict identity-based resolution with optional name disambiguation ---
-    // We will enforce that email/phone identity is primary. Name is only a tie-breaker.
-
-    // Helper to normalize names for loose alphabetical match (case-insensitive, letters only)
-    const normalizeNameLoose = (member) => {
+    const normalizeName = (member) => {
       if (!member) return '';
-      const first = member.First ? String(member.First) : '';
-      const last = member.Last ? String(member.Last) : '';
-      const combined = (first + ' ' + last).toLowerCase();
-      // strip non-alpha characters
-      return combined.replace(/[^a-z]/g, '').trim();
+      const first = (member.First || member.first || member['First Name'] || '') + '';
+      const last = (member.Last || member.last || member['Last Name'] || '') + '';
+      return (first + ' ' + last).toLowerCase().replace(/[^a-z]/g, '').trim();
     };
 
-    const emailSetSize = emailSet.size;
-    const phoneSetSize = phoneSet.size;
-    const union = new Set([...emailSet, ...phoneSet]);
-    const intersection = new Set([...emailSet].filter(x => phoneSet.has(x)));
+    const newEmail = normalizeEmail(newMember.Email || newMember['Email Address'] || newMember.email);
+    const newPhone = normalizePhone(newMember.Phone || newMember.phone || newMember['Phone']);
+    const nameKey = normalizeName(newMember);
 
-    // If intersection has multiple entries -> invariant violation: multiple rows share both email & phone
-    if (intersection.size > 1) return intersection;
+    const emailSet = newEmail ? (emailMap.get(newEmail) || new Set()) : new Set();
+    const phoneSet = newPhone ? (phoneMap.get(newPhone) || new Set()) : new Set();
 
-    // If intersection has exactly one entry -> both channels agree on the same member
-    if (intersection.size === 1) return intersection.values().next().value;
-
-    // At this point intersection is empty, union.size > 1
-    // Case: only email matches
-    if (emailSetSize > 0 && phoneSetSize === 0) {
-      if (emailSetSize === 1) return emailSet.values().next().value;
-      // multiple email candidates -> try name disambiguation
-      const nameKey = normalizeNameLoose(newMember);
+    // Email-first
+    if (emailSet.size > 0) {
+      if (emailSet.size === 1) return emailSet.values().next().value;
+      // multiple email candidates -> try name disambiguation among email matches
       if (nameKey) {
-        const matchingByName = [...emailSet].filter(idx => normalizeNameLoose(membershipData[idx]) === nameKey);
-        if (matchingByName.length === 1) return matchingByName[0];
-        if (matchingByName.length > 1) return new Set(matchingByName);
+        const matching = [...emailSet].filter(idx => normalizeName(membershipData[idx]) === nameKey);
+        if (matching.length === 1) return matching[0];
+        if (matching.length > 1) return new Set(matching);
       }
       return new Set([...emailSet]);
     }
 
-    // Case: only phone matches
-    if (phoneSetSize > 0 && emailSetSize === 0) {
-      if (phoneSetSize === 1) return phoneSet.values().next().value;
-      const nameKey = normalizeNameLoose(newMember);
+    // No email match -> phone fallback
+    if (phoneSet.size > 0) {
+      if (phoneSet.size === 1) return phoneSet.values().next().value;
       if (nameKey) {
-        const matchingByName = [...phoneSet].filter(idx => normalizeNameLoose(membershipData[idx]) === nameKey);
-        if (matchingByName.length === 1) return matchingByName[0];
-        if (matchingByName.length > 1) return new Set(matchingByName);
+        const matching = [...phoneSet].filter(idx => normalizeName(membershipData[idx]) === nameKey);
+        if (matching.length === 1) return matching[0];
+        if (matching.length > 1) return new Set(matching);
       }
       return new Set([...phoneSet]);
     }
 
-    // Case: both emailSet and phoneSet non-empty but intersection empty (cross-channel ambiguous)
-    // Try name disambiguation across union
-    const nameKey = normalizeNameLoose(newMember);
-    if (nameKey) {
-      const matchingByName = [...union].filter(idx => normalizeNameLoose(membershipData[idx]) === nameKey);
-      if (matchingByName.length === 1) return matchingByName[0];
-      if (matchingByName.length > 1) return new Set(matchingByName);
-    }
-
-    // Otherwise ambiguous across union
-    return new Set([...union]);
+    // No candidates
+    return null;
 }
 
   /**
