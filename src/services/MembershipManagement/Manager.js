@@ -669,12 +669,13 @@ static findMemberIndex(newMember, membershipData, emailMap, phoneMap) {
       // Prepare rows aligned with other fiddlers: an object-per-row map
       // Build rows with identity fields (Email, Phone, First, Last) for easier triage
       const rows = this._ambiguousTransactions.map(a => {
+        // Order fields to resemble the Members sheet: Email, First, Last, Phone, ...
         return {
           'Txn Row': a.txnRow,
           'Email': a.txn && (a.txn['Email Address'] || a.txn.Email) || '',
-          'Phone': a.txn && (a.txn.Phone || a.txn['Phone']) || '',
           'First': a.txn && (a.txn['First Name'] || a.txn.First) || '',
           'Last': a.txn && (a.txn['Last Name'] || a.txn.Last) || '',
+          'Phone': a.txn && (a.txn.Phone || a.txn['Phone']) || '',
           'Candidates': (a.candidates || []).join(','),
           'TxnJSON': JSON.stringify(a.txn || {})
         };
