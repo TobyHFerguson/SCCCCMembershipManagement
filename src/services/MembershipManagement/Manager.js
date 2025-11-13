@@ -722,12 +722,14 @@ static findMemberIndex(newMember, membershipData, emailMap, phoneMap) {
         return { persisted: false, reason: 'no_ambiguous_transactions' };
       }
       // Prepare rows aligned with other fiddlers: an object-per-row map
+      // Build rows with identity fields (Email, Phone, First, Last) for easier triage
       const rows = this._ambiguousTransactions.map(a => {
         return {
           'Txn Row': a.txnRow,
           'Email': a.txn && (a.txn['Email Address'] || a.txn.Email) || '',
-          'Payable Status': a.txn && a.txn['Payable Status'] || '',
-          'Processed': a.txn && a.txn.Processed || '',
+          'Phone': a.txn && (a.txn.Phone || a.txn['Phone']) || '',
+          'First': a.txn && (a.txn['First Name'] || a.txn.First) || '',
+          'Last': a.txn && (a.txn['Last Name'] || a.txn.Last) || '',
           'Candidates': (a.candidates || []).join(','),
           'TxnJSON': JSON.stringify(a.txn || {})
         };
@@ -735,6 +737,97 @@ static findMemberIndex(newMember, membershipData, emailMap, phoneMap) {
 
       const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler(sheetName);
       fiddler.setData(rows).dumpValues();
+
+      // Best-effort: highlight (green) the transaction cell(s) that contributed to the ambiguity
+      try {
+        const sheet = fiddler.getSheet();
+        if (sheet) {
+          // Load header to find column indices
+          const headerValues = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+          const colIndex = name => {
+            const idx = headerValues.findIndex(h => String(h || '').trim() === name);
+            return idx >= 0 ? idx + 1 : -1;
+          };
+
+          const emailCol = colIndex('Email');
+          const phoneCol = colIndex('Phone');
+          const firstCol = colIndex('First');
+          const lastCol = colIndex('Last');
+          const candidatesCol = colIndex('Candidates');
+
+          // Get active members to inspect candidate rows
+          let members = [];
+          try {
+            members = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').getData() || [];
+          } catch (e) {
+            // If ActiveMembers fiddler not available, skip highlighting
+            members = [];
+          }
+
+          // Iterate each ambiguous row and decide which fields to highlight
+          for (let r = 0; r < this._ambiguousTransactions.length; r++) {
+            const a = this._ambiguousTransactions[r];
+            const sheetRow = r + 2; // data starts at row 2
+            const txnEmail = a.txn && (a.txn['Email Address'] || a.txn.Email) ? String(a.txn['Email Address'] || a.txn.Email).trim().toLowerCase() : '';
+            const txnPhone = a.txn && (a.txn.Phone || a.txn['Phone']) ? String(a.txn.Phone || a.txn['Phone']).trim() : '';
+            const txnFirst = a.txn && (a.txn['First Name'] || a.txn.First) ? String(a.txn['First Name'] || a.txn.First).trim().toLowerCase() : '';
+            const txnLast = a.txn && (a.txn['Last Name'] || a.txn.Last) ? String(a.txn['Last Name'] || a.txn.Last).trim().toLowerCase() : '';
+
+            const candidateRows = (a.candidates || []).slice();
+            const candidateIndices = candidateRows.map(rn => Number(rn) - 2).filter(idx => idx >= 0 && idx < members.length);
+
+            // Determine matches among candidates
+            let emailMatches = 0, phoneMatches = 0, firstMatches = 0, lastMatches = 0;
+            const matchedByEmail = new Set();
+            const matchedByPhone = new Set();
+            for (let idx of candidateIndices) {
+              const m = members[idx] || {};
+              const me = m.Email ? String(m.Email).trim().toLowerCase() : '';
+              const mp = m.Phone ? String(m.Phone).trim() : '';
+              const mf = m.First ? String(m.First).trim().toLowerCase() : '';
+              const ml = m.Last ? String(m.Last).trim().toLowerCase() : '';
+              if (txnEmail && me && me === txnEmail) { emailMatches++; matchedByEmail.add(idx); }
+              if (txnPhone && mp && mp === txnPhone) { phoneMatches++; matchedByPhone.add(idx); }
+              if (txnFirst && mf && mf === txnFirst) { firstMatches++; }
+              if (txnLast && ml && ml === txnLast) { lastMatches++; }
+            }
+
+            // Decide which cells to highlight
+            const highlights = [];
+            // If email matched more than one candidate -> email caused ambiguity
+            if (txnEmail && emailMatches > 1) highlights.push(emailCol);
+            // If phone matched more than one candidate -> phone caused ambiguity
+            if (txnPhone && phoneMatches > 1) highlights.push(phoneCol);
+            // Cross-channel conflict: email matches some candidate(s) and phone matches some other candidate(s) and they are not the exact same single candidate
+            if (txnEmail && txnPhone && matchedByEmail.size > 0 && matchedByPhone.size > 0) {
+              const intersection = [...matchedByEmail].filter(x => matchedByPhone.has(x));
+              if (intersection.length === 0) {
+                // both fields point to different candidates -> highlight both
+                if (emailCol > 0) highlights.push(emailCol);
+                if (phoneCol > 0) highlights.push(phoneCol);
+              }
+            }
+            // Name-based ambiguity: if first or last match multiple candidates, highlight
+            if (txnFirst && firstMatches > 1) highlights.push(firstCol);
+            if (txnLast && lastMatches > 1) highlights.push(lastCol);
+
+            // Apply green background for each highlighted cell
+            for (const c of highlights) {
+              if (c > 0) {
+                try {
+                  sheet.getRange(sheetRow, c).setBackground('#d9ead3');
+                } catch (e) {
+                  // best-effort
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // non-fatal: highlighting is optional
+        console.warn('persistAmbiguousTransactions: highlighting failed', e && e.toString ? e.toString() : e);
+      }
+
       return { persisted: true, count: rows.length };
     } catch (err) {
       console.error('persistAmbiguousTransactions: failed to persist ambiguous transactions', err && err.toString ? err.toString() : err);
