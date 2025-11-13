@@ -266,7 +266,7 @@ MembershipManagement.Internal.getEmailSender_ = function () {
   const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails') === 'true';
   const domain = PropertiesService.getScriptProperties().getProperty('domain') || 'sc3.club';
   return (email) => {
-    email.replyTo = `membership@${domain}`;
+    email.replyTo = `no-reply-membership-automation@${domain}`;
     if (testEmails) {
       MembershipManagement.Utils.log('testEmails is set to true - logging only: ', email);
     } else {
