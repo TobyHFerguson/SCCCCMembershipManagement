@@ -1,3 +1,10 @@
+if (typeof DocsService === 'undefined') {
+  // @ts-ignore - create namespace in GAS
+  var DocsService = {};
+}
+// Ensure Internal namespace exists even if other files created a bare DocsService earlier
+DocsService.Internal = DocsService.Internal || {};
+
 DocsService.convertDocToHtml = function (docURL) {
   var doc = DocumentApp.openByUrl(docURL);
   var body = doc.getBody();

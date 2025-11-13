@@ -1,3 +1,10 @@
+// Guarded initializer so this file can be safely loaded in any order
+if (typeof DirectoryService === 'undefined') {
+    // @ts-ignore - create namespace in GAS
+    var DirectoryService = {};
+}
+DirectoryService.WebApp = DirectoryService.WebApp || {};
+
 const DIRECTORY = 'services/DirectoryService/html/directory.html'; // Name of the HTML file for the directory
 const SERVICE = 'DirectoryService'
 DirectoryService.WebApp = {

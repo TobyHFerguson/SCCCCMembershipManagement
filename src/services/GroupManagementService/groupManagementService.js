@@ -29,6 +29,11 @@ function testUpdateUserSubscriptions() {
     GroupManagementService.updateUserSubscriptions(updatedSubscriptions, userEmail);
 }
 
+if (typeof GroupManagementService === 'undefined') {
+    // @ts-ignore - create namespace in GAS
+    var GroupManagementService = {};
+}
+
 GroupManagementService.getUserGroupSubscription = function(userEmail) {
     const groups = Common.Data.Access.getPublicGroups()
     const userGroupSubscription = groups.map(group => {

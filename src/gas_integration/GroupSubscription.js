@@ -3,6 +3,12 @@ function testListGroups() {
   console.log(groups)
 };
 
+// Guarded initializer for GroupSubscription so this file can be loaded independently
+if (typeof GroupSubscription === 'undefined') {
+  // @ts-ignore - create global namespace in GAS
+  var GroupSubscription = {};
+}
+
 function testGetMember() {
   const member = GroupSubscription.getMember('tg1@sc3.club', 'membership-automation@sc3.club')
   console.log(member)

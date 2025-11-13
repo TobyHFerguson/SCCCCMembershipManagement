@@ -1,3 +1,8 @@
+if (typeof EmailChangeService === 'undefined') {
+  // @ts-ignore - create namespace in GAS
+  var EmailChangeService = { Internal: {} };
+}
+
 const SCRIPT_PROP = PropertiesService.getScriptProperties();
 
 

@@ -197,19 +197,22 @@ declare namespace Common {
             function getElections(): VotingService.Election[];
         }
     }
+        // Runtime logging instance available as `Common.Logger`
+        var Logger: Logger;
     
     // Production logging utility
     interface Logger {
-        info(service: string, message: string): void;
-        warn(service: string, message: string): void;
+        info(service: string, message: string, meta?: any): void;
+        warn(service: string, message: string, meta?: any): void;
         error(service: string, message: string, error?: any): void;
-        debug(service: string, message: string): void;
+        debug(service: string, message: string, meta?: any): void;
         setLevel(level: string): void;
         configure(config: any): void;
         getLogs(): any[][];
         clearLogs(): void;
         setContainerSpreadsheet(spreadsheetId: string): void;
     }
+
 }
 
 // Group management types

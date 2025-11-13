@@ -1,5 +1,21 @@
-if (typeof require !== 'undefined') {
-  (MembershipManagement = require('./utils.js'));
+// When running under Node (tests) require the utils module but do not overwrite
+// an existing `MembershipManagement` namespace (it may be declared as const in 1namespaces.js).
+if (typeof module !== 'undefined' && module.exports) {
+  const mm = require('./utils.js');
+  if (typeof MembershipManagement === 'undefined') {
+    // expose on global for legacy code that expects a global symbol
+    global.MembershipManagement = mm;
+  } else {
+    // merge Utils if missing to avoid replacing the whole namespace
+    MembershipManagement.Utils = MembershipManagement.Utils || mm.Utils;
+  }
+  // Ensure the rest of the MembershipManagement module augments the namespace for tests
+    try {
+      // @ts-ignore - MembershipManagement.js augments the global namespace rather than exporting modules
+      require('./MembershipManagement');
+    } catch (e) {
+      // ignore; test harness may load it separately
+    }
 }
 
 MembershipManagement.Manager = class {
@@ -119,8 +135,21 @@ MembershipManagement.Manager = class {
   }
 
   processPaidTransactions(transactions, membershipData, expirySchedule) {
-    const activeMembers = membershipData.reduce((acc, m, i) => { if (m.Status === 'Active') { acc.push([m.Email, i]); } return acc }, [])
-    const emailToActiveMemberIndexMap = Object.fromEntries(activeMembers);
+    // Build MultiMap instances for robust index resolution (email -> Set<indices>, phone -> Set<indices>)
+    // Only include currently Active members for renewal matching (matches previous behavior).
+    const emailMap = new MembershipManagement.MultiMap();
+    const phoneMap = new MembershipManagement.MultiMap();
+    membershipData.forEach((m, idx) => {
+      if (m.Status === 'Active') {
+        if (m.Email) {
+          emailMap.add(m.Email, idx);
+        }
+        if (m.Phone) {
+          phoneMap.add(m.Phone, idx);
+        }
+      }
+    });
+
     const errors = [];
     let recordsChanged = false;
     let hasPendingPayments = false;
@@ -134,31 +163,106 @@ MembershipManagement.Manager = class {
       }
       // We get here with a transaction that is not processed but is marked as paid. Process it.
       try {
-        const matchIndex = emailToActiveMemberIndexMap[txn["Email Address"]];
+        let skipFinalize = false;
+        // Build a query-like member object from the transaction for matching
+        const queryMember = {
+          Email: txn["Email Address"],
+          Phone: txn.Phone,
+          First: txn["First Name"],
+          Last: txn["Last Name"]
+        };
+
+        const match = MembershipManagement.Manager.findMemberIndex(queryMember, membershipData, emailMap, phoneMap);
+
         let message;
-        if (matchIndex !== undefined) { // a renewing member
-          console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a renewing member`);
-          const member = membershipData[matchIndex];
-          this.renewMember_(txn, member, expirySchedule);
-          message = {
-            to: member.Email,
-            subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Subject, member),
-            htmlBody: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Body, member)
-          };
-        } else { // a joining member
+        if (match === null) {
+          // No candidate found -> treat as new member
           console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a new member`);
           const newMember = this.addNewMember_(txn, expirySchedule, membershipData);
+          // update maps with new index
+          const newIndex = membershipData.length - 1;
+          if (newMember.Email) {
+            emailMap.add(newMember.Email, newIndex);
+          }
+          if (newMember.Phone) {
+            phoneMap.add(newMember.Phone, newIndex);
+          }
           this._groups.forEach(g => this._groupAddFun(newMember.Email, g.Email));
           message = {
             to: newMember.Email,
             subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Join.Subject, newMember),
             htmlBody: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Join.Body, newMember)
           };
+        } else if (typeof match === 'number') {
+          // Unambiguous renewing member
+          console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a renewing member`);
+          const member = membershipData[match];
+          this.renewMember_(txn, member, expirySchedule);
+          // If member's email/phone changed, update maps accordingly
+          // (rare in renewals, but keep maps consistent)
+          if (member.Email) {
+            emailMap.add(member.Email, match);
+          }
+          if (member.Phone) {
+            phoneMap.add(member.Phone, match);
+          }
+          message = {
+            to: member.Email,
+            subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Subject, member),
+            htmlBody: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Body, member)
+          };
+        } else if (match instanceof Set) {
+          // Ambiguous match: Policy B - DO NOT auto-add. Record ambiguity and notify director.
+          const candidateRows = Array.from(match).map(idx => idx + 2);
+          console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is ambiguous; candidates: ${candidateRows.join(',')}`);
+          // Record ambiguity (store spreadsheet row numbers for readers)
+          if (!this._ambiguousTransactions) this._ambiguousTransactions = [];
+          this._ambiguousTransactions.push({ txnRow: i + 2, txn: { ...txn }, candidates: candidateRows });
+
+          // Notify membership director if configured
+          try {
+            const directorEmail = (PropertiesService && PropertiesService.getScriptProperties && PropertiesService.getScriptProperties().getProperty('MEMBERSHIP_DIRECTOR_EMAIL')) || null;
+            const subject = `Ambiguous membership payment for ${txn["Email Address"] || ''}`;
+            const body = `A payment could not be unambiguously matched to an existing member.\n\nTransaction row: ${i + 2}\nTransaction: ${JSON.stringify(txn)}\n\nCandidate rows: ${JSON.stringify(candidateRows)}\n\nPlease review and resolve by merging records or updating contact details.`;
+            if (directorEmail) {
+              this._sendEmailFun({ to: directorEmail, subject, htmlBody: body });
+            } else {
+              console.warn('MEMBERSHIP_DIRECTOR_EMAIL not set; ambiguous transaction notification not sent', { txnRow: i + 2, candidates: candidateRows });
+            }
+          } catch (notifyErr) {
+            console.error('Failed to notify membership director about ambiguous transaction', notifyErr);
+          }
+
+          // Do not mark txn as processed; keep it pending
+          skipFinalize = true;
+
+          // Attempt to persist ambiguous transactions to a sheet so directors can triage later.
+          try {
+            const persistResult = this.persistAmbiguousTransactions();
+            if (persistResult && persistResult.persisted) {
+              console.log(`persistAmbiguousTransactions: persisted ${persistResult.count} ambiguous transactions`);
+            } else {
+              console.log('persistAmbiguousTransactions: no ambiguous transactions persisted', persistResult && persistResult.reason);
+            }
+          } catch (perr) {
+            console.error('persistAmbiguousTransactions failed', perr && perr.toString ? perr.toString() : perr);
+          }
+        } else {
+          // Unexpected match type - treat as error
+          throw new Error('Unexpected match type from findMemberIndex');
         }
-        this._sendEmailFun(message);
-        txn.Timestamp = this._today;
-        txn.Processed = this._today;
-        recordsChanged = true;
+
+        // Send the per-member notification (join/renew) if present and not skipped
+        if (!skipFinalize) {
+          if (message) this._sendEmailFun(message);
+
+          txn.Timestamp = this._today;
+          txn.Processed = this._today;
+          recordsChanged = true;
+        } else {
+          // Ambiguous transaction left unprocessed; ensure we report pending payments
+          hasPendingPayments = true;
+        }
       } catch (error) {
         error.txnNum = i + 2;
         error.email = txn["Email Address"];
@@ -457,6 +561,185 @@ MembershipManagement.Manager = class {
       }
     }
     return similarPairs;
+  }
+
+  static buildMultiMaps(members) {
+    const emailMap = new MembershipManagement.MultiMap();
+    const phoneMap = new MembershipManagement.MultiMap();
+
+    const normalizeEmail = e => e ? String(e).trim().toLowerCase() : '';
+    const normalizePhone = p => p ? String(p).trim() : '';
+
+    members.forEach((member, index) => {
+      const e = normalizeEmail(member.Email);
+      if (e) emailMap.add(e, index);
+      const p = normalizePhone(member.Phone);
+      if (p) phoneMap.add(p, index);
+    });
+
+    return { emailMap, phoneMap };
+  }
+
+  /**
+ * Reconciles a new transaction (newMember) against the current membership data using a
+ * robust, five-case decision tree and a similarity scoring system to ensure data integrity
+ * during batch processing where keys may not be perfectly unique.
+ * * **Decision Tree Logic (Applied in Order):**
+ * * 1. **Case 5: No Match (Append New):** If zero candidates are found via initial email or phone lookup (allCandidates.size === 0), the submission is treated as a brand new member (returns null).
+ * * 2. **Case 1: Unique Match (Safe Update):** If exactly one unique candidate is found across the combined set of email and phone matches (allCandidates.size === 1), it's considered a guaranteed match based on one unique ID (returns index).
+ * * 3. **Case 2: Overlapping Match (Safe Update via Intersection):** If multiple candidates exist, but the intersection of the Email match set AND the Phone match set is exactly ONE unique index (intersection.size === 1), the match is confirmed as the same person used both their old email and old phone (returns index).
+ * * 4. **Cases 3 & 4: Ambiguous/Scoring Resolution:** If the contact-based methods (1 & 2) fail, the script uses getSimilarityMeasure() on the remaining candidates to find the highest score.
+ * - **Resolved (Case 3):** If exactly one candidate achieves the single highest, non-zero score, it's considered the most likely match (returns index).
+ * - **Ambiguous (Case 4):** If the best score is zero, or if multiple candidates share the same highest score, the situation is considered ambiguous and unsafe to update (returns null).
+ * @param {Object} newMember The submitted renewal data {Email, Phone, Name} (must have matching structure for getSimilarityMeasure).
+ * @param {Array<Object>} membershipData The current array of all member records (the source of truth).
+ * @param {MembershipManagement.MultiMap} emailMap MultiMap: Email -> Set<Indices>.
+ * @param {MembershipManagement.MultiMap} phoneMap MultiMap: Phone -> Set<Indices>.
+ * @returns {number | null | Set<number>} The index of the member to update when unambiguous,
+ * null when no member can be found, or a Set of ambiguous indices when multiple candidates
+ * are equally plausible and manual resolution is required.
+ */
+static findMemberIndex(newMember, membershipData, emailMap, phoneMap) {
+    // Normalize transaction keys to match map storage
+    const normalizeEmail = e => e ? String(e).trim().toLowerCase() : '';
+    const normalizePhone = p => p ? String(p).trim() : '';
+    const newEmail = normalizeEmail(newMember.Email);
+    const newPhone = normalizePhone(newMember.Phone);
+    
+    // Get the candidate Sets directly, defaulting to an empty Set if no match
+  const emailSet = emailMap.get(newEmail) || new Set();
+  const phoneSet = phoneMap.get(newPhone) || new Set();
+
+    // Combine all potential candidates into a single Set
+    const allCandidates = new Set([...emailSet, ...phoneSet]);
+
+    // --- CASE 5: No Match (Zero candidates) ---
+    if (allCandidates.size === 0) {
+        return null;
+    }
+
+    // --- CASE 1: Unique Match ---
+    if (allCandidates.size === 1) {
+        return allCandidates.values().next().value;
+    }
+
+  // --- CASE 2: Overlapping Match (Intersection) ---
+  if (emailSet.size > 0 && phoneSet.size > 0) {
+    // Use the supported Set.intersection() for efficiency and readability
+    const intersection = emailSet.intersection(phoneSet);
+
+    if (intersection.size === 1) {
+      return intersection.values().next().value;
+    }
+    if (intersection.size > 1) {
+      // Multiple candidates in intersection -> ambiguous
+      return intersection;
+    }
+  }
+
+    // --- Cases 3 & 4: Strict identity-based resolution with optional name disambiguation ---
+    // We will enforce that email/phone identity is primary. Name is only a tie-breaker.
+
+    // Helper to normalize names for loose alphabetical match (case-insensitive, letters only)
+    const normalizeNameLoose = (member) => {
+      if (!member) return '';
+      const first = member.First ? String(member.First) : '';
+      const last = member.Last ? String(member.Last) : '';
+      const combined = (first + ' ' + last).toLowerCase();
+      // strip non-alpha characters
+      return combined.replace(/[^a-z]/g, '').trim();
+    };
+
+    const emailSetSize = emailSet.size;
+    const phoneSetSize = phoneSet.size;
+    const union = new Set([...emailSet, ...phoneSet]);
+    const intersection = new Set([...emailSet].filter(x => phoneSet.has(x)));
+
+    // If intersection has multiple entries -> invariant violation: multiple rows share both email & phone
+    if (intersection.size > 1) return intersection;
+
+    // If intersection has exactly one entry -> both channels agree on the same member
+    if (intersection.size === 1) return intersection.values().next().value;
+
+    // At this point intersection is empty, union.size > 1
+    // Case: only email matches
+    if (emailSetSize > 0 && phoneSetSize === 0) {
+      if (emailSetSize === 1) return emailSet.values().next().value;
+      // multiple email candidates -> try name disambiguation
+      const nameKey = normalizeNameLoose(newMember);
+      if (nameKey) {
+        const matchingByName = [...emailSet].filter(idx => normalizeNameLoose(membershipData[idx]) === nameKey);
+        if (matchingByName.length === 1) return matchingByName[0];
+        if (matchingByName.length > 1) return new Set(matchingByName);
+      }
+      return new Set([...emailSet]);
+    }
+
+    // Case: only phone matches
+    if (phoneSetSize > 0 && emailSetSize === 0) {
+      if (phoneSetSize === 1) return phoneSet.values().next().value;
+      const nameKey = normalizeNameLoose(newMember);
+      if (nameKey) {
+        const matchingByName = [...phoneSet].filter(idx => normalizeNameLoose(membershipData[idx]) === nameKey);
+        if (matchingByName.length === 1) return matchingByName[0];
+        if (matchingByName.length > 1) return new Set(matchingByName);
+      }
+      return new Set([...phoneSet]);
+    }
+
+    // Case: both emailSet and phoneSet non-empty but intersection empty (cross-channel ambiguous)
+    // Try name disambiguation across union
+    const nameKey = normalizeNameLoose(newMember);
+    if (nameKey) {
+      const matchingByName = [...union].filter(idx => normalizeNameLoose(membershipData[idx]) === nameKey);
+      if (matchingByName.length === 1) return matchingByName[0];
+      if (matchingByName.length > 1) return new Set(matchingByName);
+    }
+
+    // Otherwise ambiguous across union
+    return new Set([...union]);
+}
+
+  /**
+   * Return a copy of any ambiguous transactions recorded during processing.
+   * Useful for UI or retrieval by administrative code.
+   * @returns {Array<Object>} copy of ambiguous transactions (may be empty)
+   */
+  getAmbiguousTransactions() {
+    return this._ambiguousTransactions ? this._ambiguousTransactions.slice() : [];
+  }
+
+  /**
+   * Persist ambiguous transactions to a spreadsheet fiddler named by sheetName.
+   * This is best-effort: if the fiddler is not configured the method will catch
+   * the error and return a failure object rather than throwing.
+   * @param {string} sheetName
+   * @returns {{persisted: boolean, count?: number, reason?: string}}
+   */
+  persistAmbiguousTransactions(sheetName = 'AmbiguousTransactions') {
+    try {
+      if (!this._ambiguousTransactions || this._ambiguousTransactions.length === 0) {
+        return { persisted: false, reason: 'no_ambiguous_transactions' };
+      }
+      // Prepare rows aligned with other fiddlers: an object-per-row map
+      const rows = this._ambiguousTransactions.map(a => {
+        return {
+          'Txn Row': a.txnRow,
+          'Email': a.txn && (a.txn['Email Address'] || a.txn.Email) || '',
+          'Payable Status': a.txn && a.txn['Payable Status'] || '',
+          'Processed': a.txn && a.txn.Processed || '',
+          'Candidates': (a.candidates || []).join(','),
+          'TxnJSON': JSON.stringify(a.txn || {})
+        };
+      });
+
+      const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler(sheetName);
+      fiddler.setData(rows).dumpValues();
+      return { persisted: true, count: rows.length };
+    } catch (err) {
+      console.error('persistAmbiguousTransactions: failed to persist ambiguous transactions', err && err.toString ? err.toString() : err);
+      return { persisted: false, reason: err && err.toString ? err.toString() : String(err) };
+    }
   }
 
 }

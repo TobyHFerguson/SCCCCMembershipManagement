@@ -1,6 +1,9 @@
 
-if (typeof require !== 'undefined') {
-   MembershipManagement = { Utils: {} };
+// When running under Node (tests) ensure a placeholder global exists but do not overwrite
+if (typeof module !== 'undefined' && module.exports) {
+  if (typeof global !== 'undefined') {
+    global.MembershipManagement = global.MembershipManagement || { Utils: {} };
+  }
 }
 
 
