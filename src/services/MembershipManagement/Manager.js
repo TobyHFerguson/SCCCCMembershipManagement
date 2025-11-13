@@ -213,20 +213,21 @@ MembershipManagement.Manager = class {
           };
         } else if (match instanceof Set) {
           // Ambiguous match: Policy B - DO NOT auto-add. Record ambiguity and notify director.
-          console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is ambiguous; candidates: ${Array.from(match).join(',')}`);
-          // Record ambiguity
+          const candidateRows = Array.from(match).map(idx => idx + 2);
+          console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is ambiguous; candidates: ${candidateRows.join(',')}`);
+          // Record ambiguity (store spreadsheet row numbers for readers)
           if (!this._ambiguousTransactions) this._ambiguousTransactions = [];
-          this._ambiguousTransactions.push({ txnRow: i + 2, txn: { ...txn }, candidates: Array.from(match) });
+          this._ambiguousTransactions.push({ txnRow: i + 2, txn: { ...txn }, candidates: candidateRows });
 
           // Notify membership director if configured
           try {
             const directorEmail = (PropertiesService && PropertiesService.getScriptProperties && PropertiesService.getScriptProperties().getProperty('MEMBERSHIP_DIRECTOR_EMAIL')) || null;
             const subject = `Ambiguous membership payment for ${txn["Email Address"] || ''}`;
-            const body = `A payment could not be unambiguously matched to an existing member.\n\nTransaction row: ${i + 2}\nTransaction: ${JSON.stringify(txn)}\n\nCandidate indices: ${JSON.stringify(Array.from(match))}\n\nPlease review and resolve by merging records or updating contact details.`;
+            const body = `A payment could not be unambiguously matched to an existing member.\n\nTransaction row: ${i + 2}\nTransaction: ${JSON.stringify(txn)}\n\nCandidate rows: ${JSON.stringify(candidateRows)}\n\nPlease review and resolve by merging records or updating contact details.`;
             if (directorEmail) {
               this._sendEmailFun({ to: directorEmail, subject, htmlBody: body });
             } else {
-              console.warn('MEMBERSHIP_DIRECTOR_EMAIL not set; ambiguous transaction notification not sent', { txnRow: i + 2, candidates: Array.from(match) });
+              console.warn('MEMBERSHIP_DIRECTOR_EMAIL not set; ambiguous transaction notification not sent', { txnRow: i + 2, candidates: candidateRows });
             }
           } catch (notifyErr) {
             console.error('Failed to notify membership director about ambiguous transaction', notifyErr);
