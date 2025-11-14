@@ -18,7 +18,7 @@ MembershipManagement.Manager = class {
     return this._today;
   }
 
-  processExpirations(activeMembers, expirySchedule) {
+  processExpirations(activeMembers, expirySchedule, prefillFormTemplate) {
     expirySchedule.forEach(sched => { sched.Date = new Date(sched.Date) });
     expirySchedule.sort((a, b) => {
       if (b.Date - a.Date !== 0) {
@@ -28,6 +28,11 @@ MembershipManagement.Manager = class {
     });
     const schedulesToBeProcessed = expirySchedule.reduce((acc, sched, i) => { if (sched.Date <= new Date(this._today)) acc.push(i); return acc; }, []);
     schedulesToBeProcessed.sort((a, b) => b - a);
+    
+    if (!prefillFormTemplate) {
+      console.error("Prefill form template is required");
+      return 0;
+    }
     let emailsSeen = new Set();
     for (let idx of schedulesToBeProcessed) {
       const sched = expirySchedule[idx];
@@ -39,7 +44,7 @@ MembershipManagement.Manager = class {
         continue;
       }
       emailsSeen.add(sched.Email);
-      let memberIdx = activeMembers.findIndex(member => member.Email === sched.Email && member.Status !== 'Expired');
+      let memberIdx = activeMembers.findIndex(member => member.Email === sched.Email && member.Status === 'Active');
       if (memberIdx === -1) {
         console.log(`Skipping member ${sched.Email} - they're not an active member`);
       } else {
@@ -48,18 +53,19 @@ MembershipManagement.Manager = class {
           member.Status = 'Expired'
           this._groups.forEach(group => { this._groupRemoveFun(member.Email, group.Email); console.log(`Expiry4 - ${member.Email} removed from group ${group.Email}`) });
         }
+        const memberAsQueryParams = Object.fromEntries(
+          Object.entries(member).map(([k, v]) => [k, encodeURIComponent(v)])
+        );
+        const prefillFormUrl = MembershipManagement.Utils.expandTemplate(prefillFormTemplate, memberAsQueryParams);
+        member.Form = `<a href="${prefillFormUrl}">renewal form</a>`;
         let message = {
           to: member.Email,
           subject: MembershipManagement.Utils.expandTemplate(spec.Subject, member),
           htmlBody: MembershipManagement.Utils.expandTemplate(spec.Body, member)
         };
+        delete member.Form;
         this._sendEmailFun(message);
         console.log(`${sched.Type} - ${member.Email} - Email sent`);
-      }
-    }
-    for (let i = expirySchedule.length - 1; i >= 0; i--) {
-      if (emailsSeen.has(expirySchedule[i].Email)) {
-        expirySchedule.splice(i, 1);
       }
     }
     return schedulesToBeProcessed.length;

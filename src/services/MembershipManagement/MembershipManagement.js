@@ -73,8 +73,11 @@ MembershipManagement.processExpirations = function () {
     const expiryScheduleFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
 
     const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
-
-    const numProcessed = manager.processExpirations(membershipData, expiryScheduleData);
+    const prefillFormTemplate = PropertiesService.getScriptProperties().getProperty('PREFILL_FORM_TEMPLATE');
+    if (!prefillFormTemplate) {
+      throw new Error("PREFILL_FORM_TEMPLATE property is not set.");
+    }
+    const numProcessed = manager.processExpirations(membershipData, expiryScheduleData, prefillFormTemplate);
 
     if (numProcessed === 0) {
       MembershipManagement.Utils.log('No memberships required expiration processing');
