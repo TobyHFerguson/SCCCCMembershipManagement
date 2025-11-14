@@ -98,6 +98,22 @@ MembershipManagement.Utils.dateOnly = function(date)  {
   return dateOnly;
 }
 
+/**
+ * 
+ * @param {Member} member 
+ * @param {string} prefillFormTemplate 
+ * @returns {Member} copy of member with Form key added whose value is the html link to the prefilled renewal form for this member
+ */
+MembershipManagement.Utils.addPrefillForm = function(member, prefillFormTemplate)  {
+  const memberCopy = { ...member, Form: null }; // Create a shallow copy to avoid mutating the original member
+  const memberAsQueryParams = Object.fromEntries(
+    Object.entries(member).map(([k, v]) => [k, encodeURIComponent(v)])
+  );
+  const prefillFormUrl = MembershipManagement.Utils.expandTemplate(prefillFormTemplate, memberAsQueryParams);
+  memberCopy.Form = `<a href="${prefillFormUrl}">renewal form</a>`;
+  return memberCopy;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = MembershipManagement;
 }

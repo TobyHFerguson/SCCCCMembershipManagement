@@ -34,6 +34,7 @@ MembershipManagement.Manager = class {
       return 0;
     }
     let emailsSeen = new Set();
+    let expired = new Set();
     for (let idx of schedulesToBeProcessed) {
       const sched = expirySchedule[idx];
       const spec = this._actionSpecs[sched.Type];
@@ -52,22 +53,24 @@ MembershipManagement.Manager = class {
         if (sched.Type === MembershipManagement.Utils.ActionType.Expiry4) {
           member.Status = 'Expired'
           this._groups.forEach(group => { this._groupRemoveFun(member.Email, group.Email); console.log(`Expiry4 - ${member.Email} removed from group ${group.Email}`) });
+          expired.add(member.Email);
         }
-        const memberAsQueryParams = Object.fromEntries(
-          Object.entries(member).map(([k, v]) => [k, encodeURIComponent(v)])
-        );
-        const prefillFormUrl = MembershipManagement.Utils.expandTemplate(prefillFormTemplate, memberAsQueryParams);
-        member.Form = `<a href="${prefillFormUrl}">renewal form</a>`;
+        const mc = MembershipManagement.Utils.addPrefillForm(member, prefillFormTemplate);
         let message = {
           to: member.Email,
-          subject: MembershipManagement.Utils.expandTemplate(spec.Subject, member),
-          htmlBody: MembershipManagement.Utils.expandTemplate(spec.Body, member)
+          subject: MembershipManagement.Utils.expandTemplate(spec.Subject, mc),
+          htmlBody: MembershipManagement.Utils.expandTemplate(spec.Body, mc)
         };
-        delete member.Form;
         this._sendEmailFun(message);
         console.log(`${sched.Type} - ${member.Email} - Email sent`);
       }
     }
+    
+    for (let i = expirySchedule.length - 1; i >= 0; i--) {
+        if (expired.has(expirySchedule[i].Email)) {
+          expirySchedule.splice(i, 1);
+        }
+      }
     return schedulesToBeProcessed.length;
   }
 

@@ -149,7 +149,7 @@ describe('Manager tests', () => {
       activeMembers = [
         { Status: 'Active', Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2026-11-14", "Renewed On": "" },
       ];
-      expirySchedule= [
+      expirySchedule = [
         { Date: today, Type: utils.ActionType.Expiry1, Email: "a@b.com" },
         { Date: utils.addDaysToDate(today, 5), Type: utils.ActionType.Expiry2, Email: "a@b.com" },
       ];
@@ -185,9 +185,9 @@ describe('Manager tests', () => {
 
       it('should amend the expiry schedule list appropriately', () => {
         let expectedExpirySchedule = [
-        { Date: new Date('2050-01-01'), Type: utils.ActionType.Expiry1, Email: "test1@example.com" },
-        { Date: new Date('2045-01-01'), Type: utils.ActionType.Expiry3, Email: "test3@example.com" },
-      ];
+          { Date: new Date('2050-01-01'), Type: utils.ActionType.Expiry1, Email: "test1@example.com" },
+          { Date: new Date('2045-01-01'), Type: utils.ActionType.Expiry3, Email: "test3@example.com" },
+        ];
         manager.processExpirations(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
         expect(expirySchedule).toEqual(expectedExpirySchedule)
       })
@@ -195,10 +195,14 @@ describe('Manager tests', () => {
     describe('multiple expiry schedules on the same day for the same address', () => {
       let expectedActiveMembers;
       beforeEach(() => {
-        activeMembers = [{ Status: 'Active', Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" }];
+        activeMembers = [
+          { Status: 'Active', Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },
+          { Status: 'Active', Email: "test2@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },
+        ];
         expirySchedule = [
           { Date: today, Type: utils.ActionType.Expiry2, Email: "test1@example.com" },
-          { Date: today, Type: utils.ActionType.Expiry4, Email: "test1@example.com" }
+          { Date: today, Type: utils.ActionType.Expiry4, Email: "test1@example.com" },
+          { Date: '2099-10-10', Type: utils.ActionType.Expiry2, Email: "test2@example.com" }
         ];
       })
       it('should count both schedules as having been processed', () => {
@@ -210,7 +214,10 @@ describe('Manager tests', () => {
         expect(consoleSpy).toHaveBeenCalledWith("Skipping test1@example.com for Expiry2 - already processed");
       })
       it('should process only the latest expiry', () => {
-        expectedActiveMembers = [{ ...activeMembers[0], Status: 'Expired' }];
+        expectedActiveMembers = [
+          { ...activeMembers[0], Status: 'Expired' },
+          { ...activeMembers[1], Status: 'Active' }
+        ];
         manager.processExpirations(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
         expect(activeMembers).toEqual(expectedActiveMembers);
         expect(groupManager.groupRemoveFun).toHaveBeenCalledTimes(2);
@@ -222,7 +229,7 @@ describe('Manager tests', () => {
       it('should remove all schedules for the expiring member', () => {
         expirySchedule.push({ Date: utils.addDaysToDate(today, +3), Type: utils.ActionType.Expiry2, Email: "test1@example.com" })
         manager.processExpirations(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
-        expect(expirySchedule).toEqual([]);
+        expect(expirySchedule).toEqual([{ Date: new Date('2099-10-10:00:00:00Z'), Type: utils.ActionType.Expiry2, Email: "test2@example.com" }]);
       })
     });
     describe('Expiry4 processing', () => {
