@@ -19,14 +19,16 @@ MembershipManagement.Manager = class {
   }
 
   processExpirations(activeMembers, expirySchedule, prefillFormTemplate) {
-    expirySchedule.forEach(sched => { sched.Date = new Date(sched.Date) });
+    // Normalize schedule Date values to canonical ISO strings for deterministic processing
+    expirySchedule.forEach(sched => { sched.Date = MembershipManagement.Utils.toIsoDateString(sched.Date); });
+    // Sort by date descending (latest first), then by Type
     expirySchedule.sort((a, b) => {
-      if (b.Date - a.Date !== 0) {
-        return b.Date - a.Date;
-      }
+      const cmp = b.Date.localeCompare(a.Date);
+      if (cmp !== 0) return cmp;
       return a.Type.localeCompare(b.Type);
     });
-    const schedulesToBeProcessed = expirySchedule.reduce((acc, sched, i) => { if (sched.Date <= new Date(this._today)) acc.push(i); return acc; }, []);
+    const tdyIso = MembershipManagement.Utils.toIsoDateString(this._today);
+    const schedulesToBeProcessed = expirySchedule.reduce((acc, sched, i) => { if (sched.Date <= tdyIso) acc.push(i); return acc; }, []);
     schedulesToBeProcessed.sort((a, b) => b - a);
     
     if (!prefillFormTemplate) {
@@ -91,7 +93,8 @@ MembershipManagement.Manager = class {
         return;
       }
       if (mi["Migrate Me"] && !mi.Migrated) {
-        mi.Migrated = this._today;
+        // Record migration date as canonical ISO string
+        mi.Migrated = MembershipManagement.Utils.toIsoDateString(this._today);
         const newMember = { ...mi, Directory: mi.Directory ? 'Yes' : 'No' };
         // Delete unwanted keys
         try {
@@ -165,8 +168,8 @@ MembershipManagement.Manager = class {
           };
         }
         this._sendEmailFun(message);
-        txn.Timestamp = this._today;
-        txn.Processed = this._today;
+  txn.Timestamp = MembershipManagement.Utils.toIsoDateString(this._today);
+  txn.Processed = MembershipManagement.Utils.toIsoDateString(this._today);
         recordsChanged = true;
       } catch (error) {
         error.txnNum = i + 2;
@@ -188,7 +191,7 @@ MembershipManagement.Manager = class {
 
   renewMember_(txn, member, expirySchedule,) {
     member.Period = MembershipManagement.Manager.getPeriod_(txn);
-    member["Renewed On"] = this._today;
+    member["Renewed On"] = MembershipManagement.Utils.toIsoDateString(this._today);
     member.Expires = MembershipManagement.Utils.calculateExpirationDate(this._today, member.Expires, member.Period);
     Object.assign(member, MembershipManagement.Manager.extractDirectorySharing_(txn));
     this.addRenewedMemberToActionSchedule_(member, expirySchedule);
@@ -205,9 +208,10 @@ MembershipManagement.Manager = class {
     const scheduleEntries = [];
     Object.keys(this._actionSpecs).filter(type => type.startsWith('Expiry')).forEach((type) => {
       const spec = this._actionSpecs[type];
+      // addDaysToDate returns an ISO date string; compare against today's ISO string
       const scheduleDate = MembershipManagement.Utils.addDaysToDate(expiryDate, spec.Offset);
-      const tdy = new Date(this._today);
-      if (tdy >= scheduleDate) { return; }
+      const tdyIso = MembershipManagement.Utils.toIsoDateString(this._today);
+      if (tdyIso >= scheduleDate) { return; }
       scheduleEntries.push({ Date: scheduleDate, Type: spec.Type, Email: email });
     });
     return scheduleEntries;
@@ -288,7 +292,7 @@ MembershipManagement.Manager = class {
       First: txn["First Name"],
       Last: txn["Last Name"],
       Phone: txn.Phone || '',
-      Joined: this._today,
+      Joined: MembershipManagement.Utils.toIsoDateString(this._today),
       Period: MembershipManagement.Manager.getPeriod_(txn),
       Expires: MembershipManagement.Utils.calculateExpirationDate(this._today, this._today, MembershipManagement.Manager.getPeriod_(txn)),
       "Renewed On": '',
@@ -391,16 +395,17 @@ MembershipManagement.Manager = class {
 
     // If LATEST.Joined <= INITIAL.Expires then extend latest expires by LATEST.Period years from INITIAL.Expires
     try {
-      if (latestJoined <= initialExpires) {
+        if (latestJoined <= initialExpires) {
         const periodYears = Number(LATEST.Period || LATEST['Period']) || 0;
         const newExpires = MembershipManagement.Utils.addYearsToDate(initialExpires, periodYears);
         const before = { ...membershipData[latestIdx] };
         LATEST.Expires = newExpires;
-        LATEST.Migrated = MembershipManagement.Utils.dateOnly(INITIAL.Migrated || INITIAL['Migrated'] || '');
-        LATEST['Renewed On'] = MembershipManagement.Utils.dateOnly(LATEST.Joined);
-
+        // Normalize migrated/joined/renewed fields to canonical ISO strings
+        LATEST.Migrated = MembershipManagement.Utils.toIsoDateString(INITIAL.Migrated || INITIAL['Migrated'] || '');
+        LATEST['Renewed On'] = MembershipManagement.Utils.toIsoDateString(LATEST.Joined);
+        
         // set LATEST.Joined to INITIAL.Joined (only when join falls within initial expires)
-        LATEST.Joined = MembershipManagement.Utils.dateOnly(INITIAL.Joined);
+        LATEST.Joined = MembershipManagement.Utils.toIsoDateString(INITIAL.Joined);
 
         // Write LATEST back into membershipData at latestIdx
         membershipData[latestIdx] = { ...membershipData[latestIdx], ...LATEST };

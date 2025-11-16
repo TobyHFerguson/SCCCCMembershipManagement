@@ -63,7 +63,7 @@ describe('Manager tests', () => {
   const O2 = actionSpecs.Expiry2.Offset;
   const O3 = actionSpecs.Expiry3.Offset;
   const O4 = actionSpecs.Expiry4.Offset;
-  const today = utils.dateOnly("2025-03-01")
+  const today = utils.toIsoDateString("2025-03-01")
   let manager;
   let activeMembers;
   let expiredMembers;
@@ -94,9 +94,9 @@ describe('Manager tests', () => {
   describe('processExpirations', () => {
     beforeEach(() => {
       expirySchedule = [
-        { Date: new Date('2050-01-01'), Type: utils.ActionType.Expiry1, Email: "test1@example.com" },
+  { Date: '2050-01-01', Type: utils.ActionType.Expiry1, Email: "test1@example.com" },
         { Date: today, Type: utils.ActionType.Expiry2, Email: "test2@example.com" },
-        { Date: new Date('2045-01-01'), Type: utils.ActionType.Expiry3, Email: "test3@example.com" },
+  { Date: '2045-01-01', Type: utils.ActionType.Expiry3, Email: "test3@example.com" },
         { Date: today, Type: utils.ActionType.Expiry4, Email: "test4@example.com" }
       ];
     });
@@ -119,7 +119,7 @@ describe('Manager tests', () => {
       expect(consoleSpy).toHaveBeenCalledWith("Skipping member test1@example.com - they're not an active member");
     })
     it('should remove the expiry schedule even if the member cannot be expired', () => {
-      const expectedExpirySchedule = expirySchedule.filter(e => e.Date > new Date(today)).map(e => { return { ...e } });
+  const expectedExpirySchedule = expirySchedule.filter(e => e.Date > today).map(e => { return { ...e } });
       manager.processExpirations(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
       expect(expirySchedule).toEqual(expectedExpirySchedule);
     })
@@ -185,9 +185,9 @@ describe('Manager tests', () => {
 
       it('should amend the expiry schedule list appropriately', () => {
         let expectedExpirySchedule = [
-          { Date: new Date('2050-01-01'), Type: utils.ActionType.Expiry1, Email: "test1@example.com" },
-          { Date: new Date('2045-01-01'), Type: utils.ActionType.Expiry3, Email: "test3@example.com" },
-        ];
+            { Date: '2050-01-01', Type: utils.ActionType.Expiry1, Email: "test1@example.com" },
+            { Date: '2045-01-01', Type: utils.ActionType.Expiry3, Email: "test3@example.com" },
+          ];
         manager.processExpirations(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
         expect(expirySchedule).toEqual(expectedExpirySchedule)
       })
@@ -229,7 +229,7 @@ describe('Manager tests', () => {
       it('should remove all schedules for the expiring member', () => {
         expirySchedule.push({ Date: utils.addDaysToDate(today, +3), Type: utils.ActionType.Expiry2, Email: "test1@example.com" })
         manager.processExpirations(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
-        expect(expirySchedule).toEqual([{ Date: new Date('2099-10-10:00:00:00Z'), Type: utils.ActionType.Expiry2, Email: "test2@example.com" }]);
+  expect(expirySchedule).toEqual([{ Date: '2099-10-10', Type: utils.ActionType.Expiry2, Email: "test2@example.com" }]);
       })
     });
     describe('Expiry4 processing', () => {
@@ -559,7 +559,7 @@ describe('Manager tests', () => {
             Last: "Doe",
             Joined: joinDate,
             Expires: utils.addYearsToDate(activeMembers[0].Expires, 1),
-            "Renewed On": manager.today(),
+            "Renewed On": utils.toIsoDateString(manager.today()),
             Status: "Active",
             "Directory Share Name": false,
             "Directory Share Email": false,
@@ -580,7 +580,7 @@ describe('Manager tests', () => {
             Last: "Doe",
             Joined: joinDate,
             Expires: utils.addYearsToDate(manager.today(), 1),
-            "Renewed On": manager.today(),
+            "Renewed On": utils.toIsoDateString(manager.today()),
             Status: "Active",
             "Directory Share Name": false,
             "Directory Share Email": false,
@@ -677,30 +677,30 @@ describe('Manager tests', () => {
 
     beforeEach(() => {
       expirySchedule = [
-        { Date: new Date('2023-01-01'), Email: 'test@example.com', Type: utils.ActionType.Expiry1 },
-        { Date: new Date('2023-02-01'), Email: 'test@example.com', Type: utils.ActionType.Expiry2 }
+  { Date: '2023-01-01', Email: 'test@example.com', Type: utils.ActionType.Expiry1 },
+  { Date: '2023-02-01', Email: 'test@example.com', Type: utils.ActionType.Expiry2 }
       ];
       emailSpecs = actionSpecsArray
       member = {
         Email: 'test@example1.com',
         First: 'John',
         Last: 'Doe',
-        Joined: new Date('2022-01-01'),
+  Joined: '2022-01-01',
         Period: 1,
-        Expires: new Date('2023-01-01'),
-        "Renewed On": new Date('2023-01-01')
+  Expires: '2023-01-01',
+  "Renewed On": '2023-01-01'
       };
     });
 
     it('should remove existing action schedule entries for the member', () => {
-      const member = { Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: utils.dateOnly('2021-01-01'), Expires: utils.addYearsToDate(today, 1), "Renewed On": today };
+  const member = { Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: '2021-01-01', Expires: utils.addYearsToDate(today, 1), "Renewed On": today };
       const expected = [
         { Email: member.Email, Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(member.Expires, O1), },
         { Email: member.Email, Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(member.Expires, O2), },
         { Email: member.Email, Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(member.Expires, O3), },
         { Email: member.Email, Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(member.Expires, O4), }
       ]
-      expirySchedule = [{ Email: member.Email, Type: utils.ActionType.Expiry3, Date: utils.dateOnly('2021-01-10'), },
+  expirySchedule = [{ Email: member.Email, Type: utils.ActionType.Expiry3, Date: '2021-01-10', },
       ]
       manager.addRenewedMemberToActionSchedule_(member, expirySchedule, emailSpecs);
       expect(expirySchedule).toEqual(expected);
@@ -708,7 +708,7 @@ describe('Manager tests', () => {
     });
 
     it('should add new action schedule entries for the renewed member', () => {
-      const member = { Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: utils.dateOnly('2021-01-01'), Expires: utils.addYearsToDate(today, 1), "Renewed On": today };
+  const member = { Email: "test1@example.com", Period: 1, first: "John", last: "Doe", Joined: '2021-01-01', Expires: utils.addYearsToDate(today, 1), "Renewed On": today };
       const expected = [
         { Email: member.Email, Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(member.Expires, O1), },
         { Email: member.Email, Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(member.Expires, O2), },
@@ -729,17 +729,17 @@ describe('Manager tests', () => {
       ];
 
       const expirySchedule = [
-        { Email: 'captenphil@aol.com', Type: utils.ActionType.Expiry1, Date: utils.dateOnly('12/1/2026') },
-        { Email: 'captenphil@aol.com', Type: utils.ActionType.Expiry2, Date: utils.dateOnly('12/16/2026') },
-        { Email: 'captenphil@aol.com', Type: utils.ActionType.Expiry3, Date: utils.dateOnly('12/31/2026') },
-        { Email: 'captenphil@aol.com', Type: utils.ActionType.Expiry4, Date: utils.dateOnly('1/15/2027') }
+  { Email: 'captenphil@aol.com', Type: utils.ActionType.Expiry1, Date: utils.toIsoDateString('12/1/2026') },
+  { Email: 'captenphil@aol.com', Type: utils.ActionType.Expiry2, Date: utils.toIsoDateString('12/16/2026') },
+  { Email: 'captenphil@aol.com', Type: utils.ActionType.Expiry3, Date: utils.toIsoDateString('12/31/2026') },
+  { Email: 'captenphil@aol.com', Type: utils.ActionType.Expiry4, Date: utils.toIsoDateString('1/15/2027') }
       ];
 
       const expectedExpirySchedule = [
-        { Email: 'phil.stotts@gmail.com', Type: utils.ActionType.Expiry1, Date: utils.dateOnly('12/5/2028') },
-        { Email: 'phil.stotts@gmail.com', Type: utils.ActionType.Expiry2, Date: utils.dateOnly('12/10/2028') },
-        { Email: 'phil.stotts@gmail.com', Type: utils.ActionType.Expiry3, Date: utils.dateOnly('12/15/2028') },
-        { Email: 'phil.stotts@gmail.com', Type: utils.ActionType.Expiry4, Date: utils.dateOnly('12/25/2028') }
+  { Email: 'phil.stotts@gmail.com', Type: utils.ActionType.Expiry1, Date: utils.toIsoDateString('12/5/2028') },
+  { Email: 'phil.stotts@gmail.com', Type: utils.ActionType.Expiry2, Date: utils.toIsoDateString('12/10/2028') },
+  { Email: 'phil.stotts@gmail.com', Type: utils.ActionType.Expiry3, Date: utils.toIsoDateString('12/15/2028') },
+  { Email: 'phil.stotts@gmail.com', Type: utils.ActionType.Expiry4, Date: utils.toIsoDateString('12/25/2028') }
       ];
 
       const expectedMembershipData = {
@@ -748,14 +748,14 @@ describe('Manager tests', () => {
         First: 'Phil',
         Last: 'Stotts',
         Phone: '(831) 345-9634',
-        Joined: new Date('8/8/2017'),
-        Expires: new Date('12/15/2028'),
+        Joined: utils.toIsoDateString('8/8/2017'),
+        Expires: utils.toIsoDateString('12/15/2028'),
         Period: 2,
         'Directory Share Name': true,
         'Directory Share Email': true,
         'Directory Share Phone': true,
-        Migrated: new Date('3/17/2025'),
-        'Renewed On': new Date('10/23/2025')
+        Migrated: utils.toIsoDateString('3/17/2025'),
+        'Renewed On': utils.toIsoDateString('10/23/2025')
       };
 
       const result = manager.convertJoinToRenew(0, 1, membershipData, expirySchedule);
