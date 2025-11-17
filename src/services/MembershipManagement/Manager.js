@@ -31,11 +31,16 @@ MembershipManagement.Manager = class {
     
     if (!prefillFormTemplate) {
       console.error("Prefill form template is required");
-      return 0;
+      return [];
     }
+    // collect messages to allow generator/consumer separation
+    const messages = [];
+    const errors = [];
+    let processedCount = 0;
     let emailsSeen = new Set();
     let expired = new Set();
     for (let idx of schedulesToBeProcessed) {
+      processedCount++;
       const sched = expirySchedule[idx];
       const spec = this._actionSpecs[sched.Type];
       console.log(`${sched.Type} - ${sched.Email}`);
@@ -52,7 +57,16 @@ MembershipManagement.Manager = class {
         let member = activeMembers[memberIdx];
         if (sched.Type === MembershipManagement.Utils.ActionType.Expiry4) {
           member.Status = 'Expired'
-          this._groups.forEach(group => { this._groupRemoveFun(member.Email, group.Email); console.log(`Expiry4 - ${member.Email} removed from group ${group.Email}`) });
+          this._groups.forEach(group => {
+            try {
+              this._groupRemoveFun(member.Email, group.Email);
+              console.log(`Expiry4 - ${member.Email} removed from group ${group.Email}`)
+            } catch (e) {
+              e.txnNum = processedCount;
+              e.email = member.Email;
+              errors.push(e);
+            }
+          });
           expired.add(member.Email);
         }
         const mc = MembershipManagement.Utils.addPrefillForm(member, prefillFormTemplate);
@@ -61,8 +75,16 @@ MembershipManagement.Manager = class {
           subject: MembershipManagement.Utils.expandTemplate(spec.Subject, mc),
           htmlBody: MembershipManagement.Utils.expandTemplate(spec.Body, mc)
         };
-        this._sendEmailFun(message);
-        console.log(`${sched.Type} - ${member.Email} - Email sent`);
+        // keep calling the email function for backward compatibility, but also collect messages
+        try {
+          this._sendEmailFun(message);
+          console.log(`${sched.Type} - ${member.Email} - Email sent`);
+        } catch (e) {
+          e.txnNum = processedCount;
+          e.email = member.Email;
+          errors.push(e);
+        }
+        messages.push(message);
       }
     }
     
@@ -71,7 +93,10 @@ MembershipManagement.Manager = class {
           expirySchedule.splice(i, 1);
         }
       }
-    return schedulesToBeProcessed.length;
+    if (errors.length > 0) {
+      throw new AggregateError(errors, 'Errors occurred while processing expirations');
+    }
+    return messages;
   }
 
   migrateCEMembers(migrators, members, expirySchedule) {

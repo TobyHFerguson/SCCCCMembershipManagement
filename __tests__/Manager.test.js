@@ -102,8 +102,8 @@ describe('Manager tests', () => {
     });
 
     it('should do nothing if there are no members to expire', () => {
-      numProcessed = manager.processExpirations(activeMembers, [expirySchedule[0], expirySchedule[2]], PREFILL_FORM_TEMPLATE);
-      expect(numProcessed).toEqual(0);
+      const msgs = manager.processExpirations(activeMembers, [expirySchedule[0], expirySchedule[2]], PREFILL_FORM_TEMPLATE);
+      expect(msgs.length).toEqual(0);
     });
     it('should log what it is expecting to do', () => {
       manager.processExpirations(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
@@ -124,8 +124,8 @@ describe('Manager tests', () => {
       expect(expirySchedule).toEqual(expectedExpirySchedule);
     })
     it('should return the number of schedules processed', () => {
-      numProcessed = manager.processExpirations(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
-      expect(numProcessed).toEqual(2);
+      const msgs = manager.processExpirations(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
+      expect(msgs.length).toEqual(2);
     })
     it('should throw an aggregated error if there are errors', () => {
       const errorFunction = jest.fn(() => {
@@ -138,7 +138,7 @@ describe('Manager tests', () => {
         { Status: 'Active', Email: "test2@example.com", Period: 1, First: "Jane", Last: "Smith", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "" },
       ];
       try {
-        manager.processExpirations(activeMembers, expirySchedule);
+        manager.processExpirations(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
       } catch (error) {
         expect(error).toBeInstanceOf(AggregateError);
         expect(error.errors.length).toEqual(2);
@@ -159,10 +159,10 @@ describe('Manager tests', () => {
       const expectedExpirySchedule = [
         { Date: utils.addDaysToDate(today, 5), Type: utils.ActionType.Expiry2, Email: "a@b.com" },
       ];
-      const numProcessed = manager.processExpirations(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
+      const msgs = manager.processExpirations(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
       expect(expirySchedule).toEqual(expectedExpirySchedule);
       expect(activeMembers).toEqual(expectedActiveMembers);
-      expect(numProcessed).toEqual(1);
+      expect(msgs.length).toEqual(1);
     });
 
     describe('Expiration processing for multiple members', () => {
@@ -206,8 +206,8 @@ describe('Manager tests', () => {
         ];
       })
       it('should count both schedules as having been processed', () => {
-        numProcessed = manager.processExpirations(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
-        expect(numProcessed).toEqual(2);
+        const msgs = manager.processExpirations(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
+        expect(msgs.length).toEqual(2);
       })
       it('should log the anomaly', () => {
         manager.processExpirations(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
