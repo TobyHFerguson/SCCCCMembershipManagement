@@ -5,8 +5,8 @@ MembershipManagement.Menu = {
             .addItem('Process Transactions', processTransactions.name)
             .addItem('Process Expirations', processExpirations.name)
             .addSeparator()
-            .addItem('Merge Selected Members', mergeSelectedMembers.name)
             .addItem('Find possible renewals', findPossibleRenewalsFromMenu.name)
+            .addItem('Merge Selected Members', mergeSelectedMembers.name)
             .addSeparator()
             .addItem('Process Migrations', processMigrations.name)
             .addToUi();
