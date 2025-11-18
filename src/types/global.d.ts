@@ -10,6 +10,8 @@ type ActionType = MembershipManagement.ActionType;
 type Transaction = MembershipManagement.Transaction;
 type ActionSchedule = MembershipManagement.ActionSchedule;
 type ActionSpec = MembershipManagement.ActionSpec;
+type ExpiredMember = MembershipManagement.ExpiredMember;
+type ExpiredMembersQueue = MembershipManagement.ExpiredMembersQueue;
 
 // Core authentication types (used across services)
 interface TokenDataType {
@@ -137,6 +139,7 @@ declare namespace Common {
                 function getFiddler(sheetName: 'ActiveMembers'): Fiddler<Member>;
                 function getFiddler(sheetName: 'ActionSpecs'): Fiddler<MembershipManagement.ActionSpec>;
                 function getFiddler(sheetName: 'ExpirySchedule'): Fiddler<MembershipManagement.ExpirySchedule>;
+                function getFiddler(sheetName: 'ExpirationFIFO'): Fiddler<ExpiredMember>;
                 
                 // Generic fallback
                 function getFiddler(sheetName: string): Fiddler<any>;

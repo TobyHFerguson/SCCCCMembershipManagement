@@ -73,7 +73,7 @@ MembershipManagement.Manager = class {
         };
         if (sched.Type === MembershipManagement.Utils.ActionType.Expiry4) {
           member.Status = 'Expired'
-          expiredMember.groups = this._groups;
+          expiredMember.groups = this._groups.map(g => g.Email).join(',');
           expired.add(member.Email);
         }
         const mc = MembershipManagement.Utils.addPrefillForm(member, prefillFormTemplate);
@@ -131,9 +131,11 @@ MembershipManagement.Manager = class {
         member.subject = '';
         member.htmlBody = '';
         if (member.groups) {
-          for (let j = member.groups.length - 1; j >= 0; j--) {
-            groupRemoveFun(member.email, member.groups[j]);
-            member.groups.splice(j, 1);
+          const groups = member.groups.split(',');
+          for (let j = groups.length - 1; j >= 0; j--) {
+            groupRemoveFun(member.email, groups[j]);
+            groups.slice(j, 1);
+            member.groups = groups.join(',');
           }
         }
         // email was sent and groups removed successfully; remove from the list to be processed

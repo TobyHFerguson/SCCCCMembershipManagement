@@ -48,7 +48,7 @@ declare namespace MembershipManagement {
     email:string;
     subject:string;
     htmlBody:string;
-    groups?: string[];
+    groups?: string; // Comma-separated emails
     attempts?: number;
     lastError?: string;
 }

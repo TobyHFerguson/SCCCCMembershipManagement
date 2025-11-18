@@ -71,23 +71,28 @@ MembershipManagement.generateExpiringMembersList = function () {
 
     const membershipFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
     const expiryScheduleFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
+    
 
     const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
     const prefillFormTemplate = PropertiesService.getScriptProperties().getProperty('PREFILL_FORM_TEMPLATE');
     if (!prefillFormTemplate) {
       throw new Error("PREFILL_FORM_TEMPLATE property is not set.");
     }
-    const numProcessed = manager.generateExpiringMembersList(membershipData, expiryScheduleData, prefillFormTemplate);
+    const newExpiredMembers = manager.generateExpiringMembersList(membershipData, expiryScheduleData, prefillFormTemplate);
 
-    if (numProcessed.length === 0) {
+    if (newExpiredMembers.length === 0) {
       MembershipManagement.Utils.log('No memberships required expiration processing');
       return;
     }
-
+    // Convert groups array to comma-separated string if present
+    const expirationFIFO = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationFIFO');
+    const expirationQueue = expirationFIFO.getData();
+    expirationQueue.push(...newExpiredMembers);
+    expirationFIFO.setData(expirationQueue).dumpValues();
     membershipFiddler.setData(membershipData).dumpValues();
     expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
 
-    MembershipManagement.Utils.log(`Successfully processed ${numProcessed} membership expirations`);
+    MembershipManagement.Utils.log(`Successfully processed ${expirationQueue} membership expirations`);
   } catch (error) {
     const errorMessage = `Membership expiration processing failed: ${error.message}`;
     MembershipManagement.Utils.log(`ERROR: ${errorMessage}`);
@@ -123,6 +128,10 @@ MembershipManagement.Internal.getGroupAdder_ = function () {
   }
 }
 
+/**
+ * Get the group removal function
+ * @returns function(memberEmail: string, groupEmail: string): void 
+ */
 MembershipManagement.Internal.getGroupRemover_ = function () {
   if (PropertiesService.getScriptProperties().getProperty('testGroupRemoves') === 'true') {
     return (memberEmail, groupEmail) => MembershipManagement.Utils.log(`testGroupRemoves: true. Would have removed: `, memberEmail, ' from group:', groupEmail);

@@ -118,7 +118,7 @@ describe('Manager tests', () => {
     });
     it('should log what it is expecting to do', () => {
       const expectedExpiringMembers = [
-        { email: "test4@example.com", subject: 'Final Expiry', htmlBody: 'Your membership has expired, Not Member!', groups },
+        { email: "test4@example.com", subject: 'Final Expiry', htmlBody: 'Your membership has expired, Not Member!', groups: groups.map(g => g.Email).join(',') },
         { email: "test2@example.com", subject: 'Second Expiry', htmlBody: 'Your membership is expiring soon, Jane Smith!', groups: null }
       ];
       const expiringMembers = manager.generateExpiringMembersList(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
@@ -128,7 +128,7 @@ describe('Manager tests', () => {
     })
     it('should only provide groups for Expiry4 emails', () => {
       const expectedExpiringMembers = [
-        { email: "test4@example.com", subject: 'Final Expiry', htmlBody: 'Your membership has expired, Not Member!', groups },
+        { email: "test4@example.com", subject: 'Final Expiry', htmlBody: 'Your membership has expired, Not Member!', groups: groups.map(g => g.Email).join(',') },
         { email: "test2@example.com", subject: 'Second Expiry', htmlBody: 'Your membership is expiring soon, Jane Smith!', groups: null }
       ];
       const expiringMembers = manager.generateExpiringMembersList(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
@@ -249,7 +249,7 @@ describe('Manager tests', () => {
       it('should setup the member to be removed from all groups once Expiry4 has been met', () => {
         const expiringMembers = manager.generateExpiringMembersList(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
         expect(expiringMembers.length).toBe(1);
-        expect(expiringMembers[0].groups).toEqual(groups);
+        expect(expiringMembers[0].groups).toEqual(groups.map(g => g.Email).join(','));
       })
     });
 
@@ -257,7 +257,7 @@ describe('Manager tests', () => {
   describe('processExpiredMembers', () => {
     beforeEach(() => {
       expiredMembers = /** type MembershipManagement.ExpiringMember[] */[
-        { email: "test1@example.com", subject: "Subject 1", htmlBody: "Body 1", groups: groups.map(g => { return { ...g } }) },
+        { email: "test1@example.com", subject: "Subject 1", htmlBody: "Body 1", groups: groups.map(g => g.Email).join(',') },
         { email: "test2@example.com", subject: "Subject 2", htmlBody: "Body 2" }
       ];
     })
@@ -279,8 +279,8 @@ describe('Manager tests', () => {
       it('should remove members from their groups', () => {
         manager.processExpiredMembers(expiredMembers, sendEmailFun, groupManager.groupRemoveFun);
         expect(groupManager.groupRemoveFun).toHaveBeenCalledTimes(2);
-        expect(groupManager.groupRemoveFun).toHaveBeenNthCalledWith(1, expiredMembers[0].email, groups[1]);
-        expect(groupManager.groupRemoveFun).toHaveBeenNthCalledWith(2, expiredMembers[0].email, groups[0]);
+        expect(groupManager.groupRemoveFun).toHaveBeenNthCalledWith(1, expiredMembers[0].email, groups[1].Email);
+        expect(groupManager.groupRemoveFun).toHaveBeenNthCalledWith(2, expiredMembers[0].email, groups[0].Email);
       })
     });
     describe('error paths', () => {
@@ -301,15 +301,15 @@ describe('Manager tests', () => {
       });
       it('should record any email errors', () => {
         sendEmailFun = jest.fn((m) => { if (m.to === 'test1@example.com') throw new Error('email') });
-        const expectedExpiredMembers = [{ email: "test1@example.com", subject: "Subject 1", htmlBody: "Body 1", groups, attempts: 1, lastError: 'Error: email' }];
+        const expectedExpiredMembers = [{ email: "test1@example.com", subject: "Subject 1", htmlBody: "Body 1", groups: groups.map(g => g.Email).join(','), attempts: 1, lastError: 'Error: email' }];
         const results = manager.processExpiredMembers(expiredMembers, sendEmailFun, groupManager.groupRemoveFun);
         expect(results.failed).toBe(1);
         expect(results.processed).toBe(1);
         expect(results.remaining).toEqual(expectedExpiredMembers);
       })
       it('should remove as many groups as possible before failure', () => {
-        groupManager.groupRemoveFun = jest.fn((email, groupEmail) => { if (email === expiredMembers[0].email && groupEmail.Email === groups[1].Email) throw new Error('group removal') });
-        const expectedExpiredMembers = [{ email: "test1@example.com", subject: "", htmlBody: "", groups, attempts: 1, lastError: 'Error: group removal' }];
+        groupManager.groupRemoveFun = jest.fn((email, groupEmail) => { if (email === expiredMembers[0].email && groupEmail === groups[1].Email) throw new Error('group removal') });
+        const expectedExpiredMembers = [{ email: "test1@example.com", subject: "", htmlBody: "", groups: groups.map(g => g.Email).join(','), attempts: 1, lastError: 'Error: group removal' }];
         const results = manager.processExpiredMembers(expiredMembers, sendEmailFun, groupManager.groupRemoveFun);
         expect(results.processed).toBe(1);
         expect(groupManager.groupRemoveFun).toHaveBeenCalledTimes(1);
