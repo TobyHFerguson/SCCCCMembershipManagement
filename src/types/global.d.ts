@@ -98,6 +98,12 @@ interface ActiveMembersOptions {
     createIfMissing?: boolean;
 }
 
+interface ExpiryScheduleOptions {
+    id: string;
+    sheetName: 'ExpirySchedule';
+    createIfMissing?: boolean;
+}
+
 // Member data structure (for membership management)
 interface Member {
     Status: string;
@@ -114,6 +120,8 @@ interface Member {
     'Renewed On': Date;
 }
 
+
+
 // Common Data Storage namespace - only for truly shared data access
 declare namespace Common {
     namespace Data {
@@ -128,6 +136,7 @@ declare namespace Common {
                 function getFiddler(sheetName: 'Bootstrap'): Fiddler<BootstrapData>;
                 function getFiddler(sheetName: 'ActiveMembers'): Fiddler<Member>;
                 function getFiddler(sheetName: 'ActionSpecs'): Fiddler<MembershipManagement.ActionSpec>;
+                function getFiddler(sheetName: 'ExpirySchedule'): Fiddler<MembershipManagement.ExpirySchedule>;
                 
                 // Generic fallback
                 function getFiddler(sheetName: string): Fiddler<any>;

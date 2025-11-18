@@ -11,7 +11,7 @@ EmailService.sendTestEmail = function (form) {
     return;
   }
   selectedKeys.forEach(function (key) {
-    spec = actionSpecs[key];
+    let spec = actionSpecs[key];
     if (spec) {
       const message = {
         to: sendToEmail,

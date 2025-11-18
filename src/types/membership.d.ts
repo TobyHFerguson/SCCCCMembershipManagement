@@ -38,11 +38,20 @@ declare namespace MembershipManagement {
         action: ActionType;
     }
 
-    type EmailQueue = EmailQueueEntry[];
-
-    interface ExpiredMembersQueueEntry {
-        email: string;
+    interface ExpirySchedule {
+        Date: Date;
+        Type: ActionType;
+        Email: string;
     }
 
-    type ExpiredMembersQueue = ExpiredMembersQueueEntry[];
+    interface ExpiredMember{
+    email:string;
+    subject:string;
+    htmlBody:string;
+    groups?: string[];
+    attempts?: number;
+    lastError?: string;
+}
+
+    type ExpiredMembersQueue = ExpiredMember[];
 }

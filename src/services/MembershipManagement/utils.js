@@ -91,6 +91,11 @@ MembershipManagement.Utils.expandTemplate = function(template, row) {
   });
 }
 
+/**
+ * 
+ * @param {string | Date} date 
+ * @returns {Date} a date object with the time set to 00:00:00
+ */
 MembershipManagement.Utils.dateOnly = function(date)  {
   if (!date) date = new Date();
   if (typeof date === 'string') date = new Date(date);

@@ -98,7 +98,7 @@ function processMembershipExpirations() {
             Common.Logger.info('Triggers', 'Starting daily membership expiration processing');
             
             // Call the main expiration processing function
-            MembershipManagement.processExpirations();
+            MembershipManagement.generateExpiringMembersList();
             
             // @ts-ignore - Logger is implemented in separate file
             Common.Logger.info('Triggers', 'Daily membership expiration processing completed successfully');

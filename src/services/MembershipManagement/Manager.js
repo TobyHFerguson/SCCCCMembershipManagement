@@ -2,6 +2,7 @@ if (typeof require !== 'undefined') {
   (MembershipManagement = require('./utils.js'));
 }
 
+// @ts-check
 MembershipManagement.Manager = class {
   constructor(actionSpecs, groups, groupManager, sendEmailFun, today) {
     if (!groups || groups.length === 0) { throw new Error('MembershipManager requires a non-empty array of group emails'); }
@@ -18,11 +19,20 @@ MembershipManagement.Manager = class {
     return this._today;
   }
 
-  processExpirations(activeMembers, expirySchedule, prefillFormTemplate) {
-    expirySchedule.forEach(sched => { sched.Date = new Date(sched.Date) });
+  /**
+   * 
+   * @param {Member[]} activeMembers 
+   * @param {MembershipManagement.ExpirySchedule[]} expirySchedule 
+   * @param {string} prefillFormTemplate 
+   * @returns {MembershipManagement.ExpiredMembersQueue} array of messages to be sent and groups to be removed
+   */
+  generateExpiringMembersList(activeMembers, expirySchedule, prefillFormTemplate) {
+    expirySchedule.forEach(sched => { sched.Date = MembershipManagement.Utils.dateOnly(new Date(sched.Date) )});
     expirySchedule.sort((a, b) => {
-      if (b.Date - a.Date !== 0) {
-        return b.Date - a.Date;
+      const ta = a.Date.getTime();
+      const tb = b.Date.getTime();
+      if (tb - ta !== 0) {
+        return tb - ta;
       }
       return a.Type.localeCompare(b.Type);
     });
@@ -34,7 +44,7 @@ MembershipManagement.Manager = class {
       return [];
     }
     // collect messages to allow generator/consumer separation
-    const messages = [];
+    const messages = /** @type {MembershipManagement.ExpiringMember[]} */ [];
     const errors = [];
     let processedCount = 0;
     let emailsSeen = new Set();
@@ -55,36 +65,22 @@ MembershipManagement.Manager = class {
         console.log(`Skipping member ${sched.Email} - they're not an active member`);
       } else {
         let member = activeMembers[memberIdx];
+        let expiredMember = {
+          email: member.Email,
+          subject: "",
+          htmlBody: "",
+          groups: null
+        };
         if (sched.Type === MembershipManagement.Utils.ActionType.Expiry4) {
           member.Status = 'Expired'
-          this._groups.forEach(group => {
-            try {
-              this._groupRemoveFun(member.Email, group.Email);
-              console.log(`Expiry4 - ${member.Email} removed from group ${group.Email}`)
-            } catch (e) {
-              e.txnNum = processedCount;
-              e.email = member.Email;
-              errors.push(e);
-            }
-          });
+          expiredMember.groups = this._groups;
           expired.add(member.Email);
         }
         const mc = MembershipManagement.Utils.addPrefillForm(member, prefillFormTemplate);
-        let message = {
-          to: member.Email,
-          subject: MembershipManagement.Utils.expandTemplate(spec.Subject, mc),
-          htmlBody: MembershipManagement.Utils.expandTemplate(spec.Body, mc)
-        };
-        // keep calling the email function for backward compatibility, but also collect messages
-        try {
-          this._sendEmailFun(message);
-          console.log(`${sched.Type} - ${member.Email} - Email sent`);
-        } catch (e) {
-          e.txnNum = processedCount;
-          e.email = member.Email;
-          errors.push(e);
-        }
-        messages.push(message);
+        expiredMember.subject = MembershipManagement.Utils.expandTemplate(spec.Subject, mc);
+        expiredMember.htmlBody = MembershipManagement.Utils.expandTemplate(spec.Body, mc);
+        // collect messages for the consumer to send
+        messages.push(expiredMember);
       }
     }
     
@@ -97,6 +93,59 @@ MembershipManagement.Manager = class {
       throw new AggregateError(errors, 'Errors occurred while processing expirations');
     }
     return messages;
+  }
+
+  /**
+   * Consumer: process up to batchSize expired members using provided emailSendFun and groupRemoveFun
+   * @param {MembershipManagement.ExpiredMembersQueue} expiredMembers
+   * @param {function(GoogleAppsScript.Mail.MailAdvancedParameters): void} sendEmailFun
+   * @param {function(string, string): void} groupRemoveFun
+   * @param {object} opts
+   * @returns {{processed: number, failed: number, remaining: MembershipManagement.ExpiredMember[]}}
+   */
+  processExpiredMembers(expiredMembers, sendEmailFun, groupRemoveFun, opts={}) {
+    if (!Array.isArray(expiredMembers)) {
+      throw new Error('expiredMembers must be an array');
+    }
+    if (typeof sendEmailFun !== 'function') {
+      throw new Error('sendEmailFun must be a function');
+    }
+    if (typeof groupRemoveFun !== 'function') {
+      throw new Error('groupRemoveFun must be a function');
+    }
+    const batchSize = opts.batchSize || 50;
+    let i = 0; // copy, so as to not modify original
+    let processed = 0;
+    let failed = [];
+    for (let i = 0; i < expiredMembers.length; i++) { // process in reverse order to allow removal from array
+      const member = { ...expiredMembers[i] };
+      member.attempts = member.attempts !== undefined ? member.attempts : 0;
+      const msg = {
+        to: member.email,
+        subject: member.subject,
+        htmlBody: member.htmlBody
+      };
+      try {
+        sendEmailFun(msg);
+        // Indicate that the email was successfully sent
+        member.subject = '';
+        member.htmlBody = '';
+        if (member.groups) {
+          for (let j = member.groups.length - 1; j >= 0; j--) {
+            groupRemoveFun(member.email, member.groups[j]);
+            member.groups.splice(j, 1);
+          }
+        }
+        // email was sent and groups removed successfully; remove from the list to be processed
+        processed++;
+      } catch (err) { // some kind of failure. Update the member and move on.
+        member.attempts++;
+        member.lastError = err.toString ? err.toString() : String(err);
+        failed.push(member);
+      }
+    }
+    const result = { processed: processed, failed: failed.length, remaining: [...failed, ...expiredMembers.slice(batchSize)] };
+    return result;
   }
 
   migrateCEMembers(migrators, members, expirySchedule) {

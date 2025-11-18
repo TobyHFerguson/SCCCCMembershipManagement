@@ -3,7 +3,7 @@ MembershipManagement.Menu = {
         const ui = SpreadsheetApp.getUi();
         ui.createMenu('Membership Management')
             .addItem('Process Transactions', processTransactions.name)
-            .addItem('Process Expirations', processExpirations.name)
+            .addItem('Process Expirations', generateExpiringMembersList.name)
             .addSeparator()
             .addItem('Find possible renewals', findPossibleRenewalsFromMenu.name)
             .addItem('Merge Selected Members', mergeSelectedMembers.name)
@@ -19,8 +19,8 @@ MembershipManagement.Menu = {
 function processTransactions() {
     MembershipManagement.processTransactions()
 }
-function processExpirations() {
-    MembershipManagement.processExpirations()
+function generateExpiringMembersList() {
+    MembershipManagement.generateExpiringMembersList()
 }
 function processMigrations() {
     MembershipManagement.processMigrations()

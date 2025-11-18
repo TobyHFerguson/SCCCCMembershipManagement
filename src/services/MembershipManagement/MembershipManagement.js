@@ -65,7 +65,7 @@ MembershipManagement.processMigrations = function () {
   expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
 }
 
-MembershipManagement.processExpirations = function () {
+MembershipManagement.generateExpiringMembersList = function () {
   try {
     MembershipManagement.Utils.log('Starting membership expiration processing...');
 
@@ -77,9 +77,9 @@ MembershipManagement.processExpirations = function () {
     if (!prefillFormTemplate) {
       throw new Error("PREFILL_FORM_TEMPLATE property is not set.");
     }
-    const numProcessed = manager.processExpirations(membershipData, expiryScheduleData, prefillFormTemplate);
+    const numProcessed = manager.generateExpiringMembersList(membershipData, expiryScheduleData, prefillFormTemplate);
 
-    if (numProcessed === 0) {
+    if (numProcessed.length === 0) {
       MembershipManagement.Utils.log('No memberships required expiration processing');
       return;
     }
