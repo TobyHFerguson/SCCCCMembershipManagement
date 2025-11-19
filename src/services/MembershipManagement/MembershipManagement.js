@@ -71,7 +71,7 @@ MembershipManagement.generateExpiringMembersList = function () {
 
     const membershipFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
     const expiryScheduleFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
-    
+
 
     const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
     const prefillFormTemplate = PropertiesService.getScriptProperties().getProperty('PREFILL_FORM_TEMPLATE');
@@ -88,7 +88,7 @@ MembershipManagement.generateExpiringMembersList = function () {
     const expirationFIFO = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationFIFO');
     const expirationQueue = expirationFIFO.getData() || [];
 
-    const makeId = () => `${new Date().toISOString().replace(/[:.]/g, '')}-${Math.random().toString(16).slice(2,8)}`;
+    const makeId = () => `${new Date().toISOString().replace(/[:.]/g, '')}-${Math.random().toString(16).slice(2, 8)}`;
     const nowIso = () => new Date().toISOString();
 
     for (const msg of newExpiredMembers) {
@@ -158,8 +158,32 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       return { processed: 0, remaining: 0 };
     }
 
-    // Take the first batchSize entries
-    const batch = queue.slice(0, batchSize);
+    // Select eligible entries (status not 'dead' and nextRetryAt is absent or in the past)
+    const now = new Date();
+    const eligibleIndices = [];
+    for (let i = 0; i < queue.length && eligibleIndices.length < batchSize; i++) {
+      const row = queue[i];
+      if (!row) continue;
+      if (row.status === 'dead') continue;
+      if (row.nextRetryAt) {
+        const next = new Date(row.nextRetryAt);
+        if (isNaN(next.getTime())) {
+          // malformed nextRetryAt - treat as eligible
+        } else if (next > now) {
+          continue; // not yet eligible
+        }
+      }
+      eligibleIndices.push(i);
+    }
+
+    if (eligibleIndices.length === 0) {
+      MembershipManagement.Utils.log('No eligible FIFO entries to process at this time');
+      // ensure no leftover minute trigger
+      try { MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger'); } catch (e) { /* ignore */ }
+      return { processed: 0, failed: 0, remaining: queue.length };
+    }
+
+    const batch = eligibleIndices.map(i => queue[i]);
 
     // Normalize FIFO rows into the shape the Manager expects (email, subject, htmlBody)
     // and preserve the original FIFO id on each item so we can map failures back.
@@ -185,13 +209,23 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
 
     // Map failed manager items back into FIFO row schema so we can persist them.
     const nowIso = () => new Date().toISOString();
-    const failedRows = (result.failed || []).map(m => {
-      // Try to find original FIFO row for preserved metadata
-      // @ts-ignore - __fifoId is injected for mapping and not part of the declared type
-      const orig = batch.find(r => r.id === (m.__fifoId || m.id)) || {};
-      return {
-        // @ts-ignore - __fifoId may be present on the manager-returned object
-        id: orig.id || m.__fifoId || m.id || `${new Date().toISOString().replace(/[:.]/g, '')}-${Math.random().toString(16).slice(2,8)}`,
+    const scriptMaxRetries = Number(PropertiesService.getScriptProperties().getProperty('expirationMaxRetries')) || Number(PropertiesService.getScriptProperties().getProperty('maxRetries')) || 5;
+
+    // Build a map of failed items by fifo id for quick lookup.
+    // The Manager is authoritative for retry/backoff and dead-letter decisions and MUST return `failedMeta`.
+    // If the manager does not return `failedMeta` this is a programming error — surface it so it can be fixed.
+    if (!result || !Array.isArray(result.failedMeta)) {
+      throw new Error('Manager must return an array `failedMeta` describing failed items and bookkeeping');
+    }
+    const failedMap = {};
+    const metaArr = result.failedMeta;
+    metaArr.forEach(m => {
+      const fid = m['__fifoId'] || m.id || null;
+      const orig = batch.find(r => r.id === fid) || {};
+      const attempts = m.attempts !== undefined ? m.attempts : (orig.attempts || 0) + 1;
+      const lastError = m.lastError || orig.lastError || '';
+      const row = {
+        id: orig.id || fid || `${new Date().toISOString().replace(/[:.]/g, '')}-${Math.random().toString(16).slice(2, 8)}`,
         createdAt: orig.createdAt || m.createdAt || nowIso(),
         status: orig.status || 'pending',
         memberEmail: orig.memberEmail || m.memberEmail || m.email || orig.emailTo || '',
@@ -199,42 +233,85 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
         expiryDate: orig.expiryDate || '',
         actionType: orig.actionType || '',
         groups: m.groups !== undefined ? m.groups : (orig.groups || ''),
-        // prefer manager-updated fields when available
         emailTo: m.email || orig.emailTo || '',
         emailSubject: m.subject || orig.emailSubject || '',
         emailBody: m.htmlBody || orig.emailBody || '',
-        attempts: m.attempts !== undefined ? m.attempts : (orig.attempts || 0),
-        lastAttemptAt: nowIso(),
-        lastError: m.lastError || orig.lastError || '',
-        nextRetryAt: m.nextRetryAt || orig.nextRetryAt || '',
-        maxRetries: orig.maxRetries || '',
+        attempts: attempts,
+        lastAttemptAt: m.lastAttemptAt || nowIso(),
+        lastError: lastError,
+        nextRetryAt: m.nextRetryAt || '',
+        maxRetries: orig.maxRetries || scriptMaxRetries,
         note: orig.note || ''
       };
+      failedMap[row.id] = { row, dead: !!m.dead };
     });
 
-    // Compose the new queue: failed from this run (mapped back to FIFO rows) + rest of original queue beyond the batch
-    const newQueue = [ ...failedRows, ...queue.slice(batchSize) ];
-
-    expirationFIFO.setData(newQueue).dumpValues();
-
-    MembershipManagement.Utils.log(`Expiration FIFO: processed ${result.processed}, failed ${failedRows.length}, remaining ${newQueue.length}`);
-
-    // If there is more work, schedule a minute trigger to continue processing
-    if (newQueue.length > 0) {
-      try {
-        MembershipManagement.Utils.log('Scheduling 1-minute consumer trigger to continue processing');
-        // create a minute trigger named 'processExpirationFIFOTrigger'
-        MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger');
-        MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', 1);
-      } catch (e) {
-        console.error('Error scheduling expiration FIFO trigger', e && e.toString ? e.toString() : String(e));
+    // Rebuild queue by replacing processed items with updated failed rows (or removing succeeded ones)
+    const deadLetterRows = [];
+    const updatedQueue = [];
+    for (let i = 0; i < queue.length; i++) {
+      if (eligibleIndices.includes(i)) {
+        const orig = queue[i];
+        const fid = orig.id;
+        const failedEntry = failedMap[fid];
+        if (failedEntry) {
+          if (failedEntry.dead) {
+            // move to dead letter
+            const dlRow = Object.assign({}, failedEntry.row, { status: 'dead' });
+            deadLetterRows.push(dlRow);
+            // do not re-add to queue
+          } else {
+            updatedQueue.push(failedEntry.row);
+          }
+        } else {
+          // success - do not re-add to queue (work completed)
+        }
+      } else {
+        // untouched row - keep as-is
+        updatedQueue.push(queue[i]);
       }
-    } else {
-      // No more work - remove any existing minute trigger
-      try { MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger'); } catch (e) { /* ignore */ }
     }
 
-    return { processed: result.processed, failed: result.failed, remaining: newQueue.length };
+    // Persist dead-letter rows and updated queue, unless running in dryRun mode
+    if (!opts.dryRun) {
+      if (deadLetterRows.length > 0) {
+        try {
+          const deadFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationDeadLetter');
+          const existing = deadFiddler.getData() || [];
+          deadFiddler.setData(existing.concat(deadLetterRows)).dumpValues();
+          MembershipManagement.Utils.log(`Moved ${deadLetterRows.length} rows to ExpirationDeadLetter`);
+        } catch (e) {
+          console.error('Failed to persist dead-letter rows', e && e.toString ? e.toString() : e);
+        }
+      }
+
+      expirationFIFO.setData(updatedQueue).dumpValues();
+    } else {
+      MembershipManagement.Utils.log('Dry-run mode enabled: not persisting updated queue or dead-letter rows');
+    }
+
+    const failedCount = Object.values(failedMap).filter(x => !x.dead).length;
+    MembershipManagement.Utils.log(`Expiration FIFO: processed ${eligibleIndices.length}, failed ${failedCount}, dead ${deadLetterRows.length}, remaining ${updatedQueue.length}`);
+
+    // If there is more work, schedule a minute trigger to continue processing (unless dryRun)
+    if (!opts.dryRun) {
+      if (updatedQueue.length > 0) {
+        try {
+          MembershipManagement.Utils.log('Scheduling 1-minute consumer trigger to continue processing');
+          MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger');
+          MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', 1);
+        } catch (e) {
+          console.error('Error scheduling expiration FIFO trigger', e && e.toString ? e.toString() : String(e));
+        }
+      } else {
+        // No more work - remove any existing minute trigger
+        try { MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger'); } catch (e) { /* ignore */ }
+      }
+    } else {
+      MembershipManagement.Utils.log('Dry-run mode enabled: not scheduling or deleting triggers');
+    }
+
+    return { processed: eligibleIndices.length, failed: failedCount, remaining: updatedQueue.length };
   } catch (error) {
     const errorMessage = `Expiration FIFO consumer failed: ${error.message}`;
     MembershipManagement.Utils.log(`ERROR: ${errorMessage}`);
@@ -290,7 +367,7 @@ MembershipManagement.Internal.getGroupEmailReplacer_ = function () {
       return { success: true, message: 'Test mode - no changes made.' };
     }
   } else {
-    return (originalEmail, newEmail) => {return this.changeSubscribersEmailInAllGroups_(originalEmail, newEmail)};
+    return (originalEmail, newEmail) => { return this.changeSubscribersEmailInAllGroups_(originalEmail, newEmail) };
   }
 }
 

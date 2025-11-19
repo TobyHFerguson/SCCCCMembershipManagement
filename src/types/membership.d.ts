@@ -67,6 +67,7 @@ declare namespace MembershipManagement {
     lastError?: string;
     nextRetryAt?: string;
     maxRetries?: number | string;
+    dead?: boolean;
     note?: string;
 }
 
