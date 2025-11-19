@@ -76,9 +76,9 @@ MembershipManagement.Manager = class {
           expiredMember.groups = this._groups.map(g => g.Email).join(',');
           expired.add(member.Email);
         }
-        const mc = MembershipManagement.Utils.addPrefillForm(member, prefillFormTemplate);
-        expiredMember.subject = MembershipManagement.Utils.expandTemplate(spec.Subject, mc);
-        expiredMember.htmlBody = MembershipManagement.Utils.expandTemplate(spec.Body, mc);
+    const mc = MembershipManagement.Utils.addPrefillForm(member, prefillFormTemplate);
+    expiredMember.subject = MembershipManagement.Utils.expandTemplate(spec.Subject, mc);
+    expiredMember.htmlBody = MembershipManagement.Utils.expandTemplate(spec.Body, mc);
         // collect messages for the consumer to send
         messages.push(expiredMember);
       }
@@ -101,7 +101,7 @@ MembershipManagement.Manager = class {
    * @param {function(GoogleAppsScript.Mail.MailAdvancedParameters): void} sendEmailFun
    * @param {function(string, string): void} groupRemoveFun
    * @param {object} opts
-   * @returns {{processed: number, failed: number, remaining: MembershipManagement.ExpiredMember[]}}
+   * @returns {{processed: number, failed: MembershipManagement.ExpiredMembersQueue}}
    */
   processExpiredMembers(expiredMembers, sendEmailFun, groupRemoveFun, opts={}) {
     if (!Array.isArray(expiredMembers)) {
@@ -113,11 +113,10 @@ MembershipManagement.Manager = class {
     if (typeof groupRemoveFun !== 'function') {
       throw new Error('groupRemoveFun must be a function');
     }
-    const batchSize = opts.batchSize || 50;
-    let i = 0; // copy, so as to not modify original
+    // Manager will process exactly the items it's given and return failed items.
     let processed = 0;
-    let failed = [];
-    for (let i = 0; i < expiredMembers.length; i++) { // process in reverse order to allow removal from array
+    const failed = [];
+    for (let i = 0; i < expiredMembers.length; i++) {
       const member = { ...expiredMembers[i] };
       member.attempts = member.attempts !== undefined ? member.attempts : 0;
       const msg = {
@@ -133,21 +132,22 @@ MembershipManagement.Manager = class {
         if (member.groups) {
           const groups = member.groups.split(',');
           for (let j = groups.length - 1; j >= 0; j--) {
+            // attempt to remove each group; if successful, remove it from the local list
             groupRemoveFun(member.email, groups[j]);
-            groups.slice(j, 1);
+            // remove the group from the list and persist the reduction immediately so partial
+            // progress is preserved if a later group removal fails.
+            groups.splice(j, 1);
             member.groups = groups.join(',');
           }
         }
-        // email was sent and groups removed successfully; remove from the list to be processed
         processed++;
-      } catch (err) { // some kind of failure. Update the member and move on.
+      } catch (err) {
         member.attempts++;
-        member.lastError = err.toString ? err.toString() : String(err);
+        member.lastError = err && err.toString ? err.toString() : String(err);
         failed.push(member);
       }
     }
-    const result = { processed: processed, failed: failed.length, remaining: [...failed, ...expiredMembers.slice(batchSize)] };
-    return result;
+    return { processed, failed };
   }
 
   migrateCEMembers(migrators, members, expirySchedule) {

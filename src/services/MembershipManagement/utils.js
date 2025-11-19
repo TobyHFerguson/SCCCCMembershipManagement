@@ -115,6 +115,7 @@ MembershipManagement.Utils.addPrefillForm = function(member, prefillFormTemplate
     Object.entries(member).map(([k, v]) => [k, encodeURIComponent(v)])
   );
   const prefillFormUrl = MembershipManagement.Utils.expandTemplate(prefillFormTemplate, memberAsQueryParams);
+  // Keep an HTML anchor for email bodies; the raw URL is redundant once the email body is built
   memberCopy.Form = `<a href="${prefillFormUrl}">renewal form</a>`;
   return memberCopy;
 }

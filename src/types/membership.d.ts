@@ -45,12 +45,29 @@ declare namespace MembershipManagement {
     }
 
     interface ExpiredMember{
-    email:string;
-    subject:string;
-    htmlBody:string;
+    // FIFO row / processing entry for an expiring member
+    id?: string;
+    createdAt?: string; // ISO datetime
+    status?: 'pending' | 'in-progress' | 'dead' | 'done';
+    memberEmail?: string;
+    memberName?: string;
+    expiryDate?: string; // ISO date-only YYYY-MM-DD
+    actionType?: string; // e.g. 'notify+remove'
     groups?: string; // Comma-separated emails
+    // prefillUrl removed: email bodies are fully expanded before enqueueing
+    emailTo?: string;
+    emailSubject?: string;
+    emailBody?: string;
+    // Legacy message fields (kept for compatibility)
+    email?: string;
+    subject?: string;
+    htmlBody?: string;
     attempts?: number;
+    lastAttemptAt?: string;
     lastError?: string;
+    nextRetryAt?: string;
+    maxRetries?: number | string;
+    note?: string;
 }
 
     type ExpiredMembersQueue = ExpiredMember[];
