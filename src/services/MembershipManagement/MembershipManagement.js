@@ -185,15 +185,19 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
 
     const batch = eligibleIndices.map(i => queue[i]);
 
+    // Get scriptMaxRetries from Properties before building managerBatch
+    const scriptMaxRetries = Number(PropertiesService.getScriptProperties().getProperty('expirationMaxRetries')) || Number(PropertiesService.getScriptProperties().getProperty('maxRetries')) || 5;
+
     // Normalize FIFO rows into the shape the Manager expects (email, subject, htmlBody)
-    // and preserve the original FIFO id on each item so we can map failures back.
+    // and preserve the original FIFO id and maxRetries on each item so we can map failures back.
     const managerBatch = batch.map(item => {
       return Object.assign({}, item, {
         __fifoId: item.id,
         email: item.email || item.emailTo,
         subject: item.subject || item.emailSubject,
         htmlBody: item.htmlBody || item.emailBody,
-        groups: item.groups
+        groups: item.groups,
+        maxRetries: item.maxRetries !== undefined ? item.maxRetries : undefined
       });
     });
 
@@ -206,11 +210,10 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     const sendEmailFun = this.Internal.getEmailSender_();
     const groupRemoveFun = this.Internal.getGroupRemover_();
 
-    const result = manager.processExpiredMembers(managerBatch, sendEmailFun, groupRemoveFun, { batchSize });
+    const result = manager.processExpiredMembers(managerBatch, sendEmailFun, groupRemoveFun, { batchSize, maxRetries: scriptMaxRetries });
 
     // Map failed manager items back into FIFO row schema so we can persist them.
     const nowIso = () => new Date().toISOString();
-    const scriptMaxRetries = Number(PropertiesService.getScriptProperties().getProperty('expirationMaxRetries')) || Number(PropertiesService.getScriptProperties().getProperty('maxRetries')) || 5;
 
     // Build a map of failed items by fifo id for quick lookup.
     // The Manager is authoritative for retry/backoff and dead-letter decisions and MUST return `failedMeta`.
@@ -224,7 +227,6 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       const fid = m['__fifoId'] || m.id || null;
       const orig = batch.find(r => r.id === fid) || {};
       const attempts = m.attempts !== undefined ? m.attempts : (orig.attempts || 0) + 1;
-      const lastError = m.lastError || orig.lastError || '';
       const row = {
         id: orig.id || fid || `${new Date().toISOString().replace(/[:.]/g, '')}-${Math.random().toString(16).slice(2, 8)}`,
         createdAt: orig.createdAt || m.createdAt || nowIso(),
@@ -234,14 +236,14 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
         expiryDate: orig.expiryDate || '',
         actionType: orig.actionType || '',
         groups: m.groups !== undefined ? m.groups : (orig.groups || ''),
-        emailTo: m.email || orig.emailTo || '',
-        emailSubject: m.subject || orig.emailSubject || '',
-        emailBody: m.htmlBody || orig.emailBody || '',
+        emailTo: m.email,
+        emailSubject: m.subject,
+        emailBody: m.htmlBody,
         attempts: attempts,
         lastAttemptAt: m.lastAttemptAt || nowIso(),
-        lastError: lastError,
+        lastError: m.lastError || '',
         nextRetryAt: m.nextRetryAt || '',
-        maxRetries: orig.maxRetries || scriptMaxRetries,
+        maxRetries: orig.maxRetries !== undefined ? orig.maxRetries : scriptMaxRetries,
         note: orig.note || ''
       };
       failedMap[row.id] = { row, dead: !!m.dead };
