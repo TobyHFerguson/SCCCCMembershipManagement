@@ -132,11 +132,13 @@ MembershipManagement.Manager = class {
   // machine-friendly metadata for callers (GAS wrapper) that need bookkeeping
   const failedMeta = [];
 
-  const maxRetries = opts.maxRetries !== undefined ? Number(opts.maxRetries) : 5;
+  const defaultMaxRetries = opts.maxRetries !== undefined ? Number(opts.maxRetries) : 5;
   const computeNext = typeof opts.computeNextRetryAt === 'function' ? opts.computeNextRetryAt : (MembershipManagement.Utils && MembershipManagement.Utils.computeNextRetryAt ? MembershipManagement.Utils.computeNextRetryAt : null);
     for (let i = 0; i < expiredMembers.length; i++) {
       const member = { ...expiredMembers[i] };
       member.attempts = member.attempts !== undefined ? member.attempts : 0;
+      // Compute effective maxRetries: member value (from spreadsheet) → opts value (from Properties) → default 5
+      const effectiveMaxRetries = member.maxRetries !== undefined ? Number(member.maxRetries) : defaultMaxRetries;
       const msg = {
         to: member.email,
         subject: member.subject,
@@ -167,8 +169,8 @@ MembershipManagement.Manager = class {
         member.lastAttemptAt = new Date().toISOString();
         member.lastError = err && err.toString ? err.toString() : String(err);
 
-        // Decide dead-lettering vs retry
-        if (Number(attempts) >= Number(maxRetries)) {
+        // Decide dead-lettering vs retry using this member's effective maxRetries
+        if (Number(attempts) >= Number(effectiveMaxRetries)) {
           member.dead = true;
           // do not set nextRetryAt when dead
           member.nextRetryAt = member.nextRetryAt || '';
