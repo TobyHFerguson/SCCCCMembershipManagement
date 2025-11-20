@@ -303,9 +303,10 @@ describe('Manager tests', () => {
         sendEmailFun = jest.fn((m) => { if (m.to === 'test1@example.com') throw new Error('email') });
         const expectedExpiredMembers = [{ email: "test1@example.com", subject: "Subject 1", htmlBody: "Body 1", groups: groups.map(g => g.Email).join(','), attempts: 1, lastError: 'Error: email' }];
         const results = manager.processExpiredMembers(expiredMembers, sendEmailFun, groupManager.groupRemoveFun);
-        expect(results.failed).toBe(1);
+        // Manager now returns an array of failed items in `failed`
+        expect(results.failed.length).toBe(1);
         expect(results.processed).toBe(1);
-        expect(results.remaining).toEqual(expectedExpiredMembers);
+        expect(results.failed).toEqual(expectedExpiredMembers);
       })
       it('should remove as many groups as possible before failure', () => {
         groupManager.groupRemoveFun = jest.fn((email, groupEmail) => { if (email === expiredMembers[0].email && groupEmail === groups[1].Email) throw new Error('group removal') });
@@ -313,8 +314,10 @@ describe('Manager tests', () => {
         const results = manager.processExpiredMembers(expiredMembers, sendEmailFun, groupManager.groupRemoveFun);
         expect(results.processed).toBe(1);
         expect(groupManager.groupRemoveFun).toHaveBeenCalledTimes(1);
-        expect(results.remaining).toEqual(expectedExpiredMembers);
+        expect(results.failed).toEqual(expectedExpiredMembers);
       })
+
+      
     })
   });
 

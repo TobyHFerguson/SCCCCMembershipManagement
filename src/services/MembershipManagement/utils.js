@@ -62,6 +62,22 @@ if (typeof require !== 'undefined') {
     return result
   };
 
+/**
+ * Compute the ISO timestamp for the next retry using exponential backoff.
+ * @param {number} attempts - number of attempts already made (1-based)
+ * @param {number} [baseSeconds=60] - base delay in seconds for the first retry
+ * @param {number} [maxSeconds=86400] - maximum delay in seconds (defaults to 24h)
+ * @returns {string} ISO timestamp for the next retry
+ */
+MembershipManagement.Utils.computeNextRetryAt = function(attempts, baseSeconds = 60, maxSeconds = 24 * 3600) {
+  let a = Number(attempts) || 0;
+  if (a < 1) a = 1;
+  // exponential factor: attempt 1 -> 1, attempt 2 -> 2, attempt 3 -> 4, attempt 4 -> 8, ...
+  const factor = Math.pow(2, a - 1);
+  const seconds = Math.min(baseSeconds * factor, maxSeconds);
+  return new Date(Date.now() + Math.round(seconds * 1000)).toISOString();
+}
+
 
 
 
@@ -115,6 +131,7 @@ MembershipManagement.Utils.addPrefillForm = function(member, prefillFormTemplate
     Object.entries(member).map(([k, v]) => [k, encodeURIComponent(v)])
   );
   const prefillFormUrl = MembershipManagement.Utils.expandTemplate(prefillFormTemplate, memberAsQueryParams);
+  // Keep an HTML anchor for email bodies; the raw URL is redundant once the email body is built
   memberCopy.Form = `<a href="${prefillFormUrl}">renewal form</a>`;
   return memberCopy;
 }
