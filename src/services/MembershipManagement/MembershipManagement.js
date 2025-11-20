@@ -127,6 +127,11 @@ MembershipManagement.generateExpiringMembersList = function () {
     expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
 
     MembershipManagement.Utils.log(`Successfully appended ${newExpiredMembers.length} membership expiration plan(s) to FIFO`);
+    
+    // If we added items to the queue, kick off the consumer to start processing
+    if (newExpiredMembers.length > 0) {
+      MembershipManagement.processExpirationFIFO();
+    }
   } catch (error) {
     const errorMessage = `Membership expiration processing failed: ${error.message}`;
     MembershipManagement.Utils.log(`ERROR: ${errorMessage}`);
