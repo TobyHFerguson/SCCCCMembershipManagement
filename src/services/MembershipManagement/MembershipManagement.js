@@ -193,6 +193,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
         email: item.email || item.emailTo,
         subject: item.subject || item.emailSubject,
         htmlBody: item.htmlBody || item.emailBody,
+        groups: item.groups
       });
     });
 
@@ -431,6 +432,7 @@ MembershipManagement.Internal.removeMemberFromGroup_ = function (memberEmail, gr
   } catch (e) {
     // ignore "Resource Not Found" errors when the member is not in the group
     if (e.message && !e.message.includes("Resource Not Found")) {
+      e.message = `group email: ${groupEmail} - ${e.message}`
       throw e;
     }
   }
