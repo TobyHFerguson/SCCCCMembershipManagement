@@ -141,7 +141,14 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     const batchSize = opts.batchSize || Number(PropertiesService.getScriptProperties().getProperty('expirationBatchSize')) || 50;
 
     const expirationFIFO = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationFIFO');
-    const queue = expirationFIFO.getData() || [];
+    const rawQueue = expirationFIFO.getData() || [];
+    
+    // Convert spreadsheet Date objects to ISO strings for internal processing
+    const queue = rawQueue.map(item => ({
+      ...item,
+      lastAttemptAt: MembershipManagement.Utils.spreadsheetDateToIso(item.lastAttemptAt),
+      nextRetryAt: MembershipManagement.Utils.spreadsheetDateToIso(item.nextRetryAt)
+    }));
     
     if (!Array.isArray(queue) || queue.length === 0) {
       MembershipManagement.Utils.log('Expiration FIFO empty - nothing to process');
@@ -216,14 +223,26 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
         try {
           const deadFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationDeadLetter');
           const existing = deadFiddler.getData() || [];
-          deadFiddler.setData(existing.concat(deadItems)).dumpValues();
+          // Convert ISO strings to Date objects for spreadsheet display
+          const deadItemsForSheet = deadItems.map(item => ({
+            ...item,
+            lastAttemptAt: MembershipManagement.Utils.isoToSpreadsheetDate(item.lastAttemptAt),
+            nextRetryAt: MembershipManagement.Utils.isoToSpreadsheetDate(item.nextRetryAt)
+          }));
+          deadFiddler.setData(existing.concat(deadItemsForSheet)).dumpValues();
           MembershipManagement.Utils.log(`Moved ${deadItems.length} items to ExpirationDeadLetter`);
         } catch (e) {
           console.error('Failed to persist dead-letter items', e && e.toString ? e.toString() : e);
         }
       }
 
-      expirationFIFO.setData(updatedQueue).dumpValues();
+      // Convert ISO strings to Date objects for spreadsheet display
+      const updatedQueueForSheet = updatedQueue.map(item => ({
+        ...item,
+        lastAttemptAt: MembershipManagement.Utils.isoToSpreadsheetDate(item.lastAttemptAt),
+        nextRetryAt: MembershipManagement.Utils.isoToSpreadsheetDate(item.nextRetryAt)
+      }));
+      expirationFIFO.setData(updatedQueueForSheet).dumpValues();
     } else {
       MembershipManagement.Utils.log('Dry-run mode: not persisting queue or dead-letter items');
     }

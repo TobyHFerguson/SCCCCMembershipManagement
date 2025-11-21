@@ -78,6 +78,37 @@ MembershipManagement.Utils.computeNextRetryAt = function(attempts, baseSeconds =
   return new Date(Date.now() + Math.round(seconds * 1000)).toISOString();
 }
 
+/**
+ * Convert an ISO timestamp string to a Date object for spreadsheet storage.
+ * Empty strings remain empty strings (spreadsheet displays as blank).
+ * When stored in a spreadsheet cell, the Date will display in the user's timezone.
+ * @param {string} isoString - ISO timestamp string (e.g., "2025-11-21T10:30:00.000Z") or empty string
+ * @returns {Date|string} Date object for spreadsheet storage, or empty string if input was empty
+ */
+MembershipManagement.Utils.isoToSpreadsheetDate = function(isoString) {
+  if (!isoString || isoString === '') return '';
+  return new Date(isoString);
+}
+
+/**
+ * Convert a spreadsheet Date value to an ISO timestamp string for internal use.
+ * Empty strings remain empty strings.
+ * @param {Date|string|null|undefined} dateValue - Date object from spreadsheet or empty string
+ * @returns {string} ISO timestamp string (e.g., "2025-11-21T10:30:00.000Z") or empty string
+ */
+MembershipManagement.Utils.spreadsheetDateToIso = function(dateValue) {
+  if (!dateValue || dateValue === '') return '';
+  if (dateValue instanceof Date) {
+    return dateValue.toISOString();
+  }
+  // Handle case where spreadsheet might return string representation
+  if (typeof dateValue === 'string') {
+    const parsed = new Date(dateValue);
+    return isNaN(parsed.getTime()) ? '' : parsed.toISOString();
+  }
+  return '';
+}
+
 
 
 
