@@ -20,9 +20,9 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
     beforeEach(() => {
         // Prepare in-memory fiddlers via helper
         fifoData = [
-            { id: 'r1', createdAt: '', status: 'pending', memberEmail: 's1@example.com', memberName: '', expiryDate: '', actionType: 'notify-only', groups: '', emailTo: 's1@example.com', emailSubject: 's1', emailBody: 'b', attempts: 0, lastAttemptAt: '', lastError: '', nextRetryAt: '', maxRetries: '', note: '' },
-            { id: 'r2', createdAt: '', status: 'pending', memberEmail: 's2@example.com', memberName: '', expiryDate: '', actionType: 'notify-only', groups: '', emailTo: 's2@example.com', emailSubject: 's2', emailBody: 'b', attempts: 0, lastAttemptAt: '', lastError: '', nextRetryAt: '', maxRetries: '', note: '' },
-            { id: 'r3', createdAt: '', status: 'pending', memberEmail: 's3@example.com', memberName: '', expiryDate: '', actionType: 'notify-only', groups: '', emailTo: 's3@example.com', emailSubject: 's3', emailBody: 'b', attempts: 0, lastAttemptAt: '', lastError: '', nextRetryAt: '', maxRetries: '', note: '' }
+            { id: 'r1', createdAt: '', status: 'pending', memberEmail: 's1@example.com', memberName: '', expiryDate: '', actionType: 'notify-only', groups: '', emailTo: 's1@example.com', emailSubject: 's1', emailBody: 'b', attempts: 0, lastAttemptAt: '', lastError: '', nextAttemptAt: '', maxAttempts: '', note: '' },
+            { id: 'r2', createdAt: '', status: 'pending', memberEmail: 's2@example.com', memberName: '', expiryDate: '', actionType: 'notify-only', groups: '', emailTo: 's2@example.com', emailSubject: 's2', emailBody: 'b', attempts: 0, lastAttemptAt: '', lastError: '', nextAttemptAt: '', maxAttempts: '', note: '' },
+            { id: 'r3', createdAt: '', status: 'pending', memberEmail: 's3@example.com', memberName: '', expiryDate: '', actionType: 'notify-only', groups: '', emailTo: 's3@example.com', emailSubject: 's3', emailBody: 'b', attempts: 0, lastAttemptAt: '', lastError: '', nextAttemptAt: '', maxAttempts: '', note: '' }
         ];
         deadData = [];
 
@@ -44,14 +44,15 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
     it('persists manager-provided failed items into FIFO and moves dead items to ExpirationDeadLetter', () => {
         // Arrange: stub initializeManagerData_ to provide a fake manager
         const fakeResult = {
-            processed: [{ id: 'r1', email: 's1@example.com', subject: '', htmlBody: '', groups: '', attempts: 0, lastAttemptAt: '', lastError: '', nextRetryAt: '' }],
+            processed: [{ id: 'r1', email: 's1@example.com', subject: '', htmlBody: '', groups: '', attempts: 0, lastAttemptAt: '', lastError: '', nextAttemptAt: '' }],
             failed: [
-                { id: 'r2', email: 's2@example.com', subject: 's2', htmlBody: 'b', groups: '', attempts: 2, lastAttemptAt: '2020-01-01T00:00:00.000Z', lastError: 'Error: transient', nextRetryAt: '2020-01-01T00:05:00.000Z', dead: false },
-                { id: 'r3', email: 's3@example.com', subject: 's3', htmlBody: 'b', groups: '', attempts: 3, lastAttemptAt: '2020-01-01T00:00:00.000Z', lastError: 'Error: permanent', nextRetryAt: '', dead: true }
+                { id: 'r2', email: 's2@example.com', subject: 's2', htmlBody: 'b', groups: '', attempts: 2, lastAttemptAt: '2020-01-01T00:00:00.000Z', lastError: 'Error: transient', nextAttemptAt: '2020-01-01T00:05:00.000Z', dead: false },
+                { id: 'r3', email: 's3@example.com', subject: 's3', htmlBody: 'b', groups: '', attempts: 3, lastAttemptAt: '2020-01-01T00:00:00.000Z', lastError: 'Error: permanent', nextAttemptAt: '', dead: true }
             ]
         };
 
         // Override initializeManagerData_ to return our manager
+        // @ts-ignore - Mock partial implementation for testing
         global.MembershipManagement.Internal.initializeManagerData_ = jest.fn(() => {
             return { manager: { processExpiredMembers: jest.fn(() => fakeResult) }, membershipData: [], expiryScheduleData: [] };
         });
@@ -76,13 +77,14 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
     it('schedules a minute trigger when work remains after processing', () => {
         const fakeResult = {
             processed: [
-                { id: 'r2', email: 's2@example.com', subject: '', htmlBody: '', groups: '', attempts: 0, lastAttemptAt: '', lastError: '', nextRetryAt: '' },
-                { id: 'r3', email: 's3@example.com', subject: '', htmlBody: '', groups: '', attempts: 0, lastAttemptAt: '', lastError: '', nextRetryAt: '' }
+                { id: 'r2', email: 's2@example.com', subject: '', htmlBody: '', groups: '', attempts: 0, lastAttemptAt: '', lastError: '', nextAttemptAt: '' },
+                { id: 'r3', email: 's3@example.com', subject: '', htmlBody: '', groups: '', attempts: 0, lastAttemptAt: '', lastError: '', nextAttemptAt: '' }
             ],
             failed: [
-                { id: 'r1', email: 's1@example.com', subject: 's1', htmlBody: 'b', groups: '', attempts: 1, lastAttemptAt: '2020-01-01T00:00:00.000Z', lastError: 'Err', nextRetryAt: '2020-01-01T00:05:00.000Z', dead: false }
+                { id: 'r1', email: 's1@example.com', subject: 's1', htmlBody: 'b', groups: '', attempts: 1, lastAttemptAt: '2020-01-01T00:00:00.000Z', lastError: 'Err', nextAttemptAt: '2020-01-01T00:05:00.000Z', dead: false }
             ]
         };
+        // @ts-ignore - Mock partial implementation for testing
         global.MembershipManagement.Internal.initializeManagerData_ = jest.fn(() => {
             return { manager: { processExpiredMembers: jest.fn(() => fakeResult) }, membershipData: [], expiryScheduleData: [] };
         });
@@ -91,14 +93,15 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
         expect(global.MembershipManagement.Trigger._createMinuteTrigger).toHaveBeenCalled();
     });
 
-    it('skips non-eligible rows with future nextRetryAt', () => {
-        // Put a future nextRetryAt in r1 so it's not eligible
+    it('skips non-eligible rows with future nextAttemptAt', () => {
+        // Put a future nextAttemptAt in r1 so it's not eligible
         fiddlers._internal.setFifo([
-            { ...fiddlers.getFifo()[0], nextRetryAt: new Date(Date.now() + 60 * 60 * 1000).toISOString() },
+            { ...fiddlers.getFifo()[0], nextAttemptAt: new Date(Date.now() + 60 * 60 * 1000).toISOString() },
             fiddlers.getFifo()[1],
             fiddlers.getFifo()[2]
         ]);
         const fakeResult = { processed: 2, failedMeta: [] };
+        // @ts-ignore - Mock partial implementation for testing
         global.MembershipManagement.Internal.initializeManagerData_ = jest.fn(() => {
             return { manager: { processExpiredMembers: jest.fn(() => fakeResult) }, membershipData: [], expiryScheduleData: [] };
         });
@@ -109,6 +112,4 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
         const ids = fiddlers.getFifo().map(r => r.id);
         expect(ids).toContain('r1');
     });
-
-    // legacy fallback removed — Manager must return `failedMeta` (no test for legacy behavior)
 });

@@ -9,7 +9,7 @@ describe('retry/backoff helper', () => {
     expect(new Date(iso).toString()).not.toBe('Invalid Date');
   });
 
-  test('computeNextRetryAt increases exponentially', () => {
+  test('computeNextAttemptAt increases exponentially', () => {
     const base = 60;
     const now = Date.now();
     const n1 = new Date(utils.computeNextRetryAt(1, base)).getTime() - now;

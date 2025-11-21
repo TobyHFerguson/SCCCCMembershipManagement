@@ -97,7 +97,7 @@ MembershipManagement.Manager = class {
 
   /**
    * Consumer: process FIFO items using provided emailSendFun and groupRemoveFun
-   * @param {MembershipManagement.FIFOItem[]} fifoItems - Array of FIFO items with retry bookkeeping
+   * @param {MembershipManagement.FIFOItem[]} fifoItems - Array of FIFO items with attempt bookkeeping
    * @param {function(GoogleAppsScript.Mail.MailAdvancedParameters): void} sendEmailFun
    * @param {function(string, string): void} groupRemoveFun
    * @param {object} opts
@@ -105,12 +105,12 @@ MembershipManagement.Manager = class {
    *
    * Returns:
    *  - processed: array of successfully completed FIFOItems
-   *  - failed: array of failed FIFOItems with updated bookkeeping (attempts, lastError, nextRetryAt, dead)
+   *  - failed: array of failed FIFOItems with updated bookkeeping (attempts, lastError, nextAttemptAt, dead)
    *
    * Notes:
-   *  - Manager is authoritative for retry/backoff decisions
-   *  - Updates attempts, lastAttemptAt, lastError, nextRetryAt, and dead directly on item objects
-   *  - Reduces groups in-place on partial success so progress is preserved across retries
+   *  - Manager is authoritative for attempt/backoff decisions
+   *  - Updates attempts, lastAttemptAt, lastError, nextAttemptAt, and dead directly on item objects
+   *  - Reduces groups in-place on partial success so progress is preserved across re-attempts
    */
   processExpiredMembers(fifoItems, sendEmailFun, groupRemoveFun, opts={}) {
     if (!Array.isArray(fifoItems)) {
@@ -126,14 +126,14 @@ MembershipManagement.Manager = class {
     const processed = [];
     const failed = [];
 
-    const defaultMaxRetries = opts.maxRetries !== undefined ? Number(opts.maxRetries) : 5;
-    const computeNext = typeof opts.computeNextRetryAt === 'function' ? opts.computeNextRetryAt : (MembershipManagement.Utils && MembershipManagement.Utils.computeNextRetryAt ? MembershipManagement.Utils.computeNextRetryAt : null);
+    const defaultMaxAttempts = opts.maxAttempts !== undefined ? Number(opts.maxAttempts) : 5;
+    const computeNext = typeof opts.computeNextAttemptAt === 'function' ? opts.computeNextAttemptAt : (MembershipManagement.Utils && MembershipManagement.Utils.computeNextAttemptAt ? MembershipManagement.Utils.computeNextAttemptAt : null);
     
     for (let i = 0; i < fifoItems.length; i++) {
       const item = fifoItems[i];
       
-      // Compute effective maxRetries: item value → opts value → default 5
-      const effectiveMaxRetries = item.maxRetries !== undefined ? Number(item.maxRetries) : defaultMaxRetries;
+      // Compute effective maxAttempts: item value → opts value → default 5
+      const effectiveMaxAttempts = item.maxAttempts !== undefined ? Number(item.maxAttempts) : defaultMaxAttempts;
       
       const msg = {
         to: item.email,
@@ -160,26 +160,26 @@ MembershipManagement.Manager = class {
         }
         processed.push(item);
       } catch (err) {
-        // Retry bookkeeping: increment attempts and set lastError/lastAttemptAt
+        // Attempt bookkeeping: increment attempts and set lastError/lastAttemptAt
         item.attempts = Number(item.attempts || 0) + 1;
         item.lastAttemptAt = new Date().toISOString();
         item.lastError = err && err.toString ? err.toString() : String(err);
 
-        // Decide dead-lettering vs retry using this item's effective maxRetries
-        if (Number(item.attempts) >= Number(effectiveMaxRetries)) {
+        // Decide dead-lettering vs re-attempt using this item's effective maxAttempts
+        if (Number(item.attempts) >= Number(effectiveMaxAttempts)) {
           item.dead = true;
-          item.nextRetryAt = item.nextRetryAt || '';
+          item.nextAttemptAt = item.nextAttemptAt || '';
         } else if (computeNext) {
           item.dead = false;
           try {
-            item.nextRetryAt = computeNext(item.attempts);
+            item.nextAttemptAt = computeNext(item.attempts);
           } catch (e) {
             // computeNext threw; fallback to empty
-            item.nextRetryAt = '';
+            item.nextAttemptAt = '';
           }
         } else {
           item.dead = false;
-          item.nextRetryAt = '';
+          item.nextAttemptAt = '';
         }
 
         failed.push(item);

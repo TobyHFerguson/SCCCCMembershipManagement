@@ -13,7 +13,9 @@ describe('Timestamp conversion utilities', () => {
       const result = MembershipManagement.Utils.isoToSpreadsheetDate(isoString);
       
       expect(result).toBeInstanceOf(Date);
-      expect(result.toISOString()).toBe(isoString);
+      if (result instanceof Date) {
+        expect(result.toISOString()).toBe(isoString);
+      }
     });
 
     it('returns empty string for empty input', () => {
@@ -27,7 +29,9 @@ describe('Timestamp conversion utilities', () => {
       const result = MembershipManagement.Utils.isoToSpreadsheetDate(isoString);
       
       expect(result).toBeInstanceOf(Date);
-      expect(result.toISOString()).toBe(isoString);
+      if (result instanceof Date) {
+        expect(result.toISOString()).toBe(isoString);
+      }
     });
   });
 
@@ -78,12 +82,12 @@ describe('Timestamp conversion utilities', () => {
     });
   });
 
-  describe('Integration with retry logic', () => {
-    it('converted dates work with retry time calculations', () => {
+  describe('Integration with attempt logic', () => {
+    it('converted dates work with attempt time calculations', () => {
       const isoString = '2025-11-21T10:30:00.000Z';
       const date = MembershipManagement.Utils.isoToSpreadsheetDate(isoString);
       
-      // Simulate reading from spreadsheet and checking if retry time has passed
+      // Simulate reading from spreadsheet and checking if attempt time has passed
       const now = new Date('2025-11-21T10:31:00.000Z');
       expect(date < now).toBe(true);
       

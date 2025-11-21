@@ -101,7 +101,7 @@ MembershipManagement.generateExpiringMembersList = function () {
         attempts: 0,
         lastAttemptAt: '',
         lastError: '',
-        nextRetryAt: '',
+        nextAttemptAt: '',
         dead: false
       };
 
@@ -141,13 +141,15 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     const batchSize = opts.batchSize || Number(PropertiesService.getScriptProperties().getProperty('expirationBatchSize')) || 50;
 
     const expirationFIFO = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationFIFO');
+    /** @type {any[]} */
     const rawQueue = expirationFIFO.getData() || [];
     
     // Convert spreadsheet Date objects to ISO strings for internal processing
+    /** @type {MembershipManagement.FIFOItem[]} */
     const queue = rawQueue.map(item => ({
       ...item,
       lastAttemptAt: MembershipManagement.Utils.spreadsheetDateToIso(item.lastAttemptAt),
-      nextRetryAt: MembershipManagement.Utils.spreadsheetDateToIso(item.nextRetryAt)
+      nextAttemptAt: MembershipManagement.Utils.spreadsheetDateToIso(item.nextAttemptAt)
     }));
     
     if (!Array.isArray(queue) || queue.length === 0) {
@@ -156,7 +158,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       return { processed: 0, remaining: 0 };
     }
 
-    // Select eligible entries (not dead and nextRetryAt is absent or in the past)
+    // Select eligible entries (not dead and nextAttemptAt is absent or in the past)
     const now = new Date();
     const eligibleItems = [];
     const eligibleIndices = [];
@@ -165,8 +167,8 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       const item = queue[i];
       if (!item || item.dead) continue;
       
-      if (item.nextRetryAt) {
-        const next = new Date(item.nextRetryAt);
+      if (item.nextAttemptAt) {
+        const next = new Date(item.nextAttemptAt);
         if (!isNaN(next.getTime()) && next > now) continue; // not yet eligible
       }
       
@@ -180,12 +182,12 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       return { processed: 0, failed: 0, remaining: queue.length };
     }
 
-    // Get scriptMaxRetries from Properties
-    const scriptMaxRetries = Number(PropertiesService.getScriptProperties().getProperty('expirationMaxRetries')) 
+    // Get scriptMaxAttempts from Properties (with backward compatibility for old property names)
+    const scriptMaxAttempts = Number(PropertiesService.getScriptProperties().getProperty('expirationMaxAttempts')) 
+                          || Number(PropertiesService.getScriptProperties().getProperty('expirationMaxRetries')) 
+                          || Number(PropertiesService.getScriptProperties().getProperty('maxAttempts')) 
                           || Number(PropertiesService.getScriptProperties().getProperty('maxRetries')) 
-                          || 5;
-
-    // Initialize manager
+                          || 5;    // Initialize manager
     const membershipFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
     const expiryScheduleFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
     const init = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
@@ -197,22 +199,22 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     // Process batch - Manager updates bookkeeping directly on items
     const result = manager.processExpiredMembers(eligibleItems, sendEmailFun, groupRemoveFun, { 
       batchSize, 
-      maxRetries: scriptMaxRetries 
+      maxAttempts: scriptMaxAttempts 
     });
 
-    // Separate dead items from retry items
+    // Separate dead items from reattempt items
     const deadItems = result.failed.filter(item => item.dead);
-    const retryItems = result.failed.filter(item => !item.dead);
+    const reattemptItems = result.failed.filter(item => !item.dead);
 
-    // Rebuild queue: replace processed items with retry items, remove succeeded/dead items
+    // Rebuild queue: replace processed items with reattempt items, remove succeeded/dead items
     const processedIds = new Set([...result.processed.map(i => i.id), ...deadItems.map(i => i.id)]);
-    const retryMap = new Map(retryItems.map(item => [item.id, item]));
+    const reattemptMap = new Map(reattemptItems.map(item => [item.id, item]));
     
     const updatedQueue = queue.map((item, idx) => {
       if (!eligibleIndices.includes(idx)) return item; // untouched
       
-      const retryItem = retryMap.get(item.id);
-      if (retryItem) return retryItem; // failed, needs retry
+      const reattemptItem = reattemptMap.get(item.id);
+      if (reattemptItem) return reattemptItem; // failed, needs reattempt
       
       return null; // succeeded or dead - remove
     }).filter(item => item !== null);
@@ -227,7 +229,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
           const deadItemsForSheet = deadItems.map(item => ({
             ...item,
             lastAttemptAt: MembershipManagement.Utils.isoToSpreadsheetDate(item.lastAttemptAt),
-            nextRetryAt: MembershipManagement.Utils.isoToSpreadsheetDate(item.nextRetryAt)
+            nextAttemptAt: MembershipManagement.Utils.isoToSpreadsheetDate(item.nextAttemptAt)
           }));
           deadFiddler.setData(existing.concat(deadItemsForSheet)).dumpValues();
           MembershipManagement.Utils.log(`Moved ${deadItems.length} items to ExpirationDeadLetter`);
@@ -240,14 +242,14 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       const updatedQueueForSheet = updatedQueue.map(item => ({
         ...item,
         lastAttemptAt: MembershipManagement.Utils.isoToSpreadsheetDate(item.lastAttemptAt),
-        nextRetryAt: MembershipManagement.Utils.isoToSpreadsheetDate(item.nextRetryAt)
+        nextAttemptAt: MembershipManagement.Utils.isoToSpreadsheetDate(item.nextAttemptAt)
       }));
       expirationFIFO.setData(updatedQueueForSheet).dumpValues();
     } else {
       MembershipManagement.Utils.log('Dry-run mode: not persisting queue or dead-letter items');
     }
 
-    MembershipManagement.Utils.log(`Expiration FIFO: processed ${result.processed.length}, retry ${retryItems.length}, dead ${deadItems.length}, remaining ${updatedQueue.length}`);
+    MembershipManagement.Utils.log(`Expiration FIFO: processed ${result.processed.length}, reattempt ${reattemptItems.length}, dead ${deadItems.length}, remaining ${updatedQueue.length}`);
 
     // Schedule continuation trigger if work remains
     if (!opts.dryRun) {
@@ -267,7 +269,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       MembershipManagement.Utils.log('Dry-run mode enabled: not scheduling or deleting triggers');
     }
 
-    return { processed: result.processed.length, failed: retryItems.length, remaining: updatedQueue.length };
+    return { processed: result.processed.length, failed: reattemptItems.length, remaining: updatedQueue.length };
   } catch (error) {
     const errorMessage = `Expiration FIFO consumer failed: ${error.message}`;
     MembershipManagement.Utils.log(`ERROR: ${errorMessage}`);

@@ -48,7 +48,7 @@ const TestData = {
       attempts: 0,
       lastAttemptAt: '',
       lastError: '',
-      nextRetryAt: '',
+      nextAttemptAt: '',
       ...overrides
     };
   },

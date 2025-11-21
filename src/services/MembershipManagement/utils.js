@@ -1,5 +1,6 @@
 
 if (typeof require !== 'undefined') {
+   // @ts-ignore - Utils object is populated below, this is just initialization for Node/Jest
    MembershipManagement = { Utils: {} };
 }
 
@@ -63,13 +64,13 @@ if (typeof require !== 'undefined') {
   };
 
 /**
- * Compute the ISO timestamp for the next retry using exponential backoff.
+ * Compute the ISO timestamp for the next attempt using exponential backoff.
  * @param {number} attempts - number of attempts already made (1-based)
- * @param {number} [baseSeconds=60] - base delay in seconds for the first retry
+ * @param {number} [baseSeconds=60] - base delay in seconds for the first re-attempt
  * @param {number} [maxSeconds=86400] - maximum delay in seconds (defaults to 24h)
- * @returns {string} ISO timestamp for the next retry
+ * @returns {string} ISO timestamp for the next attempt
  */
-MembershipManagement.Utils.computeNextRetryAt = function(attempts, baseSeconds = 60, maxSeconds = 24 * 3600) {
+MembershipManagement.Utils.computeNextAttemptAt = function(attempts, baseSeconds = 60, maxSeconds = 24 * 3600) {
   let a = Number(attempts) || 0;
   if (a < 1) a = 1;
   // exponential factor: attempt 1 -> 1, attempt 2 -> 2, attempt 3 -> 4, attempt 4 -> 8, ...
@@ -77,6 +78,9 @@ MembershipManagement.Utils.computeNextRetryAt = function(attempts, baseSeconds =
   const seconds = Math.min(baseSeconds * factor, maxSeconds);
   return new Date(Date.now() + Math.round(seconds * 1000)).toISOString();
 }
+
+// Backward compatibility alias
+MembershipManagement.Utils.computeNextRetryAt = MembershipManagement.Utils.computeNextAttemptAt;
 
 /**
  * Convert an ISO timestamp string to a Date object for spreadsheet storage.

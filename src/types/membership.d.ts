@@ -55,15 +55,15 @@ declare namespace MembershipManagement {
     }
 
     /**
-     * FIFO type: ExpiredMember + retry bookkeeping for queue persistence
+     * FIFO type: ExpiredMember + attempt bookkeeping for queue persistence
      */
     interface FIFOItem extends ExpiredMember {
         id: string;  // unique identifier
         attempts: number;
         lastAttemptAt: string;  // ISO datetime
         lastError: string;
-        nextRetryAt: string;  // ISO datetime
-        maxRetries?: number;  // optional override
+        nextAttemptAt: string;  // ISO datetime
+        maxAttempts?: number;  // optional override
         dead?: boolean;  // true when moved to dead letter
     }
 
