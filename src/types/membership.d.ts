@@ -44,32 +44,28 @@ declare namespace MembershipManagement {
         Email: string;
     }
 
-    interface ExpiredMember{
-    // FIFO row / processing entry for an expiring member
-    id?: string;
-    createdAt?: string; // ISO datetime
-    status?: 'pending' | 'in-progress' | 'dead' | 'done';
-    memberEmail?: string;
-    memberName?: string;
-    expiryDate?: string; // ISO date-only YYYY-MM-DD
-    actionType?: string; // e.g. 'notify+remove'
-    groups?: string; // Comma-separated emails
-    // prefillUrl removed: email bodies are fully expanded before enqueueing
-    emailTo?: string;
-    emailSubject?: string;
-    emailBody?: string;
-    // Legacy message fields (kept for compatibility)
-    email?: string;
-    subject?: string;
-    htmlBody?: string;
-    attempts?: number;
-    lastAttemptAt?: string;
-    lastError?: string;
-    nextRetryAt?: string;
-    maxRetries?: number | string;
-    dead?: boolean;
-    note?: string;
-}
+    /**
+     * Domain type: minimal data needed to process an expiration
+     */
+    interface ExpiredMember {
+        email: string;
+        subject: string;
+        htmlBody: string;
+        groups?: string;  // comma-separated group emails
+    }
+
+    /**
+     * FIFO type: ExpiredMember + retry bookkeeping for queue persistence
+     */
+    interface FIFOItem extends ExpiredMember {
+        id: string;  // unique identifier
+        attempts: number;
+        lastAttemptAt: string;  // ISO datetime
+        lastError: string;
+        nextRetryAt: string;  // ISO datetime
+        maxRetries?: number;  // optional override
+        dead?: boolean;  // true when moved to dead letter
+    }
 
     type ExpiredMembersQueue = ExpiredMember[];
 }
