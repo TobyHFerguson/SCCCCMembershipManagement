@@ -96,29 +96,25 @@ MembershipManagement.Manager = class {
   }
 
   /**
-   * Consumer: process up to batchSize expired members using provided emailSendFun and groupRemoveFun
-   * @param {MembershipManagement.ExpiredMembersQueue} expiredMembers
+   * Consumer: process FIFO items using provided emailSendFun and groupRemoveFun
+   * @param {MembershipManagement.FIFOItem[]} fifoItems - Array of FIFO items with retry bookkeeping
    * @param {function(GoogleAppsScript.Mail.MailAdvancedParameters): void} sendEmailFun
    * @param {function(string, string): void} groupRemoveFun
    * @param {object} opts
-  * @returns {{processed: number, failed: MembershipManagement.ExpiredMembersQueue, failedMeta: Array<Object>}}
-  *
-  * Returns:
-  *  - processed: number of items successfully completed
-  *  - failed: minimal, human-friendly array of failed items (stable shape used by existing tests/logging)
-  *      Each object contains: { email, subject, htmlBody, groups, attempts, lastError }
-  *  - failedMeta: machine-friendly array containing retry bookkeeping for persistence by callers
-  *      Each meta object contains: { __fifoId?, id?, attempts, lastAttemptAt (ISO string), lastError, nextRetryAt (ISO string or ''), dead (boolean) }
-  *
-  * Notes:
-  *  - The Manager is authoritative for retry/backoff decisions. Callers (GAS wrapper) should prefer
-  *    `failedMeta` to persist attempts/nextRetryAt and to move items to dead-letter when `dead` is true.
-  *  - `failed` is provided for backwards compatibility and human-readable checks; it intentionally
-  *    omits richer bookkeeping fields so display/tests remain stable.
+   * @returns {{processed: MembershipManagement.FIFOItem[], failed: MembershipManagement.FIFOItem[]}}
+   *
+   * Returns:
+   *  - processed: array of successfully completed FIFOItems
+   *  - failed: array of failed FIFOItems with updated bookkeeping (attempts, lastError, nextRetryAt, dead)
+   *
+   * Notes:
+   *  - Manager is authoritative for retry/backoff decisions
+   *  - Updates attempts, lastAttemptAt, lastError, nextRetryAt, and dead directly on item objects
+   *  - Reduces groups in-place on partial success so progress is preserved across retries
    */
-  processExpiredMembers(expiredMembers, sendEmailFun, groupRemoveFun, opts={}) {
-    if (!Array.isArray(expiredMembers)) {
-      throw new Error('expiredMembers must be an array');
+  processExpiredMembers(fifoItems, sendEmailFun, groupRemoveFun, opts={}) {
+    if (!Array.isArray(fifoItems)) {
+      throw new Error('fifoItems must be an array');
     }
     if (typeof sendEmailFun !== 'function') {
       throw new Error('sendEmailFun must be a function');
@@ -126,95 +122,70 @@ MembershipManagement.Manager = class {
     if (typeof groupRemoveFun !== 'function') {
       throw new Error('groupRemoveFun must be a function');
     }
-  // Manager will process exactly the items it's given and return failed items.
-  let processed = 0;
-  const failed = [];
-  // machine-friendly metadata for callers (GAS wrapper) that need bookkeeping
-  const failedMeta = [];
+    
+    const processed = [];
+    const failed = [];
 
-  const defaultMaxRetries = opts.maxRetries !== undefined ? Number(opts.maxRetries) : 5;
-  const computeNext = typeof opts.computeNextRetryAt === 'function' ? opts.computeNextRetryAt : (MembershipManagement.Utils && MembershipManagement.Utils.computeNextRetryAt ? MembershipManagement.Utils.computeNextRetryAt : null);
-    for (let i = 0; i < expiredMembers.length; i++) {
-      const member = { ...expiredMembers[i] };
-      member.attempts = member.attempts !== undefined ? member.attempts : 0;
-      // Compute effective maxRetries: member value (from spreadsheet) → opts value (from Properties) → default 5
-      const effectiveMaxRetries = member.maxRetries !== undefined ? Number(member.maxRetries) : defaultMaxRetries;
+    const defaultMaxRetries = opts.maxRetries !== undefined ? Number(opts.maxRetries) : 5;
+    const computeNext = typeof opts.computeNextRetryAt === 'function' ? opts.computeNextRetryAt : (MembershipManagement.Utils && MembershipManagement.Utils.computeNextRetryAt ? MembershipManagement.Utils.computeNextRetryAt : null);
+    
+    for (let i = 0; i < fifoItems.length; i++) {
+      const item = fifoItems[i];
+      
+      // Compute effective maxRetries: item value → opts value → default 5
+      const effectiveMaxRetries = item.maxRetries !== undefined ? Number(item.maxRetries) : defaultMaxRetries;
+      
       const msg = {
-        to: member.email,
-        subject: member.subject,
-        htmlBody: member.htmlBody
+        to: item.email,
+        subject: item.subject,
+        htmlBody: item.htmlBody
       };
+      
       try {
         sendEmailFun(msg);
         // Indicate that the email was successfully sent
-        member.subject = '';
-        member.htmlBody = '';
-        if (member.groups) {
-          const groups = member.groups.split(',');
+        item.subject = '';
+        item.htmlBody = '';
+        
+        if (item.groups) {
+          const groups = item.groups.split(',');
           for (let j = groups.length - 1; j >= 0; j--) {
             // attempt to remove each group; if successful, remove it from the local list
-            groupRemoveFun(member.email, groups[j]);
+            groupRemoveFun(item.email, groups[j]);
             // remove the group from the list and persist the reduction immediately so partial
             // progress is preserved if a later group removal fails.
             groups.splice(j, 1);
-            member.groups = groups.join(',');
+            item.groups = groups.join(',');
           }
         }
-        processed++;
+        processed.push(item);
       } catch (err) {
         // Retry bookkeeping: increment attempts and set lastError/lastAttemptAt
-        const prevAttempts = Number(member.attempts || 0);
-        const attempts = prevAttempts + 1;
-        member.attempts = attempts;
-        member.lastAttemptAt = new Date().toISOString();
-        member.lastError = err && err.toString ? err.toString() : String(err);
+        item.attempts = Number(item.attempts || 0) + 1;
+        item.lastAttemptAt = new Date().toISOString();
+        item.lastError = err && err.toString ? err.toString() : String(err);
 
-        // Decide dead-lettering vs retry using this member's effective maxRetries
-        if (Number(attempts) >= Number(effectiveMaxRetries)) {
-          member.dead = true;
-          // do not set nextRetryAt when dead
-          member.nextRetryAt = member.nextRetryAt || '';
+        // Decide dead-lettering vs retry using this item's effective maxRetries
+        if (Number(item.attempts) >= Number(effectiveMaxRetries)) {
+          item.dead = true;
+          item.nextRetryAt = item.nextRetryAt || '';
         } else if (computeNext) {
-          member.dead = false;
+          item.dead = false;
           try {
-            member.nextRetryAt = computeNext(attempts);
+            item.nextRetryAt = computeNext(item.attempts);
           } catch (e) {
             // computeNext threw; fallback to empty
-            member.nextRetryAt = '';
+            item.nextRetryAt = '';
           }
         } else {
-          member.dead = false;
-          member.nextRetryAt = '';
+          item.dead = false;
+          item.nextRetryAt = '';
         }
 
-        // Push a minimal shape for failed items so older tests that assert
-        // specific fields continue to succeed. The Manager keeps richer
-        // bookkeeping internally, but the return value should be stable.
-        const failedItem = {
-          email: member.email,
-          subject: member.subject,
-          htmlBody: member.htmlBody,
-          groups: member.groups !== undefined ? member.groups : '',
-          attempts: member.attempts,
-          lastError: member.lastError
-        };
-
-        // Add machine-friendly meta so wrappers can persist retries/dead-lettering without re-calculating
-        const fifoId = (member && (member['__fifoId'] || member.id)) ? (member['__fifoId'] || member.id) : null;
-        const meta = {
-          __fifoId: fifoId,
-          id: member.id || null,
-          attempts: member.attempts,
-          lastAttemptAt: member.lastAttemptAt,
-          lastError: member.lastError,
-          nextRetryAt: member.nextRetryAt || '',
-          dead: !!member.dead
-        };
-        failed.push(failedItem);
-        failedMeta.push(meta);
+        failed.push(item);
       }
     }
-    return { processed, failed, failedMeta };
+    return { processed, failed };
   }
 
   migrateCEMembers(migrators, members, expirySchedule) {

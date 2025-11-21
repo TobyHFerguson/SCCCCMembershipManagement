@@ -256,25 +256,27 @@ describe('Manager tests', () => {
   });
   describe('processExpiredMembers', () => {
     beforeEach(() => {
-      expiredMembers = /** type MembershipManagement.ExpiringMember[] */[
-        { email: "test1@example.com", subject: "Subject 1", htmlBody: "Body 1", groups: groups.map(g => g.Email).join(',') },
-        { email: "test2@example.com", subject: "Subject 2", htmlBody: "Body 2" }
+      expiredMembers = /** @type {MembershipManagement.FIFOItem[]} */[
+        { id: 'id1', email: "test1@example.com", subject: "Subject 1", htmlBody: "Body 1", groups: groups.map(g => g.Email).join(','), attempts: 0, lastAttemptAt: '', lastError: '', nextRetryAt: '' },
+        { id: 'id2', email: "test2@example.com", subject: "Subject 2", htmlBody: "Body 2", groups: '', attempts: 0, lastAttemptAt: '', lastError: '', nextRetryAt: '' }
       ];
     })
     describe('happy path', () => {
       it('should do nothing if there are no expired members', () => {
         const res = manager.processExpiredMembers([], sendEmailFun, groupManager.groupRemoveFun);
-        expect(res.processed).toBe(0);
+        expect(res.processed.length).toBe(0);
+        expect(res.failed.length).toBe(0);
         expect(sendEmailFun).not.toHaveBeenCalled();
         expect(groupManager.groupRemoveFun).not.toHaveBeenCalled();
       })
       it('should send emails to the expired members', () => {
+        const expectedMsgs = expiredMembers.map(em => { return { to: em.email, subject: em.subject, htmlBody: em.htmlBody } });
         const res = manager.processExpiredMembers(expiredMembers, sendEmailFun, groupManager.groupRemoveFun);
-        expect(res.processed).toBe(2);
+        expect(res.processed.length).toBe(2);
+        expect(res.failed.length).toBe(0);
         expect(sendEmailFun).toHaveBeenCalledTimes(2);
-        const msgs = expiredMembers.map(em => { return { to: em.email, subject: em.subject, htmlBody: em.htmlBody } });
-        expect(sendEmailFun).toHaveBeenNthCalledWith(1, msgs[0]);
-        expect(sendEmailFun).toHaveBeenNthCalledWith(2, msgs[1]);
+        expect(sendEmailFun).toHaveBeenNthCalledWith(1, expectedMsgs[0]);
+        expect(sendEmailFun).toHaveBeenNthCalledWith(2, expectedMsgs[1]);
       })
       it('should remove members from their groups', () => {
         manager.processExpiredMembers(expiredMembers, sendEmailFun, groupManager.groupRemoveFun);
@@ -287,7 +289,7 @@ describe('Manager tests', () => {
       it('should throw an error if the first argument is not an array', () => {
         expect(() => {
           manager.processExpiredMembers(null, sendEmailFun, groupManager.groupRemoveFun);
-        }).toThrow('expiredMembers must be an array');
+        }).toThrow('fifoItems must be an array');
       });
       it('should throw an error if the second argument is not a function', () => {
         expect(() => {
@@ -301,20 +303,53 @@ describe('Manager tests', () => {
       });
       it('should record any email errors', () => {
         sendEmailFun = jest.fn((m) => { if (m.to === 'test1@example.com') throw new Error('email') });
-        const expectedExpiredMembers = [{ email: "test1@example.com", subject: "Subject 1", htmlBody: "Body 1", groups: groups.map(g => g.Email).join(','), attempts: 1, lastError: 'Error: email' }];
         const results = manager.processExpiredMembers(expiredMembers, sendEmailFun, groupManager.groupRemoveFun);
-        // Manager now returns an array of failed items in `failed`
+        
+        expect(results.processed.length).toBe(1);
         expect(results.failed.length).toBe(1);
-        expect(results.processed).toBe(1);
-        expect(results.failed).toEqual(expectedExpiredMembers);
+        
+        const failedItem = results.failed[0];
+        expect(failedItem.id).toBe('id1');
+        expect(failedItem.email).toBe('test1@example.com');
+        expect(failedItem.attempts).toBe(1);
+        expect(failedItem.lastError).toBe('Error: email');
+        expect(failedItem.groups).toBe(groups.map(g => g.Email).join(','));
       })
-      it('should remove as many groups as possible before failure', () => {
-        groupManager.groupRemoveFun = jest.fn((email, groupEmail) => { if (email === expiredMembers[0].email && groupEmail === groups[1].Email) throw new Error('group removal') });
-        const expectedExpiredMembers = [{ email: "test1@example.com", subject: "", htmlBody: "", groups: groups.map(g => g.Email).join(','), attempts: 1, lastError: 'Error: group removal' }];
-        const results = manager.processExpiredMembers(expiredMembers, sendEmailFun, groupManager.groupRemoveFun);
-        expect(results.processed).toBe(1);
-        expect(groupManager.groupRemoveFun).toHaveBeenCalledTimes(1);
-        expect(results.failed).toEqual(expectedExpiredMembers);
+      it('should preserve reduced groups list on partial success so retry does not re-attempt removed groups', () => {
+        // Set up: 3 groups, second group fails
+        const threeGroups = [{ Email: "group1@sc3.club" }, { Email: "group2@sc3.club" }, { Email: "group3@sc3.club" }];
+        const member = { 
+          id: 'test-id', 
+          email: "test@example.com", 
+          subject: "Subject", 
+          htmlBody: "Body", 
+          groups: threeGroups.map(g => g.Email).join(','),
+          attempts: 0, 
+          lastAttemptAt: '', 
+          lastError: '', 
+          nextRetryAt: '' 
+        };
+        
+        // Email succeeds, but group removal fails on group2 (the middle one, processed backward)
+        groupManager.groupRemoveFun = jest.fn((email, groupEmail) => { 
+          if (groupEmail === 'group2@sc3.club') throw new Error('group removal failed') 
+        });
+        
+        const results = manager.processExpiredMembers([member], sendEmailFun, groupManager.groupRemoveFun);
+        
+        expect(results.processed.length).toBe(0);
+        expect(results.failed.length).toBe(1);
+        
+        // Verify group removal was attempted backward: group3, then group2 (failed)
+        expect(groupManager.groupRemoveFun).toHaveBeenCalledTimes(2);
+        expect(groupManager.groupRemoveFun).toHaveBeenNthCalledWith(1, 'test@example.com', 'group3@sc3.club');
+        expect(groupManager.groupRemoveFun).toHaveBeenNthCalledWith(2, 'test@example.com', 'group2@sc3.club');
+        
+        const failedItem = results.failed[0];
+        // Critical assertion: groups should be reduced to only group1,group2 (group3 was successfully removed)
+        expect(failedItem.groups).toBe('group1@sc3.club,group2@sc3.club');
+        expect(failedItem.attempts).toBe(1);
+        expect(failedItem.lastError).toBe('Error: group removal failed');
       })
 
       

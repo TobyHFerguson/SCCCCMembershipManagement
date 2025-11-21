@@ -41,13 +41,13 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
         jest.restoreAllMocks();
     });
 
-    it('persists manager-provided failedMeta into FIFO and moves dead rows to ExpirationDeadLetter', () => {
+    it('persists manager-provided failed items into FIFO and moves dead items to ExpirationDeadLetter', () => {
         // Arrange: stub initializeManagerData_ to provide a fake manager
         const fakeResult = {
-            processed: 1,
-            failedMeta: [
-                { __fifoId: 'r2', id: 'r2', attempts: 2, lastAttemptAt: '2020-01-01T00:00:00.000Z', lastError: 'Error: transient', nextRetryAt: '', dead: false, email: 's2@example.com' },
-                { __fifoId: 'r3', id: 'r3', attempts: 3, lastAttemptAt: '2020-01-01T00:00:00.000Z', lastError: 'Error: permanent', nextRetryAt: '', dead: true, email: 's3@example.com' }
+            processed: [{ id: 'r1', email: 's1@example.com', subject: '', htmlBody: '', groups: '', attempts: 0, lastAttemptAt: '', lastError: '', nextRetryAt: '' }],
+            failed: [
+                { id: 'r2', email: 's2@example.com', subject: 's2', htmlBody: 'b', groups: '', attempts: 2, lastAttemptAt: '2020-01-01T00:00:00.000Z', lastError: 'Error: transient', nextRetryAt: '2020-01-01T00:05:00.000Z', dead: false },
+                { id: 'r3', email: 's3@example.com', subject: 's3', htmlBody: 'b', groups: '', attempts: 3, lastAttemptAt: '2020-01-01T00:00:00.000Z', lastError: 'Error: permanent', nextRetryAt: '', dead: true }
             ]
         };
 
@@ -59,8 +59,8 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
         // Act
         const res = global.MembershipManagement.processExpirationFIFO();
 
-        // Assert: processed count (eligibleIndices.length) is returned by the wrapper
-        expect(res.processed).toBe(3);
+        // Assert: processed count (processed array length) is returned by the wrapper
+        expect(res.processed).toBe(1);
         // One failed non-dead (r2) should remain in FIFO with updated attempts
         const remainingIds = fiddlers.getFifo().map(r => r.id);
         expect(remainingIds).toContain('r2');
@@ -75,9 +75,12 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
 
     it('schedules a minute trigger when work remains after processing', () => {
         const fakeResult = {
-            processed: 1,
-            failedMeta: [
-                { __fifoId: 'r1', id: 'r1', attempts: 1, lastAttemptAt: '2020-01-01T00:00:00.000Z', lastError: 'Err', nextRetryAt: '', dead: false, email: 's1@example.com' }
+            processed: [
+                { id: 'r2', email: 's2@example.com', subject: '', htmlBody: '', groups: '', attempts: 0, lastAttemptAt: '', lastError: '', nextRetryAt: '' },
+                { id: 'r3', email: 's3@example.com', subject: '', htmlBody: '', groups: '', attempts: 0, lastAttemptAt: '', lastError: '', nextRetryAt: '' }
+            ],
+            failed: [
+                { id: 'r1', email: 's1@example.com', subject: 's1', htmlBody: 'b', groups: '', attempts: 1, lastAttemptAt: '2020-01-01T00:00:00.000Z', lastError: 'Err', nextRetryAt: '2020-01-01T00:05:00.000Z', dead: false }
             ]
         };
         global.MembershipManagement.Internal.initializeManagerData_ = jest.fn(() => {
