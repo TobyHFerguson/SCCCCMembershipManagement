@@ -179,6 +179,7 @@ Common.Data.Storage.SpreadsheetManager = (function () {
         return fiddler;
       } catch (error) {
         Logger.log('[SpreadsheetManager.getFiddler] Error getting fiddler for ' + sheetName + ': ' + error);
+        error.message = `SpreadsheetManager.getFiddler(${sheetName}) failed: ${error.message}`;
         throw error;
       }
     },
