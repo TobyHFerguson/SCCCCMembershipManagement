@@ -133,19 +133,21 @@ MembershipManagement.Manager = class {
       const item = fifoItems[i];
       
       // Compute effective maxAttempts: item value → opts value → default 5
-      const effectiveMaxAttempts = item.maxAttempts !== undefined ? Number(item.maxAttempts) : defaultMaxAttempts;
-      
-      const msg = {
-        to: item.email,
-        subject: item.subject,
-        htmlBody: item.htmlBody
-      };
+      const effectiveMaxAttempts = item.maxAttempts ? Number(item.maxAttempts) : defaultMaxAttempts;
       
       try {
-        sendEmailFun(msg);
-        // Indicate that the email was successfully sent
-        item.subject = '';
-        item.htmlBody = '';
+        // Only send email if both subject and htmlBody are present
+        if (item.subject && item.htmlBody) {
+          const msg = {
+            to: item.email,
+            subject: item.subject,
+            htmlBody: item.htmlBody
+          };
+          sendEmailFun(msg);
+          // Indicate that the email was successfully sent
+          item.subject = '';
+          item.htmlBody = '';
+        }
         
         if (item.groups) {
           const groups = item.groups.split(',');
@@ -162,6 +164,7 @@ MembershipManagement.Manager = class {
       } catch (err) {
         // Attempt bookkeeping: increment attempts and set lastError/lastAttemptAt
         item.attempts = Number(item.attempts || 0) + 1;
+        item.maxAttempts = effectiveMaxAttempts;
         item.lastAttemptAt = new Date().toISOString();
         item.lastError = err && err.toString ? err.toString() : String(err);
 

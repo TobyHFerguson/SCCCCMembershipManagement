@@ -475,9 +475,87 @@ describe('Manager tests', () => {
         expect(failedItem.attempts).toBe(1);
         expect(failedItem.lastError).toBe('Error: group removal failed');
       })
+    });
 
-      
-    })
+    describe('email skipping when subject or htmlBody missing', () => {
+      it('should skip email sending when subject is missing but still process groups', () => {
+        const member = TestData.fifoItem({
+          subject: '',
+          htmlBody: 'Body text',
+          groups: groups.map(g => g.Email).join(',')
+        });
+        
+        const results = manager.processExpiredMembers([member], sendEmailFun, groupManager.groupRemoveFun);
+        
+        expect(sendEmailFun).not.toHaveBeenCalled();
+        expect(groupManager.groupRemoveFun).toHaveBeenCalledTimes(2);
+        expect(results.processed.length).toBe(1);
+        expect(results.failed.length).toBe(0);
+      });
+
+      it('should skip email sending when htmlBody is missing but still process groups', () => {
+        const member = TestData.fifoItem({
+          subject: 'Subject text',
+          htmlBody: '',
+          groups: groups.map(g => g.Email).join(',')
+        });
+        
+        const results = manager.processExpiredMembers([member], sendEmailFun, groupManager.groupRemoveFun);
+        
+        expect(sendEmailFun).not.toHaveBeenCalled();
+        expect(groupManager.groupRemoveFun).toHaveBeenCalledTimes(2);
+        expect(results.processed.length).toBe(1);
+        expect(results.failed.length).toBe(0);
+      });
+
+      it('should skip email sending when both subject and htmlBody are missing', () => {
+        const member = TestData.fifoItem({
+          subject: '',
+          htmlBody: '',
+          groups: groups.map(g => g.Email).join(',')
+        });
+        
+        const results = manager.processExpiredMembers([member], sendEmailFun, groupManager.groupRemoveFun);
+        
+        expect(sendEmailFun).not.toHaveBeenCalled();
+        expect(groupManager.groupRemoveFun).toHaveBeenCalledTimes(2);
+        expect(results.processed.length).toBe(1);
+        expect(results.failed.length).toBe(0);
+      });
+
+      it('should process member without groups when email fields are missing', () => {
+        const member = TestData.fifoItem({
+          subject: '',
+          htmlBody: '',
+          groups: ''
+        });
+        
+        const results = manager.processExpiredMembers([member], sendEmailFun, groupManager.groupRemoveFun);
+        
+        expect(sendEmailFun).not.toHaveBeenCalled();
+        expect(groupManager.groupRemoveFun).not.toHaveBeenCalled();
+        expect(results.processed.length).toBe(1);
+        expect(results.failed.length).toBe(0);
+      });
+
+      it('should send email when both subject and htmlBody are present', () => {
+        const member = TestData.fifoItem({
+          subject: 'Test Subject',
+          htmlBody: 'Test Body'
+        });
+        
+        const results = manager.processExpiredMembers([member], sendEmailFun, groupManager.groupRemoveFun);
+        
+        expect(sendEmailFun).toHaveBeenCalledTimes(1);
+        expect(sendEmailFun).toHaveBeenCalledWith({
+          to: member.email,
+          subject: 'Test Subject',
+          htmlBody: 'Test Body'
+        });
+        expect(results.processed.length).toBe(1);
+        expect(results.failed.length).toBe(0);
+      });
+    });
   });
 
   describe('processMigrations', () => {

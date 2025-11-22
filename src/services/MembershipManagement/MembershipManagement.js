@@ -102,6 +102,7 @@ MembershipManagement.generateExpiringMembersList = function () {
         lastAttemptAt: '',
         lastError: '',
         nextAttemptAt: '',
+        maxAttempts: undefined,
         dead: false
       };
 
@@ -249,7 +250,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       MembershipManagement.Utils.log('Dry-run mode: not persisting queue or dead-letter items');
     }
 
-    MembershipManagement.Utils.log(`Expiration FIFO: processed ${result.processed.length}, reattempt ${reattemptItems.length}, dead ${deadItems.length}, remaining ${updatedQueue.length}`);
+    MembershipManagement.Utils.log(`Expiration FIFO: # processed ${result.processed.length} of which ${reattemptItems.length} to be retried  and ${deadItems.length} marked dead, with ${updatedQueue.length} still to be processed`);
 
     // Schedule continuation trigger if work remains
     if (!opts.dryRun) {
