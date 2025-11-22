@@ -2,7 +2,7 @@
 const ns = require('../src/1namespaces.js');
 const createFiddlerMock = require('./helpers/fiddlerMock');
 
-// Set up Common.Config.Properties mock FIRST before loading any MembershipManagement code
+// Set up Common mocks FIRST before loading any MembershipManagement code
 global.Common = global.Common || {};
 global.Common.Data = global.Common.Data || {};
 global.Common.Data.Storage = global.Common.Data.Storage || {};
@@ -16,6 +16,11 @@ global.Common.Config.Properties = {
     clearCache: jest.fn(),
     getAllUserProperties: jest.fn(() => ({}))
 };
+global.Common.Logger = global.Common.Logger || {};
+global.Common.Logger.info = jest.fn();
+global.Common.Logger.warn = jest.fn();
+global.Common.Logger.error = jest.fn();
+global.Common.Logger.debug = jest.fn();
 
 // Load utilities and manager so MembershipManagement namespace is populated
 require('../src/services/MembershipManagement/utils.js');

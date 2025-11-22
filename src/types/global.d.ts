@@ -150,6 +150,7 @@ declare namespace Common {
                 function getFiddler(sheetName: 'ActionSpecs'): Fiddler<MembershipManagement.ActionSpec>;
                 function getFiddler(sheetName: 'ExpirySchedule'): Fiddler<MembershipManagement.ExpirySchedule>;
                 function getFiddler(sheetName: 'ExpirationFIFO'): Fiddler<ExpiredMember>;
+                function getFiddler(sheetName: 'Audit'): Fiddler<Audit.LogEntry>;
                 
                 // Generic fallback
                 function getFiddler(sheetName: string): Fiddler<any>;

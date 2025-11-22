@@ -25,12 +25,18 @@ MembershipManagement.processTransactions = function () {
 
   const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
-  const { recordsChanged, hasPendingPayments, errors } = manager.processPaidTransactions(transactions, membershipData, expiryScheduleData);
+  const { recordsChanged, hasPendingPayments, errors, auditEntries } = manager.processPaidTransactions(transactions, membershipData, expiryScheduleData);
   if (recordsChanged) {
     transactionsFiddler.setData(transactions).dumpValues();
     membershipFiddler.setData(membershipData).dumpValues();
     expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
   }
+  
+  // Persist audit log entries
+  if (auditEntries && auditEntries.length > 0) {
+    this.Internal.persistAuditEntries_(auditEntries);
+  }
+  
   errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack}`));
   return { hasPendingPayments, errors };
 }
@@ -47,8 +53,10 @@ MembershipManagement.processMigrations = function () {
   const mdLength = membershipData.length;
   const esdLength = expiryScheduleData.length;
 
+  let auditEntries = [];
   try {
-    manager.migrateCEMembers(migratingMembers, membershipData, expiryScheduleData);
+    const result = manager.migrateCEMembers(migratingMembers, membershipData, expiryScheduleData);
+    auditEntries = result.auditEntries || [];
   } catch (error) {
     if (error instanceof AggregateError) {
       error.errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack}`));
@@ -60,6 +68,12 @@ MembershipManagement.processMigrations = function () {
     console.log(`logOnly - # newMembers added: ${membershipData.length - mdLength} - #expirySchedule entries added: ${expiryScheduleData.length - esdLength}`);
     return;
   }
+  
+  // Persist audit log entries
+  if (auditEntries && auditEntries.length > 0) {
+    this.Internal.persistAuditEntries_(auditEntries);
+  }
+  
   migratingMembersFiddler.setData(migratingMembers).dumpValues();
   membershipFiddler.setData(membershipData).dumpValues();
   expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
@@ -79,9 +93,9 @@ MembershipManagement.generateExpiringMembersList = function () {
     if (!prefillFormTemplate) {
       throw new Error("PREFILL_FORM_TEMPLATE property is not set.");
     }
-    const newExpiredMembers = manager.generateExpiringMembersList(membershipData, expiryScheduleData, prefillFormTemplate);
+    const result = manager.generateExpiringMembersList(membershipData, expiryScheduleData, prefillFormTemplate);
 
-    if (newExpiredMembers.length === 0) {
+    if (result.messages.length === 0) {
       MembershipManagement.Utils.log('No memberships required expiration processing');
       return;
     }
@@ -90,7 +104,7 @@ MembershipManagement.generateExpiringMembersList = function () {
 
     const makeId = () => `${new Date().toISOString().replace(/[:.]/g, '')}-${Math.random().toString(16).slice(2, 8)}`;
 
-    for (const msg of newExpiredMembers) {
+    for (const msg of result.messages) {
       /** @type {MembershipManagement.FIFOItem} */
       const item = {
         id: makeId(),
@@ -112,12 +126,17 @@ MembershipManagement.generateExpiringMembersList = function () {
     expirationFIFO.setData(expirationQueue).dumpValues();
     membershipFiddler.setData(membershipData).dumpValues();
     expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
+    
+    // Persist audit log entries
+    if (result.auditEntries && result.auditEntries.length > 0) {
+      this.Internal.persistAuditEntries_(result.auditEntries);
+    }
 
-    MembershipManagement.Utils.log(`Successfully appended ${newExpiredMembers.length} membership expiration plan(s) to FIFO`);
+    MembershipManagement.Utils.log(`Successfully appended ${result.messages.length} membership expiration plan(s) to FIFO`);
     
     // If we added items to the queue, kick off the consumer to start processing
     // Pass through already-fetched fiddlers to avoid redundant getFiddler calls
-    if (newExpiredMembers.length > 0) {
+    if (result.messages.length > 0) {
       MembershipManagement.processExpirationFIFO({ 
         fiddlers: { expirationFIFO, membershipFiddler, expiryScheduleFiddler } 
       });
@@ -233,6 +252,11 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
 
     // Persist dead-letter items and updated queue
     if (!opts.dryRun) {
+      // Persist audit log entries for DeadLetter events
+      if (result.auditEntries && result.auditEntries.length > 0) {
+        this.Internal.persistAuditEntries_(result.auditEntries);
+      }
+      
       if (deadItems.length > 0) {
         try {
           // Use pre-fetched deadFiddler (leverages caching)
@@ -304,7 +328,18 @@ MembershipManagement.Internal.initializeManagerData_ = function (membershipFiddl
     groupRemoveFun: this.getGroupRemover_(),
     groupEmailReplaceFun: this.getGroupEmailReplacer_()
   }
-  const manager = new MembershipManagement.Manager(Common.Data.Access.getActionSpecs(), autoGroups, groupManager, this.getEmailSender_());
+  
+  // Create audit logger if Audit.Logger is available
+  const auditLogger = typeof Audit !== 'undefined' && Audit.Logger ? new Audit.Logger() : null;
+  
+  const manager = new MembershipManagement.Manager(
+    Common.Data.Access.getActionSpecs(), 
+    autoGroups, 
+    groupManager, 
+    this.getEmailSender_(),
+    undefined,  // today (uses default)
+    auditLogger
+  );
 
   return { manager, membershipData, expiryScheduleData };
 }
@@ -467,6 +502,32 @@ MembershipManagement.Internal.sendExpirationErrorNotification_ = function (error
     // If we can't even send the error email, log it but don't throw
     MembershipManagement.Utils.log(`CRITICAL: Failed to send expiration error notification: ${emailError.message}`);
     console.error(`Failed to send error notification: ${emailError.message}\nOriginal error: ${error.message}`);
+  }
+}
+
+/**
+ * Persists audit log entries to the Audit sheet
+ * @param {Audit.LogEntry[]} auditEntries - Array of audit log entries to persist
+ */
+MembershipManagement.Internal.persistAuditEntries_ = function (auditEntries) {
+  if (!auditEntries || auditEntries.length === 0) {
+    return;
+  }
+  
+  try {
+    const auditFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Audit');
+    const existingAudit = auditFiddler.getData() || [];
+    
+    // Append new entries
+    existingAudit.push(...auditEntries);
+    
+    // Persist to sheet
+    auditFiddler.setData(existingAudit).dumpValues();
+    
+    MembershipManagement.Utils.log(`Persisted ${auditEntries.length} audit log entries`);
+  } catch (error) {
+    // Log but don't throw - audit logging should not break main functionality
+    console.error(`Failed to persist audit entries: ${error.message}`);
   }
 }
 
