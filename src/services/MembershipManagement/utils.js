@@ -10,10 +10,7 @@ if (typeof require !== 'undefined') {
    * @param  {...any} args - The messages or objects to log.
    */
   MembershipManagement.Utils.log = function(...args)  {
-    const logging = Common.Config.Properties.getBooleanProperty('logging', false);
-    if (logging) {
-      console.log(...args);
-    }
+    Common.Logger.info('MembershipManagement', ...args);
   };
 
   MembershipManagement.Utils.addDaysToDate = function(date, days = 0) {
