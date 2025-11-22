@@ -5,7 +5,7 @@
   "githubIssues.queries": [
     {
       "label": "My Issues",
-      "query": "assignee:@me is:open"
+      "query": "assignee:@me is:open repo:${owner}/${repository}"
     },
     {
       "label": "Created by Me",
