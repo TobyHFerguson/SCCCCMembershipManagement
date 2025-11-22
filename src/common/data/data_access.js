@@ -74,5 +74,9 @@ Common.Data.Access = {
     getElections: () => {
         const votingData = Common.Data.Storage.SpreadsheetManager.getFiddler('Elections').getData();
         return votingData;
+    },
+    getSystemLogs: () => {
+        const systemLogs = Common.Data.Storage.SpreadsheetManager.getFiddler('SystemLogs').getData();
+        return systemLogs;
     }
 }
