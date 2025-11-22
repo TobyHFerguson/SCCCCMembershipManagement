@@ -1,0 +1,18 @@
+Property,Value,Description,Service
+expirationMaxAttempts,5,Maximum retry attempts for expiration actions,MembershipManagement
+expirationBatchSize,50,Number of expired members to process per batch,MembershipManagement
+PREFILL_FORM_TEMPLATE,"https://docs.google.com/forms/d/e/1FAIpQLSd1HNA6BbcJhBmYuSs6aJINbKfxlEyfklWanTgFC0TQ-0cmtg/viewform?usp=pp_url&entry.1981419329=Yes&entry.942593962=I+have+read+the+privacy+policy&entry.147802975=I+Agree&entry.1934601261=Share+Name&entry.1934601261=Share+Email&entry.1934601261=Share+Phone&entry.617015365={First}&entry.1319508840={Last}&entry.1099404401={Phone}",Template URL for prefilled forms,ProfileManagement
+testEmails,false,Use test mode for emails (no actual sending),MembershipManagement
+testGroupAdds,false,Use test mode for group additions,MembershipManagement
+testGroupRemoves,false,Use test mode for group removals,MembershipManagement
+testGroupEmailReplacements,false,Use test mode for group email changes,MembershipManagement
+domain,sc3.club,Email domain for member accounts,MembershipManagement
+logging,true,Enable general logging,Common
+logOnly,false,Log-only mode (no actual changes),MembershipManagement
+loggerLevel,INFO,Log level: DEBUG/INFO/WARN/ERROR,Logger
+loggerConsoleLogging,true,Enable console logging,Logger
+loggerSheetLogging,false,Enable sheet-based logging,Logger
+loggerScriptProperties,false,Enable Script Properties logging,Logger
+loggerEmailErrors,false,Email error-level logs,Logger
+loggerEmailRecipient,membership@sc3.club,Email address for error notifications,Logger
+loggerNamespaces,*,Namespaces to log (comma-separated or * for all),Logger

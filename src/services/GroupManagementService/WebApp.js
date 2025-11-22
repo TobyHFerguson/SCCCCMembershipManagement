@@ -11,7 +11,7 @@ GroupManagementService.WebApp = {
     updateUserSubscriptions: function (updatedSubscriptions, userToken) {
         const userEmail = Common.Auth.TokenManager.getEmailFromMUT(userToken);
         if (!userEmail) {
-            console.warning(`Invalid or expired token: ${userToken}`);
+            console.warn(`Invalid or expired token: ${userToken}`);
             return JSON.stringify({ success: false, message: "Invalid session. Please refresh the page." });
         }
         const response = GroupManagementService.updateUserSubscriptions(updatedSubscriptions, userEmail);

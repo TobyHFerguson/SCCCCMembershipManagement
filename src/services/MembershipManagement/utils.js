@@ -1,5 +1,6 @@
 
 if (typeof require !== 'undefined') {
+   // @ts-ignore - Utils object is populated below, this is just initialization for Node/Jest
    MembershipManagement = { Utils: {} };
 }
 
@@ -9,7 +10,7 @@ if (typeof require !== 'undefined') {
    * @param  {...any} args - The messages or objects to log.
    */
   MembershipManagement.Utils.log = function(...args)  {
-    const logging = PropertiesService.getScriptProperties().getProperty('logging') === 'true';
+    const logging = Common.Config.Properties.getBooleanProperty('logging', false);
     if (logging) {
       console.log(...args);
     }
@@ -62,6 +63,56 @@ if (typeof require !== 'undefined') {
     return result
   };
 
+/**
+ * Compute the ISO timestamp for the next attempt using exponential backoff.
+ * @param {number} attempts - number of attempts already made (1-based)
+ * @param {number} [baseSeconds=60] - base delay in seconds for the first re-attempt
+ * @param {number} [maxSeconds=86400] - maximum delay in seconds (defaults to 24h)
+ * @returns {string} ISO timestamp for the next attempt
+ */
+MembershipManagement.Utils.computeNextAttemptAt = function(attempts, baseSeconds = 60, maxSeconds = 24 * 3600) {
+  let a = Number(attempts) || 0;
+  if (a < 1) a = 1;
+  // exponential factor: attempt 1 -> 1, attempt 2 -> 2, attempt 3 -> 4, attempt 4 -> 8, ...
+  const factor = Math.pow(2, a - 1);
+  const seconds = Math.min(baseSeconds * factor, maxSeconds);
+  return new Date(Date.now() + Math.round(seconds * 1000)).toISOString();
+}
+
+// Backward compatibility alias
+MembershipManagement.Utils.computeNextRetryAt = MembershipManagement.Utils.computeNextAttemptAt;
+
+/**
+ * Convert an ISO timestamp string to a Date object for spreadsheet storage.
+ * Empty strings remain empty strings (spreadsheet displays as blank).
+ * When stored in a spreadsheet cell, the Date will display in the user's timezone.
+ * @param {string} isoString - ISO timestamp string (e.g., "2025-11-21T10:30:00.000Z") or empty string
+ * @returns {Date|string} Date object for spreadsheet storage, or empty string if input was empty
+ */
+MembershipManagement.Utils.isoToSpreadsheetDate = function(isoString) {
+  if (!isoString || isoString === '') return '';
+  return new Date(isoString);
+}
+
+/**
+ * Convert a spreadsheet Date value to an ISO timestamp string for internal use.
+ * Empty strings remain empty strings.
+ * @param {Date|string|null|undefined} dateValue - Date object from spreadsheet or empty string
+ * @returns {string} ISO timestamp string (e.g., "2025-11-21T10:30:00.000Z") or empty string
+ */
+MembershipManagement.Utils.spreadsheetDateToIso = function(dateValue) {
+  if (!dateValue || dateValue === '') return '';
+  if (dateValue instanceof Date) {
+    return dateValue.toISOString();
+  }
+  // Handle case where spreadsheet might return string representation
+  if (typeof dateValue === 'string') {
+    const parsed = new Date(dateValue);
+    return isNaN(parsed.getTime()) ? '' : parsed.toISOString();
+  }
+  return '';
+}
+
 
 
 
@@ -91,11 +142,33 @@ MembershipManagement.Utils.expandTemplate = function(template, row) {
   });
 }
 
+/**
+ * 
+ * @param {string | Date} date 
+ * @returns {Date} a date object with the time set to 00:00:00
+ */
 MembershipManagement.Utils.dateOnly = function(date)  {
   if (!date) date = new Date();
   if (typeof date === 'string') date = new Date(date);
   const dateOnly = new Date(date.toISOString().split('T')[0] + "T00:00:00");
   return dateOnly;
+}
+
+/**
+ * 
+ * @param {Member} member 
+ * @param {string} prefillFormTemplate 
+ * @returns {Member} copy of member with Form key added whose value is the html link to the prefilled renewal form for this member
+ */
+MembershipManagement.Utils.addPrefillForm = function(member, prefillFormTemplate)  {
+  const memberCopy = { ...member, Form: null }; // Create a shallow copy to avoid mutating the original member
+  const memberAsQueryParams = Object.fromEntries(
+    Object.entries(member).map(([k, v]) => [k, encodeURIComponent(v)])
+  );
+  const prefillFormUrl = MembershipManagement.Utils.expandTemplate(prefillFormTemplate, memberAsQueryParams);
+  // Keep an HTML anchor for email bodies; the raw URL is redundant once the email body is built
+  memberCopy.Form = `<a href="${prefillFormUrl}">renewal form</a>`;
+  return memberCopy;
 }
 
 if (typeof module !== 'undefined' && module.exports) {

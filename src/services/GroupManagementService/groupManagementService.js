@@ -1,6 +1,6 @@
 function testGetUserGroupSubscriptions() {
     const userEmail = "membership-automation@sc3.club"
-    const userGroupSubscription = getUserGroupSubscription(userEmail);
+    const userGroupSubscription = GroupManagementService.getUserGroupSubscription(userEmail);
     console.log("User Group Subscription:", JSON.stringify(userGroupSubscription, null, 2));
 }
 
