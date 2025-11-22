@@ -1,8 +1,9 @@
 /// <reference path="./Audit.d.ts" />
 
-if (typeof require !== 'undefined') {
-    // For Node.js/Jest compatibility
-    var Audit = {};
+// Audit namespace declared in src/1namespaces.js
+// For Node.js/Jest: globalThis ensures we don't redeclare
+if (typeof globalThis.Audit === 'undefined') {
+    globalThis.Audit = {};
 }
 
 /**
@@ -57,5 +58,5 @@ Audit.Logger = class {
 
 // Export for Node.js/Jest
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Audit };
+    module.exports = { Audit: globalThis.Audit };
 }
