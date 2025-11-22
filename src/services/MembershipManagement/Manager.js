@@ -4,7 +4,7 @@ if (typeof require !== 'undefined') {
 
 // @ts-check
 MembershipManagement.Manager = class {
-  constructor(actionSpecs, groups, groupManager, sendEmailFun, today) {
+  constructor(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger) {
     if (!groups || groups.length === 0) { throw new Error('MembershipManager requires a non-empty array of group emails'); }
     this._actionSpecs = actionSpecs;
     this._groups = groups;
@@ -12,7 +12,8 @@ MembershipManagement.Manager = class {
     this._groupRemoveFun = groupManager && groupManager.groupRemoveFun || (() => { });
     this._groupEmailReplaceFun = groupManager && groupManager.groupEmailReplaceFun || (() => { });
     this._sendEmailFun = sendEmailFun || (() => { });
-    this._today = MembershipManagement.Utils.dateOnly(today)
+    this._today = MembershipManagement.Utils.dateOnly(today);
+    this._auditLogger = auditLogger || null;
   }
 
   today() {
@@ -24,7 +25,7 @@ MembershipManagement.Manager = class {
    * @param {Member[]} activeMembers 
    * @param {MembershipManagement.ExpirySchedule[]} expirySchedule 
    * @param {string} prefillFormTemplate 
-   * @returns {MembershipManagement.ExpiredMembersQueue} array of messages to be sent and groups to be removed
+   * @returns {{messages: MembershipManagement.ExpiredMembersQueue, auditEntries: any[]}} array of messages to be sent and audit log entries
    */
   generateExpiringMembersList(activeMembers, expirySchedule, prefillFormTemplate) {
     expirySchedule.forEach(sched => { sched.Date = MembershipManagement.Utils.dateOnly(new Date(sched.Date) )});
@@ -41,10 +42,11 @@ MembershipManagement.Manager = class {
     
     if (!prefillFormTemplate) {
       console.error("Prefill form template is required");
-      return [];
+      return { messages: [], auditEntries: [] };
     }
     // collect messages to allow generator/consumer separation
     const messages = /** @type {MembershipManagement.ExpiringMember[]} */ [];
+    const auditEntries = [];
     const errors = [];
     let processedCount = 0;
     let emailsSeen = new Set();
@@ -81,6 +83,15 @@ MembershipManagement.Manager = class {
     expiredMember.htmlBody = MembershipManagement.Utils.expandTemplate(spec.Body, mc);
         // collect messages for the consumer to send
         messages.push(expiredMember);
+        
+        // Generate audit log entry
+        if (this._auditLogger) {
+          auditEntries.push(this._auditLogger.createLogEntry({
+            type: sched.Type,
+            outcome: 'success',
+            note: `Expiration notification queued for ${member.Email}`
+          }));
+        }
       }
     }
     
@@ -92,7 +103,7 @@ MembershipManagement.Manager = class {
     if (errors.length > 0) {
       throw new AggregateError(errors, 'Errors occurred while processing expirations');
     }
-    return messages;
+    return { messages, auditEntries };
   }
 
   /**
@@ -101,11 +112,12 @@ MembershipManagement.Manager = class {
    * @param {function(GoogleAppsScript.Mail.MailAdvancedParameters): void} sendEmailFun
    * @param {function(string, string): void} groupRemoveFun
    * @param {object} opts
-   * @returns {{processed: MembershipManagement.FIFOItem[], failed: MembershipManagement.FIFOItem[]}}
+   * @returns {{processed: MembershipManagement.FIFOItem[], failed: MembershipManagement.FIFOItem[], auditEntries: any[]}}
    *
    * Returns:
    *  - processed: array of successfully completed FIFOItems
    *  - failed: array of failed FIFOItems with updated bookkeeping (attempts, lastError, nextAttemptAt, dead)
+   *  - auditEntries: array of audit log entries for DeadLetter events
    *
    * Notes:
    *  - Manager is authoritative for attempt/backoff decisions
@@ -125,6 +137,7 @@ MembershipManagement.Manager = class {
     
     const processed = [];
     const failed = [];
+    const auditEntries = [];
 
     const defaultMaxAttempts = opts.maxAttempts !== undefined ? Number(opts.maxAttempts) : 5;
     const computeNext = typeof opts.computeNextAttemptAt === 'function' ? opts.computeNextAttemptAt : (MembershipManagement.Utils && MembershipManagement.Utils.computeNextAttemptAt ? MembershipManagement.Utils.computeNextAttemptAt : null);
@@ -172,6 +185,22 @@ MembershipManagement.Manager = class {
         if (Number(item.attempts) >= Number(effectiveMaxAttempts)) {
           item.dead = true;
           item.nextAttemptAt = item.nextAttemptAt || '';
+          
+          // Generate audit log entry for DeadLetter
+          if (this._auditLogger) {
+            auditEntries.push(this._auditLogger.createLogEntry({
+              type: 'DeadLetter',
+              outcome: 'fail',
+              note: `Failed to process expiration for ${item.email} after ${item.attempts} attempts`,
+              error: item.lastError,
+              jsonData: {
+                email: item.email,
+                attempts: item.attempts,
+                lastError: item.lastError,
+                id: item.id
+              }
+            }));
+          }
         } else if (computeNext) {
           item.dead = false;
           try {
@@ -188,7 +217,7 @@ MembershipManagement.Manager = class {
         failed.push(item);
       }
     }
-    return { processed, failed };
+    return { processed, failed, auditEntries };
   }
 
   migrateCEMembers(migrators, members, expirySchedule) {
@@ -197,6 +226,7 @@ MembershipManagement.Manager = class {
 
     let numMigrations = 0;
     const errors = [];
+    const auditEntries = [];
     migrators.forEach((mi, i) => {
       const rowNum = i + 2;
       if (!mi.Email) {
@@ -231,23 +261,49 @@ MembershipManagement.Manager = class {
           members.push(newMember);
           console.log(`Migrated ${newMember.Email}, row ${rowNum}`);
           numMigrations++;
+          
+          // Generate audit log entry
+          if (this._auditLogger) {
+            auditEntries.push(this._auditLogger.createLogEntry({
+              type: 'Migrate',
+              outcome: 'success',
+              note: `Member migrated: ${newMember.Email} (Status: ${mi.Status})`
+            }));
+          }
         } catch (error) {
           error.rowNum = rowNum;
           error.email = mi.Email;
           errors.push(error);
+          
+          // Generate audit log entry for failure
+          if (this._auditLogger) {
+            auditEntries.push(this._auditLogger.createLogEntry({
+              type: 'Migrate',
+              outcome: 'fail',
+              note: `Failed to migrate ${mi.Email}`,
+              error: error.message || String(error),
+              jsonData: {
+                rowNum: rowNum,
+                email: mi.Email,
+                errorMessage: error.message,
+                stack: error.stack
+              }
+            }));
+          }
         }
       }
     });
     if (errors.length > 0) {
       throw new AggregateError(errors, 'Errors occurred while migrating members');
     }
-    return numMigrations;
+    return { numMigrations, auditEntries };
   }
 
   processPaidTransactions(transactions, membershipData, expirySchedule) {
     const activeMembers = membershipData.reduce((acc, m, i) => { if (m.Status === 'Active') { acc.push([m.Email, i]); } return acc }, [])
     const emailToActiveMemberIndexMap = Object.fromEntries(activeMembers);
     const errors = [];
+    const auditEntries = [];
     let recordsChanged = false;
     let hasPendingPayments = false;
     transactions.forEach((txn, i) => {
@@ -262,10 +318,12 @@ MembershipManagement.Manager = class {
       try {
         const matchIndex = emailToActiveMemberIndexMap[txn["Email Address"]];
         let message;
+        let actionType;
         if (matchIndex !== undefined) { // a renewing member
           console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a renewing member`);
           const member = membershipData[matchIndex];
           this.renewMember_(txn, member, expirySchedule);
+          actionType = 'Renew';
           message = {
             to: member.Email,
             subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Subject, member),
@@ -275,6 +333,7 @@ MembershipManagement.Manager = class {
           console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a new member`);
           const newMember = this.addNewMember_(txn, expirySchedule, membershipData);
           this._groups.forEach(g => this._groupAddFun(newMember.Email, g.Email));
+          actionType = 'Join';
           message = {
             to: newMember.Email,
             subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Join.Subject, newMember),
@@ -285,13 +344,38 @@ MembershipManagement.Manager = class {
         txn.Timestamp = this._today;
         txn.Processed = this._today;
         recordsChanged = true;
+        
+        // Generate audit log entry
+        if (this._auditLogger) {
+          auditEntries.push(this._auditLogger.createLogEntry({
+            type: actionType,
+            outcome: 'success',
+            note: `Member ${actionType === 'Join' ? 'joined' : 'renewed'}: ${txn["Email Address"]}`
+          }));
+        }
       } catch (error) {
         error.txnNum = i + 2;
         error.email = txn["Email Address"];
         errors.push(error);
+        
+        // Generate audit log entry for failure
+        if (this._auditLogger) {
+          auditEntries.push(this._auditLogger.createLogEntry({
+            type: matchIndex !== undefined ? 'Renew' : 'Join',
+            outcome: 'fail',
+            note: `Failed to process transaction for ${txn["Email Address"]}`,
+            error: error.message || String(error),
+            jsonData: {
+              txnNum: i + 2,
+              email: txn["Email Address"],
+              errorMessage: error.message,
+              stack: error.stack
+            }
+          }));
+        }
       }
     });
-    return { recordsChanged, hasPendingPayments, errors };
+    return { recordsChanged, hasPendingPayments, errors, auditEntries };
   }
 
 

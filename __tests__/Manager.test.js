@@ -266,20 +266,20 @@ describe('Manager tests', () => {
 
     it('should do nothing if there are no members to expire', () => {
       activeMembers = [];
-      const msgs = manager.generateExpiringMembersList(activeMembers, [expirySchedule[0], expirySchedule[2]], PREFILL_FORM_TEMPLATE);
-      expect(msgs.length).toEqual(0);
+      const result = manager.generateExpiringMembersList(activeMembers, [expirySchedule[0], expirySchedule[2]], PREFILL_FORM_TEMPLATE);
+      expect(result.messages.length).toEqual(0);
     });
     it('should do nothing if no members are ready to be expired', () => {
-      const msgs = manager.generateExpiringMembersList(activeMembers, [expirySchedule[0], expirySchedule[2]], PREFILL_FORM_TEMPLATE);
-      expect(msgs.length).toEqual(0);
+      const result = manager.generateExpiringMembersList(activeMembers, [expirySchedule[0], expirySchedule[2]], PREFILL_FORM_TEMPLATE);
+      expect(result.messages.length).toEqual(0);
     });
     it('should generate expiring member messages with groups only for Expiry4', () => {
       const expectedExpiringMembers = [
         { email: "test4@example.com", subject: 'Final Expiry', htmlBody: 'Your membership has expired, Not Member!', groups: groups.map(g => g.Email).join(',') },
         { email: "test2@example.com", subject: 'Second Expiry', htmlBody: 'Your membership is expiring soon, Jane Smith!', groups: null }
       ];
-      const expiringMembers = manager.generateExpiringMembersList(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
-      expect(expiringMembers).toEqual(expectedExpiringMembers);
+      const result = manager.generateExpiringMembersList(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
+      expect(result.messages).toEqual(expectedExpiringMembers);
       expect(consoleSpy).toHaveBeenCalledWith("Expiry4 - test4@example.com");
       expect(consoleSpy).toHaveBeenCalledWith("Expiry2 - test2@example.com");
     })
@@ -329,10 +329,10 @@ describe('Manager tests', () => {
       const expectedExpirySchedule = [
         TestData.expiryScheduleEntry({ Date: utils.addDaysToDate(today, 5), Type: utils.ActionType.Expiry2, Email: "a@b.com" }),
       ];
-      const msgs = manager.generateExpiringMembersList(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
+      const result = manager.generateExpiringMembersList(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
       expect(expirySchedule).toEqual(expectedExpirySchedule);
       expect(activeMembers).toEqual(expectedActiveMembers);
-      expect(msgs.length).toEqual(1);
+      expect(result.messages.length).toEqual(1);
     });
 
     describe('multiple expiry schedules on the same day for the same address', () => {
@@ -349,9 +349,9 @@ describe('Manager tests', () => {
         ];
       })
       it('should count both schedules as having been processed', () => {
-        const msgs = manager.generateExpiringMembersList(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
+        const result = manager.generateExpiringMembersList(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
         // generator returns one message per unique email processed
-        expect(msgs.length).toEqual(1);
+        expect(result.messages.length).toEqual(1);
       })
       it('should log the anomaly', () => {
         manager.generateExpiringMembersList(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
@@ -374,14 +374,14 @@ describe('Manager tests', () => {
         expectedActiveMembers = [{ ...activeMembers[0], Status: 'Expired' }];
       });
       it('should set member status to Expired and add them to all groups for removal', () => {
-        const expiringMembers = manager.generateExpiringMembersList(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
+        const result = manager.generateExpiringMembersList(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
         
         // Status changed to Expired
         expect(activeMembers).toEqual(expectedActiveMembers);
         
         // Groups list populated for removal
-        expect(expiringMembers.length).toBe(1);
-        expect(expiringMembers[0].groups).toEqual(groups.map(g => g.Email).join(','));
+        expect(result.messages.length).toBe(1);
+        expect(result.messages[0].groups).toEqual(groups.map(g => g.Email).join(','));
       })
     });
 
@@ -691,8 +691,8 @@ describe('Manager tests', () => {
       });
 
       it('should indicate how many members were successfully migrated', () => {
-        const numMigrations = manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-        expect(numMigrations).toBe(1);
+        const result = manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+        expect(result.numMigrations).toBe(1);
       });
     });
     describe('Inactive Members', () => {
