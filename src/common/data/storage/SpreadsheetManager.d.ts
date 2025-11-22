@@ -15,10 +15,18 @@ declare namespace Common.Data.Storage {
         
         /**
          * Gets a fiddler based on the sheet name.
+         * Fiddlers are cached per-execution to avoid redundant spreadsheet opens.
          * @param {string} sheetName - The name of the sheet.
          * @returns {Fiddler} The fiddler instance for the sheet.
          */
         function getFiddler(sheetName: string): Fiddler<object>;
+
+        /**
+         * Clear cached fiddler(s). Call when external code may have modified the sheet.
+         * @param {string} [sheetName] - Specific sheet to clear, or omit to clear all
+         * @returns {void}
+         */
+        function clearFiddlerCache(sheetName?: string): void;
 
         /**
          * Returns the data from a fiddler with formulas merged into it.

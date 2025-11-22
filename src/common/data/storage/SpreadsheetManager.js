@@ -1,6 +1,7 @@
 Common.Data.Storage = {}
 Common.Data.Storage.SpreadsheetManager = (function () {
   let sheets;
+  const __fiddlerCache = {}; // Per-execution cache for fiddler instances
   
   /**
    * Gets the container spreadsheet ID from script properties or current binding
@@ -107,8 +108,18 @@ Common.Data.Storage.SpreadsheetManager = (function () {
   */
     getFiddler: (sheetName) => {
       try {
+        // Check cache first
+        const containerSpreadsheetId = getContainerSpreadsheetId();
+        const cacheKey = `${containerSpreadsheetId || 'default'}::${sheetName}`;
+        
+        if (__fiddlerCache[cacheKey]) {
+          // @ts-ignore - Logger is implemented in separate file
+          Common.Logger.info('SpreadsheetManager', `Returning cached fiddler for sheet: ${sheetName}`);
+          return __fiddlerCache[cacheKey];
+        }
+        
         // @ts-ignore - Logger is implemented in separate file
-        Common.Logger.info('SpreadsheetManager', `Getting fiddler for sheet: ${sheetName}`);
+        Common.Logger.info('SpreadsheetManager', `Creating new fiddler for sheet: ${sheetName}`);
         
         if (!sheets) {
           // @ts-ignore - Logger is implemented in separate file
@@ -149,8 +160,11 @@ Common.Data.Storage.SpreadsheetManager = (function () {
         
         const fiddler = bmPreFiddler.PreFiddler().getFiddler(fiddlerConfig).needFormulas();
         
+        // Cache the fiddler for reuse in this execution
+        __fiddlerCache[cacheKey] = fiddler;
+        
         // @ts-ignore - Logger is implemented in separate file
-        Common.Logger.info('SpreadsheetManager', `Successfully created fiddler for ${sheetName}`);
+        Common.Logger.info('SpreadsheetManager', `Successfully created and cached fiddler for ${sheetName}`);
         
         return fiddler;
       } catch (error) {
@@ -160,10 +174,27 @@ Common.Data.Storage.SpreadsheetManager = (function () {
       }
     },
 
-
-
-
-
+    /**
+     * Clear cached fiddler(s). Call when external code may have modified the sheet.
+     * @param {string} [sheetName] - Specific sheet to clear, or omit to clear all
+     */
+    clearFiddlerCache: (sheetName) => {
+      if (!sheetName) {
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.info('SpreadsheetManager', 'Clearing all cached fiddlers');
+        for (const k in __fiddlerCache) delete __fiddlerCache[k];
+        return;
+      }
+      
+      const containerSpreadsheetId = getContainerSpreadsheetId();
+      const cacheKey = `${containerSpreadsheetId || 'default'}::${sheetName}`;
+      
+      if (__fiddlerCache[cacheKey]) {
+        // @ts-ignore - Logger is implemented in separate file
+        Common.Logger.info('SpreadsheetManager', `Clearing cached fiddler for ${sheetName}`);
+        delete __fiddlerCache[cacheKey];
+      }
+    },
 
     /**
       * Returns the data from a fiddler with formulas merged into it.

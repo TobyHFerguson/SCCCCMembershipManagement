@@ -69,9 +69,10 @@ MembershipManagement.generateExpiringMembersList = function () {
   try {
     MembershipManagement.Utils.log('Starting membership expiration processing...');
 
+    // Get all fiddlers once at the start (leverages per-execution caching)
     const membershipFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
     const expiryScheduleFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
-
+    const expirationFIFO = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationFIFO');
 
     const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
     const prefillFormTemplate = PropertiesService.getScriptProperties().getProperty('PREFILL_FORM_TEMPLATE');
@@ -85,7 +86,6 @@ MembershipManagement.generateExpiringMembersList = function () {
       return;
     }
     // Map generator messages into FIFOItem objects and append to ExpirationFIFO
-    const expirationFIFO = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationFIFO');
     const expirationQueue = expirationFIFO.getData() || [];
 
     const makeId = () => `${new Date().toISOString().replace(/[:.]/g, '')}-${Math.random().toString(16).slice(2, 8)}`;
@@ -116,8 +116,11 @@ MembershipManagement.generateExpiringMembersList = function () {
     MembershipManagement.Utils.log(`Successfully appended ${newExpiredMembers.length} membership expiration plan(s) to FIFO`);
     
     // If we added items to the queue, kick off the consumer to start processing
+    // Pass through already-fetched fiddlers to avoid redundant getFiddler calls
     if (newExpiredMembers.length > 0) {
-      MembershipManagement.processExpirationFIFO();
+      MembershipManagement.processExpirationFIFO({ 
+        fiddlers: { expirationFIFO, membershipFiddler, expiryScheduleFiddler } 
+      });
     }
   } catch (error) {
     const errorMessage = `Membership expiration processing failed: ${error.message}`;
@@ -135,13 +138,22 @@ MembershipManagement.generateExpiringMembersList = function () {
  * Consumer: process up to batchSize entries from the ExpirationFIFO sheet.
  * This function is intended to be called by a time-based trigger (minute-based) while work remains.
  * It will reschedule itself (create a 1-minute trigger) if more work remains after processing the batch.
+ * @param {Object} opts - Options object
+ * @param {number} [opts.batchSize] - Maximum number of items to process
+ * @param {boolean} [opts.dryRun] - If true, don't persist changes
+ * @param {Object} [opts.fiddlers] - Pre-fetched fiddlers to reuse (avoids redundant getFiddler calls)
  */
 MembershipManagement.processExpirationFIFO = function (opts = {}) {
   try {
     MembershipManagement.Utils.log('Starting Expiration FIFO consumer...');
     const batchSize = opts.batchSize || Number(PropertiesService.getScriptProperties().getProperty('expirationBatchSize')) || 50;
 
-    const expirationFIFO = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationFIFO');
+    // Use pre-fetched fiddlers if provided, otherwise get them (leverages per-execution caching)
+    const expirationFIFO = opts.fiddlers?.expirationFIFO || Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationFIFO');
+    const membershipFiddler = opts.fiddlers?.membershipFiddler || Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
+    const expiryScheduleFiddler = opts.fiddlers?.expiryScheduleFiddler || Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
+    const deadFiddler = opts.fiddlers?.deadFiddler || Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationDeadLetter');
+    
     /** @type {any[]} */
     const rawQueue = expirationFIFO.getData() || [];
     
@@ -188,9 +200,9 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
                           || Number(PropertiesService.getScriptProperties().getProperty('expirationMaxRetries')) 
                           || Number(PropertiesService.getScriptProperties().getProperty('maxAttempts')) 
                           || Number(PropertiesService.getScriptProperties().getProperty('maxRetries')) 
-                          || 5;    // Initialize manager
-    const membershipFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
-    const expiryScheduleFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
+                          || 5;
+    
+    // Initialize manager (reusing fiddlers fetched at the start)
     const init = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
     const manager = init.manager;
 
@@ -224,7 +236,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     if (!opts.dryRun) {
       if (deadItems.length > 0) {
         try {
-          const deadFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationDeadLetter');
+          // Use pre-fetched deadFiddler (leverages caching)
           const existing = deadFiddler.getData() || [];
           // Convert ISO strings to Date objects for spreadsheet display
           const deadItemsForSheet = deadItems.map(item => ({
