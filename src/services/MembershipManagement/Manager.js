@@ -2,6 +2,7 @@ if (typeof require !== 'undefined') {
   (MembershipManagement = require('./utils.js'));
 }
 
+// @ts-check
 MembershipManagement.Manager = class {
   constructor(actionSpecs, groups, groupManager, sendEmailFun, today) {
     if (!groups || groups.length === 0) { throw new Error('MembershipManager requires a non-empty array of group emails'); }
@@ -18,11 +19,20 @@ MembershipManagement.Manager = class {
     return this._today;
   }
 
-  processExpirations(activeMembers, expirySchedule, prefillFormTemplate) {
-    expirySchedule.forEach(sched => { sched.Date = new Date(sched.Date) });
+  /**
+   * 
+   * @param {Member[]} activeMembers 
+   * @param {MembershipManagement.ExpirySchedule[]} expirySchedule 
+   * @param {string} prefillFormTemplate 
+   * @returns {MembershipManagement.ExpiredMembersQueue} array of messages to be sent and groups to be removed
+   */
+  generateExpiringMembersList(activeMembers, expirySchedule, prefillFormTemplate) {
+    expirySchedule.forEach(sched => { sched.Date = MembershipManagement.Utils.dateOnly(new Date(sched.Date) )});
     expirySchedule.sort((a, b) => {
-      if (b.Date - a.Date !== 0) {
-        return b.Date - a.Date;
+      const ta = a.Date.getTime();
+      const tb = b.Date.getTime();
+      if (tb - ta !== 0) {
+        return tb - ta;
       }
       return a.Type.localeCompare(b.Type);
     });
@@ -31,11 +41,16 @@ MembershipManagement.Manager = class {
     
     if (!prefillFormTemplate) {
       console.error("Prefill form template is required");
-      return 0;
+      return [];
     }
+    // collect messages to allow generator/consumer separation
+    const messages = /** @type {MembershipManagement.ExpiringMember[]} */ [];
+    const errors = [];
+    let processedCount = 0;
     let emailsSeen = new Set();
     let expired = new Set();
     for (let idx of schedulesToBeProcessed) {
+      processedCount++;
       const sched = expirySchedule[idx];
       const spec = this._actionSpecs[sched.Type];
       console.log(`${sched.Type} - ${sched.Email}`);
@@ -50,19 +65,22 @@ MembershipManagement.Manager = class {
         console.log(`Skipping member ${sched.Email} - they're not an active member`);
       } else {
         let member = activeMembers[memberIdx];
+        let expiredMember = {
+          email: member.Email,
+          subject: "",
+          htmlBody: "",
+          groups: null
+        };
         if (sched.Type === MembershipManagement.Utils.ActionType.Expiry4) {
           member.Status = 'Expired'
-          this._groups.forEach(group => { this._groupRemoveFun(member.Email, group.Email); console.log(`Expiry4 - ${member.Email} removed from group ${group.Email}`) });
+          expiredMember.groups = this._groups.map(g => g.Email).join(',');
           expired.add(member.Email);
         }
-        const mc = MembershipManagement.Utils.addPrefillForm(member, prefillFormTemplate);
-        let message = {
-          to: member.Email,
-          subject: MembershipManagement.Utils.expandTemplate(spec.Subject, mc),
-          htmlBody: MembershipManagement.Utils.expandTemplate(spec.Body, mc)
-        };
-        this._sendEmailFun(message);
-        console.log(`${sched.Type} - ${member.Email} - Email sent`);
+    const mc = MembershipManagement.Utils.addPrefillForm(member, prefillFormTemplate);
+    expiredMember.subject = MembershipManagement.Utils.expandTemplate(spec.Subject, mc);
+    expiredMember.htmlBody = MembershipManagement.Utils.expandTemplate(spec.Body, mc);
+        // collect messages for the consumer to send
+        messages.push(expiredMember);
       }
     }
     
@@ -71,7 +89,106 @@ MembershipManagement.Manager = class {
           expirySchedule.splice(i, 1);
         }
       }
-    return schedulesToBeProcessed.length;
+    if (errors.length > 0) {
+      throw new AggregateError(errors, 'Errors occurred while processing expirations');
+    }
+    return messages;
+  }
+
+  /**
+   * Consumer: process FIFO items using provided emailSendFun and groupRemoveFun
+   * @param {MembershipManagement.FIFOItem[]} fifoItems - Array of FIFO items with attempt bookkeeping
+   * @param {function(GoogleAppsScript.Mail.MailAdvancedParameters): void} sendEmailFun
+   * @param {function(string, string): void} groupRemoveFun
+   * @param {object} opts
+   * @returns {{processed: MembershipManagement.FIFOItem[], failed: MembershipManagement.FIFOItem[]}}
+   *
+   * Returns:
+   *  - processed: array of successfully completed FIFOItems
+   *  - failed: array of failed FIFOItems with updated bookkeeping (attempts, lastError, nextAttemptAt, dead)
+   *
+   * Notes:
+   *  - Manager is authoritative for attempt/backoff decisions
+   *  - Updates attempts, lastAttemptAt, lastError, nextAttemptAt, and dead directly on item objects
+   *  - Reduces groups in-place on partial success so progress is preserved across re-attempts
+   */
+  processExpiredMembers(fifoItems, sendEmailFun, groupRemoveFun, opts={}) {
+    if (!Array.isArray(fifoItems)) {
+      throw new Error('fifoItems must be an array');
+    }
+    if (typeof sendEmailFun !== 'function') {
+      throw new Error('sendEmailFun must be a function');
+    }
+    if (typeof groupRemoveFun !== 'function') {
+      throw new Error('groupRemoveFun must be a function');
+    }
+    
+    const processed = [];
+    const failed = [];
+
+    const defaultMaxAttempts = opts.maxAttempts !== undefined ? Number(opts.maxAttempts) : 5;
+    const computeNext = typeof opts.computeNextAttemptAt === 'function' ? opts.computeNextAttemptAt : (MembershipManagement.Utils && MembershipManagement.Utils.computeNextAttemptAt ? MembershipManagement.Utils.computeNextAttemptAt : null);
+    
+    for (let i = 0; i < fifoItems.length; i++) {
+      const item = fifoItems[i];
+      
+      // Compute effective maxAttempts: item value → opts value → default 5
+      const effectiveMaxAttempts = item.maxAttempts ? Number(item.maxAttempts) : defaultMaxAttempts;
+      
+      try {
+        // Only send email if both subject and htmlBody are present
+        if (item.subject && item.htmlBody) {
+          const msg = {
+            to: item.email,
+            subject: item.subject,
+            htmlBody: item.htmlBody
+          };
+          sendEmailFun(msg);
+          // Indicate that the email was successfully sent
+          item.subject = '';
+          item.htmlBody = '';
+        }
+        
+        if (item.groups) {
+          const groups = item.groups.split(',');
+          for (let j = groups.length - 1; j >= 0; j--) {
+            // attempt to remove each group; if successful, remove it from the local list
+            groupRemoveFun(item.email, groups[j]);
+            // remove the group from the list and persist the reduction immediately so partial
+            // progress is preserved if a later group removal fails.
+            groups.splice(j, 1);
+            item.groups = groups.join(',');
+          }
+        }
+        processed.push(item);
+      } catch (err) {
+        // Attempt bookkeeping: increment attempts and set lastError/lastAttemptAt
+        item.attempts = Number(item.attempts || 0) + 1;
+        item.maxAttempts = effectiveMaxAttempts;
+        item.lastAttemptAt = new Date().toISOString();
+        item.lastError = err && err.toString ? err.toString() : String(err);
+
+        // Decide dead-lettering vs re-attempt using this item's effective maxAttempts
+        if (Number(item.attempts) >= Number(effectiveMaxAttempts)) {
+          item.dead = true;
+          item.nextAttemptAt = item.nextAttemptAt || '';
+        } else if (computeNext) {
+          item.dead = false;
+          try {
+            item.nextAttemptAt = computeNext(item.attempts);
+          } catch (e) {
+            // computeNext threw; fallback to empty
+            item.nextAttemptAt = '';
+          }
+        } else {
+          item.dead = false;
+          item.nextAttemptAt = '';
+        }
+
+        failed.push(item);
+      }
+    }
+    return { processed, failed };
   }
 
   migrateCEMembers(migrators, members, expirySchedule) {

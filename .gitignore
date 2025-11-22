@@ -4,7 +4,6 @@ install_nvm.sh
 .nyc_output
 build/
 .DS_Store
-docs/
 out/
 
 .vscode/

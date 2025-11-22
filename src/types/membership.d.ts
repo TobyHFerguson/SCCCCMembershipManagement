@@ -38,11 +38,34 @@ declare namespace MembershipManagement {
         action: ActionType;
     }
 
-    type EmailQueue = EmailQueueEntry[];
-
-    interface ExpiredMembersQueueEntry {
-        email: string;
+    interface ExpirySchedule {
+        Date: Date;
+        Type: ActionType;
+        Email: string;
     }
 
-    type ExpiredMembersQueue = ExpiredMembersQueueEntry[];
+    /**
+     * Domain type: minimal data needed to process an expiration
+     */
+    interface ExpiredMember {
+        email: string;
+        subject: string;
+        htmlBody: string;
+        groups?: string;  // comma-separated group emails
+    }
+
+    /**
+     * FIFO type: ExpiredMember + attempt bookkeeping for queue persistence
+     */
+    interface FIFOItem extends ExpiredMember {
+        id: string;  // unique identifier
+        attempts: number;
+        lastAttemptAt: string;  // ISO datetime
+        lastError: string;
+        nextAttemptAt: string;  // ISO datetime
+        maxAttempts?: number;  // optional override
+        dead?: boolean;  // true when moved to dead letter
+    }
+
+    type ExpiredMembersQueue = ExpiredMember[];
 }

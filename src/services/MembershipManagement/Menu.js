@@ -3,7 +3,7 @@ MembershipManagement.Menu = {
         const ui = SpreadsheetApp.getUi();
         ui.createMenu('Membership Management')
             .addItem('Process Transactions', processTransactions.name)
-            .addItem('Process Expirations', processExpirations.name)
+            .addItem('Process Expirations', generateExpiringMembersList.name)
             .addSeparator()
             .addItem('Find possible renewals', findPossibleRenewalsFromMenu.name)
             .addItem('Merge Selected Members', mergeSelectedMembers.name)
@@ -17,13 +17,35 @@ MembershipManagement.Menu = {
 // For functions to be callable from the menu, they need to be in the global scope.
 // This is a workaround to make them callable from the menu.
 function processTransactions() {
-    MembershipManagement.processTransactions()
+    return Common.Utils.wrapMenuFunction(
+        function() {
+            Logger.log('[processTransactions] Starting processTransactions');
+            const result = MembershipManagement.processTransactions();
+            Logger.log('[processTransactions] Result: ' + result);
+            return result;
+        },
+        'Process Transactions'
+    )();
 }
-function processExpirations() {
-    MembershipManagement.processExpirations()
+function generateExpiringMembersList() {
+    return Common.Utils.wrapMenuFunction(
+        function() {
+            Logger.log('[generateExpiringMembersList] Starting generateExpiringMembersList');
+            MembershipManagement.generateExpiringMembersList();
+            Logger.log('[generateExpiringMembersList] Completed');
+        },
+        'Process Expirations'
+    )();
 }
 function processMigrations() {
-    MembershipManagement.processMigrations()
+    return Common.Utils.wrapMenuFunction(
+        function() {
+            Logger.log('[processMigrations] Starting processMigrations');
+            MembershipManagement.processMigrations();
+            Logger.log('[processMigrations] Completed');
+        },
+        'Process Migrations'
+    )();
 }
 
 function findPossibleRenewalsFromMenu() {

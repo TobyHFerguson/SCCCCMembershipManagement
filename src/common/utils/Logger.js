@@ -1,18 +1,15 @@
 /**
  * Production-friendly logging utility for Google Apps Script
  * Provides multiple logging destinations for debugging deployed applications
+ * 
+ * ARCHITECTURE: This module uses static configuration loaded once at initialization.
+ * Call Common.Logger.configure() AFTER Properties and SpreadsheetManager are ready
+ * to load configuration from the Properties sheet.
+ * 
+ * Safe defaults allow logging to work even before configure() is called.
  */
 
 (function() {
-  // Configuration - set to true to enable different logging methods
-  const CONFIG = {
-    CONSOLE_LOGGING: true,        // Standard console (only works in editor)
-    SHEET_LOGGING: true,          // Log to a sheet in the container spreadsheet
-    SCRIPT_PROPERTIES: false,     // Log to Script Properties (limited storage)
-    EMAIL_ERRORS: false,          // Email critical errors (configure recipient)
-    EMAIL_RECIPIENT: 'your-email@example.com'
-  };
-
   const LOG_LEVELS = {
     DEBUG: 0,
     INFO: 1,
@@ -20,7 +17,70 @@
     ERROR: 3
   };
   
+  /**
+   * Static logger configuration - initialized with safe defaults, updated via configure()
+   * @type {Object}
+   */
+  let CONFIG = {
+    CONSOLE_LOGGING: true,
+    SHEET_LOGGING: false,  // Disabled by default to avoid dependencies during init
+    SCRIPT_PROPERTIES: false,
+    EMAIL_ERRORS: false,
+    EMAIL_RECIPIENT: 'membership@sc3.club',
+    NAMESPACES: '*'  // '*' = all namespaces, or comma-separated list: 'MembershipManagement,VotingService'
+  };
+  
+  /**
+   * Current log level - initialized with safe default, updated via configure()
+   * @type {number}
+   */
   let currentLogLevel = LOG_LEVELS.INFO;
+  
+  /**
+   * Load configuration from Properties sheet
+   * Call this AFTER Properties and SpreadsheetManager are initialized
+   * Safe to call multiple times to refresh configuration
+   */
+  function loadConfiguration() {
+    // Only load if Properties module is available and ready
+    if (typeof Common === 'undefined' || !Common.Config || !Common.Config.Properties) {
+      Logger.log('[Common.Logger] Properties not available, using default configuration');
+      return;
+    }
+    
+    try {
+      CONFIG.CONSOLE_LOGGING = Common.Config.Properties.getBooleanProperty('loggerConsoleLogging', true);
+      CONFIG.SHEET_LOGGING = Common.Config.Properties.getBooleanProperty('loggerSheetLogging', false);
+      CONFIG.SCRIPT_PROPERTIES = Common.Config.Properties.getBooleanProperty('loggerScriptProperties', false);
+      CONFIG.EMAIL_ERRORS = Common.Config.Properties.getBooleanProperty('loggerEmailErrors', false);
+      CONFIG.EMAIL_RECIPIENT = Common.Config.Properties.getProperty('loggerEmailRecipient', 'membership@sc3.club');
+      CONFIG.NAMESPACES = Common.Config.Properties.getProperty('loggerNamespaces', '*');
+      
+      const levelName = Common.Config.Properties.getProperty('loggerLevel', 'INFO').toUpperCase();
+      currentLogLevel = LOG_LEVELS[levelName] !== undefined ? LOG_LEVELS[levelName] : LOG_LEVELS.INFO;
+      
+      Logger.log('[Common.Logger] Configuration loaded from Properties sheet');
+    } catch (error) {
+      // If Properties fails to load, keep using defaults
+      Logger.log('[Common.Logger] Failed to load configuration from Properties, using defaults: ' + error);
+    }
+  }
+  
+  /**
+   * Check if a namespace/service is enabled for logging
+   * @param {string} service - Service name (e.g., 'MembershipManagement', 'VotingService')
+   * @returns {boolean} True if logging enabled for this namespace
+   */
+  function isNamespaceEnabled(service) {
+    // '*' means log everything
+    if (CONFIG.NAMESPACES === '*') return true;
+    
+    // Parse comma-separated list of enabled namespaces
+    const enabledNamespaces = CONFIG.NAMESPACES.split(',').map(ns => ns.trim());
+    
+    // Check if service matches any enabled namespace (prefix match)
+    return enabledNamespaces.some(ns => service.startsWith(ns));
+  }
   
   /**
    * Formats a log message with timestamp and service info
@@ -248,8 +308,12 @@
     const levelValue = LOG_LEVELS[level] || LOG_LEVELS.INFO;
     const callerName = getCallerFunctionName();
     service = `${service}.${callerName}`;
+    
     // Check if we should log this level
     if (levelValue < currentLogLevel) return;
+    
+    // Check namespace filtering
+    if (!isNamespaceEnabled(service)) return;
     
     // Console logging (only works in script editor)
     if (CONFIG.CONSOLE_LOGGING) {
@@ -302,16 +366,34 @@
     log('ERROR', service, message, data);
   };
   
+  /**
+   * Load/reload logger configuration from Properties sheet
+   * Call this AFTER Properties and SpreadsheetManager are initialized
+   * Safe to call multiple times
+   * 
+   * @example
+   * // In your initialization code (e.g., onOpen trigger):
+   * Common.Logger.configure();
+   */
   // @ts-ignore
-  Common.Logger.setLevel = function(level) {
-    if (LOG_LEVELS[level.toUpperCase()] !== undefined) {
-      currentLogLevel = level;
-    }
+  Common.Logger.configure = function() {
+    loadConfiguration();
   };
   
+  /**
+   * Set log level programmatically (overrides Properties sheet value until next configure() call)
+   * @param {string} level - 'DEBUG', 'INFO', 'WARN', or 'ERROR'
+   * @deprecated Prefer setting loggerLevel in Properties sheet and calling configure()
+   */
   // @ts-ignore
-  Common.Logger.configure = function(config) {
-    Object.assign(CONFIG, config);
+  Common.Logger.setLevel = function(level) {
+    const levelUpper = level.toUpperCase();
+    if (LOG_LEVELS[levelUpper] !== undefined) {
+      currentLogLevel = LOG_LEVELS[levelUpper];
+      Logger.log('[Common.Logger] Log level set to: ' + levelUpper);
+    } else {
+      Logger.log('[Common.Logger] Invalid log level: ' + level);
+    }
   };
   
   // @ts-ignore

@@ -56,7 +56,7 @@ MembershipManagement.processMigrations = function () {
       console.error(`Error: ${error.message}\nStack trace: ${error.stack}`);
     }
   }
-  if (PropertiesService.getScriptProperties().getProperty('logOnly').toLowerCase() === 'true') {
+  if (PropertiesService.getScriptProperties().getProperty('MIGRATION_LOG_ONLY').toLowerCase() === 'true') {
     console.log(`logOnly - # newMembers added: ${membershipData.length - mdLength} - #expirySchedule entries added: ${expiryScheduleData.length - esdLength}`);
     return;
   }
@@ -65,29 +65,63 @@ MembershipManagement.processMigrations = function () {
   expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
 }
 
-MembershipManagement.processExpirations = function () {
+MembershipManagement.generateExpiringMembersList = function () {
   try {
     MembershipManagement.Utils.log('Starting membership expiration processing...');
 
+    // Get all fiddlers once at the start (leverages per-execution caching)
     const membershipFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
     const expiryScheduleFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
+    const expirationFIFO = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationFIFO');
 
     const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
-    const prefillFormTemplate = PropertiesService.getScriptProperties().getProperty('PREFILL_FORM_TEMPLATE');
+    const prefillFormTemplate = Common.Config.Properties.getProperty('PREFILL_FORM_TEMPLATE');
     if (!prefillFormTemplate) {
       throw new Error("PREFILL_FORM_TEMPLATE property is not set.");
     }
-    const numProcessed = manager.processExpirations(membershipData, expiryScheduleData, prefillFormTemplate);
+    const newExpiredMembers = manager.generateExpiringMembersList(membershipData, expiryScheduleData, prefillFormTemplate);
 
-    if (numProcessed === 0) {
+    if (newExpiredMembers.length === 0) {
       MembershipManagement.Utils.log('No memberships required expiration processing');
       return;
     }
+    // Map generator messages into FIFOItem objects and append to ExpirationFIFO
+    const expirationQueue = expirationFIFO.getData() || [];
 
+    const makeId = () => `${new Date().toISOString().replace(/[:.]/g, '')}-${Math.random().toString(16).slice(2, 8)}`;
+
+    for (const msg of newExpiredMembers) {
+      /** @type {MembershipManagement.FIFOItem} */
+      const item = {
+        id: makeId(),
+        email: msg.email,
+        subject: msg.subject,
+        htmlBody: msg.htmlBody,
+        groups: msg.groups || '',
+        attempts: 0,
+        lastAttemptAt: '',
+        lastError: '',
+        nextAttemptAt: '',
+        maxAttempts: undefined,
+        dead: false
+      };
+
+      expirationQueue.push(item);
+    }
+
+    expirationFIFO.setData(expirationQueue).dumpValues();
     membershipFiddler.setData(membershipData).dumpValues();
     expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
 
-    MembershipManagement.Utils.log(`Successfully processed ${numProcessed} membership expirations`);
+    MembershipManagement.Utils.log(`Successfully appended ${newExpiredMembers.length} membership expiration plan(s) to FIFO`);
+    
+    // If we added items to the queue, kick off the consumer to start processing
+    // Pass through already-fetched fiddlers to avoid redundant getFiddler calls
+    if (newExpiredMembers.length > 0) {
+      MembershipManagement.processExpirationFIFO({ 
+        fiddlers: { expirationFIFO, membershipFiddler, expiryScheduleFiddler } 
+      });
+    }
   } catch (error) {
     const errorMessage = `Membership expiration processing failed: ${error.message}`;
     MembershipManagement.Utils.log(`ERROR: ${errorMessage}`);
@@ -99,6 +133,166 @@ MembershipManagement.processExpirations = function () {
     throw error; // Re-throw to ensure trigger system knows about the failure
   }
 }
+
+/**
+ * Consumer: process up to batchSize entries from the ExpirationFIFO sheet.
+ * This function is intended to be called by a time-based trigger (minute-based) while work remains.
+ * It will reschedule itself (create a 1-minute trigger) if more work remains after processing the batch.
+ * @param {Object} opts - Options object
+ * @param {number} [opts.batchSize] - Maximum number of items to process
+ * @param {boolean} [opts.dryRun] - If true, don't persist changes
+ * @param {Object} [opts.fiddlers] - Pre-fetched fiddlers to reuse (avoids redundant getFiddler calls)
+ */
+MembershipManagement.processExpirationFIFO = function (opts = {}) {
+  try {
+    MembershipManagement.Utils.log('Starting Expiration FIFO consumer...');
+    const batchSize = opts.batchSize || Common.Config.Properties.getNumberProperty('expirationBatchSize', 50);
+
+    // Use pre-fetched fiddlers if provided, otherwise get them (leverages per-execution caching)
+    const expirationFIFO = opts.fiddlers?.expirationFIFO || Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationFIFO');
+    const membershipFiddler = opts.fiddlers?.membershipFiddler || Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
+    const expiryScheduleFiddler = opts.fiddlers?.expiryScheduleFiddler || Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
+    const deadFiddler = opts.fiddlers?.deadFiddler || Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationDeadLetter');
+    
+    /** @type {any[]} */
+    const rawQueue = expirationFIFO.getData() || [];
+    
+    // Convert spreadsheet Date objects to ISO strings for internal processing
+    /** @type {MembershipManagement.FIFOItem[]} */
+    const queue = rawQueue.map(item => ({
+      ...item,
+      lastAttemptAt: MembershipManagement.Utils.spreadsheetDateToIso(item.lastAttemptAt),
+      nextAttemptAt: MembershipManagement.Utils.spreadsheetDateToIso(item.nextAttemptAt)
+    }));
+    
+    if (!Array.isArray(queue) || queue.length === 0) {
+      MembershipManagement.Utils.log('Expiration FIFO empty - nothing to process');
+      try { MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger'); } catch (e) { /* ignore */ }
+      return { processed: 0, remaining: 0 };
+    }
+
+    // Select eligible entries (not dead and nextAttemptAt is absent or in the past)
+    const now = new Date();
+    const eligibleItems = [];
+    const eligibleIndices = [];
+    
+    for (let i = 0; i < queue.length && eligibleItems.length < batchSize; i++) {
+      const item = queue[i];
+      if (!item || item.dead) continue;
+      
+      if (item.nextAttemptAt) {
+        const next = new Date(item.nextAttemptAt);
+        if (!isNaN(next.getTime()) && next > now) continue; // not yet eligible
+      }
+      
+      eligibleItems.push(item);
+      eligibleIndices.push(i);
+    }
+
+    if (eligibleItems.length === 0) {
+      MembershipManagement.Utils.log('No eligible FIFO entries to process at this time');
+      try { MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger'); } catch (e) { /* ignore */ }
+      return { processed: 0, failed: 0, remaining: queue.length };
+    }
+
+    // Get scriptMaxAttempts from Properties (with backward compatibility for old property names)
+    const scriptMaxAttempts = Common.Config.Properties.getNumberProperty('expirationMaxAttempts', 0)
+                          || Common.Config.Properties.getNumberProperty('expirationMaxRetries', 0)
+                          || Common.Config.Properties.getNumberProperty('maxAttempts', 0)
+                          || Common.Config.Properties.getNumberProperty('maxRetries', 5);
+    
+    // Initialize manager (reusing fiddlers fetched at the start)
+    const init = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
+    const manager = init.manager;
+
+    const sendEmailFun = this.Internal.getEmailSender_();
+    const groupRemoveFun = this.Internal.getGroupRemover_();
+
+    // Process batch - Manager updates bookkeeping directly on items
+    const result = manager.processExpiredMembers(eligibleItems, sendEmailFun, groupRemoveFun, { 
+      batchSize, 
+      maxAttempts: scriptMaxAttempts 
+    });
+
+    // Separate dead items from reattempt items
+    const deadItems = result.failed.filter(item => item.dead);
+    const reattemptItems = result.failed.filter(item => !item.dead);
+
+    // Rebuild queue: replace processed items with reattempt items, remove succeeded/dead items
+    const processedIds = new Set([...result.processed.map(i => i.id), ...deadItems.map(i => i.id)]);
+    const reattemptMap = new Map(reattemptItems.map(item => [item.id, item]));
+    
+    const updatedQueue = queue.map((item, idx) => {
+      if (!eligibleIndices.includes(idx)) return item; // untouched
+      
+      const reattemptItem = reattemptMap.get(item.id);
+      if (reattemptItem) return reattemptItem; // failed, needs reattempt
+      
+      return null; // succeeded or dead - remove
+    }).filter(item => item !== null);
+
+    // Persist dead-letter items and updated queue
+    if (!opts.dryRun) {
+      if (deadItems.length > 0) {
+        try {
+          // Use pre-fetched deadFiddler (leverages caching)
+          const existing = deadFiddler.getData() || [];
+          // Convert ISO strings to Date objects for spreadsheet display
+          const deadItemsForSheet = deadItems.map(item => ({
+            ...item,
+            lastAttemptAt: MembershipManagement.Utils.isoToSpreadsheetDate(item.lastAttemptAt),
+            nextAttemptAt: MembershipManagement.Utils.isoToSpreadsheetDate(item.nextAttemptAt)
+          }));
+          deadFiddler.setData(existing.concat(deadItemsForSheet)).dumpValues();
+          MembershipManagement.Utils.log(`Moved ${deadItems.length} items to ExpirationDeadLetter`);
+        } catch (e) {
+          console.error('Failed to persist dead-letter items', e && e.toString ? e.toString() : e);
+        }
+      }
+
+      // Convert ISO strings to Date objects for spreadsheet display
+      const updatedQueueForSheet = updatedQueue.map(item => ({
+        ...item,
+        lastAttemptAt: MembershipManagement.Utils.isoToSpreadsheetDate(item.lastAttemptAt),
+        nextAttemptAt: MembershipManagement.Utils.isoToSpreadsheetDate(item.nextAttemptAt)
+      }));
+      expirationFIFO.setData(updatedQueueForSheet).dumpValues();
+    } else {
+      MembershipManagement.Utils.log('Dry-run mode: not persisting queue or dead-letter items');
+    }
+
+    MembershipManagement.Utils.log(`Expiration FIFO: # ${queue.length} in queue, ${eligibleItems.length} in this batch, of which completed ${result.processed.length}, ${reattemptItems.length} to be retried, ${deadItems.length} marked dead, with ${updatedQueue.length} still to be processed`);
+
+    // Schedule continuation trigger if work remains
+    if (!opts.dryRun) {
+      if (updatedQueue.length > 0) {
+        try {
+          MembershipManagement.Utils.log('Scheduling 1-minute trigger to continue processing');
+          MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger');
+          MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', 1);
+        } catch (e) {
+          console.error('Error scheduling expiration FIFO trigger', e && e.toString ? e.toString() : String(e));
+        }
+      } else {
+        // No more work - remove any existing minute trigger
+        try { MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger'); } catch (e) { /* ignore */ }
+      }
+    } else {
+      MembershipManagement.Utils.log('Dry-run mode enabled: not scheduling or deleting triggers');
+    }
+
+    return { processed: result.processed.length, failed: reattemptItems.length, remaining: updatedQueue.length };
+  } catch (error) {
+    const errorMessage = `Expiration FIFO consumer failed: ${error.message}`;
+    MembershipManagement.Utils.log(`ERROR: ${errorMessage}`);
+    console.error(`${errorMessage}\nStack trace: ${error.stack}`);
+    try { this.Internal.sendExpirationErrorNotification_(error); } catch (e) { console.error('Failed to send error notification', e); }
+    return { processed: 0, failed: 0, remaining: -1, error: errorMessage };
+  }
+}
+
+// Top-level trigger wrapper which the ScriptApp trigger should call
+function processExpirationFIFOTrigger() { return MembershipManagement.processExpirationFIFO(); }
 
 MembershipManagement.Internal.initializeManagerData_ = function (membershipFiddler, expiryScheduleFiddler,) {
   const membershipData = membershipFiddler.getData();
@@ -116,15 +310,19 @@ MembershipManagement.Internal.initializeManagerData_ = function (membershipFiddl
 }
 
 MembershipManagement.Internal.getGroupAdder_ = function () {
-  if (PropertiesService.getScriptProperties().getProperty('testGroupAdds') === 'true') {
+  if (Common.Config.Properties.getBooleanProperty('testGroupAdds', false)) {
     return (memberEmail, groupEmail) => MembershipManagement.Utils.log(`testGroupAdds: true. Would have added: `, memberEmail, ' to group:', groupEmail);
   } else {
     return (memberEmail, groupEmail) => this.addMemberToGroup_(memberEmail, groupEmail);
   }
 }
 
+/**
+ * Get the group removal function
+ * @returns function(memberEmail: string, groupEmail: string): void 
+ */
 MembershipManagement.Internal.getGroupRemover_ = function () {
-  if (PropertiesService.getScriptProperties().getProperty('testGroupRemoves') === 'true') {
+  if (Common.Config.Properties.getBooleanProperty('testGroupRemoves', false)) {
     return (memberEmail, groupEmail) => MembershipManagement.Utils.log(`testGroupRemoves: true. Would have removed: `, memberEmail, ' from group:', groupEmail);
   } else {
     return (memberEmail, groupEmail) => this.removeMemberFromGroup_(memberEmail, groupEmail);
@@ -132,13 +330,13 @@ MembershipManagement.Internal.getGroupRemover_ = function () {
 }
 
 MembershipManagement.Internal.getGroupEmailReplacer_ = function () {
-  if (PropertiesService.getScriptProperties().getProperty('testGroupEmailReplacements') === 'true') {
+  if (Common.Config.Properties.getBooleanProperty('testGroupEmailReplacements', false)) {
     return (originalEmail, newEmail) => {
       MembershipManagement.Utils.log(`testGroupEmailReplacements: true. Would have replaced: `, originalEmail, ' with:', newEmail);
       return { success: true, message: 'Test mode - no changes made.' };
     }
   } else {
-    return (originalEmail, newEmail) => {return this.changeSubscribersEmailInAllGroups_(originalEmail, newEmail)};
+    return (originalEmail, newEmail) => { return this.changeSubscribersEmailInAllGroups_(originalEmail, newEmail) };
   }
 }
 
@@ -202,14 +400,15 @@ MembershipManagement.Internal.removeMemberFromGroup_ = function (memberEmail, gr
   } catch (e) {
     // ignore "Resource Not Found" errors when the member is not in the group
     if (e.message && !e.message.includes("Resource Not Found")) {
+      e.message = `group email: ${groupEmail} - ${e.message}`
       throw e;
     }
   }
 }
 
 MembershipManagement.Internal.getEmailSender_ = function () {
-  const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails') === 'true';
-  const domain = PropertiesService.getScriptProperties().getProperty('domain') || 'sc3.club';
+  const testEmails = Common.Config.Properties.getBooleanProperty('testEmails', false);
+  const domain = Common.Config.Properties.getProperty('domain', 'sc3.club');
   return (email) => {
     email.replyTo = `membership@${domain}`;
     if (testEmails) {
@@ -232,8 +431,8 @@ MembershipManagement.Internal.sendSingleEmail_ = function (email) {
 
 MembershipManagement.Internal.sendExpirationErrorNotification_ = function (error) {
   try {
-    const domain = PropertiesService.getScriptProperties().getProperty('domain') || 'sc3.club';
-    const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails') === 'true';
+    const domain = Common.Config.Properties.getProperty('domain', 'sc3.club');
+    const testEmails = Common.Config.Properties.getBooleanProperty('testEmails', false);
 
     const email = {
       to: `membership-automation@${domain}`,
