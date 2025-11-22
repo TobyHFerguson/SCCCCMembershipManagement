@@ -315,8 +315,8 @@ MembershipManagement.Manager = class {
         return
       }
       // We get here with a transaction that is not processed but is marked as paid. Process it.
+      const matchIndex = emailToActiveMemberIndexMap[txn["Email Address"]];
       try {
-        const matchIndex = emailToActiveMemberIndexMap[txn["Email Address"]];
         let message;
         let actionType;
         if (matchIndex !== undefined) { // a renewing member
