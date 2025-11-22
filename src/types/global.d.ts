@@ -41,6 +41,15 @@ interface BootstrapData {
     createIfMissing: boolean;
 }
 
+// System Logs data structure (for logging)
+interface SystemLogEntry {
+    Timestamp: Date;
+    Level: string;
+    Service: string;
+    Message: string;
+    Data: string;
+}
+
 /**
  * Represents a data management utility for a spreadsheet.
  * @template T The type of data objects managed by the Fiddler.
@@ -136,6 +145,7 @@ declare namespace Common {
                 function getFiddler(sheetName: 'Validated Results'): Fiddler<Result>;
                 function getFiddler(sheetName: 'Invalid Results'): Fiddler<Result>;
                 function getFiddler(sheetName: 'Bootstrap'): Fiddler<BootstrapData>;
+                function getFiddler(sheetName: 'SystemLogs'): Fiddler<SystemLogEntry>;
                 function getFiddler(sheetName: 'ActiveMembers'): Fiddler<Member>;
                 function getFiddler(sheetName: 'ActionSpecs'): Fiddler<MembershipManagement.ActionSpec>;
                 function getFiddler(sheetName: 'ExpirySchedule'): Fiddler<MembershipManagement.ExpirySchedule>;
