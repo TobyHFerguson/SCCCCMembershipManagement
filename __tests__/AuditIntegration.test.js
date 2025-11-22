@@ -1,5 +1,7 @@
-const { Audit } = require('../src/common/audit/AuditLogger');
-const { MembershipManagement } = require('../src/services/MembershipManagement/Manager');
+if (typeof require !== 'undefined') {
+    var { Audit } = require('../src/common/audit/AuditLogger');
+    var { MembershipManagement } = require('../src/services/MembershipManagement/Manager');
+}
 
 /**
  * Integration tests for audit logging in Manager

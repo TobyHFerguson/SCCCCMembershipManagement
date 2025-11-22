@@ -1,4 +1,6 @@
-const { Audit } = require('../src/common/audit/AuditLogger');
+if (typeof require !== 'undefined') {
+    var { Audit } = require('../src/common/audit/AuditLogger');
+}
 
 describe('Audit.Logger', () => {
     let logger;
