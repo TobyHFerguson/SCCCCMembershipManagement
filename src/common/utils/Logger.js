@@ -2,11 +2,17 @@
  * Production-friendly logging utility for Google Apps Script
  * Provides multiple logging destinations for debugging deployed applications
  * 
+ * FOUNDATIONAL FILE: This is a low-level foundational module (like Properties and SpreadsheetManager).
+ * It MUST NOT create circular dependencies. Use Logger.log() for internal tracing, never Common.Logger.
+ * 
  * ARCHITECTURE: This module uses static configuration loaded once at initialization.
  * Call Common.Logger.configure() AFTER Properties and SpreadsheetManager are ready
  * to load configuration from the Properties sheet.
  * 
  * Safe defaults allow logging to work even before configure() is called.
+ * System Logs are managed through the Bootstrap process. The Bootstrap sheet should contain:
+ * | Reference | iD | sheetName | createIfMissing |
+ * | SystemLogs |  | System Logs | True |
  */
 
 (function() {
@@ -102,8 +108,35 @@
   }
   
   /**
+   * Gets the SystemLogs fiddler from SpreadsheetManager
+   * @returns {Fiddler<SystemLogEntry>|null} The SystemLogs fiddler or null if unavailable
+   * @private
+   */
+  function getLogFiddler() {
+    try {
+      // Check if SpreadsheetManager is available
+      if (typeof Common === 'undefined' || 
+          !Common.Data || 
+          !Common.Data.Storage || 
+          !Common.Data.Storage.SpreadsheetManager) {
+        Logger.log('[Common.Logger.getLogFiddler] SpreadsheetManager not available yet, using fallback');
+        return null;
+      }
+      
+      // Get the fiddler for SystemLogs from Bootstrap configuration
+      const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('SystemLogs');
+      return fiddler;
+    } catch (error) {
+      // If SystemLogs is not configured in Bootstrap or any other error, log and return null
+      Logger.log('[Common.Logger.getLogFiddler] Failed to get SystemLogs fiddler: ' + (error && error.message ? error.message : String(error)));
+      return null;
+    }
+  }
+  
+  /**
    * Gets the container spreadsheet ID from script properties or current binding
    * @returns {string|null} The container spreadsheet ID
+   * @deprecated This function is kept for backward compatibility but should not be needed with SpreadsheetManager
    */
   function getContainerSpreadsheetId() {
     try {
@@ -127,16 +160,18 @@
       
       return containerId;
     } catch (error) {
-      console.error('Failed to get container spreadsheet ID:', error);
+      Logger.log('[Common.Logger.getContainerSpreadsheetId] Failed: ' + error);
       return null;
     }
   }
 
   /**
    * Gets or creates the logging sheet in the container spreadsheet
+   * DEPRECATED: This is a fallback for when SpreadsheetManager is not available
    * @returns {GoogleAppsScript.Spreadsheet.Sheet|null} The log sheet
+   * @private
    */
-  function getLogSheet() {
+  function getLogSheetFallback() {
     try {
       let spreadsheet;
       
@@ -168,13 +203,13 @@
       
       return logSheet;
     } catch (error) {
-      console.error('Failed to get/create log sheet:', error);
+      Logger.log('[Common.Logger.getLogSheetFallback] Failed: ' + error);
       return null;
     }
   }
   
   /**
-   * Logs a message to the sheet
+   * Logs a message to the sheet using SpreadsheetManager
    * @param {string} level - Log level
    * @param {string} service - Service name
    * @param {string} message - Message
@@ -182,43 +217,95 @@
    */
   function logToSheet(level, service, message, data) {
     try {
-      const logSheet = getLogSheet();
-      if (!logSheet) return;
+      // Try to use the fiddler-based approach first
+      const fiddler = getLogFiddler();
       
-      const timestamp = new Date();
-      // If data is an Error object, include additional error details
-
-      let dataStr = '';
-      if (data !== undefined && data !== null) {
-        // If data has error-like properties prefer a compact object with message/stack (and name if present)
-        if (typeof data === 'object' && (data.message || data.stack)) {
-          const errPart = {};
-          if (data.name) errPart.name = data.name;
-          if (data.message) errPart.message = data.message;
-          if (data.stack) errPart.stack = data.stack;
-          try {
-        dataStr = JSON.stringify(errPart);
-          } catch (e) {
-        dataStr = String(errPart);
-          }
-        } else {
-          try {
-        dataStr = JSON.stringify(data);
-          } catch (e) {
-        dataStr = String(data);
+      if (fiddler) {
+        const timestamp = new Date();
+        
+        let dataStr = '';
+        if (data !== undefined && data !== null) {
+          // If data has error-like properties prefer a compact object with message/stack (and name if present)
+          if (typeof data === 'object' && (data.message || data.stack)) {
+            const errPart = {};
+            if (data.name) errPart.name = data.name;
+            if (data.message) errPart.message = data.message;
+            if (data.stack) errPart.stack = data.stack;
+            try {
+              dataStr = JSON.stringify(errPart);
+            } catch (e) {
+              dataStr = String(errPart);
+            }
+          } else {
+            try {
+              dataStr = JSON.stringify(data);
+            } catch (e) {
+              dataStr = String(data);
+            }
           }
         }
-      }
+        
+        // Get current log data
+        const logData = fiddler.getData();
+        
+        // Add new log entry
+        const newEntry = {
+          Timestamp: timestamp,
+          Level: level,
+          Service: service,
+          Message: message,
+          Data: dataStr
+        };
+        
+        logData.push(newEntry);
+        
+        // Auto-rotate logs if they get too long (keep last 1000 entries)
+        if (logData.length > 1000) {
+          logData.splice(0, logData.length - 1000);
+        }
+        
+        // Write back to sheet
+        fiddler.setData(logData).dumpValues();
+        
+      } else {
+        // Fallback to legacy sheet-based approach if fiddler not available
+        const logSheet = getLogSheetFallback();
+        if (!logSheet) return;
+        
+        const timestamp = new Date();
+        
+        let dataStr = '';
+        if (data !== undefined && data !== null) {
+          // If data has error-like properties prefer a compact object with message/stack (and name if present)
+          if (typeof data === 'object' && (data.message || data.stack)) {
+            const errPart = {};
+            if (data.name) errPart.name = data.name;
+            if (data.message) errPart.message = data.message;
+            if (data.stack) errPart.stack = data.stack;
+            try {
+              dataStr = JSON.stringify(errPart);
+            } catch (e) {
+              dataStr = String(errPart);
+            }
+          } else {
+            try {
+              dataStr = JSON.stringify(data);
+            } catch (e) {
+              dataStr = String(data);
+            }
+          }
+        }
 
-      logSheet.appendRow([timestamp, level, service, message, dataStr]);
-      
-      // Auto-rotate logs if they get too long (keep last 1000 entries)
-      const lastRow = logSheet.getLastRow();
-      if (lastRow > 1001) { // Header + 1000 data rows
-        logSheet.deleteRows(2, lastRow - 1001);
+        logSheet.appendRow([timestamp, level, service, message, dataStr]);
+        
+        // Auto-rotate logs if they get too long (keep last 1000 entries)
+        const lastRow = logSheet.getLastRow();
+        if (lastRow > 1001) { // Header + 1000 data rows
+          logSheet.deleteRows(2, lastRow - 1001);
+        }
       }
     } catch (error) {
-      console.error('Failed to log to sheet:', error);
+      Logger.log('[Common.Logger.logToSheet] Failed: ' + (error && error.message ? error.message : String(error)));
     }
   }
   
@@ -398,20 +485,51 @@
   
   // @ts-ignore
   Common.Logger.getLogs = function() {
-    const logSheet = getLogSheet();
-    if (!logSheet) return [];
-    
-    const lastRow = logSheet.getLastRow();
-    if (lastRow <= 1) return [];
-    
-    return logSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+    try {
+      const fiddler = getLogFiddler();
+      if (fiddler) {
+        // Use fiddler to get log data
+        const logData = fiddler.getData();
+        // Convert to array format matching legacy interface: [Timestamp, Level, Service, Message, Data]
+        return logData.map(entry => [
+          entry.Timestamp,
+          entry.Level,
+          entry.Service,
+          entry.Message,
+          entry.Data
+        ]);
+      } else {
+        // Fallback to legacy approach
+        const logSheet = getLogSheetFallback();
+        if (!logSheet) return [];
+        
+        const lastRow = logSheet.getLastRow();
+        if (lastRow <= 1) return [];
+        
+        return logSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+      }
+    } catch (error) {
+      Logger.log('[Common.Logger.getLogs] Failed: ' + (error && error.message ? error.message : String(error)));
+      return [];
+    }
   };
   
   // @ts-ignore
   Common.Logger.clearLogs = function() {
-    const logSheet = getLogSheet();
-    if (logSheet && logSheet.getLastRow() > 1) {
-      logSheet.getRange(2, 1, logSheet.getLastRow() - 1, 5).clearContent();
+    try {
+      const fiddler = getLogFiddler();
+      if (fiddler) {
+        // Use fiddler to clear log data
+        fiddler.setData([]).dumpValues();
+      } else {
+        // Fallback to legacy approach
+        const logSheet = getLogSheetFallback();
+        if (logSheet && logSheet.getLastRow() > 1) {
+          logSheet.getRange(2, 1, logSheet.getLastRow() - 1, 5).clearContent();
+        }
+      }
+    } catch (error) {
+      Logger.log('[Common.Logger.clearLogs] Failed: ' + (error && error.message ? error.message : String(error)));
     }
   };
   
