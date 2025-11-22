@@ -22,6 +22,15 @@ interface TokenDataType {
     Service?: string;
 }
 
+// System logging types
+interface SystemLogEntry {
+    Timestamp: Date;
+    Level: string;
+    Service: string;
+    Message: string;
+    Data: string;
+}
+
 // Fiddler-related types (used across multiple services)
 interface FormResponse {
     timestamp: Date;
@@ -40,6 +49,7 @@ interface BootstrapData {
     sheetName: string;
     createIfMissing: boolean;
 }
+
 
 /**
  * Represents a data management utility for a spreadsheet.

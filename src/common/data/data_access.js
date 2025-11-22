@@ -14,6 +14,13 @@ function getTokensFiddler() {
     return Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens');
 }
 
+/**
+ * @returns {Fiddler<SystemLogEntry>}
+ */
+function getSystemLogsFiddler() {
+    return Common.Data.Storage.SpreadsheetManager.getFiddler('SystemLogs');
+}
+
 Common.Data.Access = {
     getBootstrapData: () => {
         const bootStrapFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Bootstrap');
