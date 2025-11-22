@@ -12,6 +12,7 @@ declare namespace Common.Data.Storage {
         function getFiddler(sheetName: 'Validated Results'): Fiddler<Result>;
         function getFiddler(sheetName: 'Invalid Results'): Fiddler<Result>;
         function getFiddler(sheetName: 'Bootstrap'): Fiddler<BootstrapData>;
+        function getFiddler(sheetName: 'SystemLogs'): Fiddler<SystemLogEntry>;
         
         /**
          * Gets a fiddler based on the sheet name.
