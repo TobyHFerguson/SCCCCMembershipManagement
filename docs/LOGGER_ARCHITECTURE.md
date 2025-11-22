@@ -7,15 +7,18 @@ To prevent circular dependencies, the codebase follows a strict layering:
 ### Layer 0: Foundation (NO Common.Logger allowed)
 - `SpreadsheetManager.js` - Low-level sheet access via bmPreFiddler
 - `Properties.js` - Property management (reads from Properties sheet)
+- `Logger.js` - Structured logging with namespace filtering (foundational module)
 
 **Rules:**
 - MUST use `Logger.log()` only (GAS built-in)
 - MUST NOT use `Common.Logger.*`
 - Reason: Common.Logger depends on Properties, creating circular dependency
 
+**Note:** Logger.js is a foundational file that loads early and uses SpreadsheetManager, but its internal functions must avoid Common.Logger to prevent circular dependencies.
+
 ### Layer 1: Infrastructure (Common.Logger safe)
-- `Logger.js` - Structured logging with namespace filtering
 - `Data.Access.js` - High-level data access helpers
+- Other utility modules
 
 **Rules:**
 - Can use `Common.Logger.*` methods
@@ -56,11 +59,28 @@ Set these in the Properties sheet (Reference='Properties' in Bootstrap):
 |----------|------|---------|-------------|
 | `loggerLevel` | string | `INFO` | Log level: DEBUG, INFO, WARN, ERROR |
 | `loggerConsoleLogging` | boolean | `true` | Log to console (script editor) |
-| `loggerSheetLogging` | boolean | `false` | Log to Logs sheet |
+| `loggerSheetLogging` | boolean | `false` | Log to SystemLogs sheet |
 | `loggerScriptProperties` | boolean | `false` | Log to Script Properties |
 | `loggerEmailErrors` | boolean | `false` | Email ERROR level logs |
 | `loggerEmailRecipient` | string | | Email address for error notifications |
 | `loggerNamespaces` | string | `*` | Namespaces to log (comma-separated or `*` for all) |
+
+### Bootstrap Configuration for SystemLogs
+
+The SystemLogs sheet is managed through the Bootstrap process. Add this entry to the Bootstrap sheet:
+
+| Reference | iD | sheetName | createIfMissing |
+|-----------|---|-----------|-----------------|
+| SystemLogs |  | System Logs | True |
+
+**Benefits:**
+- Sheet name is configurable (can be renamed without code changes)
+- Consistent with other sheet management
+- Fiddler-based access provides per-execution caching
+- Supports formula data if needed in the future
+
+**Fallback Behavior:**
+If SystemLogs is not configured in Bootstrap or SpreadsheetManager is not available, Logger falls back to legacy direct sheet access to ensure logging always works.
 
 ### Namespace Filtering Examples
 
@@ -99,6 +119,8 @@ function _loadPropertiesSheet() {
 
 If Common.Logger is accidentally used in Properties or SpreadsheetManager, this will throw immediately instead of infinite looping.
 
+**Note:** Logger.js is also a foundational file. Its internal functions (like `getLogFiddler()`, `logToSheet()`) must use `Logger.log()` for error reporting, not `Common.Logger.*`, to avoid circular dependencies.
+
 ### Build-Time Detection
 
 Run `npm test` to check for circular dependencies:
@@ -110,7 +132,10 @@ npm test circular-dependency.test.js
 This validates that:
 - Properties.js contains no `Common.Logger.*(` calls
 - SpreadsheetManager.js contains no `Common.Logger.*(` calls
-- Logger.js uses static configuration
+- Logger.js internal functions contain no `Common.Logger.*(` calls
+- Logger.js uses SpreadsheetManager.getFiddler('SystemLogs')
+- Logger.js has fallback when SpreadsheetManager is not available
+- Logger.js is documented as a foundational file
 
 ## Migration from Old Logger
 

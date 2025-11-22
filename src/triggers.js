@@ -22,11 +22,11 @@
  * Initialize All triggers for the system
  */
 function initializeTriggers() {
+    Common.Logger.configure()
       try {
         const properties = PropertiesService.getScriptProperties();
         const electionsTriggerId = properties.getProperty('ELECTIONS_TRIGGER_ID');
         const formSubmitTriggerId = properties.getProperty('FORM_SUBMIT_TRIGGER_ID');
-        
         if (!electionsTriggerId || !formSubmitTriggerId) {
             Common.Logger.info('', 'System triggers not found - setting up automatically...');
             const result = setupAllTriggers();
@@ -77,7 +77,7 @@ function ballotSubmitHandler(e) {
 
 function manageElectionLifecycles() {
     withLock_(() => {
-        console.log('Managing election lifecycles');
+        Common.Logger.info('Triggers', 'Managing election lifecycles');
         VotingService.manageElectionLifecycles();
     })();
 }
@@ -117,6 +117,7 @@ function processMembershipExpirations() {
  * @returns {string} The external Elections spreadsheet ID
  */
 function getElectionsSpreadsheetId() {
+    Common.Logger.configure();
     try {
         // @ts-ignore - Logger is implemented in separate file
         Common.Logger.info('Triggers', 'Starting getElectionsSpreadsheetId - attempting to get Bootstrap data');
@@ -166,11 +167,12 @@ function setupElectionsTriggers() {
  * Uses Bootstrap configuration to determine the external spreadsheet ID
  */
 function setupAllTriggers() {
+    Common.Logger.configure();
     try {
-        console.log('Setting up all system triggers...');
+        Common.Logger.info('Triggers', 'Setting up all system triggers...');
         
         const electionsSpreadsheetId = getElectionsSpreadsheetId();
-        console.log(`Found Elections spreadsheet ID: ${electionsSpreadsheetId}`);
+        Common.Logger.info('Triggers', `Found Elections spreadsheet ID: ${electionsSpreadsheetId}`);
         
         // Remove any existing triggers for these functions to avoid duplicates
         const existingTriggers = ScriptApp.getProjectTriggers();
@@ -253,8 +255,9 @@ function setupAllTriggers() {
  * Can be called from a menu item or manually
  */
 function processElectionsChanges() {
+    Common.Logger.configure();
     try {
-        console.log('Processing Elections spreadsheet changes...');
+        Common.Logger.info('Triggers', 'Processing Elections spreadsheet changes...');
         
         const electionsSpreadsheetId = getElectionsSpreadsheetId();
         const electionsSpreadsheet = SpreadsheetApp.openById(electionsSpreadsheetId);
@@ -264,10 +267,10 @@ function processElectionsChanges() {
             throw new Error('Elections sheet not found in external spreadsheet');
         }
         
-        console.log('Running election lifecycle management...');
+        Common.Logger.info('Triggers', 'Running election lifecycle management...');
         VotingService.manageElectionLifecycles();
         
-        console.log('Elections changes processed successfully');
+        Common.Logger.info('Triggers', 'Elections changes processed successfully');
         
         return {
             success: true,
@@ -341,7 +344,8 @@ function withLock_(func, lockType = 'document', timeoutMillis = 30000) {
   // Return a new function that will execute the original function.
   return function() {
     let lock;
-    
+    // Setup the logger
+    Common.Logger.configure();
     // Acquire the correct lock type based on the input.
     if (lockType === 'script') {
       lock = LockService.getScriptLock();
@@ -361,12 +365,12 @@ function withLock_(func, lockType = 'document', timeoutMillis = 30000) {
         func.apply(this, arguments);
       } else {
         // Handle the case where the lock couldn't be acquired.
-        Logger.log('Could not acquire lock. The resource is busy.');
+        Common.Logger.warn('Could not acquire lock. The resource is busy.');
         // You could also throw an error or handle it gracefully here.
       }
     } catch (e) {
       // Gracefully handle any errors from the wrapped function.
-      Logger.log(`An error occurred: ${e.message}`);
+      Common.Logger.error(`An error occurred: ${e.message}`);
       // Add your custom error handling logic, e.g., send an email.
     } finally {
       // Ensure the lock is always released.
