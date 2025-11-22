@@ -149,7 +149,7 @@ MembershipManagement.Manager = class {
       const effectiveMaxAttempts = item.maxAttempts ? Number(item.maxAttempts) : defaultMaxAttempts;
       
       try {
-        // Only send email if both subject and htmlBody are present
+        // Only send email if both subject and htmlBody are present`
         if (item.subject && item.htmlBody) {
           const msg = {
             to: item.email,
@@ -173,6 +173,20 @@ MembershipManagement.Manager = class {
             item.groups = groups.join(',');
           }
         }
+        
+        // Generate audit log entry for successful processing
+        if (this._auditLogger) {
+          auditEntries.push(this._auditLogger.createLogEntry({
+            type: 'ProcessExpiredMember',
+            outcome: 'success',
+            note: `Successfully processed expiration for ${item.email}`,
+            jsonData: {
+              email: item.email,
+              id: item.id
+            }
+          }));
+        }
+        
         processed.push(item);
       } catch (err) {
         // Attempt bookkeeping: increment attempts and set lastError/lastAttemptAt
