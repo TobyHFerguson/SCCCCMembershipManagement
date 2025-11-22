@@ -10,6 +10,8 @@ const Common = {
     Logger: {}
 };
 
+const Audit = {};
+
 const GroupSubscription = {};
 
 const EmailChangeService = {
