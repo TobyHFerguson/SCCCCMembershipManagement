@@ -1,6 +1,22 @@
 // Wrapper-level tests for MembershipManagement.processExpirationFIFO
 const ns = require('../src/1namespaces.js');
 const createFiddlerMock = require('./helpers/fiddlerMock');
+
+// Set up Common.Config.Properties mock FIRST before loading any MembershipManagement code
+global.Common = global.Common || {};
+global.Common.Data = global.Common.Data || {};
+global.Common.Data.Storage = global.Common.Data.Storage || {};
+global.Common.Config = global.Common.Config || {};
+global.Common.Config.Properties = {
+    getProperty: jest.fn((key, defaultValue) => defaultValue),
+    getNumberProperty: jest.fn((key, defaultValue) => defaultValue),
+    getBooleanProperty: jest.fn((key, defaultValue) => defaultValue),
+    setCodeInternalProperty: jest.fn(),
+    deleteCodeInternalProperty: jest.fn(),
+    clearCache: jest.fn(),
+    getAllUserProperties: jest.fn(() => ({}))
+};
+
 // Load utilities and manager so MembershipManagement namespace is populated
 require('../src/services/MembershipManagement/utils.js');
 require('../src/services/MembershipManagement/Manager.js');

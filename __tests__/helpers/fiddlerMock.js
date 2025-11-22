@@ -5,8 +5,12 @@ module.exports = function createFiddlerMock(initialFifo = [], initialDead = []) 
   let originalGetFiddler = null;
 
   function install() {
-    // Ensure global Common exists
-    global.Common = global.Common || { Data: { Storage: { SpreadsheetManager: {} } } };
+    // Ensure global Common exists, preserving existing properties
+    global.Common = global.Common || {};
+    global.Common.Data = global.Common.Data || {};
+    global.Common.Data.Storage = global.Common.Data.Storage || {};
+    global.Common.Data.Storage.SpreadsheetManager = global.Common.Data.Storage.SpreadsheetManager || {};
+    
     originalGetFiddler = global.Common.Data.Storage.SpreadsheetManager.getFiddler;
     global.Common.Data.Storage.SpreadsheetManager.getFiddler = (name) => {
       if (name === 'ExpirationFIFO') {

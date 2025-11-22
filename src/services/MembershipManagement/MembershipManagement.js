@@ -56,7 +56,7 @@ MembershipManagement.processMigrations = function () {
       console.error(`Error: ${error.message}\nStack trace: ${error.stack}`);
     }
   }
-  if (PropertiesService.getScriptProperties().getProperty('logOnly').toLowerCase() === 'true') {
+  if (PropertiesService.getScriptProperties().getProperty('MIGRATION_LOG_ONLY').toLowerCase() === 'true') {
     console.log(`logOnly - # newMembers added: ${membershipData.length - mdLength} - #expirySchedule entries added: ${expiryScheduleData.length - esdLength}`);
     return;
   }
@@ -75,7 +75,7 @@ MembershipManagement.generateExpiringMembersList = function () {
     const expirationFIFO = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationFIFO');
 
     const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
-    const prefillFormTemplate = PropertiesService.getScriptProperties().getProperty('PREFILL_FORM_TEMPLATE');
+    const prefillFormTemplate = Common.Config.Properties.getProperty('PREFILL_FORM_TEMPLATE');
     if (!prefillFormTemplate) {
       throw new Error("PREFILL_FORM_TEMPLATE property is not set.");
     }
@@ -146,7 +146,7 @@ MembershipManagement.generateExpiringMembersList = function () {
 MembershipManagement.processExpirationFIFO = function (opts = {}) {
   try {
     MembershipManagement.Utils.log('Starting Expiration FIFO consumer...');
-    const batchSize = opts.batchSize || Number(PropertiesService.getScriptProperties().getProperty('expirationBatchSize')) || 50;
+    const batchSize = opts.batchSize || Common.Config.Properties.getNumberProperty('expirationBatchSize', 50);
 
     // Use pre-fetched fiddlers if provided, otherwise get them (leverages per-execution caching)
     const expirationFIFO = opts.fiddlers?.expirationFIFO || Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationFIFO');
@@ -196,11 +196,10 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     }
 
     // Get scriptMaxAttempts from Properties (with backward compatibility for old property names)
-    const scriptMaxAttempts = Number(PropertiesService.getScriptProperties().getProperty('expirationMaxAttempts')) 
-                          || Number(PropertiesService.getScriptProperties().getProperty('expirationMaxRetries')) 
-                          || Number(PropertiesService.getScriptProperties().getProperty('maxAttempts')) 
-                          || Number(PropertiesService.getScriptProperties().getProperty('maxRetries')) 
-                          || 5;
+    const scriptMaxAttempts = Common.Config.Properties.getNumberProperty('expirationMaxAttempts', 0)
+                          || Common.Config.Properties.getNumberProperty('expirationMaxRetries', 0)
+                          || Common.Config.Properties.getNumberProperty('maxAttempts', 0)
+                          || Common.Config.Properties.getNumberProperty('maxRetries', 5);
     
     // Initialize manager (reusing fiddlers fetched at the start)
     const init = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
@@ -262,7 +261,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       MembershipManagement.Utils.log('Dry-run mode: not persisting queue or dead-letter items');
     }
 
-    MembershipManagement.Utils.log(`Expiration FIFO: # processed ${result.processed.length} of which ${reattemptItems.length} to be retried  and ${deadItems.length} marked dead, with ${updatedQueue.length} still to be processed`);
+    MembershipManagement.Utils.log(`Expiration FIFO: # ${queue.length} in queue, ${eligibleItems.length} in this batch, of which completed ${result.processed.length}, ${reattemptItems.length} to be retried, ${deadItems.length} marked dead, with ${updatedQueue.length} still to be processed`);
 
     // Schedule continuation trigger if work remains
     if (!opts.dryRun) {
@@ -311,7 +310,7 @@ MembershipManagement.Internal.initializeManagerData_ = function (membershipFiddl
 }
 
 MembershipManagement.Internal.getGroupAdder_ = function () {
-  if (PropertiesService.getScriptProperties().getProperty('testGroupAdds') === 'true') {
+  if (Common.Config.Properties.getBooleanProperty('testGroupAdds', false)) {
     return (memberEmail, groupEmail) => MembershipManagement.Utils.log(`testGroupAdds: true. Would have added: `, memberEmail, ' to group:', groupEmail);
   } else {
     return (memberEmail, groupEmail) => this.addMemberToGroup_(memberEmail, groupEmail);
@@ -323,7 +322,7 @@ MembershipManagement.Internal.getGroupAdder_ = function () {
  * @returns function(memberEmail: string, groupEmail: string): void 
  */
 MembershipManagement.Internal.getGroupRemover_ = function () {
-  if (PropertiesService.getScriptProperties().getProperty('testGroupRemoves') === 'true') {
+  if (Common.Config.Properties.getBooleanProperty('testGroupRemoves', false)) {
     return (memberEmail, groupEmail) => MembershipManagement.Utils.log(`testGroupRemoves: true. Would have removed: `, memberEmail, ' from group:', groupEmail);
   } else {
     return (memberEmail, groupEmail) => this.removeMemberFromGroup_(memberEmail, groupEmail);
@@ -331,7 +330,7 @@ MembershipManagement.Internal.getGroupRemover_ = function () {
 }
 
 MembershipManagement.Internal.getGroupEmailReplacer_ = function () {
-  if (PropertiesService.getScriptProperties().getProperty('testGroupEmailReplacements') === 'true') {
+  if (Common.Config.Properties.getBooleanProperty('testGroupEmailReplacements', false)) {
     return (originalEmail, newEmail) => {
       MembershipManagement.Utils.log(`testGroupEmailReplacements: true. Would have replaced: `, originalEmail, ' with:', newEmail);
       return { success: true, message: 'Test mode - no changes made.' };
@@ -408,8 +407,8 @@ MembershipManagement.Internal.removeMemberFromGroup_ = function (memberEmail, gr
 }
 
 MembershipManagement.Internal.getEmailSender_ = function () {
-  const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails') === 'true';
-  const domain = PropertiesService.getScriptProperties().getProperty('domain') || 'sc3.club';
+  const testEmails = Common.Config.Properties.getBooleanProperty('testEmails', false);
+  const domain = Common.Config.Properties.getProperty('domain', 'sc3.club');
   return (email) => {
     email.replyTo = `membership@${domain}`;
     if (testEmails) {
@@ -432,8 +431,8 @@ MembershipManagement.Internal.sendSingleEmail_ = function (email) {
 
 MembershipManagement.Internal.sendExpirationErrorNotification_ = function (error) {
   try {
-    const domain = PropertiesService.getScriptProperties().getProperty('domain') || 'sc3.club';
-    const testEmails = PropertiesService.getScriptProperties().getProperty('testEmails') === 'true';
+    const domain = Common.Config.Properties.getProperty('domain', 'sc3.club');
+    const testEmails = Common.Config.Properties.getBooleanProperty('testEmails', false);
 
     const email = {
       to: `membership-automation@${domain}`,
