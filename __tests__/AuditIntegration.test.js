@@ -214,18 +214,16 @@ describe('Manager Audit Integration', () => {
                 auditLogger
             );
             
-            expect(() => {
-                errorManager.migrateCEMembers(migrators, members, expirySchedule);
-            }).toThrow();
+            // Should return errors instead of throwing
+            const result = errorManager.migrateCEMembers(migrators, members, expirySchedule);
             
-            // Even though it throws, audit entry should be created before the error
-            // We need to catch and check
-            try {
-                errorManager.migrateCEMembers(migrators, members, expirySchedule);
-            } catch (error) {
-                // The error is AggregateError, check that audit was attempted
-                expect(error).toBeInstanceOf(AggregateError);
-            }
+            // Should have errors
+            expect(result.errors).toBeDefined();
+            expect(result.errors.length).toBeGreaterThan(0);
+            
+            // Should still create audit entry for the failure
+            expect(result.auditEntries).toBeDefined();
+            expect(result.auditEntries.length).toBeGreaterThan(0);
         });
     });
 
