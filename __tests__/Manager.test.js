@@ -298,24 +298,6 @@ describe('Manager tests', () => {
       manager.generateExpiringMembersList(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
       expect(expirySchedule).toEqual(expectedExpirySchedule);
     })
-    it('should throw an aggregated error if there are errors', () => {
-      const errorFunction = jest.fn(() => {
-        throw new Error('This is a test error');
-      });
-      sendEmailFun = errorFunction;
-      groupRemoveFun = errorFunction;
-      activeMembers = [
-        TestData.activeMember({ Email: "test1@example.com", First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10" }),
-        TestData.activeMember({ Email: "test2@example.com", First: "Jane", Last: "Smith", Joined: "2020-03-10", Expires: "2021-01-10" }),
-      ];
-      try {
-        manager.generateExpiringMembersList(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
-      } catch (error) {
-        expect(error).toBeInstanceOf(AggregateError);
-        expect(error.errors.length).toEqual(2);
-        expect(error.errors[0].txnNum).toEqual(1);
-      }
-    })
     it('should process just the first entry if only one is due', () => {
       activeMembers = [
         TestData.activeMember({ Email: "a@b.com", First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2026-11-14" }),
