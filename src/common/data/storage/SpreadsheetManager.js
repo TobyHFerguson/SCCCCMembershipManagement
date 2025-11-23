@@ -66,7 +66,29 @@ Common.Data.Storage.SpreadsheetManager = (function () {
 
       const bootStrap = bmPreFiddler.PreFiddler().getFiddler(fiddlerConfig).getData();
 
-      sheets = Object.fromEntries(bootStrap.map(row => [row.Reference, row]));
+      // Process Bootstrap data to extract IDs from URLs
+      // This allows users to paste Google Sheets URLs in the id column instead of just IDs
+      sheets = Object.fromEntries(bootStrap.map(row => {
+        // Create a shallow copy to avoid mutating the original data
+        const processedRow = { ...row };
+        
+        // If row has an id field, extract the ID from URL if it's a URL
+        if (processedRow.id && typeof processedRow.id === 'string') {
+          // Use Common.Utils.extractSpreadsheetId to handle both URLs and plain IDs
+          // Note: Common.Utils may not be loaded yet during early initialization
+          // So we inline a simple extraction to avoid circular dependencies
+          const trimmed = processedRow.id.trim();
+          const urlPattern = /\/d\/([a-zA-Z0-9-_]+)/;
+          const match = trimmed.match(urlPattern);
+          if (match) {
+            processedRow.id = match[1];
+          } else {
+            processedRow.id = trimmed;
+          }
+        }
+        
+        return [row.Reference, processedRow];
+      }));
     } catch (error) {
       Logger.log('[SpreadsheetManager._initializeSheets] Error: ' + error);
       // NOTE: Don't use Common.Logger here - creates circular dependency
@@ -157,6 +179,7 @@ Common.Data.Storage.SpreadsheetManager = (function () {
         return fiddler;
       } catch (error) {
         Logger.log('[SpreadsheetManager.getFiddler] Error getting fiddler for ' + sheetName + ': ' + error);
+        error.message = `SpreadsheetManager.getFiddler(${sheetName}) failed: ${error.message}`;
         throw error;
       }
     },
