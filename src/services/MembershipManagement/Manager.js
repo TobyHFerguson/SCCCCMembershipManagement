@@ -47,7 +47,6 @@ MembershipManagement.Manager = class {
     // collect messages to allow generator/consumer separation
     const messages = /** @type {MembershipManagement.ExpiringMember[]} */ [];
     const auditEntries = [];
-    const errors = [];
     let processedCount = 0;
     let emailsSeen = new Set();
     let expired = new Set();
@@ -100,9 +99,6 @@ MembershipManagement.Manager = class {
           expirySchedule.splice(i, 1);
         }
       }
-    if (errors.length > 0) {
-      throw new AggregateError(errors, 'Errors occurred while processing expirations');
-    }
     return { messages, auditEntries };
   }
 
@@ -307,10 +303,7 @@ MembershipManagement.Manager = class {
         }
       }
     });
-    if (errors.length > 0) {
-      throw new AggregateError(errors, 'Errors occurred while migrating members');
-    }
-    return { numMigrations, auditEntries };
+    return { numMigrations, auditEntries, errors };
   }
 
   processPaidTransactions(transactions, membershipData, expirySchedule) {

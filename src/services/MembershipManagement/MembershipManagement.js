@@ -54,16 +54,14 @@ MembershipManagement.processMigrations = function () {
   const esdLength = expiryScheduleData.length;
 
   let auditEntries = [];
-  try {
-    const result = manager.migrateCEMembers(migratingMembers, membershipData, expiryScheduleData);
-    auditEntries = result.auditEntries || [];
-  } catch (error) {
-    if (error instanceof AggregateError) {
-      error.errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack}`));
-    } else {
-      console.error(`Error: ${error.message}\nStack trace: ${error.stack}`);
-    }
+  const result = manager.migrateCEMembers(migratingMembers, membershipData, expiryScheduleData);
+  auditEntries = result.auditEntries || [];
+  
+  // Log any errors that occurred during migration
+  if (result.errors && result.errors.length > 0) {
+    result.errors.forEach(e => console.error(`Migration error on row ${e.rowNum} ${e.email}: ${e.message}\nStack trace: ${e.stack}`));
   }
+  
   if (PropertiesService.getScriptProperties().getProperty('MIGRATION_LOG_ONLY').toLowerCase() === 'true') {
     console.log(`logOnly - # newMembers added: ${membershipData.length - mdLength} - #expirySchedule entries added: ${expiryScheduleData.length - esdLength}`);
     return;
