@@ -14,6 +14,13 @@ function getTokensFiddler() {
     return Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens');
 }
 
+/**
+ * @returns {Fiddler<SystemLogEntry>}
+ */
+function getSystemLogsFiddler() {
+    return Common.Data.Storage.SpreadsheetManager.getFiddler('SystemLogs');
+}
+
 Common.Data.Access = {
     getBootstrapData: () => {
         const bootStrapFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Bootstrap');
@@ -67,5 +74,9 @@ Common.Data.Access = {
     getElections: () => {
         const votingData = Common.Data.Storage.SpreadsheetManager.getFiddler('Elections').getData();
         return votingData;
+    },
+    getSystemLogs: () => {
+        const systemLogs = Common.Data.Storage.SpreadsheetManager.getFiddler('SystemLogs').getData();
+        return systemLogs;
     }
 }
