@@ -48,6 +48,42 @@ Call `Common.Data.Storage.SpreadsheetManager.clearFiddlerCache(sheetName)` if ex
 
 For formulas: `Common.Data.Storage.SpreadsheetManager.getDataWithFormulas(fiddler)` merges formula and value data.
 
+### Circular Dependency Prevention (CRITICAL)
+
+**Layered Architecture** (enforced by tests in `__tests__/circular-dependency.test.js`):
+
+**Layer 0: Foundation (NO Common.Logger allowed)**
+- `src/common/data/storage/SpreadsheetManager.js` - Low-level sheet access
+- `src/common/config/Properties.js` - Property management
+- `src/common/utils/Logger.js` - Structured logging
+
+**Rules**:
+- MUST use `Logger.log()` only (GAS built-in)
+- MUST NOT use `Common.Logger.*` methods
+- Reason: `Common.Logger` depends on Properties/SpreadsheetManager, creating circular dependency
+
+**Layer 1: Infrastructure (Common.Logger safe)**
+- `src/common/data/data_access.js` - High-level data access helpers
+- Other utility modules
+
+**Layer 2: Application Services**
+- `MembershipManagement`, `VotingService`, etc.
+- Use `Common.Logger.*` for all logging
+
+**Logger Initialization**:
+```javascript
+// In onOpen, menu handler, or main entry point
+function onOpen() {
+  Common.Logger.configure();  // Loads config from Properties sheet
+  Common.Logger.info('App', 'Application initialized');
+}
+```
+
+**DO NOT**:
+- Call `Common.Logger.*` in SpreadsheetManager.js or Properties.js
+- Call Properties methods from Logger.js internal functions
+- Use dynamic property lookups in hot code paths (logger calls on every log statement)
+
 ### Service-Based Architecture
 Each service (`MembershipManagement`, `VotingService`, `DirectoryService`, etc.) follows namespace pattern:
 - **`Service.Internal`**: Private GAS-dependent initialization helpers
@@ -133,13 +169,60 @@ Time-based triggers call functions like `checkPaymentStatus()` and `processExpir
 ### Template Expansion
 Email templates use `{FieldName}` placeholders expanded by `MembershipManagement.Utils.expandTemplate(template, row)`. Date fields automatically formatted. See `ActionSpecs` sheet for email templates with hyperlinks stored as formulas.
 
+### Audit Logging Pattern
+
+**Pure business logic generates audit entries**:
+- `Manager` classes accept optional `auditLogger` parameter in constructor
+- Methods return `{ ..., auditEntries: Audit.LogEntry[] }` alongside business results
+- GAS wrappers persist audit entries to `Audit` sheet via fiddler
+
+**Example**:
+```javascript
+const auditLogger = new Audit.Logger();
+const manager = new MembershipManagement.Manager(
+  actionSpecs, groups, groupManager, emailSender, 
+  undefined,  // today
+  auditLogger
+);
+
+const result = manager.processPaidTransactions(txns, members, schedule);
+// result.auditEntries contains log entries for persistence
+```
+
+**Error Handling Pattern**:
+- Manager methods MUST return errors as data, not throw exceptions
+- Return shape: `{ businessResult, auditEntries, errors }` where `errors` is an array
+- Allows partial success handling and consistent audit logging
+- See `docs/ISSUE-AGGREGATEERROR.md` for rationale
+
+## Bootstrap Configuration
+
+All sheet references configured in `Bootstrap` sheet:
+
+| Reference | iD | sheetName | createIfMissing |
+|-----------|---|-----------|-----------------|
+| SystemLogs |  | System Logs | True |
+| Properties |  | Properties | False |
+| ActiveMembers |  | ActiveMembers | False |
+| ExpirationFIFO |  | ExpirationFIFO | True |
+
+See `docs/BOOTSTRAP_CONFIGURATION.md` for full schema.
+
+**When adding new sheets**:
+1. Add row to Bootstrap sheet
+2. Add TypeScript type definition in `src/types/global.d.ts`
+3. Use via `Common.Data.Storage.SpreadsheetManager.getFiddler('SheetName')`
+
 ## Key Files Reference
 - `src/1namespaces.js`: All service namespaces (loads first)
 - `src/webapp_endpoints.js`: Global functions callable from web UIs
 - `src/webApp.js`: doGet router dispatching to service WebApp handlers
 - `src/common/data/data_access.js`: `Common.Data.Access` namespace for data retrieval
-- `src/services/MembershipManagement/Manager.js`: Pure membership logic (593 lines)
+- `src/services/MembershipManagement/Manager.js`: Pure membership logic
 - `__tests__/Manager.test.js`: Comprehensive test suite with table of contents
+- `docs/LOGGER_ARCHITECTURE.md`: Logger layering and initialization guide
+- `docs/BOOTSTRAP_CONFIGURATION.md`: Sheet configuration reference
+- `docs/ExpirationFIFO_SCHEMA.md`: FIFO queue schema and contract
 
 ## Common Gotchas
 - **Sheet access always via Fiddler**: Never use `SpreadsheetApp.getActiveSpreadsheet()` directly for data access
@@ -147,3 +230,4 @@ Email templates use `{FieldName}` placeholders expanded by `MembershipManagement
 - **Module exports**: Files include Node.js module checks (`if (typeof module !== 'undefined')`) for Jest compatibility
 - **Environment switching**: Running wrong clasp command deploys to wrong environment - always use `npm run {env}:*` scripts
 - **Test mocking**: GAS globals like `PropertiesService` mocked in `jest.setup.ts` (imports `__mocks__/google-apps-script.ts`)
+- **Circular dependencies**: Build fails if Layer 0 modules use `Common.Logger.*` - tests enforce this
