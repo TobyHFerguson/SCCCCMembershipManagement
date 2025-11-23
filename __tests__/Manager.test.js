@@ -652,12 +652,14 @@ describe('Manager tests', () => {
       it('should not migrate members if an error is thrown', () => {
         groupManager.groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
         manager = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today);
-        try {
-          manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-          fail('Expected error not thrown');
-        } catch (error) {
-          expect(activeMembers).toEqual([]);
-        }
+        const result = manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+        
+        // Should return errors instead of throwing
+        expect(result.errors).toBeDefined();
+        expect(result.errors.length).toBeGreaterThan(0);
+        
+        // Member should not be added to activeMembers when there's an error
+        expect(activeMembers).toEqual([]);
       });
       it('should not migrate members that have already been migrated', () => {
         migrators = [{ ...migrators[0], Migrated: today }];
@@ -741,21 +743,24 @@ describe('Manager tests', () => {
       it('should continue even when there are errors', () => {
         groupManager.groupAddFun = jest.fn(() => { throw new Error('This is a test error') });
         manager = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today);
-        try {
-          manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
-          fail('Expected error not thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(AggregateError);
-          expect(error.errors.length).toEqual(1);
-          expect(error.errors[0].message).toBe('This is a test error');
-          expect(error.errors[0].rowNum).toBe(2);
-          expect(error.errors[0].email).toBe("a@b.com");
-        }
+        const result = manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
+        
+        // Should return errors array instead of throwing
+        expect(result.errors).toBeDefined();
+        expect(result.errors.length).toEqual(1);
+        expect(result.errors[0].message).toBe('This is a test error');
+        expect(result.errors[0].rowNum).toBe(2);
+        expect(result.errors[0].email).toBe("a@b.com");
+        
+        // Should still provide auditEntries even when there are errors
+        expect(result.auditEntries).toBeDefined();
       });
 
       it('should indicate how many members were successfully migrated', () => {
         const result = manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
         expect(result.numMigrations).toBe(1);
+        expect(result.errors).toBeDefined();
+        expect(result.errors.length).toBe(0);
       });
     });
     describe('Inactive Members', () => {
@@ -812,24 +817,33 @@ describe('Manager tests', () => {
           Note: expect.stringContaining('Member migrated: member1@example.com')
         });
       });
-      // Skipping because the AggregateError is not returned from migrateCEMembers in a way
-      // that allows us to access the audit entries here. The audit entry creation is
-      // verified by the code executing without error and the success test above.
-
-      //TODO create an issue to review the use of AggregateError in the codebase and see if we can improve the pattern
-      it.skip('should generate audit entries for migration failures', () => {
+      
+      it('should generate audit entries for migration failures', () => {
         const auditLogger = new Audit.Logger(today);
         groupManager.groupAddFun = jest.fn(() => { throw new Error('Group service error'); });
         const managerWithAudit = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger);
         
-        const migrators = [TestData.migrator({ Email: "fail@example.com", "Migrate Me": true, Status: "Active" })];
+        const migrators = [TestData.migrator({ 
+          Email: "fail@example.com", 
+          "Migrate Me": true, 
+          Status: "Active",
+          "member_discussions@sc3.club": true  // Add a group key so groupAddFun gets called
+        })];
         
-        // migrateCEMembers creates audit entries internally before throwing
-        // We can't access them directly after the throw, but the audit entry creation
-        // is verified by the code executing without error and the success test above
-        expect(() => {
-          managerWithAudit.migrateCEMembers(migrators, activeMembers, expirySchedule);
-        }).toThrow();
+        const result = managerWithAudit.migrateCEMembers(migrators, activeMembers, expirySchedule);
+        
+        // Should return errors instead of throwing
+        expect(result.errors).toBeDefined();
+        expect(result.errors.length).toBe(1);
+        
+        // Should still generate audit entries for failures
+        expect(result.auditEntries).toBeDefined();
+        expect(result.auditEntries.length).toBe(1);
+        expect(result.auditEntries[0]).toMatchObject({
+          Type: 'Migrate',
+          Outcome: 'fail',
+          Note: expect.stringContaining('Failed to migrate fail@example.com')
+        });
       });
     });
   });

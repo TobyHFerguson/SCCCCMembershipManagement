@@ -303,10 +303,7 @@ MembershipManagement.Manager = class {
         }
       }
     });
-    if (errors.length > 0) {
-      throw new AggregateError(errors, 'Errors occurred while migrating members');
-    }
-    return { numMigrations, auditEntries };
+    return { numMigrations, auditEntries, errors };
   }
 
   processPaidTransactions(transactions, membershipData, expirySchedule) {
