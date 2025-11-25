@@ -5,6 +5,28 @@ Google Apps Script (GAS) membership management system for SCCCC. Hybrid TypeScri
 
 ## Critical Architecture Patterns
 
+### Namespace Declaration Pattern (CRITICAL)
+
+**Hybrid environment challenge**: Files run concatenated in GAS but independently in Jest. `1namespaces.js` declares all root namespaces with `const`, loading first in GAS.
+
+**REQUIRED pattern for ANY file extending a namespace**:
+```javascript
+// ✅ CORRECT: Works in both GAS and Jest
+if (typeof NamespaceName === 'undefined') NamespaceName = {};
+NamespaceName.SubNamespace = NamespaceName.SubNamespace || {};
+```
+
+**NEVER do this**:
+```javascript
+// ❌ WRONG: Conflicts with const in 1namespaces.js
+var Audit = Audit || {};
+const Common = Common || {};
+```
+
+**Why**: In GAS, `const Audit = {}` already exists from `1namespaces.js`. Redeclaring with `var`/`const` causes `SyntaxError: Identifier 'Audit' has already been declared`. The `typeof` check skips redeclaration in GAS but creates namespace in Jest.
+
+**See**: `docs/NAMESPACE_DECLARATION_PATTERN.md` for complete documentation and examples.
+
 ### Generator/Consumer Separation (Testability Pattern)
 **Core principle**: Pure JS business logic (generators) separated from GAS side-effects (consumers).
 
@@ -220,11 +242,13 @@ See `docs/BOOTSTRAP_CONFIGURATION.md` for full schema.
 - `src/common/data/data_access.js`: `Common.Data.Access` namespace for data retrieval
 - `src/services/MembershipManagement/Manager.js`: Pure membership logic
 - `__tests__/Manager.test.js`: Comprehensive test suite with table of contents
+- `docs/NAMESPACE_DECLARATION_PATTERN.md`: Namespace extension pattern guide
 - `docs/LOGGER_ARCHITECTURE.md`: Logger layering and initialization guide
 - `docs/BOOTSTRAP_CONFIGURATION.md`: Sheet configuration reference
 - `docs/ExpirationFIFO_SCHEMA.md`: FIFO queue schema and contract
 
 ## Common Gotchas
+- **Namespace declarations**: ALWAYS use `if (typeof Namespace === 'undefined')` pattern when extending namespaces (see `docs/NAMESPACE_DECLARATION_PATTERN.md`)
 - **Sheet access always via Fiddler**: Never use `SpreadsheetApp.getActiveSpreadsheet()` directly for data access
 - **Formula handling**: Use `convertLinks()` before `getDataWithFormulas()` for cells with rich text hyperlinks
 - **Module exports**: Files include Node.js module checks (`if (typeof module !== 'undefined')`) for Jest compatibility

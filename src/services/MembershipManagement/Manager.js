@@ -21,11 +21,14 @@ MembershipManagement.Manager = class {
   }
 
   /**
+   * Generator: Create list of expiring members to be processed
+   * This is a pure generator function that prepares work but does NOT cause business events.
+   * Business events (email send, group removal) happen in processExpiredMembers (the consumer).
    * 
    * @param {Member[]} activeMembers 
    * @param {MembershipManagement.ExpirySchedule[]} expirySchedule 
    * @param {string} prefillFormTemplate 
-   * @returns {{messages: MembershipManagement.ExpiredMembersQueue, auditEntries: any[]}} array of messages to be sent and audit log entries
+   * @returns {{messages: MembershipManagement.ExpiredMembersQueue}} array of messages to be sent
    */
   generateExpiringMembersList(activeMembers, expirySchedule, prefillFormTemplate) {
     expirySchedule.forEach(sched => { sched.Date = MembershipManagement.Utils.dateOnly(new Date(sched.Date) )});
@@ -42,11 +45,10 @@ MembershipManagement.Manager = class {
     
     if (!prefillFormTemplate) {
       console.error("Prefill form template is required");
-      return { messages: [], auditEntries: [] };
+      return { messages: [] };
     }
     // collect messages to allow generator/consumer separation
     const messages = /** @type {MembershipManagement.ExpiringMember[]} */ [];
-    const auditEntries = [];
     let processedCount = 0;
     let emailsSeen = new Set();
     let expired = new Set();
@@ -82,15 +84,6 @@ MembershipManagement.Manager = class {
     expiredMember.htmlBody = MembershipManagement.Utils.expandTemplate(spec.Body, mc);
         // collect messages for the consumer to send
         messages.push(expiredMember);
-        
-        // Generate audit log entry
-        if (this._auditLogger) {
-          auditEntries.push(this._auditLogger.createLogEntry({
-            type: sched.Type,
-            outcome: 'success',
-            note: `Expiration notification queued for ${member.Email}`
-          }));
-        }
       }
     }
     
@@ -99,7 +92,7 @@ MembershipManagement.Manager = class {
           expirySchedule.splice(i, 1);
         }
       }
-    return { messages, auditEntries };
+    return { messages };
   }
 
   /**
@@ -180,7 +173,7 @@ MembershipManagement.Manager = class {
               email: item.email,
               id: item.id
             }
-          }));
+          })); 
         }
         
         processed.push(item);

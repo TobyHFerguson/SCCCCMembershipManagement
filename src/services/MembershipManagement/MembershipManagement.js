@@ -432,10 +432,19 @@ MembershipManagement.Internal.removeMemberFromGroup_ = function (memberEmail, gr
     MembershipManagement.Utils.log(`Successfully removed ${memberEmail} from ${groupEmail}`);
   } catch (e) {
     // ignore "Resource Not Found" errors when the member is not in the group
-    if (e.message && !e.message.includes("Resource Not Found")) {
-      e.message = `group email: ${groupEmail} - ${e.message}`
-      throw e;
+    if (!e.message) throw e;
+    if (e.message.includes("Resource Not Found")) {
+      if (e.message.includes('Not Found: groupKey')) {
+        const m = `Group ${groupEmail} is invalid. Check Public Groups Sheet to correct.`;
+        Common.Logger.error('MembershipManagement', m)
+        e.message = m;
+        throw e;
+      }
+      Common.Logger.debug(`MembershipManagement`, `Member ${memberEmail} not found in ${groupEmail}, nothing to remove`);
+      return;
     }
+    e.message = `Error deleting ${memberEmail} from ${groupEmail}: ${e.message}`
+    throw e;
   }
 }
 
@@ -504,28 +513,26 @@ MembershipManagement.Internal.sendExpirationErrorNotification_ = function (error
 }
 
 /**
- * Persists audit log entries to the Audit sheet
+ * Persists audit log entries to the Audit sheet using the canonical helper
  * @param {Audit.LogEntry[]} auditEntries - Array of audit log entries to persist
  */
 MembershipManagement.Internal.persistAuditEntries_ = function (auditEntries) {
   if (!auditEntries || auditEntries.length === 0) {
-    return;
+    return 0;
   }
   
   try {
     const auditFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Audit');
-    const existingAudit = auditFiddler.getData() || [];
     
-    // Append new entries
-    existingAudit.push(...auditEntries);
+    // Use the canonical persistence helper (enforces schema validation and deduplication)
+    const numWritten = Audit.Persistence.persistAuditEntries(auditFiddler, auditEntries);
     
-    // Persist to sheet
-    auditFiddler.setData(existingAudit).dumpValues();
-    
-    MembershipManagement.Utils.log(`Persisted ${auditEntries.length} audit log entries`);
+    MembershipManagement.Utils.log(`Persisted ${numWritten} audit log entries`);
+    return numWritten;
   } catch (error) {
     // Log but don't throw - audit logging should not break main functionality
     console.error(`Failed to persist audit entries: ${error.message}`);
+    return 0;
   }
 }
 

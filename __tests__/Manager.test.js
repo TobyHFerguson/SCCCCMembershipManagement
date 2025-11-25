@@ -367,38 +367,6 @@ describe('Manager tests', () => {
         expect(result.messages[0].groups).toEqual(groups.map(g => g.Email).join(','));
       })
     });
-
-    describe('audit trail', () => {
-      it('should generate audit entries for successful expiration notifications', () => {
-        const auditLogger = new Audit.Logger(today);
-        const managerWithAudit = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger);
-        
-        expirySchedule = [
-          TestData.expiryScheduleEntry({ Date: today, Type: utils.ActionType.Expiry1, Email: "test1@example.com" }),
-          TestData.expiryScheduleEntry({ Date: today, Type: utils.ActionType.Expiry2, Email: "test2@example.com" })
-        ];
-        activeMembers = [
-          TestData.activeMember({ Email: "test1@example.com" }),
-          TestData.activeMember({ Email: "test2@example.com" })
-        ];
-
-        const result = managerWithAudit.generateExpiringMembersList(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
-        
-        expect(result.auditEntries).toBeDefined();
-        expect(result.auditEntries.length).toBe(2);
-        expect(result.auditEntries[0]).toMatchObject({
-          Type: utils.ActionType.Expiry2,
-          Outcome: 'success',
-          Note: expect.stringContaining('Expiration notification queued for test2@example.com')
-        });
-        expect(result.auditEntries[1]).toMatchObject({
-          Type: utils.ActionType.Expiry1,
-          Outcome: 'success',
-          Note: expect.stringContaining('Expiration notification queued for test1@example.com')
-        });
-      });
-    });
-
   });
   describe('processExpiredMembers', () => {
     beforeEach(() => {
