@@ -673,6 +673,90 @@ MembershipManagement.Manager = class {
     return similarPairs;
   }
 
+  /**
+   * Pure function: Select items from queue eligible for processing in current batch
+   * @param {MembershipManagement.FIFOItem[]} queue - Queue with ISO string dates
+   * @param {number} batchSize - Maximum items to select
+   * @param {Date} now - Current time for eligibility check
+   * @returns {{eligibleItems: MembershipManagement.FIFOItem[], eligibleIndices: number[]}}
+   */
+  static selectBatchForProcessing(queue, batchSize, now) {
+    const result = queue.reduce((acc, item, index) => {
+      // Skip null/undefined items and dead items
+      if (!item || item.dead) return acc;
+      
+      // Check if item is eligible (nextAttemptAt is in the past or empty)
+      const next = new Date(item.nextAttemptAt);
+      const isEligible = !item.nextAttemptAt || item.nextAttemptAt === '' || isNaN(next.getTime()) || next <= now;
+      
+      // Skip ineligible items or if batch is full
+      if (!isEligible || acc.eligibleItems.length >= batchSize) return acc;
+      
+      // Add eligible item to batch
+      return {
+        eligibleItems: [...acc.eligibleItems, item],
+        eligibleIndices: [...acc.eligibleIndices, index]
+      };
+    }, { eligibleItems: [], eligibleIndices: [] });
+    return result;
+  }
+
+  /**
+   * Pure function: Rebuild queue after processing, removing succeeded/dead items, keeping retry items
+   * @param {MembershipManagement.FIFOItem[]} originalQueue - Original queue before processing
+   * @param {number[]} processedIndices - Indices of items that were selected for processing
+   * @param {MembershipManagement.FIFOItem[]} reattemptItems - Items that failed and need retry (with Manager-set nextAttemptAt)
+   * @param {MembershipManagement.FIFOItem[]} deadItems - Items marked dead (for reference, not included in result)
+   * @returns {MembershipManagement.FIFOItem[]} Updated queue
+   */
+  static rebuildQueue(originalQueue, processedIndices, reattemptItems, deadItems) {
+    const reattemptMap = new Map(reattemptItems.map(item => [item.id, item]));
+    const processedIndicesSet = new Set(processedIndices);
+    
+    const result = originalQueue
+      .map((item, idx) => {
+        if (!processedIndicesSet.has(idx)) {
+          // Item was not selected for processing - keep as-is
+          return item;
+        }
+        // Was selected for processing - check if it needs reattempt
+        return reattemptMap.get(item.id) || null; // retry item or null (succeeded/dead)
+      })
+      .filter(item => item !== null);
+    return result;
+  }
+
+  /**
+   * Pure function: Assign nextAttemptAt timestamps to items that will be in next batch
+   * Call this AFTER rebuildQueue to determine what the next batch will actually be
+   * NOTE: Queue passed in has already had dead items removed by rebuildQueue
+   * @param {MembershipManagement.FIFOItem[]} queue - Queue after rebuild (no dead items)
+   * @param {number} batchSize - Batch size for next processing run
+   * @param {Date} now - Current time for eligibility check
+   * @param {string} nextTriggerTime - ISO string timestamp when next trigger will run
+   * @returns {MembershipManagement.FIFOItem[]} Queue with nextAttemptAt set for next batch items
+   */
+  static assignNextBatchTimestamps(queue, batchSize, now, nextTriggerTime) {
+    let nextBatchCount = 0;
+    
+    return queue.map(item => {
+      // Check if item is currently eligible for next batch
+      const next = new Date(item.nextAttemptAt);
+      const isEligible = !item.nextAttemptAt || item.nextAttemptAt === '' || isNaN(next.getTime()) || next <= now;
+      
+      if (isEligible) {
+        nextBatchCount++;
+        if (nextBatchCount <= batchSize) {
+          // This item will be in the next batch - set its nextAttemptAt
+          return { ...item, nextAttemptAt: nextTriggerTime };
+        }
+      }
+      
+      // Not eligible or beyond batch size - return unchanged
+      return item;
+    });
+  }
+
 }
 
 if (typeof module !== 'undefined' && module.exports) {
