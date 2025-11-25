@@ -209,12 +209,13 @@ MembershipManagement.Manager = class {
           try {
             item.nextAttemptAt = computeNext(item.attempts);
           } catch (e) {
-            // computeNext threw; fallback to empty
-            item.nextAttemptAt = '';
+            // computeNext threw; fallback to 1-minute retry
+            item.nextAttemptAt = new Date(Date.now() + 60000).toISOString();
           }
         } else {
           item.dead = false;
-          item.nextAttemptAt = '';
+          // No computeNext function available; retry in 1 minute
+          item.nextAttemptAt = new Date(Date.now() + 60000).toISOString();
         }
 
         failed.push(item);

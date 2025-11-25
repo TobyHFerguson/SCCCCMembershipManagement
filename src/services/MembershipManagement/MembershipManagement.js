@@ -188,7 +188,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       return { processed: 0, remaining: 0 };
     }
 
-    // Select eligible entries (not dead and nextAttemptAt is absent or in the past)
+    // Select eligible entries (not dead and nextAttemptAt is in the past or now)
     const now = new Date();
     const eligibleItems = [];
     const eligibleIndices = [];
@@ -197,10 +197,9 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       const item = queue[i];
       if (!item || item.dead) continue;
       
-      if (item.nextAttemptAt) {
-        const next = new Date(item.nextAttemptAt);
-        if (!isNaN(next.getTime()) && next > now) continue; // not yet eligible
-      }
+      // nextAttemptAt should always be populated; skip if future
+      const next = new Date(item.nextAttemptAt);
+      if (!isNaN(next.getTime()) && next > now) continue; // not yet eligible
       
       eligibleItems.push(item);
       eligibleIndices.push(i);
@@ -289,9 +288,23 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     if (!opts.dryRun) {
       if (updatedQueue.length > 0) {
         try {
-          MembershipManagement.Utils.log('Scheduling 1-minute trigger to continue processing');
+          // Find earliest eligible time among remaining items to optimize trigger scheduling
+          const eligibleTimes = updatedQueue
+            .filter(item => !item.dead && item.nextAttemptAt)
+            .map(item => new Date(item.nextAttemptAt))
+            .filter(d => !isNaN(d.getTime()));
+          
+          let minutesUntilNext = 1; // Default: check again in 1 minute
+          
+          if (eligibleTimes.length > 0) {
+            const nextEligibleMs = Math.min(...eligibleTimes.map(d => d.getTime()));
+            const msUntilNext = nextEligibleMs - now.getTime();
+            minutesUntilNext = Math.max(1, Math.ceil(msUntilNext / 60000));
+          }
+          
+          MembershipManagement.Utils.log(`Scheduling ${minutesUntilNext}-minute trigger for next eligible item`);
           MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger');
-          MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', 1);
+          MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', minutesUntilNext);
         } catch (e) {
           console.error('Error scheduling expiration FIFO trigger', e && e.toString ? e.toString() : String(e));
         }
