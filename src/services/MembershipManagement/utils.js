@@ -10,10 +10,7 @@ if (typeof require !== 'undefined') {
    * @param  {...any} args - The messages or objects to log.
    */
   MembershipManagement.Utils.log = function(...args)  {
-    const logging = Common.Config.Properties.getBooleanProperty('logging', false);
-    if (logging) {
-      console.log(...args);
-    }
+    Common.Logger.info('MembershipManagement', ...args);
   };
 
   MembershipManagement.Utils.addDaysToDate = function(date, days = 0) {
@@ -111,6 +108,34 @@ MembershipManagement.Utils.spreadsheetDateToIso = function(dateValue) {
     return isNaN(parsed.getTime()) ? '' : parsed.toISOString();
   }
   return '';
+}
+
+/**
+ * Convert FIFO items from ISO string dates (internal format) to spreadsheet Date objects.
+ * Converts lastAttemptAt and nextAttemptAt fields.
+ * @param {MembershipManagement.FIFOItem[]} items - Array of FIFO items with ISO string dates
+ * @returns {MembershipManagement.FIFOItem[]} Array of FIFO items with Date objects for spreadsheet
+ */
+MembershipManagement.Utils.convertFIFOItemsToSpreadsheet = function(items) {
+  return items.map(item => ({
+    ...item,
+    lastAttemptAt: this.isoToSpreadsheetDate(item.lastAttemptAt),
+    nextAttemptAt: this.isoToSpreadsheetDate(item.nextAttemptAt)
+  }));
+}
+
+/**
+ * Convert FIFO items from spreadsheet Date objects to ISO strings (internal format).
+ * Converts lastAttemptAt and nextAttemptAt fields.
+ * @param {any[]} items - Array of FIFO items with spreadsheet Date objects
+ * @returns {MembershipManagement.FIFOItem[]} Array of FIFO items with ISO string dates
+ */
+MembershipManagement.Utils.convertFIFOItemsFromSpreadsheet = function(items) {
+  return items.map(item => ({
+    ...item,
+    lastAttemptAt: this.spreadsheetDateToIso(item.lastAttemptAt),
+    nextAttemptAt: this.spreadsheetDateToIso(item.nextAttemptAt)
+  }));
 }
 
 

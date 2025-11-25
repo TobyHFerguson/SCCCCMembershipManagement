@@ -19,9 +19,9 @@ MembershipManagement.Menu = {
 function processTransactions() {
     return Common.Utils.wrapMenuFunction(
         function() {
-            Logger.log('[processTransactions] Starting processTransactions');
+            Common.Logger.info('MembershipManagement', '[processTransactions] Starting processTransactions');
             const result = MembershipManagement.processTransactions();
-            Logger.log('[processTransactions] Result: ' + result);
+            Common.Logger.info('MembershipManagement', '[processTransactions] Result: ' + result);
             return result;
         },
         'Process Transactions'
@@ -30,9 +30,9 @@ function processTransactions() {
 function generateExpiringMembersList() {
     return Common.Utils.wrapMenuFunction(
         function() {
-            Logger.log('[generateExpiringMembersList] Starting generateExpiringMembersList');
+            Common.Logger.info('MembershipManagement', '[generateExpiringMembersList] Starting generateExpiringMembersList');
             MembershipManagement.generateExpiringMembersList();
-            Logger.log('[generateExpiringMembersList] Completed');
+            Common.Logger.info('MembershipManagement', '[generateExpiringMembersList] Completed');
         },
         'Process Expirations'
     )();
@@ -40,9 +40,9 @@ function generateExpiringMembersList() {
 function processMigrations() {
     return Common.Utils.wrapMenuFunction(
         function() {
-            Logger.log('[processMigrations] Starting processMigrations');
+            Common.Logger.info('MembershipManagement', '[processMigrations] Starting processMigrations');
             MembershipManagement.processMigrations();
-            Logger.log('[processMigrations] Completed');
+            Common.Logger.info('MembershipManagement', '[processMigrations] Completed');
         },
         'Process Migrations'
     )();

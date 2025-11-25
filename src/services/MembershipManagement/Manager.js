@@ -4,7 +4,7 @@ if (typeof require !== 'undefined') {
 
 // @ts-check
 MembershipManagement.Manager = class {
-  constructor(actionSpecs, groups, groupManager, sendEmailFun, today) {
+  constructor(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger) {
     if (!groups || groups.length === 0) { throw new Error('MembershipManager requires a non-empty array of group emails'); }
     this._actionSpecs = actionSpecs;
     this._groups = groups;
@@ -12,7 +12,8 @@ MembershipManagement.Manager = class {
     this._groupRemoveFun = groupManager && groupManager.groupRemoveFun || (() => { });
     this._groupEmailReplaceFun = groupManager && groupManager.groupEmailReplaceFun || (() => { });
     this._sendEmailFun = sendEmailFun || (() => { });
-    this._today = MembershipManagement.Utils.dateOnly(today)
+    this._today = MembershipManagement.Utils.dateOnly(today);
+    this._auditLogger = auditLogger || null;
   }
 
   today() {
@@ -20,11 +21,14 @@ MembershipManagement.Manager = class {
   }
 
   /**
+   * Generator: Create list of expiring members to be processed
+   * This is a pure generator function that prepares work but does NOT cause business events.
+   * Business events (email send, group removal) happen in processExpiredMembers (the consumer).
    * 
    * @param {Member[]} activeMembers 
    * @param {MembershipManagement.ExpirySchedule[]} expirySchedule 
    * @param {string} prefillFormTemplate 
-   * @returns {MembershipManagement.ExpiredMembersQueue} array of messages to be sent and groups to be removed
+   * @returns {{messages: MembershipManagement.ExpiredMembersQueue}} array of messages to be sent
    */
   generateExpiringMembersList(activeMembers, expirySchedule, prefillFormTemplate) {
     expirySchedule.forEach(sched => { sched.Date = MembershipManagement.Utils.dateOnly(new Date(sched.Date) )});
@@ -41,11 +45,10 @@ MembershipManagement.Manager = class {
     
     if (!prefillFormTemplate) {
       console.error("Prefill form template is required");
-      return [];
+      return { messages: [] };
     }
     // collect messages to allow generator/consumer separation
     const messages = /** @type {MembershipManagement.ExpiringMember[]} */ [];
-    const errors = [];
     let processedCount = 0;
     let emailsSeen = new Set();
     let expired = new Set();
@@ -89,10 +92,7 @@ MembershipManagement.Manager = class {
           expirySchedule.splice(i, 1);
         }
       }
-    if (errors.length > 0) {
-      throw new AggregateError(errors, 'Errors occurred while processing expirations');
-    }
-    return messages;
+    return { messages };
   }
 
   /**
@@ -101,11 +101,12 @@ MembershipManagement.Manager = class {
    * @param {function(GoogleAppsScript.Mail.MailAdvancedParameters): void} sendEmailFun
    * @param {function(string, string): void} groupRemoveFun
    * @param {object} opts
-   * @returns {{processed: MembershipManagement.FIFOItem[], failed: MembershipManagement.FIFOItem[]}}
+   * @returns {{processed: MembershipManagement.FIFOItem[], failed: MembershipManagement.FIFOItem[], auditEntries: any[]}}
    *
    * Returns:
    *  - processed: array of successfully completed FIFOItems
    *  - failed: array of failed FIFOItems with updated bookkeeping (attempts, lastError, nextAttemptAt, dead)
+   *  - auditEntries: array of audit log entries for DeadLetter events
    *
    * Notes:
    *  - Manager is authoritative for attempt/backoff decisions
@@ -125,6 +126,7 @@ MembershipManagement.Manager = class {
     
     const processed = [];
     const failed = [];
+    const auditEntries = [];
 
     const defaultMaxAttempts = opts.maxAttempts !== undefined ? Number(opts.maxAttempts) : 5;
     const computeNext = typeof opts.computeNextAttemptAt === 'function' ? opts.computeNextAttemptAt : (MembershipManagement.Utils && MembershipManagement.Utils.computeNextAttemptAt ? MembershipManagement.Utils.computeNextAttemptAt : null);
@@ -136,7 +138,7 @@ MembershipManagement.Manager = class {
       const effectiveMaxAttempts = item.maxAttempts ? Number(item.maxAttempts) : defaultMaxAttempts;
       
       try {
-        // Only send email if both subject and htmlBody are present
+        // Only send email if both subject and htmlBody are present`
         if (item.subject && item.htmlBody) {
           const msg = {
             to: item.email,
@@ -160,6 +162,20 @@ MembershipManagement.Manager = class {
             item.groups = groups.join(',');
           }
         }
+        
+        // Generate audit log entry for successful processing
+        if (this._auditLogger) {
+          auditEntries.push(this._auditLogger.createLogEntry({
+            type: 'ProcessExpiredMember',
+            outcome: 'success',
+            note: `Successfully processed expiration for ${item.email}`,
+            jsonData: {
+              email: item.email,
+              id: item.id
+            }
+          })); 
+        }
+        
         processed.push(item);
       } catch (err) {
         // Attempt bookkeeping: increment attempts and set lastError/lastAttemptAt
@@ -172,23 +188,40 @@ MembershipManagement.Manager = class {
         if (Number(item.attempts) >= Number(effectiveMaxAttempts)) {
           item.dead = true;
           item.nextAttemptAt = item.nextAttemptAt || '';
+          
+          // Generate audit log entry for DeadLetter
+          if (this._auditLogger) {
+            auditEntries.push(this._auditLogger.createLogEntry({
+              type: 'DeadLetter',
+              outcome: 'fail',
+              note: `Failed to process expiration for ${item.email} after ${item.attempts} attempts`,
+              error: item.lastError,
+              jsonData: {
+                email: item.email,
+                attempts: item.attempts,
+                lastError: item.lastError,
+                id: item.id
+              }
+            }));
+          }
         } else if (computeNext) {
           item.dead = false;
           try {
             item.nextAttemptAt = computeNext(item.attempts);
           } catch (e) {
-            // computeNext threw; fallback to empty
-            item.nextAttemptAt = '';
+            // computeNext threw; fallback to 1-minute retry
+            item.nextAttemptAt = new Date(Date.now() + 60000).toISOString();
           }
         } else {
           item.dead = false;
-          item.nextAttemptAt = '';
+          // No computeNext function available; retry in 1 minute
+          item.nextAttemptAt = new Date(Date.now() + 60000).toISOString();
         }
 
         failed.push(item);
       }
     }
-    return { processed, failed };
+    return { processed, failed, auditEntries };
   }
 
   migrateCEMembers(migrators, members, expirySchedule) {
@@ -197,6 +230,7 @@ MembershipManagement.Manager = class {
 
     let numMigrations = 0;
     const errors = [];
+    const auditEntries = [];
     migrators.forEach((mi, i) => {
       const rowNum = i + 2;
       if (!mi.Email) {
@@ -231,23 +265,46 @@ MembershipManagement.Manager = class {
           members.push(newMember);
           console.log(`Migrated ${newMember.Email}, row ${rowNum}`);
           numMigrations++;
+          
+          // Generate audit log entry
+          if (this._auditLogger) {
+            auditEntries.push(this._auditLogger.createLogEntry({
+              type: 'Migrate',
+              outcome: 'success',
+              note: `Member migrated: ${newMember.Email} (Status: ${mi.Status})`
+            }));
+          }
         } catch (error) {
           error.rowNum = rowNum;
           error.email = mi.Email;
           errors.push(error);
+          
+          // Generate audit log entry for failure
+          if (this._auditLogger) {
+            auditEntries.push(this._auditLogger.createLogEntry({
+              type: 'Migrate',
+              outcome: 'fail',
+              note: `Failed to migrate ${mi.Email}`,
+              error: error.message || String(error),
+              jsonData: {
+                rowNum: rowNum,
+                email: mi.Email,
+                errorMessage: error.message,
+                stack: error.stack
+              }
+            }));
+          }
         }
       }
     });
-    if (errors.length > 0) {
-      throw new AggregateError(errors, 'Errors occurred while migrating members');
-    }
-    return numMigrations;
+    return { numMigrations, auditEntries, errors };
   }
 
   processPaidTransactions(transactions, membershipData, expirySchedule) {
     const activeMembers = membershipData.reduce((acc, m, i) => { if (m.Status === 'Active') { acc.push([m.Email, i]); } return acc }, [])
     const emailToActiveMemberIndexMap = Object.fromEntries(activeMembers);
     const errors = [];
+    const auditEntries = [];
     let recordsChanged = false;
     let hasPendingPayments = false;
     transactions.forEach((txn, i) => {
@@ -259,13 +316,15 @@ MembershipManagement.Manager = class {
         return
       }
       // We get here with a transaction that is not processed but is marked as paid. Process it.
+      const matchIndex = emailToActiveMemberIndexMap[txn["Email Address"]];
       try {
-        const matchIndex = emailToActiveMemberIndexMap[txn["Email Address"]];
         let message;
+        let actionType;
         if (matchIndex !== undefined) { // a renewing member
           console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a renewing member`);
           const member = membershipData[matchIndex];
           this.renewMember_(txn, member, expirySchedule);
+          actionType = 'Renew';
           message = {
             to: member.Email,
             subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Subject, member),
@@ -275,6 +334,7 @@ MembershipManagement.Manager = class {
           console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a new member`);
           const newMember = this.addNewMember_(txn, expirySchedule, membershipData);
           this._groups.forEach(g => this._groupAddFun(newMember.Email, g.Email));
+          actionType = 'Join';
           message = {
             to: newMember.Email,
             subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Join.Subject, newMember),
@@ -285,13 +345,38 @@ MembershipManagement.Manager = class {
         txn.Timestamp = this._today;
         txn.Processed = this._today;
         recordsChanged = true;
+        
+        // Generate audit log entry
+        if (this._auditLogger) {
+          auditEntries.push(this._auditLogger.createLogEntry({
+            type: actionType,
+            outcome: 'success',
+            note: `Member ${actionType === 'Join' ? 'joined' : 'renewed'}: ${txn["Email Address"]}`
+          }));
+        }
       } catch (error) {
         error.txnNum = i + 2;
         error.email = txn["Email Address"];
         errors.push(error);
+        
+        // Generate audit log entry for failure
+        if (this._auditLogger) {
+          auditEntries.push(this._auditLogger.createLogEntry({
+            type: matchIndex !== undefined ? 'Renew' : 'Join',
+            outcome: 'fail',
+            note: `Failed to process transaction for ${txn["Email Address"]}`,
+            error: error.message || String(error),
+            jsonData: {
+              txnNum: i + 2,
+              email: txn["Email Address"],
+              errorMessage: error.message,
+              stack: error.stack
+            }
+          }));
+        }
       }
     });
-    return { recordsChanged, hasPendingPayments, errors };
+    return { recordsChanged, hasPendingPayments, errors, auditEntries };
   }
 
 
@@ -586,6 +671,90 @@ MembershipManagement.Manager = class {
       }
     }
     return similarPairs;
+  }
+
+  /**
+   * Pure function: Select items from queue eligible for processing in current batch
+   * @param {MembershipManagement.FIFOItem[]} queue - Queue with ISO string dates
+   * @param {number} batchSize - Maximum items to select
+   * @param {Date} now - Current time for eligibility check
+   * @returns {{eligibleItems: MembershipManagement.FIFOItem[], eligibleIndices: number[]}}
+   */
+  static selectBatchForProcessing(queue, batchSize, now) {
+    const result = queue.reduce((acc, item, index) => {
+      // Skip null/undefined items and dead items
+      if (!item || item.dead) return acc;
+      
+      // Check if item is eligible (nextAttemptAt is in the past or empty)
+      const next = new Date(item.nextAttemptAt);
+      const isEligible = !item.nextAttemptAt || item.nextAttemptAt === '' || isNaN(next.getTime()) || next <= now;
+      
+      // Skip ineligible items or if batch is full
+      if (!isEligible || acc.eligibleItems.length >= batchSize) return acc;
+      
+      // Add eligible item to batch
+      return {
+        eligibleItems: [...acc.eligibleItems, item],
+        eligibleIndices: [...acc.eligibleIndices, index]
+      };
+    }, { eligibleItems: [], eligibleIndices: [] });
+    return result;
+  }
+
+  /**
+   * Pure function: Rebuild queue after processing, removing succeeded/dead items, keeping retry items
+   * @param {MembershipManagement.FIFOItem[]} originalQueue - Original queue before processing
+   * @param {number[]} processedIndices - Indices of items that were selected for processing
+   * @param {MembershipManagement.FIFOItem[]} reattemptItems - Items that failed and need retry (with Manager-set nextAttemptAt)
+   * @param {MembershipManagement.FIFOItem[]} deadItems - Items marked dead (for reference, not included in result)
+   * @returns {MembershipManagement.FIFOItem[]} Updated queue
+   */
+  static rebuildQueue(originalQueue, processedIndices, reattemptItems, deadItems) {
+    const reattemptMap = new Map(reattemptItems.map(item => [item.id, item]));
+    const processedIndicesSet = new Set(processedIndices);
+    
+    const result = originalQueue
+      .map((item, idx) => {
+        if (!processedIndicesSet.has(idx)) {
+          // Item was not selected for processing - keep as-is
+          return item;
+        }
+        // Was selected for processing - check if it needs reattempt
+        return reattemptMap.get(item.id) || null; // retry item or null (succeeded/dead)
+      })
+      .filter(item => item !== null);
+    return result;
+  }
+
+  /**
+   * Pure function: Assign nextAttemptAt timestamps to items that will be in next batch
+   * Call this AFTER rebuildQueue to determine what the next batch will actually be
+   * NOTE: Queue passed in has already had dead items removed by rebuildQueue
+   * @param {MembershipManagement.FIFOItem[]} queue - Queue after rebuild (no dead items)
+   * @param {number} batchSize - Batch size for next processing run
+   * @param {Date} now - Current time for eligibility check
+   * @param {string} nextTriggerTime - ISO string timestamp when next trigger will run
+   * @returns {MembershipManagement.FIFOItem[]} Queue with nextAttemptAt set for next batch items
+   */
+  static assignNextBatchTimestamps(queue, batchSize, now, nextTriggerTime) {
+    let nextBatchCount = 0;
+    
+    return queue.map(item => {
+      // Check if item is currently eligible for next batch
+      const next = new Date(item.nextAttemptAt);
+      const isEligible = !item.nextAttemptAt || item.nextAttemptAt === '' || isNaN(next.getTime()) || next <= now;
+      
+      if (isEligible) {
+        nextBatchCount++;
+        if (nextBatchCount <= batchSize) {
+          // This item will be in the next batch - set its nextAttemptAt
+          return { ...item, nextAttemptAt: nextTriggerTime };
+        }
+      }
+      
+      // Not eligible or beyond batch size - return unchanged
+      return item;
+    });
   }
 
 }
