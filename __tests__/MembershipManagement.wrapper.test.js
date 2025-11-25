@@ -134,3 +134,91 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
         expect(ids).toContain('r1');
     });
 });
+
+describe('MembershipManagement audit persistence integration', () => {
+    beforeEach(() => {
+        // Setup Common.Logger mock for AuditPersistence
+        global.Common = global.Common || {};
+        global.Common.Logger = global.Common.Logger || {};
+        global.Common.Logger.info = jest.fn();
+        global.Common.Logger.error = jest.fn();
+        
+        // Ensure Audit namespace exists globally and load Audit.Persistence helper
+        const auditModule = require('../src/common/audit/AuditPersistence.js');
+        global.Audit = auditModule.Audit;
+    });
+
+    it('persistAuditEntries_ uses Audit.Persistence.persistAuditEntries helper', () => {
+        const mockAuditEntries = [
+            { Type: 'ProcessExpiredMember', Outcome: 'success', Note: 'Test entry 1', Timestamp: '2024-01-01T00:00:00.000Z' },
+            { Type: 'DeadLetter', Outcome: 'fail', Note: 'Test entry 2', Error: 'Test error', Timestamp: '2024-01-01T00:00:01.000Z' }
+        ];
+
+        const mockAuditFiddler = {
+            getData: jest.fn(() => []),
+            setData: jest.fn().mockReturnThis(),
+            dumpValues: jest.fn()
+        };
+
+        global.Common = global.Common || {};
+        global.Common.Data = global.Common.Data || {};
+        global.Common.Data.Storage = global.Common.Data.Storage || {};
+        global.Common.Data.Storage.SpreadsheetManager = {
+            getFiddler: jest.fn((name) => {
+                if (name === 'Audit') return mockAuditFiddler;
+                throw new Error(`Unexpected fiddler: ${name}`);
+            })
+        };
+
+        // Call the wrapper function
+        const numWritten = global.MembershipManagement.Internal.persistAuditEntries_(mockAuditEntries);
+
+        // Verify helper was called with correct fiddler
+        expect(global.Common.Data.Storage.SpreadsheetManager.getFiddler).toHaveBeenCalledWith('Audit');
+
+        // Verify audit entries were persisted
+        expect(mockAuditFiddler.setData).toHaveBeenCalled();
+        expect(mockAuditFiddler.dumpValues).toHaveBeenCalled();
+
+        // Verify return value
+        expect(numWritten).toBe(2);
+    });
+
+    it('persistAuditEntries_ returns 0 when auditEntries is empty', () => {
+        const numWritten = global.MembershipManagement.Internal.persistAuditEntries_([]);
+        expect(numWritten).toBe(0);
+    });
+
+    it('persistAuditEntries_ returns 0 when auditEntries is null/undefined', () => {
+        expect(global.MembershipManagement.Internal.persistAuditEntries_(null)).toBe(0);
+        expect(global.MembershipManagement.Internal.persistAuditEntries_(undefined)).toBe(0);
+    });
+
+    it('persistAuditEntries_ catches and logs errors without throwing', () => {
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+        const mockAuditEntries = [
+            { Type: 'Test', Outcome: 'success', Note: 'Test entry', Timestamp: '2024-01-01T00:00:00.000Z' }
+        ];
+
+        global.Common = global.Common || {};
+        global.Common.Data = global.Common.Data || {};
+        global.Common.Data.Storage = global.Common.Data.Storage || {};
+        global.Common.Data.Storage.SpreadsheetManager = {
+            getFiddler: jest.fn(() => {
+                throw new Error('Fiddler error');
+            })
+        };
+
+        // Should not throw
+        const numWritten = global.MembershipManagement.Internal.persistAuditEntries_(mockAuditEntries);
+
+        // Should log error
+        expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to persist audit entries'));
+
+        // Should return 0
+        expect(numWritten).toBe(0);
+
+        consoleErrorSpy.mockRestore();
+    });
+});

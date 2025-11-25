@@ -513,28 +513,26 @@ MembershipManagement.Internal.sendExpirationErrorNotification_ = function (error
 }
 
 /**
- * Persists audit log entries to the Audit sheet
+ * Persists audit log entries to the Audit sheet using the canonical helper
  * @param {Audit.LogEntry[]} auditEntries - Array of audit log entries to persist
  */
 MembershipManagement.Internal.persistAuditEntries_ = function (auditEntries) {
   if (!auditEntries || auditEntries.length === 0) {
-    return;
+    return 0;
   }
   
   try {
     const auditFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Audit');
-    const existingAudit = auditFiddler.getData() || [];
     
-    // Append new entries
-    existingAudit.push(...auditEntries);
+    // Use the canonical persistence helper (enforces schema validation and deduplication)
+    const numWritten = Audit.Persistence.persistAuditEntries(auditFiddler, auditEntries);
     
-    // Persist to sheet
-    auditFiddler.setData(existingAudit).dumpValues();
-    
-    MembershipManagement.Utils.log(`Persisted ${auditEntries.length} audit log entries`);
+    MembershipManagement.Utils.log(`Persisted ${numWritten} audit log entries`);
+    return numWritten;
   } catch (error) {
     // Log but don't throw - audit logging should not break main functionality
     console.error(`Failed to persist audit entries: ${error.message}`);
+    return 0;
   }
 }
 
