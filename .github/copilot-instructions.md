@@ -5,6 +5,65 @@ Google Apps Script (GAS) membership management system for SCCCC. Hybrid TypeScri
 
 ## Critical Architecture Patterns
 
+### GAS Layer Separation (FUNDAMENTAL PRINCIPLE)
+
+**Core Rule**: GAS layer files (in service namespaces like `MembershipManagement`, `VotingService`) MUST contain ONLY:
+- GAS API calls (`MailApp`, `AdminDirectory`, `SpreadsheetApp`, `PropertiesService`, etc.)
+- Date conversions between spreadsheet and ISO formats
+- Fiddler operations (get/set data)
+- Orchestration logic calling Manager pure functions
+- Error handling and logging
+
+**ALL business logic MUST be in Manager classes** with full Jest test coverage.
+
+**Anti-pattern (BAD)**:
+```javascript
+// In MembershipManagement.processExpirationFIFO
+const eligibleItems = [];
+for (let i = 0; i < queue.length; i++) {
+  const item = queue[i];
+  if (!item || item.dead) continue;
+  const next = new Date(item.nextAttemptAt);
+  const isEligible = !item.nextAttemptAt || item.nextAttemptAt === '' || isNaN(next.getTime()) || next <= now;
+  if (!isEligible) continue;
+  if (eligibleItems.length < batchSize) {
+    eligibleItems.push(item);
+    eligibleIndices.push(i);
+  }
+}
+// ❌ Complex pure logic in GAS layer - untestable without GAS runtime
+```
+
+**Correct Pattern (GOOD)**:
+```javascript
+// In Manager.js (pure, testable)
+static selectBatchForProcessing(queue, batchSize, now) {
+  const eligibleItems = [];
+  const eligibleIndices = [];
+  // ... complex logic here
+  return { eligibleItems, eligibleIndices };
+}
+
+// In MembershipManagement.js (GAS orchestration only)
+const now = new Date(); // GAS: get current time
+const { eligibleItems, eligibleIndices } = MembershipManagement.Manager.selectBatchForProcessing(queue, batchSize, now);
+// ✅ Pure logic in Manager, GAS layer just calls it
+```
+
+**Benefits**:
+- **Testability**: Complex logic covered by comprehensive Jest tests
+- **Reliability**: Tests catch edge cases before deployment
+- **Maintainability**: Business logic changes don't require GAS deployment to verify
+- **Debuggability**: Pure functions can be debugged locally with Node.js
+
+**Implementation Pattern**:
+1. Write pure static methods in `Manager` class accepting all inputs (no GAS dependencies)
+2. Write comprehensive Jest tests covering edge cases
+3. GAS layer calls Manager methods, passing GAS-fetched data and injected functions
+4. Mark GAS operations with `// GAS:` comments, pure function calls with `// PURE:`
+
+**See**: `__tests__/FIFOBatchProcessing.test.js` for example of comprehensive pure function tests.
+
 ### Namespace Declaration Pattern (CRITICAL)
 
 **Hybrid environment challenge**: Files run concatenated in GAS but independently in Jest. `1namespaces.js` declares all root namespaces with `const`, loading first in GAS.
