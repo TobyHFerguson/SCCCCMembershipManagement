@@ -193,16 +193,22 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     const eligibleItems = [];
     const eligibleIndices = [];
     
-    for (let i = 0; i < queue.length && eligibleItems.length < batchSize; i++) {
+    for (let i = 0; i < queue.length; i++) {
       const item = queue[i];
       if (!item || item.dead) continue;
       
-      // nextAttemptAt should always be populated; skip if future
+      // Check if item is eligible (nextAttemptAt is in the past or empty)
       const next = new Date(item.nextAttemptAt);
-      if (!isNaN(next.getTime()) && next > now) continue; // not yet eligible
+      const isEligible = !item.nextAttemptAt || item.nextAttemptAt === '' || isNaN(next.getTime()) || next <= now;
       
-      eligibleItems.push(item);
-      eligibleIndices.push(i);
+      if (!isEligible) continue; // Not eligible - skip
+      
+      // Item is eligible - add to batch up to batchSize limit
+      if (eligibleItems.length < batchSize) {
+        eligibleItems.push(item);
+        eligibleIndices.push(i);
+      }
+      // We don't track items beyond batchSize here - we'll handle them after processing
     }
 
     if (eligibleItems.length === 0) {
@@ -239,13 +245,38 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     const reattemptMap = new Map(reattemptItems.map(item => [item.id, item]));
     
     const updatedQueue = queue.map((item, idx) => {
-      if (!eligibleIndices.includes(idx)) return item; // untouched
-      
-      const reattemptItem = reattemptMap.get(item.id);
-      if (reattemptItem) return reattemptItem; // failed, needs reattempt
-      
-      return null; // succeeded or dead - remove
+      if (eligibleIndices.includes(idx)) {
+        // Was selected for processing in THIS batch
+        const reattemptItem = reattemptMap.get(item.id);
+        if (reattemptItem) return reattemptItem; // failed, needs reattempt (Manager set nextAttemptAt)
+        return null; // succeeded or dead - remove
+      }
+      // Item was not selected for processing - keep as-is
+      return item;
     }).filter(item => item !== null);
+    
+    // NOW figure out what the next batch will be and set nextAttemptAt for those items
+    // Calculate when the next trigger will run
+    const nextTriggerTime = new Date(now.getTime() + 60000).toISOString();
+    
+    let nextBatchCount = 0;
+    for (let i = 0; i < updatedQueue.length; i++) {
+      const item = updatedQueue[i];
+      if (item.dead) continue;
+      
+      // Check if item is currently eligible for next batch
+      const next = new Date(item.nextAttemptAt);
+      const isEligible = !item.nextAttemptAt || item.nextAttemptAt === '' || isNaN(next.getTime()) || next <= now;
+      
+      if (isEligible) {
+        nextBatchCount++;
+        if (nextBatchCount <= batchSize) {
+          // This item will be in the next batch - set its nextAttemptAt
+          updatedQueue[i] = { ...item, nextAttemptAt: nextTriggerTime };
+        }
+        // Items beyond batchSize will remain untouched (empty nextAttemptAt)
+      }
+    }
 
     // Persist dead-letter items and updated queue
     if (!opts.dryRun) {
