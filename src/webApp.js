@@ -1,4 +1,5 @@
-const MAGIC_LINK_INPUT = 'common/auth/magicLinkInput.html'; // Name of the HTML file for input form
+const MAGIC_LINK_INPUT = 'common/auth/magicLinkInput.html'; // Name of the HTML file for magic link input form
+const VERIFICATION_CODE_INPUT = 'common/auth/verificationCodeInput.html'; // Name of the HTML file for verification code input
 const _LAYOUT_FILE = 'common/html/_Layout.html'; // Name of the layout file
 
 // @ts-check
@@ -32,10 +33,13 @@ function doGet(e) {
     template.serviceName = service.name
 
     if (page === 'request') {
-        template.contentFileName = MAGIC_LINK_INPUT;
+        // Check feature flag to determine which auth flow to use
+        const useNewAuth = Common.Config.FeatureFlags.isNewAuthEnabled();
+        template.contentFileName = useNewAuth ? VERIFICATION_CODE_INPUT : MAGIC_LINK_INPUT;
         template.service = service.service;
+        const authFlowName = useNewAuth ? 'Verification Code' : 'Magic Link';
         const output = template.evaluate()
-            .setTitle(`Request Access - ${MAGIC_LINK_INPUT}`)
+            .setTitle(`Request Access - ${authFlowName}`)
         return output;
     }
     const token = e.parameter.token;
