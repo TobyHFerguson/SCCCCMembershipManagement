@@ -1,0 +1,403 @@
+<style>
+  .message {
+    text-align: left;
+  }
+  
+  .code-input-container {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .code-input {
+    width: 2.5rem;
+    height: 3rem;
+    font-size: 1.5rem;
+    text-align: center;
+    border: 0.0625rem solid #ccc;
+    border-radius: 0.25rem;
+    padding: 0;
+  }
+  
+  .code-input:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 0.125rem rgba(0, 123, 255, 0.25);
+  }
+  
+  .code-separator {
+    font-size: 1.5rem;
+    line-height: 3rem;
+    color: #666;
+  }
+  
+  .verification-step {
+    display: none;
+  }
+  
+  .verification-step.active {
+    display: block;
+  }
+  
+  .back-link {
+    display: block;
+    margin-top: 1rem;
+    text-align: center;
+    color: #007bff;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  
+  .resend-link {
+    display: block;
+    margin-top: 1rem;
+    text-align: center;
+    color: #666;
+    font-size: 0.9rem;
+  }
+  
+  .resend-link a {
+    color: #007bff;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  
+  .resend-link a.disabled {
+    color: #999;
+    cursor: not-allowed;
+    text-decoration: none;
+  }
+</style>
+
+<h2>SCCCC
+  <?= serviceName ?>
+</h2>
+
+<!-- Step 1: Email Input -->
+<div id="step1" class="verification-step active">
+  <h2>Request Verification Code</h2>
+  
+  <form id="emailForm">
+    <input type="email" id="email" placeholder="Enter your email address" required
+      autocomplete="email" oninput="validateEmailInput()">
+    <button type="submit" id="sendCodeButton" disabled>Send Verification Code</button>
+    <div id="emailMessage" class="message"></div>
+  </form>
+</div>
+
+<!-- Step 2: Code Input -->
+<div id="step2" class="verification-step">
+  <h2>Enter Verification Code</h2>
+  <p style="text-align: center; color: #666; font-size: 0.9rem;">
+    We've sent a 6-digit code to <span id="displayEmail"></span>
+  </p>
+  
+  <form id="codeForm">
+    <div class="code-input-container">
+      <input type="text" class="code-input" id="code1" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" autofocus>
+      <input type="text" class="code-input" id="code2" maxlength="1" inputmode="numeric" pattern="[0-9]">
+      <input type="text" class="code-input" id="code3" maxlength="1" inputmode="numeric" pattern="[0-9]">
+      <span class="code-separator">-</span>
+      <input type="text" class="code-input" id="code4" maxlength="1" inputmode="numeric" pattern="[0-9]">
+      <input type="text" class="code-input" id="code5" maxlength="1" inputmode="numeric" pattern="[0-9]">
+      <input type="text" class="code-input" id="code6" maxlength="1" inputmode="numeric" pattern="[0-9]">
+    </div>
+    <button type="submit" id="verifyButton" disabled>Verify Code</button>
+    <div id="codeMessage" class="message"></div>
+  </form>
+  
+  <div class="resend-link">
+    Didn't receive the code? <a id="resendLink" onclick="handleResendCode()">Resend code</a>
+    <span id="resendCountdown" style="display: none;"></span>
+  </div>
+  
+  <a class="back-link" onclick="showStep1()">← Use a different email</a>
+</div>
+
+<script>
+  console.log('Service value from template:', '<?= service ?>');
+
+  // State
+  let userEmail = '';
+  let resendDisabled = false;
+  let resendCountdownSeconds = 0;
+  let resendTimer = null;
+
+  // DOM Elements
+  const emailInput = document.getElementById('email');
+  const sendCodeButton = document.getElementById('sendCodeButton');
+  const emailMessageDiv = document.getElementById('emailMessage');
+  const emailForm = document.getElementById('emailForm');
+  const codeForm = document.getElementById('codeForm');
+  const verifyButton = document.getElementById('verifyButton');
+  const codeMessageDiv = document.getElementById('codeMessage');
+  const displayEmailSpan = document.getElementById('displayEmail');
+  const resendLink = document.getElementById('resendLink');
+  const resendCountdown = document.getElementById('resendCountdown');
+  const codeInputs = [
+    document.getElementById('code1'),
+    document.getElementById('code2'),
+    document.getElementById('code3'),
+    document.getElementById('code4'),
+    document.getElementById('code5'),
+    document.getElementById('code6')
+  ];
+
+  // Step Navigation
+  function showStep1() {
+    document.getElementById('step1').classList.add('active');
+    document.getElementById('step2').classList.remove('active');
+    clearCodeInputs();
+    hideMessage(codeMessageDiv);
+  }
+
+  function showStep2() {
+    document.getElementById('step1').classList.remove('active');
+    document.getElementById('step2').classList.add('active');
+    displayEmailSpan.textContent = userEmail;
+    codeInputs[0].focus();
+  }
+
+  // Email Validation
+  function validateEmailInput() {
+    sendCodeButton.disabled = !emailInput.checkValidity() || emailForm.dataset.customDisabled === 'true';
+  }
+
+  // Code Input Validation
+  function validateCodeInputs() {
+    const code = getCodeValue();
+    verifyButton.disabled = code.length !== 6 || !/^\d{6}$/.test(code);
+  }
+
+  function getCodeValue() {
+    return codeInputs.map(input => input.value).join('');
+  }
+
+  function clearCodeInputs() {
+    codeInputs.forEach(input => {
+      input.value = '';
+    });
+    verifyButton.disabled = true;
+  }
+
+  // Message Display
+  function displayMessage(div, message, isError = false) {
+    div.style.display = 'block';
+    div.className = 'message ' + (isError ? 'error' : 'success');
+    div.innerHTML = message;
+  }
+
+  function hideMessage(div) {
+    div.style.display = 'none';
+    div.innerHTML = '';
+    div.className = 'message';
+  }
+
+  // Code Input Handlers
+  codeInputs.forEach((input, index) => {
+    input.addEventListener('input', (e) => {
+      const value = e.target.value;
+      
+      // Only allow digits
+      if (value && !/^\d$/.test(value)) {
+        e.target.value = '';
+        return;
+      }
+      
+      // Move to next input on valid digit
+      if (value && index < 5) {
+        codeInputs[index + 1].focus();
+      }
+      
+      validateCodeInputs();
+    });
+
+    input.addEventListener('keydown', (e) => {
+      // Handle backspace - move to previous input if current is empty
+      if (e.key === 'Backspace' && !e.target.value && index > 0) {
+        codeInputs[index - 1].focus();
+      }
+      
+      // Handle left/right arrow keys
+      if (e.key === 'ArrowLeft' && index > 0) {
+        codeInputs[index - 1].focus();
+      }
+      if (e.key === 'ArrowRight' && index < 5) {
+        codeInputs[index + 1].focus();
+      }
+    });
+
+    // Handle paste - fill all inputs from paste
+    input.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pastedData = (e.clipboardData || window.clipboardData).getData('text');
+      const digits = pastedData.replace(/\D/g, '').slice(0, 6);
+      
+      digits.split('').forEach((digit, i) => {
+        if (codeInputs[i]) {
+          codeInputs[i].value = digit;
+        }
+      });
+      
+      // Focus last filled input or last input
+      const lastIndex = Math.min(digits.length, 6) - 1;
+      if (lastIndex >= 0) {
+        codeInputs[Math.min(lastIndex, 5)].focus();
+      }
+      
+      validateCodeInputs();
+    });
+  });
+
+  // Resend Countdown
+  function startResendCountdown() {
+    resendDisabled = true;
+    resendCountdownSeconds = 60;
+    resendLink.classList.add('disabled');
+    resendLink.onclick = null;
+    updateResendUI();
+    
+    resendTimer = setInterval(() => {
+      resendCountdownSeconds--;
+      updateResendUI();
+      
+      if (resendCountdownSeconds <= 0) {
+        clearInterval(resendTimer);
+        resendDisabled = false;
+        resendLink.classList.remove('disabled');
+        resendLink.onclick = handleResendCode;
+        resendCountdown.style.display = 'none';
+        resendLink.textContent = 'Resend code';
+      }
+    }, 1000);
+  }
+
+  function updateResendUI() {
+    if (resendCountdownSeconds > 0) {
+      resendLink.textContent = '';
+      resendCountdown.style.display = 'inline';
+      resendCountdown.textContent = ` (available in ${resendCountdownSeconds}s)`;
+    }
+  }
+
+  // API Handlers
+  function handleSendCode() {
+    userEmail = emailInput.value.trim().toLowerCase();
+    
+    disableForm(emailForm);
+    displayMessage(emailMessageDiv, 'Sending verification code...', false);
+
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run
+        .withSuccessHandler(function(response) {
+          enableForm(emailForm);
+          if (response && response.success) {
+            hideMessage(emailMessageDiv);
+            showStep2();
+            startResendCountdown();
+          } else {
+            const errorMessage = response && response.error ? response.error : 'Failed to send verification code.';
+            displayMessage(emailMessageDiv, 'Error: ' + errorMessage, true);
+          }
+        })
+        .withFailureHandler(function(error) {
+          enableForm(emailForm);
+          displayMessage(emailMessageDiv, 'Error: ' + error.message, true);
+        })
+        .sendVerificationCode(userEmail, '<?= service ?>');
+    } else {
+      enableForm(emailForm);
+      displayMessage(emailMessageDiv, 'Error: google.script.run is not defined.', true);
+    }
+  }
+
+  function handleVerifyCode() {
+    const code = getCodeValue();
+    
+    disableForm(codeForm);
+    displayMessage(codeMessageDiv, 'Verifying...', false);
+
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run
+        .withSuccessHandler(function(response) {
+          if (response && response.success) {
+            displayMessage(codeMessageDiv, 'Verified! Redirecting...', false);
+            // Redirect with the multi-use token
+            if (response.redirectUrl) {
+              window.top.location.href = response.redirectUrl;
+            } else {
+              // Fallback: reload page with token
+              window.top.location.reload();
+            }
+          } else {
+            enableForm(codeForm);
+            const errorMessage = response && response.error ? response.error : 'Verification failed.';
+            displayMessage(codeMessageDiv, 'Error: ' + errorMessage, true);
+            clearCodeInputs();
+            codeInputs[0].focus();
+          }
+        })
+        .withFailureHandler(function(error) {
+          enableForm(codeForm);
+          displayMessage(codeMessageDiv, 'Error: ' + error.message, true);
+          clearCodeInputs();
+          codeInputs[0].focus();
+        })
+        .verifyCode(userEmail, code, '<?= service ?>');
+    } else {
+      enableForm(codeForm);
+      displayMessage(codeMessageDiv, 'Error: google.script.run is not defined.', true);
+    }
+  }
+
+  function handleResendCode() {
+    if (resendDisabled) return;
+    
+    disableForm(codeForm);
+    displayMessage(codeMessageDiv, 'Resending verification code...', false);
+
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run
+        .withSuccessHandler(function(response) {
+          enableForm(codeForm);
+          if (response && response.success) {
+            displayMessage(codeMessageDiv, 'A new code has been sent to your email.', false);
+            startResendCountdown();
+            clearCodeInputs();
+            codeInputs[0].focus();
+          } else {
+            const errorMessage = response && response.error ? response.error : 'Failed to resend code.';
+            displayMessage(codeMessageDiv, 'Error: ' + errorMessage, true);
+          }
+        })
+        .withFailureHandler(function(error) {
+          enableForm(codeForm);
+          displayMessage(codeMessageDiv, 'Error: ' + error.message, true);
+        })
+        .sendVerificationCode(userEmail, '<?= service ?>');
+    } else {
+      enableForm(codeForm);
+      displayMessage(codeMessageDiv, 'Error: google.script.run is not defined.', true);
+    }
+  }
+
+  // Form Submissions
+  emailForm.addEventListener('submit', function(event) {
+    event.preventDefault();
+    hideMessage(emailMessageDiv);
+    handleSendCode();
+  });
+
+  codeForm.addEventListener('submit', function(event) {
+    event.preventDefault();
+    hideMessage(codeMessageDiv);
+    handleVerifyCode();
+  });
+
+  // Initial setup
+  document.addEventListener('DOMContentLoaded', function() {
+    validateEmailInput();
+    enableForm(emailForm);
+  });
+</script>

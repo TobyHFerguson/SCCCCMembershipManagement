@@ -446,11 +446,13 @@ Common.Auth.VerificationCode = {
    */
   sendCodeEmail: function(email, code, serviceName) {
     try {
+      // Normalize email address
+      const normalizedEmail = email.trim().toLowerCase();
       const formattedCode = code.slice(0, 3) + '-' + code.slice(3);
       const expiryMinutes = VERIFICATION_CONFIG.CODE_EXPIRY_MINUTES;
       
       const message = {
-        to: email,
+        to: normalizedEmail,
         subject: `SCCCC ${serviceName} - Verification Code`,
         body: `Your verification code for SCCCC ${serviceName} is:\n\n` +
               `    ${formattedCode}\n\n` +
@@ -461,7 +463,7 @@ Common.Auth.VerificationCode = {
       
       // GAS: Send email
       MailApp.sendEmail(message);
-      Logger.log('[VerificationCode.sendCodeEmail] Email sent to ' + email);
+      Logger.log('[VerificationCode.sendCodeEmail] Email sent to ' + normalizedEmail);
       
       return { success: true };
     } catch (error) {
