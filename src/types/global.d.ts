@@ -242,6 +242,150 @@ declare namespace Common {
         clearLogs(): void;
         setContainerSpreadsheet(spreadsheetId: string): void;
     }
+    
+    // Configuration namespace
+    namespace Config {
+        // Feature Flags
+        interface FeatureFlagConfig {
+            name: string;
+            defaultValue: boolean;
+            description?: string;
+        }
+        
+        namespace FeatureFlags {
+            function isEnabled(flagName: string, defaultValue?: boolean): boolean;
+            function setFlag(flagName: string, value: boolean): { success: boolean; error?: string };
+            function deleteFlag(flagName: string): { success: boolean; error?: string };
+            function getAllFlags(): Record<string, boolean>;
+            function getSummary(): { enabled: string[]; disabled: string[]; total: number };
+            function enableNewAuth(): { success: boolean; error?: string };
+            function emergencyRollback(): { success: boolean; error?: string };
+            function isNewAuthEnabled(): boolean;
+            function isSPAModeEnabled(): boolean;
+            function getKnownFlags(): Record<string, FeatureFlagConfig>;
+        }
+        
+        // FeatureFlagsManager - Pure logic class
+        class FeatureFlagsManager {
+            static validateFlagName(flagName: string): { valid: boolean; error?: string };
+            static parseBoolean(value: string | boolean | null | undefined, defaultValue: boolean): boolean;
+            static formatForStorage(value: boolean): string;
+            static shouldEnableFeature(flagValue: boolean, isProduction: boolean, forceEnabled?: boolean): boolean;
+            static summarizeFlags(flags: Record<string, boolean>): { enabled: string[]; disabled: string[]; total: number };
+        }
+    }
+    
+    // Auth namespace
+    namespace Auth {
+        // Verification Code types
+        interface VerificationCodeEntry {
+            email: string;
+            code: string;
+            createdAt: string;
+            expiresAt: string;
+            attempts: number;
+            used: boolean;
+            service?: string;
+        }
+        
+        interface VerificationResult {
+            success: boolean;
+            email?: string;
+            error?: string;
+            errorCode?: string;
+        }
+        
+        interface CodeGenerationResult {
+            success: boolean;
+            code?: string;
+            error?: string;
+            errorCode?: string;
+        }
+        
+        interface RateLimitResult {
+            allowed: boolean;
+            remaining: number;
+            retryAfter?: number;
+        }
+        
+        // VerificationCode GAS layer
+        namespace VerificationCode {
+            function generateAndStore(email: string, service?: string): CodeGenerationResult;
+            function verify(email: string, code: string): VerificationResult;
+            function sendCodeEmail(email: string, code: string, serviceName: string): { success: boolean; error?: string };
+            function requestCode(email: string, serviceName: string, service?: string): { success: boolean; error?: string };
+            function clearCodes(email: string): void;
+        }
+        
+        // VerificationCodeManager - Pure logic class
+        class VerificationCodeManager {
+            static generateCode(randomFn?: () => number): string;
+            static validateCodeFormat(code: string): { valid: boolean; error?: string };
+            static validateEmail(email: string): { valid: boolean; error?: string };
+            static calculateExpiry(createdAt: Date, expiryMinutes?: number): Date;
+            static isExpired(expiresAt: string, now?: Date): boolean;
+            static isMaxAttemptsExceeded(attempts: number, maxAttempts?: number): boolean;
+            static createEntry(email: string, code: string, now?: Date, service?: string): VerificationCodeEntry;
+            static verifyCode(inputCode: string, entry: VerificationCodeEntry | null, now?: Date): VerificationResult;
+            static checkGenerationRateLimit(existingEntries: VerificationCodeEntry[], now?: Date): RateLimitResult;
+            static filterActiveEntries(entries: VerificationCodeEntry[], now?: Date): VerificationCodeEntry[];
+            static getConfig(): { CODE_LENGTH: number; CODE_EXPIRY_MINUTES: number; MAX_VERIFICATION_ATTEMPTS: number; MAX_CODES_PER_EMAIL_PER_HOUR: number; RATE_LIMIT_WINDOW_MINUTES: number };
+        }
+    }
+    
+    // API namespace
+    namespace Api {
+        // API response types
+        interface ApiResponse {
+            success: boolean;
+            data?: any;
+            error?: string;
+            errorCode?: string;
+            meta?: {
+                requestId: string;
+                duration: number;
+                action: string;
+            };
+        }
+        
+        interface ApiRequest {
+            action: string;
+            params?: Record<string, any>;
+            token?: string;
+        }
+        
+        interface ActionHandler {
+            handler: (params: Record<string, any>, token: string) => ApiResponse;
+            requiresAuth?: boolean;
+            description?: string;
+        }
+        
+        // ApiClient GAS layer
+        namespace Client {
+            function registerHandler(action: string, handler: ActionHandler['handler'], options?: { requiresAuth?: boolean; description?: string }): void;
+            function handleRequest(request: ApiRequest): string;
+            function listActions(): string;
+            function getHandler(action: string): ActionHandler | undefined;
+            function clearHandlers(): void;
+        }
+        
+        // ClientManager - Pure logic class
+        class ClientManager {
+            static successResponse(data: any, meta?: object): ApiResponse;
+            static errorResponse(error: string, errorCode?: string, meta?: object): ApiResponse;
+            static validateRequest(request: any): { valid: boolean; error?: string };
+            static validateRequiredParams(params: Record<string, any>, required: string[]): { valid: boolean; missing?: string[] };
+            static sanitizeString(value: any, maxLength?: number): string;
+            static sanitizeParams(params: Record<string, any>, schema?: Record<string, number>): Record<string, any>;
+            static createRequestContext(action: string, requestId?: string): { action: string; requestId: string; startTime: number };
+            static generateRequestId(): string;
+            static getRequestDuration(context: { startTime: number }): number;
+            static createMetaFromContext(context: { action: string; requestId: string; startTime: number }): object;
+            static actionRequiresAuth(action: string, handlers: Record<string, ActionHandler>): boolean;
+            static listActions(handlers: Record<string, ActionHandler>, includePrivate?: boolean): Array<{ action: string; requiresAuth: boolean; description?: string }>;
+            static formatErrorForLogging(error: Error | string, request?: ApiRequest): object;
+        }
+    }
 }
 
 // Group management types
