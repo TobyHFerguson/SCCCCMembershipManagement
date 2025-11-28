@@ -155,6 +155,9 @@ function handleApiRequest(request) {
   if (typeof GroupManagementService.initApi === 'function') {
     GroupManagementService.initApi();
   }
+  if (typeof ProfileManagementService.initApi === 'function') {
+    ProfileManagementService.initApi();
+  }
   
   // Handle the request
   return Common.Api.Client.handleRequest(request);
