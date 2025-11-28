@@ -268,13 +268,18 @@ GroupManagementService.Api = {
 
       case 'update':
         // GAS: Get current member and update delivery settings
+        // Note: We re-fetch the member here to handle potential race conditions
+        // where the member was removed between calculateActions and _executeAction.
+        // This fallback to subscribe ensures the user's intent is fulfilled.
         const member = GroupSubscription.getMember(action.groupEmail, action.userEmail);
         if (member) {
           member.delivery_settings = action.deliveryValue;
           GroupSubscription.updateMember(member, action.groupEmail);
           Logger.log('[GroupManagementService.Api] Updated ' + action.userEmail + ' in ' + action.groupEmail);
         } else {
-          // Member not found, need to subscribe instead
+          // Member not found (possibly removed since action was calculated)
+          // Fall back to subscribe to fulfill user's intent
+          Logger.log('[GroupManagementService.Api] WARNING: Member not found for update, falling back to subscribe');
           const fallbackMember = {
             email: action.userEmail,
             delivery_settings: action.deliveryValue

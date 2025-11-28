@@ -134,24 +134,38 @@ Type definitions added to `src/types/global.d.ts` for:
 
 ---
 
-## Phase 1: Authentication (Week 2) - PENDING
+## Phase 1: Authentication (Week 2) - COMPLETED ✓
 
-### Deliverables
-1. Integrate VerificationCode with existing `doGet` flow
-2. Add verification code input page HTML
-3. Create verification code email template
-4. Add feature flag checks to `webApp.js`
-5. Integration tests for complete auth flow
+### Deliverables Completed
+1. ✅ Integrated VerificationCode with existing `doGet` flow
+2. ✅ Added verification code input page HTML (`verificationCodeInput.html`)
+3. ✅ Created verification code email template
+4. ✅ Added feature flag checks to `webApp.js`
+5. ✅ Integration tests for complete auth flow (`AuthFlowIntegration.test.js`)
+6. ✅ Global endpoints: `sendVerificationCode()`, `verifyCode()`, `refreshSession()`
 
 ---
 
-## Phase 2: Pilot Service (Week 3) - PENDING
+## Phase 2: Pilot Service (Week 3) - COMPLETED ✓
 
-### Deliverables
-1. Convert GroupManagementService to SPA architecture
-2. Create `GroupManagementService.Api.js` with API handlers
-3. Update `GroupManagementService.html` for client-side rendering
-4. Test complete flow with feature flag enabled
+### Deliverables Completed
+1. ✅ Created `GroupManagementService.Manager.js` with pure business logic
+   - 100% test coverage
+   - All validation, transformation, and action calculation logic
+2. ✅ Created `GroupManagementService.Api.js` with API handlers
+   - 88% test coverage
+   - Handlers: `getSubscriptions`, `updateSubscriptions`, `getDeliveryOptions`
+3. ✅ Updated `groupManagementService.js` to use Manager class
+4. ✅ Added `handleApiRequest()` global endpoint for SPA API calls
+5. ✅ Added type definitions to `global.d.ts`
+6. ✅ Comprehensive Jest tests (79 tests for GroupManagementService)
+7. ✅ Backward compatibility maintained (existing HTML/token flow still works)
+
+### Architecture Notes
+- Manager class contains pure business logic (testable)
+- Api class handles GAS orchestration
+- Existing HTML (`GroupManagementService.html`) works with both old and new patterns
+- `handleApiRequest()` provides unified entry point for SPA API calls
 
 ---
 
@@ -234,6 +248,37 @@ if (typeof module !== 'undefined' && module.exports) {
 
 ### Type Definitions
 - Updated `src/types/global.d.ts`
+
+---
+
+## Files Created (Phase 1)
+
+### Source Files
+- `src/common/auth/verificationCodeInput.html`
+
+### Test Files
+- `__tests__/AuthFlowIntegration.test.js`
+
+### Modified Files
+- `src/webApp.js` - Added feature flag check for auth flow
+- `src/webapp_endpoints.js` - Added `sendVerificationCode()`, `verifyCode()`, `refreshSession()`
+
+---
+
+## Files Created (Phase 2)
+
+### Source Files
+- `src/services/GroupManagementService/Manager.js` - Pure business logic
+- `src/services/GroupManagementService/Api.js` - GAS layer API handlers
+
+### Test Files
+- `__tests__/GroupManagementService.Manager.test.js` - 60 tests, 100% coverage
+- `__tests__/GroupManagementService.Api.test.js` - 19 tests, 88% coverage
+
+### Modified Files
+- `src/services/GroupManagementService/groupManagementService.js` - Now uses Manager
+- `src/webapp_endpoints.js` - Added `handleApiRequest()` global endpoint
+- `src/types/global.d.ts` - Added GroupManagementService types
 
 ### Documentation
 - `docs/issues/ISSUE-SPA-AND-AUTH-COMBINED.md` (this file)
