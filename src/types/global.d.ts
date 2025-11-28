@@ -435,3 +435,84 @@ declare namespace bmPreFiddler {
     function PreFiddler(): PreFiddlerService;
 }
 
+/**
+ * GroupManagementService types
+ */
+declare namespace GroupManagementService {
+    // Data types
+    interface PublicGroup {
+        Name: string;
+        Email: string;
+    }
+
+    interface GroupMember {
+        email: string;
+        delivery_settings: string;
+    }
+
+    interface GroupSubscription {
+        groupName: string;
+        groupEmail: string;
+        deliveryValue: string;
+        deliveryName: string;
+    }
+
+    interface SubscriptionUpdate {
+        groupEmail: string;
+        deliveryValue: string;
+    }
+
+    interface DeliveryOption {
+        value: string;
+        name: string;
+        description: string;
+    }
+
+    interface SubscriptionAction {
+        action: 'subscribe' | 'update' | 'unsubscribe';
+        groupEmail: string;
+        userEmail: string;
+        deliveryValue?: string;
+    }
+
+    interface ValidationResult {
+        valid: boolean;
+        error?: string;
+        errorCode?: string;
+    }
+
+    // Manager class - Pure business logic
+    class Manager {
+        static getDeliveryOptions(): Record<string, [string, string]>;
+        static validateEmail(email: string): ValidationResult;
+        static validateDeliveryValue(deliveryValue: string, deliveryOptions?: Record<string, [string, string]>): ValidationResult;
+        static validateSubscriptionUpdate(update: SubscriptionUpdate, deliveryOptions?: Record<string, [string, string]>): ValidationResult;
+        static validateSubscriptionUpdates(updates: SubscriptionUpdate[], deliveryOptions?: Record<string, [string, string]>): ValidationResult;
+        static buildSubscription(group: PublicGroup, member: GroupMember | null, deliveryOptions?: Record<string, [string, string]>): GroupSubscription;
+        static buildUserSubscriptions(groups: PublicGroup[], membersByGroup: Record<string, GroupMember | null>, deliveryOptions?: Record<string, [string, string]>): GroupSubscription[];
+        static determineAction(update: SubscriptionUpdate, currentMember: GroupMember | null, userEmail: string): SubscriptionAction | null;
+        static calculateActions(updates: SubscriptionUpdate[], currentMembersByGroup: Record<string, GroupMember | null>, userEmail: string): { actions: SubscriptionAction[]; skipped: number };
+        static getDeliveryOptionsArray(deliveryOptions?: Record<string, [string, string]>): DeliveryOption[];
+        static formatUpdateResult(successCount: number, failedCount: number, errors?: string[]): { success: boolean; message: string; details: { successCount: number; failedCount: number; errors?: string[] } };
+        static normalizeEmail(email: string): string;
+    }
+
+    // Api namespace - GAS layer
+    namespace Api {
+        function handleGetSubscriptions(params: { _authenticatedEmail?: string }): Common.Api.ApiResponse;
+        function handleUpdateSubscriptions(params: { _authenticatedEmail?: string; updates?: SubscriptionUpdate[] }): Common.Api.ApiResponse;
+        function handleGetDeliveryOptions(): Common.Api.ApiResponse;
+    }
+
+    // WebApp namespace - doGet handler
+    namespace WebApp {
+        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: any): GoogleAppsScript.HTML.HtmlOutput;
+        function updateUserSubscriptions(updatedSubscriptions: SubscriptionUpdate[], userToken: string): { success: boolean; message?: string };
+    }
+
+    // Functions
+    function getUserGroupSubscription(userEmail: string): GroupSubscription[];
+    function updateUserSubscriptions(updatedSubscriptions: SubscriptionUpdate[], userEmail: string): { success: boolean; message: string };
+    function initApi(): void;
+}
+

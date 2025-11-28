@@ -137,3 +137,25 @@ function updateUserSubscriptions(updatedSubscriptions, userToken) {
 function updateProfile(userToken, updatedProfile ) {
     return ProfileManagementService.updateProfile(userToken, updatedProfile);
 }
+
+/**
+ * Handle API requests for SPA services.
+ * This is the main entry point for google.script.run API calls.
+ * 
+ * @param {Object} request - The API request object
+ * @param {string} request.action - The action to perform
+ * @param {Object} [request.params] - Action parameters
+ * @param {string} [request.token] - Authentication token
+ * @returns {string} JSON-encoded API response
+ */
+function handleApiRequest(request) {
+  console.log('handleApiRequest:', request && request.action);
+  
+  // Initialize API handlers if not already done
+  if (typeof GroupManagementService.initApi === 'function') {
+    GroupManagementService.initApi();
+  }
+  
+  // Handle the request
+  return Common.Api.Client.handleRequest(request);
+}
