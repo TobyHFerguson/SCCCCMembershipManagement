@@ -62,6 +62,23 @@ const DEFAULT_FORBIDDEN_FIELDS = [
 ];
 
 /**
+ * Shared validation patterns
+ * @type {Object.<string, {pattern: string, regex: RegExp, description: string}>}
+ */
+const VALIDATION_PATTERNS = {
+  NAME: {
+    pattern: "^[A-Za-z0-9\\s\\-'.]+$",
+    regex: /^[A-Za-z0-9\s\-'.]+$/,
+    description: 'can only contain letters, numbers, spaces, hyphens, apostrophes, or periods'
+  },
+  PHONE: {
+    pattern: '^\\(\\d{3}\\) \\d{3}-\\d{4}$',
+    regex: /^\(\d{3}\) \d{3}-\d{4}$/,
+    description: 'must match (123) 123-1234 format'
+  }
+};
+
+/**
  * Allowed profile fields with their validation rules
  * @type {Object.<string, ProfileField>}
  */
@@ -69,22 +86,22 @@ const PROFILE_FIELD_SCHEMA = {
   'First': {
     name: 'First',
     required: true,
-    pattern: "^[A-Za-z0-9\\s\\-'.]+$",
-    patternDescription: 'First Name must be non-empty and can contain letters, numbers, spaces, hyphens, apostrophes, or periods.',
+    pattern: VALIDATION_PATTERNS.NAME.pattern,
+    patternDescription: 'First Name must be non-empty and ' + VALIDATION_PATTERNS.NAME.description + '.',
     maxLength: 100
   },
   'Last': {
     name: 'Last',
     required: true,
-    pattern: "^[A-Za-z0-9\\s\\-'.]+$",
-    patternDescription: 'Last Name must be non-empty and can contain letters, numbers, spaces, hyphens, apostrophes, or periods.',
+    pattern: VALIDATION_PATTERNS.NAME.pattern,
+    patternDescription: 'Last Name must be non-empty and ' + VALIDATION_PATTERNS.NAME.description + '.',
     maxLength: 100
   },
   'Phone': {
     name: 'Phone',
     required: true,
-    pattern: '^\\(\\d{3}\\) \\d{3}-\\d{4}$',
-    patternDescription: 'Phone must match (123) 123-1234 format',
+    pattern: VALIDATION_PATTERNS.PHONE.pattern,
+    patternDescription: 'Phone ' + VALIDATION_PATTERNS.PHONE.description,
     maxLength: 14
   },
   'Directory Share Name': {
@@ -178,11 +195,10 @@ ProfileManagementService.Manager = class {
       };
     }
     
-    const nameRegex = /^[A-Za-z0-9\s\-'.]+$/;
-    if (!nameRegex.test(trimmed)) {
+    if (!VALIDATION_PATTERNS.NAME.regex.test(trimmed)) {
       return { 
         valid: false, 
-        error: `${fieldName} can only contain letters, numbers, spaces, hyphens, apostrophes, or periods`, 
+        error: `${fieldName} ${VALIDATION_PATTERNS.NAME.description}`, 
         errorCode: 'INVALID_NAME_CHARACTERS' 
       };
     }
@@ -205,11 +221,10 @@ ProfileManagementService.Manager = class {
     }
     
     const trimmed = phone.trim();
-    const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/;
-    if (!phoneRegex.test(trimmed)) {
+    if (!VALIDATION_PATTERNS.PHONE.regex.test(trimmed)) {
       return { 
         valid: false, 
-        error: 'Phone must match (123) 123-1234 format', 
+        error: 'Phone ' + VALIDATION_PATTERNS.PHONE.description, 
         errorCode: 'INVALID_PHONE_FORMAT' 
       };
     }
