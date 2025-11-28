@@ -1,0 +1,304 @@
+// @ts-check
+/// <reference path="../../types/global.d.ts" />
+
+/**
+ * GroupManagementService.Api - GAS layer for group subscription API
+ * 
+ * This module provides the API endpoints for the GroupManagementService SPA.
+ * It handles GAS API calls and orchestrates the Manager business logic.
+ * 
+ * Architecture follows GAS Layer Separation pattern:
+ * - Api: GAS layer (orchestration, GAS API calls)
+ * - Manager: Pure logic (testable)
+ * 
+ * @namespace GroupManagementService.Api
+ */
+
+// Namespace declaration pattern (works in both GAS and Jest)
+if (typeof GroupManagementService === 'undefined') GroupManagementService = {};
+
+/**
+ * Initialize API handlers for GroupManagementService
+ * This should be called once during application startup
+ */
+GroupManagementService.initApi = function() {
+  // Register getSubscriptions handler
+  Common.Api.Client.registerHandler(
+    'groupManagement.getSubscriptions',
+    GroupManagementService.Api.handleGetSubscriptions,
+    {
+      requiresAuth: true,
+      description: 'Get user\'s group subscriptions'
+    }
+  );
+
+  // Register updateSubscriptions handler
+  Common.Api.Client.registerHandler(
+    'groupManagement.updateSubscriptions',
+    GroupManagementService.Api.handleUpdateSubscriptions,
+    {
+      requiresAuth: true,
+      description: 'Update user\'s group subscriptions'
+    }
+  );
+
+  // Register getDeliveryOptions handler (public - for loading form options)
+  Common.Api.Client.registerHandler(
+    'groupManagement.getDeliveryOptions',
+    GroupManagementService.Api.handleGetDeliveryOptions,
+    {
+      requiresAuth: false,
+      description: 'Get available delivery options'
+    }
+  );
+};
+
+/**
+ * GroupManagementService.Api - API handlers and GAS orchestration
+ */
+GroupManagementService.Api = {
+  /**
+   * Handle getSubscriptions API request
+   * Gets user's current group subscription settings
+   * 
+   * @param {Object} params - Request parameters
+   * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
+   * @returns {Common.Api.ApiResponse}
+   */
+  handleGetSubscriptions: function(params) {
+    const userEmail = params._authenticatedEmail;
+    
+    if (!userEmail) {
+      return Common.Api.ClientManager.errorResponse(
+        'User email not available',
+        'NO_EMAIL'
+      );
+    }
+
+    try {
+      // PURE: Normalize email
+      const normalizedEmail = GroupManagementService.Manager.normalizeEmail(userEmail);
+
+      // GAS: Get public groups
+      const groups = Common.Data.Access.getPublicGroups();
+      
+      // GAS: Get member data for each group
+      const membersByGroup = {};
+      for (const group of groups) {
+        try {
+          const member = GroupSubscription.getMember(group.Email, normalizedEmail);
+          membersByGroup[group.Email] = member;
+        } catch (error) {
+          // Log but continue - missing group membership is not fatal
+          Logger.log('[GroupManagementService.Api] Error getting member for ' + group.Email + ': ' + error);
+          membersByGroup[group.Email] = null;
+        }
+      }
+
+      // PURE: Build subscriptions
+      const subscriptions = GroupManagementService.Manager.buildUserSubscriptions(
+        groups,
+        membersByGroup,
+        GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions()
+      );
+
+      // Return success response
+      return Common.Api.ClientManager.successResponse({
+        subscriptions: subscriptions,
+        deliveryOptions: GroupManagementService.Manager.getDeliveryOptionsArray(
+          GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions()
+        )
+      });
+    } catch (error) {
+      Logger.log('[GroupManagementService.Api] handleGetSubscriptions error: ' + error);
+      return Common.Api.ClientManager.errorResponse(
+        'Failed to get subscriptions',
+        'GET_SUBSCRIPTIONS_ERROR'
+      );
+    }
+  },
+
+  /**
+   * Handle updateSubscriptions API request
+   * Updates user's group subscription settings
+   * 
+   * @param {Object} params - Request parameters
+   * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
+   * @param {Array} params.updates - Array of subscription updates
+   * @returns {Common.Api.ApiResponse}
+   */
+  handleUpdateSubscriptions: function(params) {
+    const userEmail = params._authenticatedEmail;
+    const updates = params.updates;
+
+    if (!userEmail) {
+      return Common.Api.ClientManager.errorResponse(
+        'User email not available',
+        'NO_EMAIL'
+      );
+    }
+
+    // PURE: Validate updates
+    const validation = GroupManagementService.Manager.validateSubscriptionUpdates(
+      updates,
+      GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions()
+    );
+
+    if (!validation.valid) {
+      return Common.Api.ClientManager.errorResponse(
+        validation.error,
+        validation.errorCode
+      );
+    }
+
+    try {
+      // PURE: Normalize email
+      const normalizedEmail = GroupManagementService.Manager.normalizeEmail(userEmail);
+
+      // GAS: Get current member status for each group being updated
+      const currentMembersByGroup = {};
+      for (const update of updates) {
+        try {
+          const member = GroupSubscription.getMember(update.groupEmail, normalizedEmail);
+          currentMembersByGroup[update.groupEmail] = member;
+        } catch (error) {
+          Logger.log('[GroupManagementService.Api] Error getting member for ' + update.groupEmail + ': ' + error);
+          currentMembersByGroup[update.groupEmail] = null;
+        }
+      }
+
+      // PURE: Calculate actions
+      const { actions, skipped } = GroupManagementService.Manager.calculateActions(
+        updates,
+        currentMembersByGroup,
+        normalizedEmail
+      );
+
+      // GAS: Execute actions
+      let successCount = 0;
+      let failedCount = 0;
+      const errors = [];
+
+      for (const action of actions) {
+        try {
+          this._executeAction(action);
+          successCount++;
+        } catch (error) {
+          failedCount++;
+          errors.push(`${action.groupEmail}: ${error.message || error}`);
+          Logger.log('[GroupManagementService.Api] Action failed: ' + JSON.stringify(action) + ' - ' + error);
+        }
+      }
+
+      // PURE: Format result
+      const result = GroupManagementService.Manager.formatUpdateResult(
+        successCount,
+        failedCount,
+        errors
+      );
+
+      if (result.success) {
+        return Common.Api.ClientManager.successResponse(result);
+      } else {
+        return Common.Api.ClientManager.errorResponse(
+          result.message,
+          'UPDATE_FAILED',
+          { details: result.details }
+        );
+      }
+    } catch (error) {
+      Logger.log('[GroupManagementService.Api] handleUpdateSubscriptions error: ' + error);
+      return Common.Api.ClientManager.errorResponse(
+        'Failed to update subscriptions',
+        'UPDATE_SUBSCRIPTIONS_ERROR'
+      );
+    }
+  },
+
+  /**
+   * Handle getDeliveryOptions API request
+   * Returns available delivery options for the dropdown
+   * 
+   * @returns {Common.Api.ApiResponse}
+   */
+  handleGetDeliveryOptions: function() {
+    try {
+      const options = GroupManagementService.Manager.getDeliveryOptionsArray(
+        GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions()
+      );
+
+      return Common.Api.ClientManager.successResponse({
+        deliveryOptions: options
+      });
+    } catch (error) {
+      Logger.log('[GroupManagementService.Api] handleGetDeliveryOptions error: ' + error);
+      return Common.Api.ClientManager.errorResponse(
+        'Failed to get delivery options',
+        'GET_OPTIONS_ERROR'
+      );
+    }
+  },
+
+  /**
+   * Execute a subscription action
+   * @private
+   * @param {Object} action - The action to execute
+   * @param {'subscribe'|'update'|'unsubscribe'} action.action - Action type
+   * @param {string} action.groupEmail - Group email
+   * @param {string} action.userEmail - User email
+   * @param {string} [action.deliveryValue] - Delivery setting (for subscribe/update)
+   */
+  _executeAction: function(action) {
+    switch (action.action) {
+      case 'unsubscribe':
+        // GAS: Remove member from group
+        GroupSubscription.removeMember(action.groupEmail, action.userEmail);
+        Logger.log('[GroupManagementService.Api] Unsubscribed ' + action.userEmail + ' from ' + action.groupEmail);
+        break;
+
+      case 'subscribe':
+        // GAS: Subscribe member to group
+        const newMember = {
+          email: action.userEmail,
+          delivery_settings: action.deliveryValue
+        };
+        GroupSubscription.subscribeMember(newMember, action.groupEmail);
+        Logger.log('[GroupManagementService.Api] Subscribed ' + action.userEmail + ' to ' + action.groupEmail);
+        break;
+
+      case 'update':
+        // GAS: Get current member and update delivery settings
+        // Note: We re-fetch the member here to handle potential race conditions
+        // where the member was removed between calculateActions and _executeAction.
+        // This fallback to subscribe ensures the user's intent is fulfilled.
+        const member = GroupSubscription.getMember(action.groupEmail, action.userEmail);
+        if (member) {
+          member.delivery_settings = action.deliveryValue;
+          GroupSubscription.updateMember(member, action.groupEmail);
+          Logger.log('[GroupManagementService.Api] Updated ' + action.userEmail + ' in ' + action.groupEmail);
+        } else {
+          // Member not found (possibly removed since action was calculated)
+          // Fall back to subscribe to fulfill user's intent
+          Logger.log('[GroupManagementService.Api] WARNING: Member not found for update, falling back to subscribe');
+          const fallbackMember = {
+            email: action.userEmail,
+            delivery_settings: action.deliveryValue
+          };
+          GroupSubscription.subscribeMember(fallbackMember, action.groupEmail);
+          Logger.log('[GroupManagementService.Api] Subscribed (update fallback) ' + action.userEmail + ' to ' + action.groupEmail);
+        }
+        break;
+
+      default:
+        throw new Error('Unknown action: ' + action.action);
+    }
+  }
+};
+
+// Node.js export for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    Api: GroupManagementService.Api,
+    initApi: GroupManagementService.initApi
+  };
+}
