@@ -516,3 +516,73 @@ declare namespace GroupManagementService {
     function initApi(): void;
 }
 
+/**
+ * ProfileManagementService types
+ */
+declare namespace ProfileManagementService {
+    // Validation result interface
+    interface ValidationResult {
+        valid: boolean;
+        error?: string;
+        errorCode?: string;
+    }
+
+    // Forbidden field check result
+    interface ForbiddenFieldCheckResult {
+        hasViolation: boolean;
+        field?: string;
+        violationType?: 'update' | 'add';
+    }
+
+    // Profile update result
+    interface ProfileUpdateResult {
+        success: boolean;
+        message: string;
+        mergedProfile?: Record<string, any>;
+    }
+
+    // Profile field schema
+    interface ProfileField {
+        name: string;
+        required: boolean;
+        pattern?: string;
+        patternDescription?: string;
+        maxLength?: number;
+    }
+
+    // Manager class - Pure business logic
+    class Manager {
+        static getForbiddenFields(): string[];
+        static getProfileFieldSchema(): Record<string, ProfileField>;
+        static validateEmail(email: string): ValidationResult;
+        static validateName(name: string, fieldName?: string): ValidationResult;
+        static validatePhone(phone: string): ValidationResult;
+        static checkForForbiddenUpdates(originalProfile: Record<string, any>, updatedProfile: Record<string, any>, forbiddenFields?: string[]): ForbiddenFieldCheckResult;
+        static validateProfileUpdate(updatedProfile: Record<string, any>): ValidationResult;
+        static mergeProfiles(originalProfile: Record<string, any>, updates: Record<string, any>): Record<string, any>;
+        static processProfileUpdate(originalProfile: Record<string, any>, updatedProfile: Record<string, any>, forbiddenFields?: string[]): ProfileUpdateResult;
+        static formatProfileForDisplay(profile: Record<string, any>): Record<string, any> | null;
+        static getEditableFields(profile: Record<string, any>): Record<string, any> | null;
+        static normalizeEmail(email: string): string;
+        static formatUpdateResult(success: boolean, message: string): { success: boolean; message: string };
+    }
+
+    // Api namespace - GAS layer
+    namespace Api {
+        function handleGetProfile(params: { _authenticatedEmail?: string }): Common.Api.ApiResponse;
+        function handleGetEditableFields(params: { _authenticatedEmail?: string }): Common.Api.ApiResponse;
+        function handleUpdateProfile(params: { _authenticatedEmail?: string; updates?: Record<string, any> }): Common.Api.ApiResponse;
+    }
+
+    // WebApp namespace - doGet handler
+    namespace WebApp {
+        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: any): GoogleAppsScript.HTML.HtmlOutput;
+    }
+
+    // Legacy function (for backward compatibility)
+    function updateProfile(userToken: string, updatedProfile: Record<string, any>): { success: boolean; message: string };
+    function _checkForForbiddenUpdates(originalObject: Record<string, any>, updatedObject: Record<string, any>, forbiddenFields: string[]): void;
+    function initApi(): void;
+}
+
+

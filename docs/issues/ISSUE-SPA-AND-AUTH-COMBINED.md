@@ -121,7 +121,7 @@ google.script.run
 - **VerificationCode**: 92% statements, 90% branches
 - **ApiClient**: 100% statements, 96% branches
 
-All tests pass: 353 tests total
+All tests pass: 561 tests total
 
 ### Type Definitions
 Type definitions added to `src/types/global.d.ts` for:
@@ -169,12 +169,40 @@ Type definitions added to `src/types/global.d.ts` for:
 
 ---
 
-## Phase 3-5: Remaining Services (Weeks 4-6) - PENDING
+## Phase 3: ProfileManagementService Migration (Week 4) - COMPLETED ✓
+
+### Deliverables Completed
+1. ✅ Created `ProfileManagementService.Manager.js` with pure business logic
+   - 100% test coverage (100% statements, 96.73% branches)
+   - Email, name, phone validation methods
+   - Forbidden field checking logic
+   - Profile merge and update processing
+   - Format methods for display
+2. ✅ Created `ProfileManagementService.Api.js` with API handlers
+   - 94% test coverage (94.23% statements, 91.66% branches)
+   - Handlers: `getProfile`, `getEditableFields`, `updateProfile`
+3. ✅ Updated `webapp_endpoints.js` to initialize ProfileManagementService API
+4. ✅ Added type definitions to `global.d.ts`
+5. ✅ Comprehensive Jest tests (103 tests for ProfileManagementService)
+6. ✅ Backward compatibility maintained (existing HTML form still works)
+
+### Files Created
+- `src/services/ProfileManagementService/Manager.js` - Pure business logic
+- `src/services/ProfileManagementService/Api.js` - GAS layer API handlers
+- `__tests__/ProfileManagementService.Manager.test.js` - 71 tests, 100% coverage
+- `__tests__/ProfileManagementService.Api.test.js` - 32 tests, 94% coverage
+
+### Modified Files
+- `src/webapp_endpoints.js` - Added ProfileManagementService.initApi() initialization
+- `src/types/global.d.ts` - Added ProfileManagementService types
+
+---
+
+## Phase 4-5: Remaining Services (Weeks 5-6) - PENDING
 
 ### Services to Migrate (in order)
-1. ProfileManagementService (Week 4)
-2. DirectoryService (Week 5)
-3. EmailChangeService, VotingService (Week 6)
+1. DirectoryService (Week 5)
+2. EmailChangeService, VotingService (Week 6)
 
 ---
 
