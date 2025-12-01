@@ -585,4 +585,63 @@ declare namespace ProfileManagementService {
     function initApi(): void;
 }
 
+/**
+ * DirectoryService types
+ */
+declare namespace DirectoryService {
+    // Data types
+    interface DirectoryEntry {
+        First: string;
+        Last: string;
+        email: string;
+        phone: string;
+    }
+
+    interface FilterOptions {
+        searchTerm?: string;
+        activeOnly?: boolean;
+    }
+
+    interface ValidationResult {
+        valid: boolean;
+        error?: string;
+        errorCode?: string;
+    }
+
+    interface DirectoryStats {
+        total: number;
+        active: number;
+        public: number;
+    }
+
+    // Manager class - Pure business logic
+    class Manager {
+        static filterActiveMembers(members: Member[]): Member[];
+        static filterPublicMembers(members: Member[]): Member[];
+        static transformToDirectoryEntry(member: Member): DirectoryEntry | null;
+        static transformToDirectoryEntries(members: Member[]): DirectoryEntry[];
+        static getDirectoryEntries(members: Member[]): DirectoryEntry[];
+        static filterBySearchTerm(entries: DirectoryEntry[], searchTerm: string): DirectoryEntry[];
+        static sortByName(entries: DirectoryEntry[]): DirectoryEntry[];
+        static processDirectory(members: Member[], options?: FilterOptions): DirectoryEntry[];
+        static validateSearchTerm(searchTerm: string): ValidationResult;
+        static getDirectoryStats(members: Member[]): DirectoryStats;
+    }
+
+    // Api namespace - GAS layer
+    namespace Api {
+        function handleGetEntries(params: { _authenticatedEmail?: string; searchTerm?: string }): Common.Api.ApiResponse;
+        function handleGetStats(params: { _authenticatedEmail?: string }): Common.Api.ApiResponse;
+    }
+
+    // WebApp namespace - doGet handler
+    namespace WebApp {
+        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: any): GoogleAppsScript.HTML.HtmlOutput;
+    }
+
+    // Functions
+    function getDirectoryEntries(): DirectoryEntry[];
+    function initApi(): void;
+}
+
 

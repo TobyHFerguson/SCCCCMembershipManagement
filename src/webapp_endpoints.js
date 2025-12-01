@@ -158,6 +158,9 @@ function handleApiRequest(request) {
   if (typeof ProfileManagementService.initApi === 'function') {
     ProfileManagementService.initApi();
   }
+  if (typeof DirectoryService.initApi === 'function') {
+    DirectoryService.initApi();
+  }
   
   // Handle the request
   return Common.Api.Client.handleRequest(request);

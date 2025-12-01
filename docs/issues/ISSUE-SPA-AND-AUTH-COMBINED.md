@@ -198,11 +198,40 @@ Type definitions added to `src/types/global.d.ts` for:
 
 ---
 
-## Phase 4-5: Remaining Services (Weeks 5-6) - PENDING
+## Phase 4: DirectoryService Migration (Week 5) - COMPLETED ✓
+
+### Deliverables Completed
+1. ✅ Created `DirectoryService.Manager.js` with pure business logic
+   - 100% test coverage (100% statements, 90% branches)
+   - Member filtering (active/public)
+   - Directory entry transformation (respects sharing preferences)
+   - Search filtering and sorting
+   - Directory statistics
+2. ✅ Created `DirectoryService.Api.js` with API handlers
+   - 97% test coverage (96.77% statements, 87.5% branches)
+   - Handlers: `directory.getEntries`, `directory.getStats`
+3. ✅ Updated `webapp_endpoints.js` to initialize DirectoryService API
+4. ✅ Added type definitions to `global.d.ts`
+5. ✅ Comprehensive Jest tests (80 tests for DirectoryService)
+6. ✅ Backward compatibility maintained (existing HTML still works)
+
+### Files Created
+- `src/services/DirectoryService/Manager.js` - Pure business logic
+- `src/services/DirectoryService/Api.js` - GAS layer API handlers
+- `__tests__/DirectoryService.Manager.test.js` - 59 tests, 100% coverage
+- `__tests__/DirectoryService.Api.test.js` - 21 tests, 97% coverage
+
+### Modified Files
+- `src/webapp_endpoints.js` - Added DirectoryService.initApi() initialization
+- `src/types/global.d.ts` - Added DirectoryService types
+
+---
+
+## Phase 5: Remaining Services (Week 6) - PENDING
 
 ### Services to Migrate (in order)
-1. DirectoryService (Week 5)
-2. EmailChangeService, VotingService (Week 6)
+1. EmailChangeService
+2. VotingService
 
 ---
 
