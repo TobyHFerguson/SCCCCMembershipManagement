@@ -227,15 +227,49 @@ Type definitions added to `src/types/global.d.ts` for:
 
 ---
 
-## Phase 5: Remaining Services (Week 6) - PENDING
+## Phase 5: EmailChangeService Migration (Week 6) - COMPLETED ✓
 
-### Services to Migrate (in order)
-1. EmailChangeService
-2. VotingService
+### Deliverables Completed
+1. ✅ Created `EmailChangeService.Manager.js` with pure business logic
+   - 100% test coverage (100% statements, 98.64% branches)
+   - Email validation and normalization
+   - Verification code validation and generation
+   - Group membership data transformation
+   - Result aggregation for multi-group updates
+2. ✅ Created `EmailChangeService.Api.js` with API handlers
+   - 94.53% test coverage (94.53% statements, 92.85% branches)
+   - Handlers: `emailChange.sendVerificationCode`, `emailChange.verifyAndGetGroups`, `emailChange.changeEmail`
+3. ✅ Updated `webapp_endpoints.js` to initialize EmailChangeService API
+4. ✅ Added type definitions to `global.d.ts`
+5. ✅ Comprehensive Jest tests (121 tests for EmailChangeService)
+6. ✅ Backward compatibility maintained (existing HTML form still works)
+
+### Files Created
+- `src/services/EmailChangeService/Manager.js` - Pure business logic
+- `src/services/EmailChangeService/Api.js` - GAS layer API handlers
+- `__tests__/EmailChangeService.Manager.test.js` - 81 tests, 100% coverage
+- `__tests__/EmailChangeService.Api.test.js` - 40 tests, 94.53% coverage
+
+### Modified Files
+- `src/webapp_endpoints.js` - Added EmailChangeService.initApi() initialization
+- `src/types/global.d.ts` - Added EmailChangeService types
+
+### Architecture Notes
+- Manager class contains pure business logic (testable)
+- Api class handles GAS orchestration
+- Existing HTML (`EmailChangeForm.html`) works with legacy functions
+- New SPA can use `handleApiRequest()` with `emailChange.*` actions
 
 ---
 
-## Phase 6: Cleanup (Week 7) - PENDING
+## Phase 6: VotingService Migration (Week 6) - PENDING
+
+### Services to Migrate
+1. VotingService
+
+---
+
+## Phase 7: Cleanup (Week 7) - PENDING
 
 ### Deliverables
 1. Remove legacy magic link code (behind feature flag)
@@ -244,7 +278,7 @@ Type definitions added to `src/types/global.d.ts` for:
 
 ---
 
-## Phase 7: Production (Week 8) - PENDING
+## Phase 8: Production (Week 8) - PENDING
 
 ### Rollout Plan
 ```javascript
