@@ -174,6 +174,47 @@ Each service (`MembershipManagement`, `VotingService`, `DirectoryService`, etc.)
 
 Services registered in `src/1namespaces.js` and routed via `src/webApp.js` doGet handler using `?service=` parameter.
 
+### Responsive CSS Framework (SPA Services)
+
+All web services MUST use the existing responsive CSS framework in `src/common/html/_Header.html`. DO NOT duplicate or reimplement the responsive breakpoint logic.
+
+Features:
+- Breakpoint-based responsive design using classes applied to the `<html>` element.
+- Device classes: `is-mobile-portrait`, `is-mobile-landscape`, `is-tablet`.
+- Base font-size scaling per device; use `rem` units for service styles.
+- Shared utilities: `checkViewportAndApplyClasses()`, `disableForm()`, `enableForm()` are provided by `_Header.html`.
+
+Service authoring pattern:
+```
+<!-- Service HTML (e.g. GroupManagementApp.html) -->
+<!-- _Layout.html includes _Header.html which sets up the classes and utilities -->
+<style>
+  /* Desktop defaults */
+  #serviceForm { display: grid; grid-template-columns: auto 1fr; gap: 10px; }
+
+  /* Tablet */
+  html.is-tablet #serviceForm { grid-template-columns: 1fr; }
+
+  /* Mobile portrait */
+  html.is-mobile-portrait #serviceForm { padding: 15px; gap: 12px; }
+</style>
+
+<script>
+  async function saveData() {
+    const form = document.getElementById('serviceForm');
+    disableForm(form);
+    try {
+      await google.script.run.withSuccessHandler(() => enableForm(form)).saveData(data);
+    } catch (e) {
+      enableForm(form);
+      throw e;
+    }
+  }
+</script>
+```
+
+CRITICAL: always reference `_Header.html` for breakpoint behavior and UX helpers; test on desktop, tablet, mobile-portrait and mobile-landscape.
+
 ### Magic Link Authentication
 Users access web services via tokenized URLs. Flow:
 1. User requests access at `?page=request&service=ServiceName`
@@ -296,15 +337,27 @@ See `docs/BOOTSTRAP_CONFIGURATION.md` for full schema.
 
 ## Key Files Reference
 - `src/1namespaces.js`: All service namespaces (loads first)
-- `src/webapp_endpoints.js`: Global functions callable from web UIs
+- `src/webapp_endpoints.js`: Global functions callable from web UIs via `google.script.run`
 - `src/webApp.js`: doGet router dispatching to service WebApp handlers
 - `src/common/data/data_access.js`: `Common.Data.Access` namespace for data retrieval
-- `src/services/MembershipManagement/Manager.js`: Pure membership logic
+- `src/common/html/_Header.html`: Shared responsive CSS framework (MUST use for all web services)
+- `src/common/html/_Layout.html`: Master HTML template that includes `_Header.html` and service content
+- `src/services/MembershipManagement/Manager.js`: Pure membership logic (testable)
+- `src/services/MembershipManagement/MembershipManagement.js`: GAS orchestration
+- `src/services/GroupManagementService/Manager.js`: SPA service Manager example
+- `src/services/GroupManagementService/Api.js`: SPA API layer example
+- `src/services/GroupManagementService/GroupManagementApp.html`: SPA HTML with CSS framework
 - `__tests__/Manager.test.js`: Comprehensive test suite with table of contents
-- `docs/NAMESPACE_DECLARATION_PATTERN.md`: Namespace extension pattern guide
-- `docs/LOGGER_ARCHITECTURE.md`: Logger layering and initialization guide
+- `__mocks__/google-apps-script.ts`: GAS globals mocking
+- `jest.setup.ts`: Global test configuration
+- `src/types/global.d.ts`: Global TypeScript types
+- `src/types/membership.d.ts`: Membership-specific types
+- `docs/NAMESPACE_DECLARATION_PATTERN.md`: Namespace extension pattern (CRITICAL)
+- `docs/LOGGER_ARCHITECTURE.md`: Logger layering and initialization
 - `docs/BOOTSTRAP_CONFIGURATION.md`: Sheet configuration reference
 - `docs/ExpirationFIFO_SCHEMA.md`: FIFO queue schema and contract
+- `docs/GAS-PR-TESTING.md`: How to test PRs in GAS environment
+- `docs/issues/ISSUE-SPA-AND-AUTH-COMBINED.md`: SPA migration master plan
 
 ## Common Gotchas
 - **Namespace declarations**: ALWAYS use `if (typeof Namespace === 'undefined')` pattern when extending namespaces (see `docs/NAMESPACE_DECLARATION_PATTERN.md`)
