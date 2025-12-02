@@ -738,5 +738,3 @@ declare namespace EmailChangeService {
     function handleChangeEmailInGroupsUI(oldEmail: string, newEmail: string, groupData: GroupMembershipInfo[]): Array<{ groupEmail: string; status: string; error: string | null }>;
     function initApi(): void;
 }
-
-
