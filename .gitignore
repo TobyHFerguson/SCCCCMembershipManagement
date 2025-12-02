@@ -9,3 +9,5 @@ out/
 .vscode/
 .clasp.json
 creds.json
+coverage/
+.clasp-credentials.json
