@@ -644,4 +644,99 @@ declare namespace DirectoryService {
     function initApi(): void;
 }
 
+/**
+ * EmailChangeService types
+ */
+declare namespace EmailChangeService {
+    // Data types
+    interface ValidationResult {
+        valid: boolean;
+        error?: string;
+        errorCode?: string;
+    }
+
+    interface GroupMembershipInfo {
+        groupEmail: string;
+        oldEmail: string;
+        newEmail: string;
+        status: 'Pending' | 'Success' | 'Failed';
+        error?: string;
+    }
+
+    interface VerificationData {
+        newEmail: string;
+        code: string;
+        expiry: number;
+        type: 'emailUpdate';
+        oldEmail: string;
+    }
+
+    interface EmailUpdateResult {
+        success: boolean;
+        message: string;
+        results?: GroupMembershipInfo[];
+        successCount?: number;
+        failedCount?: number;
+    }
+
+    interface VerificationConfig {
+        CODE_LENGTH: number;
+        EXPIRY_MINUTES: number;
+    }
+
+    // Manager class - Pure business logic
+    class Manager {
+        static getVerificationConfig(): VerificationConfig;
+        static validateEmail(email: string): ValidationResult;
+        static validateEmailChange(oldEmail: string, newEmail: string): ValidationResult;
+        static validateVerificationCode(code: string): ValidationResult;
+        static generateVerificationCode(randomFn?: () => number): string;
+        static createVerificationEntry(oldEmail: string, newEmail: string, code: string, now?: Date): VerificationData;
+        static verifyCode(inputCode: string, oldEmail: string, newEmail: string, storedData: VerificationData | null, now?: Date): ValidationResult;
+        static transformGroupsToMembershipInfo(groups: Array<{email: string}>, oldEmail: string, newEmail: string): GroupMembershipInfo[];
+        static updateMembershipResult(membership: GroupMembershipInfo, success: boolean, error?: string): GroupMembershipInfo;
+        static aggregateResults(results: GroupMembershipInfo[]): EmailUpdateResult;
+        static createUpdatedMemberRecord(originalMember: Record<string, any>, newEmail: string): Record<string, any> | null;
+        static createChangeLogEntry(oldEmail: string, newEmail: string, date?: Date): {date: Date, from: string, to: string};
+        static normalizeEmail(email: string): string;
+        static buildVerificationEmailContent(code: string): {subject: string, body: string, htmlBody: string};
+        static formatSendCodeResult(success: boolean, email: string, error?: string): {success: boolean, message: string, error?: string, errorCode?: string};
+    }
+
+    // Api namespace - GAS layer
+    namespace Api {
+        function handleSendVerificationCode(params: { _authenticatedEmail?: string; newEmail?: string }): Common.Api.ApiResponse;
+        function handleVerifyAndGetGroups(params: { _authenticatedEmail?: string; newEmail?: string; verificationCode?: string }): Common.Api.ApiResponse;
+        function handleChangeEmail(params: { _authenticatedEmail?: string; newEmail?: string; groups?: GroupMembershipInfo[] }): Common.Api.ApiResponse;
+        function storeVerificationData(code: string, data: VerificationData): void;
+        function getVerificationData(code: string): VerificationData | null;
+        function deleteVerificationData(code: string): void;
+        function sendVerificationEmail(email: string, content: {subject: string, body: string, htmlBody: string}): boolean;
+        function changeEmailInSpreadsheets(oldEmail: string, newEmail: string): void;
+        function logEmailChange(oldEmail: string, newEmail: string): void;
+    }
+
+    // WebApp namespace - doGet handler
+    namespace WebApp {
+        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: any): GoogleAppsScript.HTML.HtmlOutput;
+    }
+
+    // Internal namespace - Legacy functions
+    namespace Internal {
+        function _generateVerificationCode(): string;
+        function storeVerificationData(newEmail: string, verificationCode: string, type: string, oldEmail: string): void;
+        function getVerificationData(verificationCode: string): VerificationData | null;
+        function deleteVerificationData(verificationCode: string): void;
+        function sendVerificationEmail(email: string, code: string): boolean;
+        function updateUserEmailInGroup(groupEmail: string, originalEmail: string, newEmail: string): { groupEmail: string; status: string; error: string | null };
+        function changeEmailInSpreadsheets(oldEmail: string, newEmail: string, sheetRefs: string[]): void;
+    }
+
+    // Legacy functions (for backward compatibility)
+    function handleSendVerificationCode(originalEmail: string, newEmail: string): string;
+    function handleVerifyAndGetGroups(originalEmail: string, newEmail: string, verificationCode: string): GroupMembershipInfo[];
+    function handleChangeEmailInGroupsUI(oldEmail: string, newEmail: string, groupData: GroupMembershipInfo[]): Array<{ groupEmail: string; status: string; error: string | null }>;
+    function initApi(): void;
+}
+
 

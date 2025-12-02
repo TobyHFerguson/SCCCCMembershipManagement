@@ -161,6 +161,9 @@ function handleApiRequest(request) {
   if (typeof DirectoryService.initApi === 'function') {
     DirectoryService.initApi();
   }
+  if (typeof EmailChangeService.initApi === 'function') {
+    EmailChangeService.initApi();
+  }
   
   // Handle the request
   return Common.Api.Client.handleRequest(request);
