@@ -367,3 +367,43 @@ See `docs/BOOTSTRAP_CONFIGURATION.md` for full schema.
 - **Environment switching**: Running wrong clasp command deploys to wrong environment - always use `npm run {env}:*` scripts
 - **Test mocking**: GAS globals like `PropertiesService` mocked in `jest.setup.ts` (imports `__mocks__/google-apps-script.ts`)
 - **Circular dependencies**: Build fails if Layer 0 modules use `Common.Logger.*` - tests enforce this
+
+## Current Migration: SPA Architecture + Verification Code Authentication
+
+**Active Project**: Migrating 5 web services from magic link + multi-page to verification code + SPA architecture.
+
+**Status**: Tracked in Issue #291
+
+**Completed Phases**:
+- Phase 0: Foundation (ApiClient, FeatureFlags, VerificationCode infrastructure)
+- Phase 1: Authentication flow (verification code UI, backward compatibility)
+- Phase 2: GroupManagementService SPA migration
+- Phase 3: ProfileManagementService SPA migration
+- [Add phases as completed]
+
+**Key Migration Principles**:
+1. **Feature Flags**: Use `Common.FeatureFlags.useNewAuth()` for safe rollout
+2. **Backward Compatibility**: Magic links still work when flag is OFF
+3. **Verification Codes**: 6-digit codes, 10-minute expiry, rate limiting (5 attempts)
+4. **SPA Pattern**: Single doGet for bootstrap, then `google.script.run` APIs
+5. **Session Management**: Tokens in memory only (not in HTML/URL)
+6. **CSS Framework**: MUST use existing `_Header.html` responsive framework
+
+**Services in Migration Scope**:
+1. ✅ GroupManagementService (Phase 2)
+2. ✅ ProfileManagementService (Phase 3)
+3. 🔄 DirectoryService (Phase 4 - in progress)
+4. ⏸️ EmailChangeService (Phase 5)
+5. ⏸️ VotingService (Phase 6)
+
+**Out of Scope**: EmailService, DocsService (modal dialogs), MembershipManagement (triggers only)
+
+**Complete Plan**: `docs/issues/ISSUE-SPA-AND-AUTH-COMBINED.md`
+
+**CRITICAL for SPA Development**:
+- ALL business logic in `Service.Manager.js` (pure, testable)
+- GAS orchestration ONLY in `Service.Api.js`
+- Follow `GroupManagementService` as template
+- Use responsive CSS framework from `_Header.html`
+- Test coverage: Manager 100%, Api 95%+
+- Manual test all breakpoints before PR review
