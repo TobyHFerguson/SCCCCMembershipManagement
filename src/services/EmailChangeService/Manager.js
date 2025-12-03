@@ -54,7 +54,7 @@ if (typeof EmailChangeService === 'undefined') EmailChangeService = {};
 /**
  * Verification code configuration
  */
-const VERIFICATION_CONFIG = {
+EmailChangeService.VERIFICATION_CONFIG = {
   CODE_LENGTH: 6,
   EXPIRY_MINUTES: 15
 };
@@ -62,7 +62,7 @@ const VERIFICATION_CONFIG = {
 /**
  * Email validation regex pattern
  */
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+EmailChangeService.EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * EmailChangeService.Manager - Pure logic class for email change operations
@@ -76,7 +76,7 @@ EmailChangeService.Manager = class {
    * @returns {{CODE_LENGTH: number, EXPIRY_MINUTES: number}}
    */
   static getVerificationConfig() {
-    return { ...VERIFICATION_CONFIG };
+    return { ...EmailChangeService.VERIFICATION_CONFIG };
   }
 
   /**
@@ -92,7 +92,7 @@ EmailChangeService.Manager = class {
     if (trimmed.length === 0) {
       return { valid: false, error: 'Email cannot be empty', errorCode: 'EMPTY_EMAIL' };
     }
-    if (!EMAIL_REGEX.test(trimmed)) {
+    if (!EmailChangeService.EMAIL_REGEX.test(trimmed)) {
       return { valid: false, error: 'Invalid email format', errorCode: 'INVALID_EMAIL_FORMAT' };
     }
     return { valid: true };
@@ -149,10 +149,10 @@ EmailChangeService.Manager = class {
       return { valid: false, error: 'Verification code must be provided', errorCode: 'MISSING_CODE' };
     }
     const trimmed = code.trim();
-    if (trimmed.length !== VERIFICATION_CONFIG.CODE_LENGTH) {
-      return { 
-        valid: false, 
-        error: `Verification code must be ${VERIFICATION_CONFIG.CODE_LENGTH} digits`, 
+    if (trimmed.length !== EmailChangeService.VERIFICATION_CONFIG.CODE_LENGTH) {
+      return {
+        valid: false,
+        error: `Verification code must be ${EmailChangeService.VERIFICATION_CONFIG.CODE_LENGTH} digits`,
         errorCode: 'INVALID_CODE_LENGTH' 
       };
     }
@@ -173,7 +173,7 @@ EmailChangeService.Manager = class {
    */
   static generateVerificationCode(randomFn = Math.random) {
     let code = '';
-    for (let i = 0; i < VERIFICATION_CONFIG.CODE_LENGTH; i++) {
+    for (let i = 0; i < EmailChangeService.VERIFICATION_CONFIG.CODE_LENGTH; i++) {
       code += Math.floor(randomFn() * 10).toString();
     }
     return code;
@@ -188,7 +188,7 @@ EmailChangeService.Manager = class {
    * @returns {VerificationData}
    */
   static createVerificationEntry(oldEmail, newEmail, code, now = new Date()) {
-    const expiryMs = now.getTime() + (VERIFICATION_CONFIG.EXPIRY_MINUTES * 60 * 1000);
+    const expiryMs = now.getTime() + (EmailChangeService.VERIFICATION_CONFIG.EXPIRY_MINUTES * 60 * 1000);
     return {
       newEmail: this.normalizeEmail(newEmail),
       code: code,
@@ -416,10 +416,10 @@ EmailChangeService.Manager = class {
    */
   static buildVerificationEmailContent(code) {
     const subject = 'Verify Your New Email Address';
-    const body = `Your verification code is: ${code}\n\nThis code will expire in ${VERIFICATION_CONFIG.EXPIRY_MINUTES} minutes.\n\nIf you did not request this email change, please ignore this message.`;
+    const body = `Your verification code is: ${code}\n\nThis code will expire in ${EmailChangeService.VERIFICATION_CONFIG.EXPIRY_MINUTES} minutes.\n\nIf you did not request this email change, please ignore this message.`;
     const htmlBody = `
       <p>Your verification code is: <strong>${code}</strong></p>
-      <p>This code will expire in ${VERIFICATION_CONFIG.EXPIRY_MINUTES} minutes.</p>
+      <p>This code will expire in ${EmailChangeService.VERIFICATION_CONFIG.EXPIRY_MINUTES} minutes.</p>
       <p>If you did not request this email change, please ignore this message.</p>
     `.trim();
 
@@ -453,7 +453,7 @@ EmailChangeService.Manager = class {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     Manager: EmailChangeService.Manager,
-    VERIFICATION_CONFIG,
-    EMAIL_REGEX
+    VERIFICATION_CONFIG: EmailChangeService.VERIFICATION_CONFIG,
+    EMAIL_REGEX: EmailChangeService.EMAIL_REGEX
   };
 }
