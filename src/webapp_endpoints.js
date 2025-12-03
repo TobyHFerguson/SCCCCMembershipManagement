@@ -164,6 +164,9 @@ function handleApiRequest(request) {
   if (typeof EmailChangeService.initApi === 'function') {
     EmailChangeService.initApi();
   }
+  if (typeof VotingService.initApi === 'function') {
+    VotingService.initApi();
+  }
   
   // Handle the request
   return Common.Api.Client.handleRequest(request);
