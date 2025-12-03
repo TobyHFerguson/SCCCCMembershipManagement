@@ -229,6 +229,47 @@ Each service (`MembershipManagement`, `VotingService`, `DirectoryService`, etc.)
 
 Services registered in `src/1namespaces.js` and routed via `src/webApp.js` doGet handler using `?service=` parameter.
 
+### Responsive CSS Framework (SPA Services)
+
+All web services MUST use the existing responsive CSS framework in `src/common/html/_Header.html`. DO NOT duplicate or reimplement the responsive breakpoint logic.
+
+Features:
+- Breakpoint-based responsive design using classes applied to the `<html>` element.
+- Device classes: `is-mobile-portrait`, `is-mobile-landscape`, `is-tablet`.
+- Base font-size scaling per device; use `rem` units for service styles.
+- Shared utilities: `checkViewportAndApplyClasses()`, `disableForm()`, `enableForm()` are provided by `_Header.html`.
+
+Service authoring pattern:
+```
+<!-- Service HTML (e.g. GroupManagementApp.html) -->
+<!-- _Layout.html includes _Header.html which sets up the classes and utilities -->
+<style>
+  /* Desktop defaults */
+  #serviceForm { display: grid; grid-template-columns: auto 1fr; gap: 10px; }
+
+  /* Tablet */
+  html.is-tablet #serviceForm { grid-template-columns: 1fr; }
+
+  /* Mobile portrait */
+  html.is-mobile-portrait #serviceForm { padding: 15px; gap: 12px; }
+</style>
+
+<script>
+  async function saveData() {
+    const form = document.getElementById('serviceForm');
+    disableForm(form);
+    try {
+      await google.script.run.withSuccessHandler(() => enableForm(form)).saveData(data);
+    } catch (e) {
+      enableForm(form);
+      throw e;
+    }
+  }
+</script>
+```
+
+CRITICAL: always reference `_Header.html` for breakpoint behavior and UX helpers; test on desktop, tablet, mobile-portrait and mobile-landscape.
+
 ### Magic Link Authentication
 Users access web services via tokenized URLs. Flow:
 1. User requests access at `?page=request&service=ServiceName`
@@ -339,15 +380,27 @@ See `docs/BOOTSTRAP_CONFIGURATION.md` for full schema.
 
 ## Key Files Reference
 - `src/1namespaces.js`: All service namespaces (loads first)
-- `src/webapp_endpoints.js`: Global functions callable from web UIs
+- `src/webapp_endpoints.js`: Global functions callable from web UIs via `google.script.run`
 - `src/webApp.js`: doGet router dispatching to service WebApp handlers
 - `src/common/data/data_access.js`: `Common.Data.Access` namespace for data retrieval
-- `src/services/MembershipManagement/Manager.js`: Pure membership logic
+- `src/common/html/_Header.html`: Shared responsive CSS framework (MUST use for all web services)
+- `src/common/html/_Layout.html`: Master HTML template that includes `_Header.html` and service content
+- `src/services/MembershipManagement/Manager.js`: Pure membership logic (testable)
+- `src/services/MembershipManagement/MembershipManagement.js`: GAS orchestration
+- `src/services/GroupManagementService/Manager.js`: SPA service Manager example
+- `src/services/GroupManagementService/Api.js`: SPA API layer example
+- `src/services/GroupManagementService/GroupManagementApp.html`: SPA HTML with CSS framework
 - `__tests__/Manager.test.js`: Comprehensive test suite with table of contents
-- `docs/NAMESPACE_DECLARATION_PATTERN.md`: Namespace extension pattern guide
-- `docs/LOGGER_ARCHITECTURE.md`: Logger layering and initialization guide
+- `__mocks__/google-apps-script.ts`: GAS globals mocking
+- `jest.setup.ts`: Global test configuration
+- `src/types/global.d.ts`: Global TypeScript types
+- `src/types/membership.d.ts`: Membership-specific types
+- `docs/NAMESPACE_DECLARATION_PATTERN.md`: Namespace extension pattern (CRITICAL)
+- `docs/LOGGER_ARCHITECTURE.md`: Logger layering and initialization
 - `docs/BOOTSTRAP_CONFIGURATION.md`: Sheet configuration reference
 - `docs/ExpirationFIFO_SCHEMA.md`: FIFO queue schema and contract
+- `docs/GAS-PR-TESTING.md`: How to test PRs in GAS environment
+- `docs/issues/ISSUE-SPA-AND-AUTH-COMBINED.md`: SPA migration master plan
 
 ## Common Gotchas
 - **Namespace declarations**: ALWAYS use `if (typeof Namespace === 'undefined')` pattern when extending namespaces (see `docs/NAMESPACE_DECLARATION_PATTERN.md`)
@@ -357,3 +410,43 @@ See `docs/BOOTSTRAP_CONFIGURATION.md` for full schema.
 - **Environment switching**: Running wrong clasp command deploys to wrong environment - always use `npm run {env}:*` scripts
 - **Test mocking**: GAS globals like `PropertiesService` mocked in `jest.setup.ts` (imports `__mocks__/google-apps-script.ts`)
 - **Circular dependencies**: Build fails if Layer 0 modules use `Common.Logger.*` - tests enforce this
+
+## Current Migration: SPA Architecture + Verification Code Authentication
+
+**Active Project**: Migrating 5 web services from magic link + multi-page to verification code + SPA architecture.
+
+**Status**: Tracked in Issue #291
+
+**Completed Phases**:
+- Phase 0: Foundation (ApiClient, FeatureFlags, VerificationCode infrastructure)
+- Phase 1: Authentication flow (verification code UI, backward compatibility)
+- Phase 2: GroupManagementService SPA migration
+- Phase 3: ProfileManagementService SPA migration
+- [Add phases as completed]
+
+**Key Migration Principles**:
+1. **Feature Flags**: Use `Common.FeatureFlags.useNewAuth()` for safe rollout
+2. **Backward Compatibility**: Magic links still work when flag is OFF
+3. **Verification Codes**: 6-digit codes, 10-minute expiry, rate limiting (5 attempts)
+4. **SPA Pattern**: Single doGet for bootstrap, then `google.script.run` APIs
+5. **Session Management**: Tokens in memory only (not in HTML/URL)
+6. **CSS Framework**: MUST use existing `_Header.html` responsive framework
+
+**Services in Migration Scope**:
+1. ✅ GroupManagementService (Phase 2)
+2. ✅ ProfileManagementService (Phase 3)
+3. 🔄 DirectoryService (Phase 4 - in progress)
+4. ⏸️ EmailChangeService (Phase 5)
+5. ⏸️ VotingService (Phase 6)
+
+**Out of Scope**: EmailService, DocsService (modal dialogs), MembershipManagement (triggers only)
+
+**Complete Plan**: `docs/issues/ISSUE-SPA-AND-AUTH-COMBINED.md`
+
+**CRITICAL for SPA Development**:
+- ALL business logic in `Service.Manager.js` (pure, testable)
+- GAS orchestration ONLY in `Service.Api.js`
+- Follow `GroupManagementService` as template
+- Use responsive CSS framework from `_Header.html`
+- Test coverage: Manager 100%, Api 95%+
+- Manual test all breakpoints before PR review
