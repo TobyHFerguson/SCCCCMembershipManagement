@@ -61,6 +61,7 @@ npm run prod:deploy-live    # Production deploy with git versioning
 - **Commits**: Commit frequently with descriptive messages
 - **Testing**: ALL tests MUST pass before every commit (`npm test`)
 - **PR Requirement**: Run `npm test` and verify 100% pass before opening PR
+- **Multi-phase work**: Use "References #issue" in PR description (NOT "Fixes #issue") to keep issue open
 - **Clean working directory**: Production deployments require clean git state (`git:enforce-clean`)
 - **Version tracking**: Use `clasp:create-version` which embeds git tag/commit in GAS version
 
