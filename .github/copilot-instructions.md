@@ -1,7 +1,62 @@
+---
+applyTo: '**'
+---
+
 # SCCCC Management Copilot Instructions
 
 ## Project Overview
 Google Apps Script (GAS) membership management system for SCCCC. Hybrid TypeScript/JavaScript with pure-logic core functions tested via Jest, and GAS-specific wrappers for runtime integration.
+
+## Setup and Commands
+
+**Install dependencies:**
+```bash
+npm install
+```
+
+**Run tests:**
+```bash
+npm test                    # Run all Jest tests
+npm test Manager.test.js    # Run specific test file
+```
+
+**Linting:**
+This project uses Prettier for code formatting. Configuration is in `.prettierrc.js`.
+
+**Deployment (Clasp):**
+Three environments: dev, staging, prod. Scripts use clasp-env to switch `.clasp.json`.
+
+```bash
+npm run dev:push            # Watch mode deployment to dev
+npm run dev:deploy          # Deploy to dev test deployment
+npm run stage:deploy        # Full staging deploy (push + version + redeploy)
+npm run prod:deploy-live    # Production deploy with git versioning
+```
+
+## Boundaries and Restrictions
+
+**DO NOT:**
+- Use `var` or `const` to redeclare namespaces (always use `if (typeof Namespace === 'undefined')` pattern)
+- Access spreadsheets directly via `SpreadsheetApp.getActiveSpreadsheet()` - always use Fiddler
+- Use `Common.Logger.*` in Layer 0 modules (SpreadsheetManager.js, Properties.js, Logger.js)
+- Throw exceptions from Manager methods - return errors as data instead
+- Commit secrets or credentials to source code
+- Modify production configuration files without proper review
+- Skip tests when modifying Manager class business logic
+
+**ALWAYS:**
+- Write comprehensive Jest tests for any pure business logic in Manager classes
+- Use the namespace declaration pattern documented below when extending namespaces
+- Run `npm test` before committing changes
+- Use `npm run {env}:*` scripts for deployment (never run clasp commands directly)
+
+## Git Workflow
+
+- **Branching**: Create feature branches for new features
+- **Commits**: Commit frequently with descriptive messages
+- **Testing**: All tests must pass before merging (`npm test`)
+- **Clean working directory**: Production deployments require clean git state (`git:enforce-clean`)
+- **Version tracking**: Use `clasp:create-version` which embeds git tag/commit in GAS version
 
 ## Critical Architecture Patterns
 
@@ -237,25 +292,13 @@ Type definitions in `src/types/*.d.ts` and service-specific `*.d.ts` files. The 
 
 ## Development Workflows
 
-### Testing
-```bash
-npm test                    # Run all Jest tests
-npm test Manager.test.js    # Run specific test file
-```
+### Testing Details
 
 **Test structure**: Factory functions in `TestData` namespace provide default test objects with overrides (see `__tests__/Manager.test.js` lines 40-100). Mock GAS globals in `__mocks__/google-apps-script.ts`.
 
 **Debugging tests**: Each test file has a table of contents comment. Tests organized by member lifecycle (onboarding, expiration, supporting functions).
 
-### Deployment (Clasp)
-Three environments: dev, staging, prod. Scripts use clasp-env to switch `.clasp.json`.
-
-```bash
-npm run dev:push            # Watch mode deployment to dev
-npm run dev:deploy          # Deploy to dev test deployment
-npm run stage:deploy        # Full staging deploy (push + version + redeploy)
-npm run prod:deploy-live    # Production deploy with git versioning
-```
+### Deployment Details
 
 **Version tracking**: `clasp:create-version` embeds git tag/commit in GAS version description. Always commit before production deployment (`git:enforce-clean` enforces clean working directory).
 

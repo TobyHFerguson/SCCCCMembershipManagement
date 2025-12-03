@@ -29,55 +29,81 @@ function testUpdateUserSubscriptions() {
     GroupManagementService.updateUserSubscriptions(updatedSubscriptions, userEmail);
 }
 
+/**
+ * Get user's group subscriptions
+ * Uses Manager class for pure business logic
+ * 
+ * @param {string} userEmail - User's email address
+ * @returns {Array} Array of subscription objects
+ */
 GroupManagementService.getUserGroupSubscription = function(userEmail) {
-    const groups = Common.Data.Access.getPublicGroups()
-    const userGroupSubscription = groups.map(group => {
-        const member = GroupSubscription.getMember(group.Email, userEmail);
-        if (member) {
-            return {
-                groupName: group.Name,
-                groupEmail: group.Email,
-                deliveryValue: member.delivery_settings,
-                deliveryName: GroupSubscription.deliveryOptions[member.delivery_settings][0] // Add the human-readable name
-            };
-        } else {
-            return {
-                groupName: group.Name,
-                groupEmail: group.Email,
-                deliveryValue: "UNSUBSCRIBE",
-                deliveryName: "UNSUBSCRIBED"
-            };
-        }
+    // PURE: Normalize email
+    const normalizedEmail = GroupManagementService.Manager.normalizeEmail(userEmail);
+    
+    // GAS: Get public groups
+    const groups = Common.Data.Access.getPublicGroups();
+    
+    // GAS: Get member data for each group
+    const membersByGroup = {};
+    groups.forEach(group => {
+        const member = GroupSubscription.getMember(group.Email, normalizedEmail);
+        membersByGroup[group.Email] = member;
     });
-    return userGroupSubscription;
+    
+    // PURE: Build subscriptions using Manager
+    const subscriptions = GroupManagementService.Manager.buildUserSubscriptions(
+        groups,
+        membersByGroup,
+        GroupSubscription.deliveryOptions
+    );
+    
+    return subscriptions;
 }
 
 
 
 GroupManagementService.updateUserSubscriptions = function (updatedSubscriptions, userEmail) {
+    // PURE: Normalize email
+    const normalizedEmail = GroupManagementService.Manager.normalizeEmail(userEmail);
     
+    // GAS: Get current member status for each group
+    const currentMembersByGroup = {};
     for (const subscription of updatedSubscriptions) {
-        const member = GroupSubscription.getMember(subscription.groupEmail, userEmail);
-
-        if (subscription.deliveryValue === "UNSUBSCRIBE") {
-            GroupSubscription.removeMember(subscription.groupEmail, userEmail);
-        } else {
-            if (member) {
-                member.delivery_settings = subscription.deliveryValue;
-                GroupSubscription.updateMember(member, subscription.groupEmail);
-            } else {
+        const member = GroupSubscription.getMember(subscription.groupEmail, normalizedEmail);
+        currentMembersByGroup[subscription.groupEmail] = member;
+    }
+    
+    // PURE: Calculate actions using Manager
+    const { actions } = GroupManagementService.Manager.calculateActions(
+        updatedSubscriptions,
+        currentMembersByGroup,
+        normalizedEmail
+    );
+    
+    // GAS: Execute actions
+    for (const action of actions) {
+        switch (action.action) {
+            case 'unsubscribe':
+                GroupSubscription.removeMember(action.groupEmail, action.userEmail);
+                break;
+            case 'subscribe':
                 const newMember = {
-                    email: userEmail,
-                    delivery_settings: subscription.deliveryValue
+                    email: action.userEmail,
+                    delivery_settings: action.deliveryValue
                 };
-                GroupSubscription.subscribeMember(newMember, subscription.groupEmail);
-            }
+                GroupSubscription.subscribeMember(newMember, action.groupEmail);
+                break;
+            case 'update':
+                const member = GroupSubscription.getMember(action.groupEmail, action.userEmail);
+                if (member) {
+                    member.delivery_settings = action.deliveryValue;
+                    GroupSubscription.updateMember(member, action.groupEmail);
+                }
+                break;
         }
     }
+    
     console.log(`GroupManagementService.updateUserSubscriptions(${JSON.stringify(updatedSubscriptions)}, ${userEmail}) was successful`);
-    // **IMPORTANT:** Implement your actual logic here to update the user's
-    // subscriptions in your data storage, using the 'userEmail' to identify the user
-    // and the 'updatedSubscriptions' data (which now contains the underlying values).
 
     // Cleanup: Cache will expire automatically
     return { success: true, message: "Subscriptions updated successfully" };
