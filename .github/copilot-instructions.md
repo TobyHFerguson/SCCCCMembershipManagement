@@ -134,6 +134,10 @@ const { eligibleItems, eligibleIndices } = MembershipManagement.Manager.selectBa
 // ✅ CORRECT: Works in both GAS and Jest
 if (typeof NamespaceName === 'undefined') NamespaceName = {};
 NamespaceName.SubNamespace = NamespaceName.SubNamespace || {};
+
+// ✅ CORRECT: Constants attached to namespace
+NamespaceName.MY_CONSTANT = 'value';
+NamespaceName.CONFIG = { key: 'value' };
 ```
 
 **NEVER do this**:
@@ -141,9 +145,15 @@ NamespaceName.SubNamespace = NamespaceName.SubNamespace || {};
 // ❌ WRONG: Conflicts with const in 1namespaces.js
 var Audit = Audit || {};
 const Common = Common || {};
+
+// ❌ WRONG: Global constants conflict when files are concatenated
+const VERIFICATION_CONFIG = { ... };
+const EMAIL_REGEX = /pattern/;
 ```
 
 **Why**: In GAS, `const Audit = {}` already exists from `1namespaces.js`. Redeclaring with `var`/`const` causes `SyntaxError: Identifier 'Audit' has already been declared`. The `typeof` check skips redeclaration in GAS but creates namespace in Jest.
+
+**Constants**: ALL constants (configs, regex patterns, enums) MUST be attached to the namespace. Never use `const`/`let`/`var` for module-level constants - they become globals when GAS concatenates files.
 
 **See**: `docs/NAMESPACE_DECLARATION_PATTERN.md` for complete documentation and examples.
 
