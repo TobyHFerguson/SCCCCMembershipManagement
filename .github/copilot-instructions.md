@@ -43,18 +43,22 @@ npm run prod:deploy-live    # Production deploy with git versioning
 - Commit secrets or credentials to source code
 - Modify production configuration files without proper review
 - Skip tests when modifying Manager class business logic
+- Open a PR without running `npm test` and ensuring all tests pass
 
 **ALWAYS:**
 - Write comprehensive Jest tests for any pure business logic in Manager classes
 - Use the namespace declaration pattern documented below when extending namespaces
-- Run `npm test` before committing changes
+- Run `npm test` BEFORE every commit and verify all tests pass
+- Run `npm test` BEFORE opening any PR - PRs with failing tests will be rejected
+- Fix any test failures immediately - do not commit broken tests
 - Use `npm run {env}:*` scripts for deployment (never run clasp commands directly)
 
 ## Git Workflow
 
 - **Branching**: Create feature branches for new features
 - **Commits**: Commit frequently with descriptive messages
-- **Testing**: All tests must pass before merging (`npm test`)
+- **Testing**: ALL tests MUST pass before every commit (`npm test`)
+- **PR Requirement**: Run `npm test` and verify 100% pass before opening PR
 - **Clean working directory**: Production deployments require clean git state (`git:enforce-clean`)
 - **Version tracking**: Use `clasp:create-version` which embeds git tag/commit in GAS version
 

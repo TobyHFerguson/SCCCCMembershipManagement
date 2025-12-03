@@ -121,7 +121,7 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
             fiddlers.getFifo()[1],
             fiddlers.getFifo()[2]
         ]);
-        const fakeResult = { processed: 2, failedMeta: [] };
+        const fakeResult = { processed: [{}, {}], failed: [], auditEntries: [] };
         // @ts-ignore - Mock partial implementation for testing
         global.MembershipManagement.Internal.initializeManagerData_ = jest.fn(() => {
             return { manager: { processExpiredMembers: jest.fn(() => fakeResult) }, membershipData: [], expiryScheduleData: [] };
