@@ -507,25 +507,75 @@ MembershipManagement.Manager = class {
     expirySchedule.push(...scheduleEntries);
   }
 
-  static isSimilarMember(memberA, memberB) {
+  /**
+   * Check if two members represent a possible renewal (same person with multiple membership records).
+   * A possible renewal is identified by:
+   * - Both members are Active
+   * - First letters of first names match (case insensitive)
+   * - First letters of last names match (case insensitive)
+   * - Same phone OR same email
+   * - The later Joined date is before or equal to the earlier Expires date
+   * 
+   * @param {Object} memberA - First member object
+   * @param {Object} memberB - Second member object
+   * @returns {boolean} True if the pair is a possible renewal
+   */
+  static isPossibleRenewal(memberA, memberB) {
+    // Must be different members
+    if (memberA === memberB) return false;
+    
     const normalize = v => v ? String(v).trim().toLowerCase() : '';
+    
+    // Both must be Active
+    if (normalize(memberA && memberA.Status) !== 'active') return false;
+    if (normalize(memberB && memberB.Status) !== 'active') return false;
+    
     const a = {
       email: normalize(memberA && memberA.Email),
       phone: normalize(memberA && memberA.Phone),
-      name: normalize(memberA && memberA.First + ' ' + memberA && memberA.Last),
+      firstLetter: normalize(memberA && memberA.First).charAt(0),
+      lastLetter: normalize(memberA && memberA.Last).charAt(0),
+      joined: memberA ? new Date(memberA.Joined) : null,
+      expires: memberA ? new Date(memberA.Expires) : null
     };
     const b = {
       email: normalize(memberB && memberB.Email),
       phone: normalize(memberB && memberB.Phone),
-      name: normalize(memberB && memberB.First + ' ' + memberB && memberB.Last),
+      firstLetter: normalize(memberB && memberB.First).charAt(0),
+      lastLetter: normalize(memberB && memberB.Last).charAt(0),
+      joined: memberB ? new Date(memberB.Joined) : null,
+      expires: memberB ? new Date(memberB.Expires) : null
     };
 
-    // If they share any identity characteristics, they are similar
-    let similarityIndex = 0;
-    if (a.email && b.email && a.email === b.email) similarityIndex++;
-    if (a.phone && b.phone && a.phone === b.phone) similarityIndex++;
-    if (a.name && b.name && a.name === b.name) similarityIndex++;
-    return 0 < similarityIndex && similarityIndex < 3;
+    // First letters of first name must match (case insensitive)
+    if (!a.firstLetter || !b.firstLetter || a.firstLetter !== b.firstLetter) return false;
+    
+    // First letters of last name must match (case insensitive)
+    if (!a.lastLetter || !b.lastLetter || a.lastLetter !== b.lastLetter) return false;
+    
+    // Must share same phone OR same email
+    const sameEmail = a.email && b.email && a.email === b.email;
+    const samePhone = a.phone && b.phone && a.phone === b.phone;
+    if (!sameEmail && !samePhone) return false;
+    
+    // Joined dates must be different (one record joined after the other)
+    if (!a.joined || !b.joined || isNaN(a.joined.getTime()) || isNaN(b.joined.getTime())) return false;
+    if (a.joined.getTime() === b.joined.getTime()) return false;
+    
+    // The later Joined must be before or equal to the earlier Expires
+    const [earlier, later] = a.joined < b.joined ? [a, b] : [b, a];
+    if (!earlier.expires || isNaN(earlier.expires.getTime())) return false;
+    if (later.joined > earlier.expires) return false;
+    
+    return true;
+  }
+
+  /**
+   * @deprecated Use isPossibleRenewal instead
+   * Legacy method for backward compatibility - now delegates to isPossibleRenewal
+   */
+  static isSimilarMember(memberA, memberB) {
+    return MembershipManagement.Manager.isPossibleRenewal(memberA, memberB);
   }
 
   /**
@@ -553,9 +603,9 @@ MembershipManagement.Manager = class {
     const a = membershipData[idxA];
     const b = membershipData[idxB];
 
-    if (!MembershipManagement.Manager.isSimilarMember(a, b)) {
-      console.error('convertJoinToRenew: selected rows do not share identity', { idxA, idxB, a: { Email: a.Email, Phone: a.Phone, First: a.First, Last: a.Last }, b: { Email: b.Email, Phone: b.Phone, First: b.First, Last: b.Last } });
-      return { success: false, message: 'Selected rows do not share any identity characteristic with one another (email, phone, first, or last name)' };
+    if (!MembershipManagement.Manager.isPossibleRenewal(a, b)) {
+      console.error('convertJoinToRenew: selected rows are not a possible renewal pair', { idxA, idxB, a: { Email: a.Email, Phone: a.Phone, First: a.First, Last: a.Last, Status: a.Status, Joined: a.Joined, Expires: a.Expires }, b: { Email: b.Email, Phone: b.Phone, First: b.First, Last: b.Last, Status: b.Status, Joined: b.Joined, Expires: b.Expires } });
+      return { success: false, message: 'Selected rows are not a valid possible renewal pair. Ensure both are Active, first letters of first/last names match, they share email or phone, and the later Joined is before the earlier Expires.' };
     }
     // Ensure we work with copies to avoid mutation surprises
     const rowA = { ...membershipData[idxA] };
@@ -656,16 +706,10 @@ MembershipManagement.Manager = class {
   }
 
   static findPossibleRenewals(membershipData) {
-    function joinedBeforeExpired(a, b) {
-      return ((new Date(a.Joined)) > (new Date(b.Joined)) && new Date(a.Joined) <= new Date(b.Expires)) || (new Date(b.Joined) > new Date(a.Joined) && new Date(b.Joined) <= new Date(a.Expires));
-    }
     const similarPairs = [];
     for (let i = 0; i < membershipData.length; i++) {
-      if (membershipData[i].Status !== 'Active') continue;
       for (let j = i + 1; j < membershipData.length; j++) {
-        if (membershipData[j].Status !== 'Active') continue;
-        if (!joinedBeforeExpired(membershipData[i], membershipData[j])) continue;
-        if (MembershipManagement.Manager.isSimilarMember(membershipData[i], membershipData[j])) {
+        if (MembershipManagement.Manager.isPossibleRenewal(membershipData[i], membershipData[j])) {
           similarPairs.push([i, j]);
         }
       }
