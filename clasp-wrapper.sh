@@ -13,8 +13,10 @@ fi
 cp "$PROJECT_CREDS" "$HOME/.clasprc.json"
 
 # Run clasp command with all arguments (use full path to ensure correct version)
+set -v
 /opt/homebrew/bin/clasp "$@"
 EXIT_CODE=$?
+set +v
 
 # Restore original credentials
 if [ -f "$BACKUP_FILE" ]; then
