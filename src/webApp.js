@@ -38,6 +38,13 @@ function doGet(e) {
         template.contentFileName = useNewAuth ? VERIFICATION_CODE_INPUT : MAGIC_LINK_INPUT;
         template.service = service.service;
         const authFlowName = useNewAuth ? 'Verification Code' : 'Magic Link';
+        
+        // Log which auth flow is being used for monitoring
+        if (!useNewAuth) {
+            console.warn('[DEPRECATED] Using legacy Magic Link authentication flow. ' +
+                'Call Common.Config.FeatureFlags.enableNewAuth() to use the new Verification Code flow.');
+        }
+        
         const output = template.evaluate()
             .setTitle(`Request Access - ${authFlowName}`)
         return output;
