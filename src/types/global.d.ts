@@ -738,3 +738,85 @@ declare namespace EmailChangeService {
     function handleChangeEmailInGroupsUI(oldEmail: string, newEmail: string, groupData: GroupMembershipInfo[]): Array<{ groupEmail: string; status: string; error: string | null }>;
     function initApi(): void;
 }
+
+/**
+ * VotingService types (extended for SPA migration)
+ */
+declare namespace VotingService {
+    // Data types for API
+    interface ProcessedElection {
+        title: string;
+        opens?: Date;
+        closes?: Date;
+        status: string;
+        url?: string;
+    }
+
+    interface ValidationResult {
+        valid: boolean;
+        error?: string;
+        errorCode?: string;
+    }
+
+    interface TokenValidationResult {
+        valid: boolean;
+        email?: string;
+        error?: string;
+        errorCode?: string;
+    }
+
+    interface VoteValidationResult {
+        valid: boolean;
+        email?: string;
+        error?: string;
+        errorCode?: string;
+        duplicate?: boolean;
+        tokenInvalid?: boolean;
+    }
+
+    interface ElectionStats {
+        total: number;
+        active: number;
+        unopened: number;
+        closed: number;
+    }
+
+    // Manager class - Pure business logic
+    class Manager {
+        static getElectionStates(): { UNOPENED: string; ACTIVE: string; CLOSED: string };
+        static calculateElectionState(startDate: Date | string | null | undefined, endDate: Date | string | null | undefined, now?: Date): string;
+        static validateEmail(email: string): ValidationResult;
+        static normalizeEmail(email: string): string;
+        static hasUserVoted(userEmail: string, voters: Array<{ Email: string }>): boolean;
+        static validateElection(election: object): ValidationResult;
+        static validateToken(token: string): ValidationResult;
+        static validateTokenData(tokenData: object | null): TokenValidationResult;
+        static isDuplicateVote(email: string, currentToken: string, allTokens: Array<{ Email: string; Token: string }>): boolean;
+        static validateVote(tokenData: object | null, currentToken: string, allTokens: Array<{ Email: string; Token: string }>): VoteValidationResult;
+        static buildElectionStatusMessage(state: string, hasVoted: boolean, ballotAccepting?: boolean): string;
+        static processElectionForDisplay(election: object, userEmail: string, voters: Array<{ Email: string }>, ballotPublished?: boolean, ballotAccepting?: boolean, now?: Date): ProcessedElection;
+        static extractFirstValues(namedValues: Record<string, any[] | any>): Record<string, any>;
+        static extractElectionTitle(spreadsheetName: string, resultsSuffix?: string): string;
+        static buildValidVoteEmailContent(electionTitle: string): { subject: string; body: string };
+        static buildInvalidVoteEmailContent(electionTitle: string): { subject: string; body: string };
+        static buildManualCountEmailContent(electionTitle: string, vote: object, tokenFieldName?: string): { subject: string; body: string };
+        static buildElectionOpeningEmailContent(ballotTitle: string, editUrl: string): { subject: string; body: string };
+        static buildElectionClosureEmailContent(ballotTitle: string, editUrl: string, manualCountRequired?: boolean): { subject: string; body: string };
+        static buildElectionOfficerAddedEmailContent(title: string, editUrl: string, isSharedDrive?: boolean): { subject: string; body: string };
+        static buildElectionOfficerRemovedEmailContent(title: string, isSharedDrive?: boolean): { subject: string; body: string };
+        static calculateElectionStats(elections: Array<object>, now?: Date): ElectionStats;
+        static formatActiveElectionsResponse(elections: ProcessedElection[], userEmail: string): { elections: ProcessedElection[]; userEmail: string; count: number };
+        static calculateOfficerChanges(newOfficers: string[], currentOfficers: string[]): { toAdd: string[]; toRemove: string[] };
+        static parseElectionOfficers(officersString: string): string[];
+    }
+
+    // Api namespace - GAS layer
+    namespace Api {
+        function handleGetActiveElections(params: { _authenticatedEmail?: string }): Common.Api.ApiResponse;
+        function handleGetElectionStats(params: { _authenticatedEmail?: string }): Common.Api.ApiResponse;
+        function handleGenerateBallotToken(params: { _authenticatedEmail?: string; electionTitle?: string }): Common.Api.ApiResponse;
+    }
+
+    // Initialize API handlers
+    function initApi(): void;
+}
