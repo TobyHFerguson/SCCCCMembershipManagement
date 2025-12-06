@@ -558,14 +558,17 @@ MembershipManagement.Manager = class {
     const samePhone = a.phone && b.phone && a.phone === b.phone;
     if (!sameEmail && !samePhone) return false;
     
-    // Joined dates must be different (one record joined after the other)
+    // Joined dates must be valid
     if (!a.joined || !b.joined || isNaN(a.joined.getTime()) || isNaN(b.joined.getTime())) return false;
-    if (a.joined.getTime() === b.joined.getTime()) return false;
     
-    // The later Joined must be before or equal to the earlier Expires
-    const [earlier, later] = a.joined < b.joined ? [a, b] : [b, a];
-    if (!earlier.expires || isNaN(earlier.expires.getTime())) return false;
-    if (later.joined > earlier.expires) return false;
+    // If joined dates are different, the later Joined must be before or equal to the earlier Expires
+    if (a.joined.getTime() !== b.joined.getTime()) {
+      const [earlier, later] = a.joined < b.joined ? [a, b] : [b, a];
+      if (!earlier.expires || isNaN(earlier.expires.getTime())) return false;
+      if (later.joined > earlier.expires) return false;
+    }
+    // If joined dates are equal (duplicate records), they can still be a possible renewal
+    // as long as they're different objects (checked by === at the start)
     
     return true;
   }

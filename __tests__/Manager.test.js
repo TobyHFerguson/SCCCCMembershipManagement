@@ -1325,15 +1325,16 @@ describe('Manager tests', () => {
         expect(MembershipManagement.Manager.isPossibleRenewal(member1, member2)).toBe(false);
       });
 
-      it('should not match same object (identity)', () => {
+      it('should still not match same object reference (identity)', () => {
         const member = { Email: "toby@mail.com", Phone: "(408) 386-9343", First: "Toby", Last: "Ferguson", Joined: "1/1/2025", Expires: "1/1/2026", Status: "Active" };
         expect(MembershipManagement.Manager.isPossibleRenewal(member, member)).toBe(false);
       });
 
-      it('should not match when both joined on the same date', () => {
+      it('should MATCH when both joined on the same date (different objects with equal data)', () => {
         const member1 = { Email: "toby@mail.com", Phone: "(408) 386-9343", First: "Toby", Last: "Ferguson", Joined: "1/1/2025", Expires: "1/1/2026", Status: "Active" };
         const member2 = { Email: "toby@mail.com", Phone: "(408) 386-9343", First: "Toby", Last: "Ferguson", Joined: "1/1/2025", Expires: "1/1/2028", Status: "Active" };
-        expect(MembershipManagement.Manager.isPossibleRenewal(member1, member2)).toBe(false);
+        // Different objects with equal data fields should match (this is a change from previous logic)
+        expect(MembershipManagement.Manager.isPossibleRenewal(member1, member2)).toBe(true);
       });
     });
 
