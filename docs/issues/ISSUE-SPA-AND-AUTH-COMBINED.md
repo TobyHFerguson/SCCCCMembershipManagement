@@ -340,8 +340,21 @@ When `FEATURE_USE_NEW_AUTH` is permanently enabled (Phase 8 production rollout):
 - Emergency rollback is available via `Common.Config.FeatureFlags.emergencyRollback()`
 
 ---
+## Phase 8
 
-## Phase 8: Production (Week 8) - PENDING
+### Deliverables
+1. After verifying the code entered by the user the current page is swapped out to a page (home page) offering the services:
+  * Directory Service
+  * Email Change Service
+  * Group Management Service
+  * Profile Management Service
+  * Voting Service
+  Selecting a service will swap that page out with the service page.
+2. All service pages will include a link that will take them back to the home page listing all the services
+
+---
+
+## Phase 9: Production (Week 8) - PENDING
 
 ### Rollout Plan
 ```javascript
