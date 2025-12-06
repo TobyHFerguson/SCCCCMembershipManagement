@@ -107,26 +107,39 @@ function getServiceContent(email, service) {
     }
   };
   
-  // Get service properties
-  const scriptProperties = PropertiesService.getScriptProperties();
-  const mobileBreakpoint = scriptProperties.getProperty('MOBILE_BREAKPOINT') || '767';
-  const tabletMinBreakpoint = scriptProperties.getProperty('TABLET_MIN_BREAKPOINT') || '768';
-  const tabletMaxBreakpoint = scriptProperties.getProperty('TABLET_MAX_BREAKPOINT') || '1032';
+  // For container replacement, we create a minimal "content-only" template
+  // that services can populate directly without the full _Layout wrapper
+  const contentTemplate = {};
+  contentTemplate.include = _includeHtml;
+  contentTemplate.serviceName = webService.name;
+  contentTemplate.userEmail = email;
   
-  // Create template
-  const template = HtmlService.createTemplateFromFile('common/html/_Layout.html');
-  template.breakpoints = {
-    mobile: mobileBreakpoint,
-    tabletMin: tabletMinBreakpoint,
-    tabletMax: tabletMaxBreakpoint
+  // Get the service's content file path
+  // Each service defines its content file (e.g., 'services/DirectoryService/html/directory.html')
+  // We'll call the service's doGet which will set contentFileName on our template
+  const mockTemplate = {
+    ...contentTemplate,
+    contentFileName: '',  // Service will set this
+    evaluate: function() {
+      // After service sets contentFileName, evaluate just that file
+      if (!this.contentFileName) {
+        throw new Error(`Service ${service} did not set contentFileName`);
+      }
+      const template = HtmlService.createTemplateFromFile(this.contentFileName);
+      // Copy all properties from this mock template to the real template
+      Object.keys(this).forEach(key => {
+        if (key !== 'evaluate' && key !== 'contentFileName') {
+          template[key] = this[key];
+        }
+      });
+      return template.evaluate();
+    }
   };
-  template.include = _includeHtml;
-  template.serviceName = webService.name;
   
-  // Call service's WebApp.doGet to render content
-  const output = webService.WebApp.doGet(mockEvent, email, template);
+  // Call service's doGet - it will populate mockTemplate and call evaluate()
+  const output = webService.WebApp.doGet(mockEvent, email, mockTemplate);
   
-  // Return the HTML content as string
+  // Return just the content HTML (no layout wrapper)
   return output.getContent();
 }
 
@@ -134,36 +147,18 @@ function getServiceContent(email, service) {
  * Render home page HTML content for authenticated user
  * Called after successful verification code validation to show available services
  * 
+ * For SPA architecture, this returns pure data (not HTML). The client will render the HTML.
+ * 
  * @param {string} email - Authenticated user email
- * @returns {string} HTML content for the home page
+ * @returns {{services: Array}} Services data for client-side rendering
  */
 function getHomePageContent(email) {
   console.log('getHomePageContent(', email, ')');
   
-  // Get service properties
-  const scriptProperties = PropertiesService.getScriptProperties();
-  const mobileBreakpoint = scriptProperties.getProperty('MOBILE_BREAKPOINT') || '767';
-  const tabletMinBreakpoint = scriptProperties.getProperty('TABLET_MIN_BREAKPOINT') || '768';
-  const tabletMaxBreakpoint = scriptProperties.getProperty('TABLET_MAX_BREAKPOINT') || '1032';
-  
-  // Create template
-  const template = HtmlService.createTemplateFromFile('common/html/_Layout.html');
-  template.breakpoints = {
-    mobile: mobileBreakpoint,
-    tabletMin: tabletMinBreakpoint,
-    tabletMax: tabletMaxBreakpoint
+  // Return just the data - client will render the HTML
+  return {
+    services: Common.HomePage.Manager.getAvailableServices()
   };
-  template.include = _includeHtml;
-  template.serviceName = 'Home';
-  template.contentFileName = 'common/html/serviceHomePage';
-  
-  // Pass services data to template - derived from WebServices (single source of truth)
-  template.services = Common.HomePage.Manager.getAvailableServices();
-  
-  // Evaluate the template and return HTML content
-  const output = template.evaluate().setTitle('SCCCC Services');
-  
-  return output.getContent();
 }
 
 /**
@@ -175,28 +170,19 @@ function getHomePageContent(email) {
 function getVerificationPageContent() {
   console.log('getVerificationPageContent()');
   
-  // Get service properties
-  const scriptProperties = PropertiesService.getScriptProperties();
-  const mobileBreakpoint = scriptProperties.getProperty('MOBILE_BREAKPOINT') || '767';
-  const tabletMinBreakpoint = scriptProperties.getProperty('TABLET_MIN_BREAKPOINT') || '768';
-  const tabletMaxBreakpoint = scriptProperties.getProperty('TABLET_MAX_BREAKPOINT') || '1032';
+  // Check feature flag to determine which auth flow to use
+  const useNewAuth = Common.Config.FeatureFlags.isNewAuthEnabled();
+  const VERIFICATION_CODE_INPUT = 'common/auth/verificationCodeInput';
+  const MAGIC_LINK_INPUT = 'common/auth/magicLinkInput';
+  const contentFileName = useNewAuth ? VERIFICATION_CODE_INPUT : MAGIC_LINK_INPUT;
   
-  // Create template
-  const template = HtmlService.createTemplateFromFile('common/html/_Layout.html');
-  template.breakpoints = {
-    mobile: mobileBreakpoint,
-    tabletMin: tabletMinBreakpoint,
-    tabletMax: tabletMaxBreakpoint
-  };
-  template.include = _includeHtml;
-  template.serviceName = '';
-  template.service = '';
-  template.contentFileName = 'common/auth/verificationCodeInput';
+  // Create template for just the content (no layout wrapper)
+  // This is used for container replacement when signing out
+  const template = HtmlService.createTemplateFromFile(contentFileName);
+  template.service = ''; // No specific service for verification page
   
-  // Evaluate the template and return HTML content
-  const output = template.evaluate().setTitle('Request Access');
-  
-  return output.getContent();
+  // Evaluate and return just the inner HTML content
+  return template.evaluate().getContent();
 }
 
 /**

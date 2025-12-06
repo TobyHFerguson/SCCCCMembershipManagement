@@ -334,13 +334,20 @@
               }
             }
             
-            // Get the home page content and replace the entire page
+            // Get the home page content (now returns data, not HTML)
             google.script.run
-              .withSuccessHandler(function(htmlContent) {
-                // Replace the entire document with the home page content
-                document.open();
-                document.write(htmlContent);
-                document.close();
+              .withSuccessHandler(function(data) {
+                // Update browser title
+                document.title = 'SCCCC Services';
+                
+                // Render home page using client-side renderer
+                const container = document.querySelector('.container');
+                if (container && window.renderHomePage) {
+                  const html = window.renderHomePage(data.services, response.email);
+                  container.innerHTML = html;
+                } else {
+                  console.error('Container or renderHomePage not found');
+                }
               })
               .withFailureHandler(function(error) {
                 displayMessage(codeMessageDiv, 'Error loading services: ' + error.message, true);

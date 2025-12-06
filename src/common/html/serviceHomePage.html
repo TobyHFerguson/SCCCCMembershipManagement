@@ -238,19 +238,29 @@
     if (typeof google !== 'undefined' && google.script && google.script.run) {
       google.script.run
         .withSuccessHandler(function(htmlContent) {
-          // Replace the entire document with the service content
-          document.open();
-          document.write(htmlContent);
-          document.close();
+          // Replace the container content with the service content
+          const mainContainer = document.querySelector('.container');
+          if (mainContainer) {
+            mainContainer.innerHTML = htmlContent;
+          } else if (container) {
+            container.innerHTML = htmlContent;
+          }
         })
         .withFailureHandler(function(error) {
-          container.innerHTML = '<div class="loading-message error">Error loading service: ' + error.message + '</div>';
+          if (container) {
+            container.innerHTML = '<div class="loading-message error">Error loading service: ' + error.message + '</div>';
+          }
         })
         .getServiceContent(email, serviceId);
     } else {
-      container.innerHTML = '<div class="loading-message error">Error: google.script.run is not available.</div>';
+      if (container) {
+        container.innerHTML = '<div class="loading-message error">Error: google.script.run is not available.</div>';
+      }
     }
   }
+  
+  // Make loadService available globally for navigation back to services
+  window.loadService = loadService;
 
   // Handle sign out
   function handleSignOut() {
@@ -264,21 +274,28 @@
     
     // Load the initial verification code input page
     if (typeof google !== 'undefined' && google.script && google.script.run) {
-      const container = document.getElementById('serviceList');
-      if (container) {
-        container.innerHTML = '<div class="loading-message">Signing out...</div>';
+      const serviceListContainer = document.getElementById('serviceList');
+      if (serviceListContainer) {
+        serviceListContainer.innerHTML = '<div class="loading-message">Signing out...</div>';
       }
       
       google.script.run
         .withSuccessHandler(function(htmlContent) {
-          document.open();
-          document.write(htmlContent);
-          document.close();
+          // Update browser title
+          document.title = 'Request Access - Verification Code';
+          
+          // Replace main container content
+          const mainContainer = document.querySelector('.container');
+          if (mainContainer) {
+            mainContainer.innerHTML = htmlContent;
+          } else if (serviceListContainer) {
+            serviceListContainer.innerHTML = htmlContent;
+          }
         })
         .withFailureHandler(function(error) {
           // If there's an error, show error message
-          if (container) {
-            container.innerHTML = '<div class="loading-message error">Error signing out: ' + error.message + '</div>';
+          if (serviceListContainer) {
+            serviceListContainer.innerHTML = '<div class="loading-message error">Error signing out: ' + error.message + '</div>';
           }
         })
         .getVerificationPageContent();
@@ -288,10 +305,8 @@
     }
   }
 
-  // Initialize the page
-  function initHomePage() {
-    const email = getAuthenticatedEmail();
-    
+  // Initialize the page with services data
+  function initHomePageWithData(services, email) {
     // Update browser tab title
     document.title = 'SCCCC Services';
     
@@ -300,11 +315,6 @@
     if (welcomeDiv) {
       welcomeDiv.textContent = email ? 'Signed in as ' + email : 'Welcome to SCCCC Services';
     }
-
-    // Services are passed from server-side via GAS template
-    // This ensures single source of truth - services are defined in 1namespaces.js
-    // and derived via HomePageManager.getAvailableServices()
-    const services = JSON.parse('<?= JSON.stringify(services) ?>');
 
     // Cache services in sessionStorage for quick navigation back from service pages
     try {
@@ -315,6 +325,21 @@
 
     renderServices(services);
   }
+
+  // Initialize the page (for initial page load via doGet)
+  function initHomePage() {
+    const email = getAuthenticatedEmail();
+    
+    // Services are passed from server-side via GAS template
+    // This ensures single source of truth - services are defined in 1namespaces.js
+    // and derived via HomePageManager.getAvailableServices()
+    const services = JSON.parse('<?= JSON.stringify(services) ?>');
+    
+    initHomePageWithData(services, email);
+  }
+  
+  // Make function globally available for manual initialization after container replacement
+  window.initHomePageWithData = initHomePageWithData;
 
   // Initialize on DOM ready
   if (document.readyState === 'loading') {

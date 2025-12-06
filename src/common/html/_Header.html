@@ -374,6 +374,7 @@
     /**
      * Navigate back to the services home page
      * Uses cached services from sessionStorage for instant navigation (no server call)
+     * Made globally available so it persists after document.write() calls
      */
     function navigateToHomePage() {
         let email = '';
@@ -406,10 +407,15 @@
             }
             
             google.script.run
-                .withSuccessHandler(function(htmlContent) {
-                    document.open();
-                    document.write(htmlContent);
-                    document.close();
+                .withSuccessHandler(function(data) {
+                    // Update browser title
+                    document.title = 'SCCCC Services';
+                    
+                    // Render home page using client-side renderer
+                    if (container && window.renderHomePage) {
+                        const html = window.renderHomePage(data.services, email);
+                        container.innerHTML = html;
+                    }
                 })
                 .withFailureHandler(function(error) {
                     if (container) {
@@ -429,87 +435,13 @@
         // Update browser tab title
         document.title = 'SCCCC Services';
         
-        // SVG icons for services
-        const serviceIcons = {
-            directory: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>',
-            email: '<svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>',
-            groups: '<svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>',
-            profile: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM7.07 18.28c.43-.9 3.05-1.78 4.93-1.78s4.51.88 4.93 1.78C15.57 19.36 13.86 20 12 20s-3.57-.64-4.93-1.72zm11.29-1.45c-1.43-1.74-4.9-2.33-6.36-2.33s-4.93.59-6.36 2.33C4.62 15.49 4 13.82 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 1.82-.62 3.49-1.64 4.83zM12 6c-1.94 0-3.5 1.56-3.5 3.5S10.06 13 12 13s3.5-1.56 3.5-3.5S13.94 6 12 6zm0 5c-.83 0-1.5-.67-1.5-1.5S11.17 8 12 8s1.5.67 1.5 1.5S12.83 11 12 11z"/></svg>',
-            voting: '<svg viewBox="0 0 24 24"><path d="M18 13h-.68l-2 2h1.91L19 17H5l1.78-2h2.05l-2-2H6l-3 3v4c0 1.1.89 2 1.99 2H19c1.1 0 2-.89 2-2v-4l-3-3zm-1-5.05l-4.95 4.95-3.54-3.54 4.95-4.95 3.54 3.54zm-4.24-5.66L6.39 8.66a.996.996 0 0 0 0 1.41l4.95 4.95c.39.39 1.02.39 1.41 0l6.36-6.36a.996.996 0 0 0 0-1.41L14.16 2.3c-.38-.4-1.01-.4-1.4-.01z"/></svg>'
-        };
-
-        // HTML escape function
-        function escapeHtml(str) {
-            if (typeof str !== 'string') return '';
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
-        }
-
-        // Build the service cards HTML with data attributes for service IDs
-        const serviceCardsHtml = services.map(service => `
-            <div class="service-card" data-service-id="${escapeHtml(service.id)}" role="button" tabindex="0">
-                <div class="service-icon">
-                    ${serviceIcons[service.icon] || serviceIcons.profile}
-                </div>
-                <div class="service-info">
-                    <h3 class="service-name">${escapeHtml(service.name)}</h3>
-                    <p class="service-description">${escapeHtml(service.description)}</p>
-                </div>
-                <span class="service-arrow">›</span>
-            </div>
-        `).join('');
-
-        // Replace container content with home page
+        // Use the global renderer
         const container = document.querySelector('.container');
-        if (container) {
-            container.innerHTML = `
-                <style>
-                    .service-list { display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; }
-                    .service-card { display: flex; align-items: center; padding: 1rem; background-color: #f8f9fa; border: 0.0625rem solid #ddd; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s ease; text-decoration: none; color: inherit; }
-                    .service-card:hover { background-color: #e9ecef; border-color: #007bff; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.1); }
-                    .service-icon { width: 3rem; height: 3rem; display: flex; align-items: center; justify-content: center; background-color: #007bff; border-radius: 0.5rem; margin-right: 1rem; flex-shrink: 0; }
-                    .service-icon svg { width: 1.5rem; height: 1.5rem; fill: white; }
-                    .service-info { flex: 1; }
-                    .service-name { font-size: 1.1rem; font-weight: 600; margin: 0 0 0.25rem 0; color: #333; }
-                    .service-description { font-size: 0.9rem; color: #666; margin: 0; }
-                    .service-arrow { color: #999; font-size: 1.2rem; margin-left: 0.5rem; }
-                    .welcome-header { text-align: center; margin-bottom: 1.5rem; }
-                    .welcome-message { font-size: 0.9rem; color: #666; margin-top: 0.5rem; }
-                    .sign-out-link { display: block; margin-top: 1.5rem; text-align: center; color: #666; font-size: 0.9rem; cursor: pointer; text-decoration: underline; }
-                    .sign-out-link:hover { color: #007bff; }
-                </style>
-                <div class="welcome-header">
-                    <h2>SCCCC Services</h2>
-                    <p class="welcome-message">${email ? 'Signed in as ' + escapeHtml(email) : 'Welcome to SCCCC Services'}</p>
-                </div>
-                <div class="service-list">
-                    ${serviceCardsHtml}
-                </div>
-                <a class="sign-out-link" id="signOutLink">Sign out</a>
-            `;
-
-            // Add click handlers to service cards using event delegation
-            container.querySelectorAll('.service-card').forEach(card => {
-                card.addEventListener('click', function() {
-                    const serviceId = this.getAttribute('data-service-id');
-                    if (serviceId) {
-                        loadServiceFromHomePage(serviceId);
-                    }
-                });
-                card.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        card.click();
-                    }
-                });
-            });
-
-            // Add click handler to sign out link
-            const signOutLink = container.querySelector('#signOutLink');
-            if (signOutLink) {
-                signOutLink.addEventListener('click', handleSignOutFromCache);
-            }
+        if (container && window.renderHomePage) {
+            const html = window.renderHomePage(services, email);
+            container.innerHTML = html;
+        } else {
+            console.error('Container or renderHomePage not found');
         }
     }
 
@@ -550,9 +482,10 @@
         if (typeof google !== 'undefined' && google.script && google.script.run) {
             google.script.run
                 .withSuccessHandler(function(htmlContent) {
-                    document.open();
-                    document.write(htmlContent);
-                    document.close();
+                    // Replace container content instead of entire document
+                    if (container) {
+                        container.innerHTML = htmlContent;
+                    }
                 })
                 .withFailureHandler(function(error) {
                     if (container) {
@@ -567,6 +500,10 @@
         }
     }
 
+    // Make navigation functions globally available so they persist after document.write()
+    window.navigateToHomePage = navigateToHomePage;
+    window.loadHomePage = navigateToHomePage; // Alias for compatibility
+    
     /**
      * Handle sign out - clears session and returns to verification page
      */
@@ -588,9 +525,13 @@
             
             google.script.run
                 .withSuccessHandler(function(htmlContent) {
-                    document.open();
-                    document.write(htmlContent);
-                    document.close();
+                    // Update browser title
+                    document.title = 'Request Access - Verification Code';
+                    
+                    // Replace container content
+                    if (container) {
+                        container.innerHTML = htmlContent;
+                    }
                 })
                 .withFailureHandler(function(error) {
                     // If there's an error, just reload the page
@@ -602,6 +543,88 @@
             window.location.reload();
         }
     }
+    
+    /**
+     * Client-Side Page Renderers
+     * These functions generate HTML purely on the client side from data.
+     * This solves the innerHTML script execution problem - no scripts in the generated HTML.
+     */
+    
+    // SVG icons for services
+    const serviceIcons = {
+        directory: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>',
+        email: '<svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>',
+        groups: '<svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>',
+        profile: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM7.07 18.28c.43-.9 3.05-1.78 4.93-1.78s4.51.88 4.93 1.78C15.57 19.36 13.86 20 12 20s-3.57-.64-4.93-1.72zm11.29-1.45c-1.43-1.74-4.9-2.33-6.36-2.33s-4.93.59-6.36 2.33C4.62 15.49 4 13.82 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 1.82-.62 3.49-1.64 4.83zM12 6c-1.94 0-3.5 1.56-3.5 3.5S10.06 13 12 13s3.5-1.56 3.5-3.5S13.94 6 12 6zm0 5c-.83 0-1.5-.67-1.5-1.5S11.17 8 12 8s1.5.67 1.5 1.5S12.83 11 12 11z"/></svg>',
+        voting: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>'
+    };
+    
+    function escapeHtml(str) {
+        if (typeof str !== 'string') return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+    
+    // Render the home page with services
+    function renderHomePage(services, email) {
+        const html = `
+            <style>
+                .service-list { display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; }
+                .service-card { display: flex; align-items: center; padding: 1rem; background-color: #f8f9fa; border: 0.0625rem solid #ddd; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s ease; text-decoration: none; color: inherit; }
+                .service-card:hover { background-color: #e9ecef; border-color: #007bff; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.1); }
+                .service-card:active { background-color: #dee2e6; }
+                .service-icon { width: 3rem; height: 3rem; display: flex; align-items: center; justify-content: center; background-color: #007bff; border-radius: 0.5rem; margin-right: 1rem; flex-shrink: 0; }
+                .service-icon svg { width: 1.5rem; height: 1.5rem; fill: white; }
+                .service-info { flex: 1; }
+                .service-name { font-size: 1.1rem; font-weight: 600; margin: 0 0 0.25rem 0; color: #333; }
+                .service-description { font-size: 0.9rem; color: #666; margin: 0; }
+                .service-arrow { color: #999; font-size: 1.2rem; margin-left: 0.5rem; }
+                .welcome-header { text-align: center; margin-bottom: 1.5rem; }
+                .welcome-message { font-size: 0.9rem; color: #666; margin-top: 0.5rem; }
+                .sign-out-link { display: block; margin-top: 1.5rem; text-align: center; color: #666; font-size: 0.9rem; cursor: pointer; text-decoration: underline; }
+                .sign-out-link:hover { color: #007bff; }
+                html.is-mobile-portrait .service-card { padding: 1.2rem; }
+                html.is-mobile-portrait .service-icon { width: 2.5rem; height: 2.5rem; }
+                html.is-mobile-portrait .service-icon svg { width: 1.25rem; height: 1.25rem; }
+                html.is-mobile-portrait .service-name { font-size: 1rem; }
+                html.is-mobile-portrait .service-description { font-size: 0.85rem; }
+                html.is-tablet .service-card { padding: 1.1rem; }
+            </style>
+            <div class="welcome-header">
+                <h2>SCCCC Services</h2>
+                <p class="welcome-message">Signed in as ${escapeHtml(email)}</p>
+            </div>
+            <div id="serviceList" class="service-list">
+                ${services.map(service => `
+                    <div class="service-card" onclick="window.loadServiceFromHomePage('${escapeHtml(service.id)}')" role="button" tabindex="0">
+                        <div class="service-icon">${serviceIcons[service.icon] || serviceIcons.profile}</div>
+                        <div class="service-info">
+                            <h3 class="service-name">${escapeHtml(service.name)}</h3>
+                            <p class="service-description">${escapeHtml(service.description)}</p>
+                        </div>
+                        <span class="service-arrow">›</span>
+                    </div>
+                `).join('')}
+            </div>
+            <a class="sign-out-link" onclick="window.handleSignOutFromCache()">Sign out</a>
+        `;
+        
+        // Cache services for quick navigation
+        try {
+            sessionStorage.setItem('cachedServices', JSON.stringify(services));
+        } catch (e) {
+            console.warn('Could not cache services:', e);
+        }
+        
+        return html;
+    }
+    
+    // Make page renderer and utility functions globally available
+    window.renderHomePage = renderHomePage;
+    window.loadServiceFromHomePage = loadServiceFromHomePage;
+    window.handleSignOutFromCache = handleSignOutFromCache;
+    
     // Initial check on load
     checkViewportAndApplyClasses();
     // Re-check on window resize (for orientation changes)
