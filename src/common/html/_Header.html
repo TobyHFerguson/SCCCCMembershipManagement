@@ -1432,6 +1432,18 @@
     function renderService(serviceId, data, container) {
         console.log('renderService:', serviceId, data);
         
+        // Handle null or undefined data
+        if (!data) {
+            container.innerHTML = `
+                <div style="padding: 1rem;">
+                    <h2>Error</h2>
+                    <p>Service data not available</p>
+                    <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                </div>
+            `;
+            return;
+        }
+        
         if (data.error) {
             container.innerHTML = `
                 <div style="padding: 1rem;">

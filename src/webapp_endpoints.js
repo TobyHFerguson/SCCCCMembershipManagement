@@ -112,7 +112,17 @@ function getServiceContent(email, service) {
   // Note: webService IS the service namespace (e.g., GroupManagementService)
   if (webService.Api && typeof webService.Api.getData === 'function') {
     console.log(`Calling ${service}.Api.getData(${email})`);
-    return webService.Api.getData(email);
+    try {
+      const data = webService.Api.getData(email);
+      console.log(`${service}.Api.getData returned:`, data);
+      return data;
+    } catch (error) {
+      console.error(`Error in ${service}.Api.getData:`, error);
+      return { 
+        error: `Failed to load ${service}: ${error.message}`,
+        serviceName: service 
+      };
+    }
   }
   
   // Fallback for services not yet migrated to new architecture
