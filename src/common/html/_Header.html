@@ -249,6 +249,27 @@
     }
 
     /* Input, button, message styles can inherit or be overridden here */
+
+    /* Navigation links (Back to Services, etc.) */
+    .nav-back-link {
+        display: block;
+        margin-top: 1.5rem;
+        text-align: center;
+        color: #007bff;
+        cursor: pointer;
+        text-decoration: underline;
+        font-size: 0.95rem;
+    }
+
+    .nav-back-link:hover {
+        color: #0056b3;
+    }
+
+    html.is-mobile-portrait .nav-back-link,
+    html.is-mobile-landscape .nav-back-link {
+        font-size: 1rem;
+        margin-top: 1.25rem;
+    }
 </style>
 <script>
     function checkViewportAndApplyClasses() {
@@ -347,6 +368,42 @@
             }
             formElement.classList.remove('form-disabled');
             delete formElement.dataset.customDisabled;
+        }
+    }
+
+    /**
+     * Navigate back to the services home page
+     * This function loads the home page content via google.script.run
+     */
+    function navigateToHomePage() {
+        let email = '';
+        try {
+            email = sessionStorage.getItem('authenticatedEmail') || '';
+        } catch (e) {
+            console.warn('Could not read from sessionStorage:', e);
+        }
+        
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+            // Show loading indicator
+            const container = document.querySelector('.container');
+            if (container) {
+                container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">Loading services...</div>';
+            }
+            
+            google.script.run
+                .withSuccessHandler(function(htmlContent) {
+                    document.open();
+                    document.write(htmlContent);
+                    document.close();
+                })
+                .withFailureHandler(function(error) {
+                    if (container) {
+                        container.innerHTML = '<div style="text-align: center; padding: 2rem; color: red;">Error loading services: ' + error.message + '</div>';
+                    }
+                })
+                .getHomePageContent(email);
+        } else {
+            console.error('google.script.run is not available');
         }
     }
     // Initial check on load

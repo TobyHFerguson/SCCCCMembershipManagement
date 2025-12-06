@@ -322,7 +322,7 @@
       google.script.run
         .withSuccessHandler(function(response) {
           if (response && response.success) {
-            displayMessage(codeMessageDiv, 'Verified! Loading service...', false);
+            displayMessage(codeMessageDiv, 'Verified! Loading services...', false);
             
             // Store the multi-use token in sessionStorage for SPA API calls
             if (response.token) {
@@ -334,19 +334,19 @@
               }
             }
             
-            // Get the service content and replace the entire page
+            // Get the home page content and replace the entire page
             google.script.run
               .withSuccessHandler(function(htmlContent) {
-                // Replace the entire document with the service content
+                // Replace the entire document with the home page content
                 document.open();
                 document.write(htmlContent);
                 document.close();
               })
               .withFailureHandler(function(error) {
-                displayMessage(codeMessageDiv, 'Error loading service: ' + error.message, true);
+                displayMessage(codeMessageDiv, 'Error loading services: ' + error.message, true);
                 enableForm(codeForm);
               })
-              .getServiceContent(response.email, response.service);
+              .getHomePageContent(response.email);
           } else {
             enableForm(codeForm);
             const errorMessage = response && response.error ? response.error : 'Verification failed.';

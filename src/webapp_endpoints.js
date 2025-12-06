@@ -131,6 +131,39 @@ function getServiceContent(email, service) {
 }
 
 /**
+ * Render home page HTML content for authenticated user
+ * Called after successful verification code validation to show available services
+ * 
+ * @param {string} email - Authenticated user email
+ * @returns {string} HTML content for the home page
+ */
+function getHomePageContent(email) {
+  console.log('getHomePageContent(', email, ')');
+  
+  // Get service properties
+  const scriptProperties = PropertiesService.getScriptProperties();
+  const mobileBreakpoint = scriptProperties.getProperty('MOBILE_BREAKPOINT') || '767';
+  const tabletMinBreakpoint = scriptProperties.getProperty('TABLET_MIN_BREAKPOINT') || '768';
+  const tabletMaxBreakpoint = scriptProperties.getProperty('TABLET_MAX_BREAKPOINT') || '1032';
+  
+  // Create template
+  const template = HtmlService.createTemplateFromFile('common/html/_Layout.html');
+  template.breakpoints = {
+    mobile: mobileBreakpoint,
+    tabletMin: tabletMinBreakpoint,
+    tabletMax: tabletMaxBreakpoint
+  };
+  template.include = _includeHtml;
+  template.serviceName = 'Home';
+  template.contentFileName = 'common/html/serviceHomePage';
+  
+  // Evaluate the template and return HTML content
+  const output = template.evaluate().setTitle('SCCCC Services');
+  
+  return output.getContent();
+}
+
+/**
  * Refresh a session token.
  * Extends the expiration of an existing multi-use token.
  * 

@@ -386,6 +386,43 @@ declare namespace Common {
             static formatErrorForLogging(error: Error | string, request?: ApiRequest): object;
         }
     }
+    
+    // HomePage namespace - Service home page after authentication
+    namespace HomePage {
+        // Service information type
+        interface ServiceInfo {
+            id: string;
+            name: string;
+            description: string;
+            icon: string;
+        }
+        
+        // Home page data type
+        interface HomePageData {
+            email: string;
+            services: ServiceInfo[];
+            welcomeMessage: string;
+        }
+        
+        // Validation result type
+        interface ValidationResult {
+            valid: boolean;
+            error?: string;
+            errorCode?: string;
+        }
+        
+        // Manager class - Pure business logic for home page
+        class Manager {
+            static SERVICE_DEFINITIONS: Record<string, { name: string; description: string; icon: string }>;
+            static getAvailableServices(): ServiceInfo[];
+            static getServiceById(serviceId: string): ServiceInfo | null;
+            static validateServiceId(serviceId: string): ValidationResult;
+            static generateWelcomeMessage(email: string): string;
+            static buildHomePageData(email: string): HomePageData;
+            static requiresAdditionalAuth(serviceId: string): boolean;
+            static getServiceCount(): number;
+        }
+    }
 }
 
 // Group management types
