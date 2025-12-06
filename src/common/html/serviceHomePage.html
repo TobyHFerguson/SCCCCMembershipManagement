@@ -262,6 +262,13 @@
     // and derived via HomePageManager.getAvailableServices()
     const services = JSON.parse('<?= JSON.stringify(services) ?>');
 
+    // Cache services in sessionStorage for quick navigation back from service pages
+    try {
+      sessionStorage.setItem('cachedServices', JSON.stringify(services));
+    } catch (e) {
+      console.warn('Could not cache services in sessionStorage:', e);
+    }
+
     renderServices(services);
   }
 
