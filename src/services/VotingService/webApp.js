@@ -80,7 +80,7 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
                     }
                     // Ballot is published
                     else {
-                        result.url = this._getFormUrlWithTokenField(userEmail, election);
+                        result.url = VotingService.WebApp._getFormUrlWithTokenField(userEmail, election);
                         result.status = "Active";
                     }
                     break;
