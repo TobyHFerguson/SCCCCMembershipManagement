@@ -322,14 +322,31 @@
       google.script.run
         .withSuccessHandler(function(response) {
           if (response && response.success) {
-            displayMessage(codeMessageDiv, 'Verified! Redirecting...', false);
-            // Redirect with the multi-use token
-            if (response.redirectUrl) {
-              window.top.location.href = response.redirectUrl;
-            } else {
-              // Fallback: reload page with token
-              window.top.location.reload();
+            displayMessage(codeMessageDiv, 'Verified! Loading service...', false);
+            
+            // Store the multi-use token in sessionStorage for SPA API calls
+            if (response.token) {
+              try {
+                sessionStorage.setItem('authToken', response.token);
+                sessionStorage.setItem('authenticatedEmail', response.email);
+              } catch (e) {
+                console.warn('Could not store auth token in sessionStorage:', e);
+              }
             }
+            
+            // Get the service content and replace the entire page
+            google.script.run
+              .withSuccessHandler(function(htmlContent) {
+                // Replace the entire document with the service content
+                document.open();
+                document.write(htmlContent);
+                document.close();
+              })
+              .withFailureHandler(function(error) {
+                displayMessage(codeMessageDiv, 'Error loading service: ' + error.message, true);
+                enableForm(codeForm);
+              })
+              .getServiceContent(response.email, response.service);
           } else {
             enableForm(codeForm);
             const errorMessage = response && response.error ? response.error : 'Verification failed.';

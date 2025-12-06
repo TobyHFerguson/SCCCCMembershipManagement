@@ -426,11 +426,14 @@ See `docs/BOOTSTRAP_CONFIGURATION.md` for full schema.
 - Phase 1: Authentication flow (verification code UI, backward compatibility)
 - Phase 2: GroupManagementService SPA migration
 - Phase 3: ProfileManagementService SPA migration
-- [Add phases as completed]
+- Phase 4: DirectoryService SPA migration
+- Phase 5: EmailChangeService SPA migration
+- Phase 6: VotingService SPA migration
+- Phase 7: Cleanup (deprecation notices, documentation updates)
 
 **Key Migration Principles**:
-1. **Feature Flags**: Use `Common.FeatureFlags.useNewAuth()` for safe rollout
-2. **Backward Compatibility**: Magic links still work when flag is OFF
+1. **Feature Flags**: Use `Common.Config.FeatureFlags.isNewAuthEnabled()` for safe rollout
+2. **Backward Compatibility**: Magic links still work when flag is OFF (deprecated, will be removed)
 3. **Verification Codes**: 6-digit codes, 10-minute expiry, rate limiting (5 attempts)
 4. **SPA Pattern**: Single doGet for bootstrap, then `google.script.run` APIs
 5. **Session Management**: Tokens in memory only (not in HTML/URL)
@@ -439,13 +442,19 @@ See `docs/BOOTSTRAP_CONFIGURATION.md` for full schema.
 **Services in Migration Scope**:
 1. ✅ GroupManagementService (Phase 2)
 2. ✅ ProfileManagementService (Phase 3)
-3. 🔄 DirectoryService (Phase 4 - in progress)
-4. ⏸️ EmailChangeService (Phase 5)
-5. ⏸️ VotingService (Phase 6)
+3. ✅ DirectoryService (Phase 4)
+4. ✅ EmailChangeService (Phase 5)
+5. ✅ VotingService (Phase 6)
 
 **Out of Scope**: EmailService, DocsService (modal dialogs), MembershipManagement (triggers only)
 
 **Complete Plan**: `docs/issues/ISSUE-SPA-AND-AUTH-COMBINED.md`
+
+**Deprecated Code (Phase 7)**:
+The following will be removed after Phase 8 production rollout:
+- `sendMagicLink()` in `webapp_endpoints.js`
+- `Common.Auth.Utils.sendMagicLink()` in `utils.js`
+- `src/common/auth/magicLinkInput.html`
 
 **CRITICAL for SPA Development**:
 - ALL business logic in `Service.Manager.js` (pure, testable)
