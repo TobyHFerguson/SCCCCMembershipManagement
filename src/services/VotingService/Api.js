@@ -30,14 +30,23 @@ VotingService.Api = VotingService.Api || {};
 VotingService.Api.getData = function(email) {
   console.log('VotingService.Api.getData(', email, ')');
   
-  // Get processed elections (already filtered and formatted for display)
-  // This reuses the existing WebApp logic
-  const elections = VotingService.WebApp._getElectionsForTemplate(email);
-  
-  return {
-    serviceName: 'Voting',
-    elections: elections
-  };
+  try {
+    // Get processed elections (already filtered and formatted for display)
+    // This reuses the existing WebApp logic
+    const elections = VotingService.WebApp._getElectionsForTemplate(email);
+    
+    return {
+      serviceName: 'Voting',
+      elections: elections
+    };
+  } catch (error) {
+    console.error('VotingService.Api.getData error:', error);
+    return {
+      serviceName: 'Voting',
+      error: `Failed to load elections: ${error.message}`,
+      elections: []
+    };
+  }
 };
 
 /**

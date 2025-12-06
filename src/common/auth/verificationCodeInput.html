@@ -211,6 +211,18 @@
       }
       
       validateCodeInputs();
+      
+      // Auto-submit if all 6 digits are filled
+      if (value && index === 5) {
+        const code = getCodeValue();
+        if (code.length === 6 && /^\d{6}$/.test(code)) {
+          setTimeout(() => {
+            if (!verifyButton.disabled) {
+              verifyButton.click();
+            }
+          }, 100);
+        }
+      }
     });
 
     input.addEventListener('keydown', (e) => {
@@ -247,6 +259,16 @@
       }
       
       validateCodeInputs();
+      
+      // Auto-submit if we have 6 digits
+      if (digits.length === 6) {
+        // Small delay to show the filled inputs before submitting
+        setTimeout(() => {
+          if (!verifyButton.disabled) {
+            verifyButton.click();
+          }
+        }, 100);
+      }
     });
   });
 
