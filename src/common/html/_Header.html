@@ -481,13 +481,17 @@
         
         if (typeof google !== 'undefined' && google.script && google.script.run) {
             google.script.run
-                .withSuccessHandler(function(htmlContent) {
-                    // Replace container content instead of entire document
-                    if (container) {
-                        container.innerHTML = htmlContent;
+                .withSuccessHandler(function(data) {
+                    console.log('loadServiceFromHomePage: Received data for', serviceId, ':', data);
+                    // Render service using client-side renderer
+                    if (container && window.renderService) {
+                        window.renderService(serviceId, data, container);
+                    } else {
+                        console.error('Container or renderService not found');
                     }
                 })
                 .withFailureHandler(function(error) {
+                    console.error('loadServiceFromHomePage: Error loading service:', error);
                     if (container) {
                         container.innerHTML = '<div style="text-align: center; padding: 2rem; color: red;">Error loading service: ' + error.message + '</div>';
                     }
@@ -620,8 +624,166 @@
         return html;
     }
     
+    /**
+     * Load external script dynamically (scripts in innerHTML don't execute reliably)
+     */
+    function loadScript(src) {
+        return new Promise((resolve, reject) => {
+            // Check if script already loaded
+            if (document.querySelector(`script[src="${src}"]`)) {
+                resolve();
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+    
+    /**
+     * Load external stylesheet dynamically
+     */
+    function loadStylesheet(href) {
+        // Check if stylesheet already loaded
+        if (document.querySelector(`link[href="${href}"]`)) {
+            return;
+        }
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = href;
+        document.head.appendChild(link);
+    }
+    
+    /**
+     * Client-Side Service Renderers
+     * Each service has a dedicated renderer that generates HTML from data
+     */
+    
+    // Render Directory Service
+    function renderDirectoryService(data, container) {
+        console.log('renderDirectoryService called with data:', data);
+        
+        // Load required stylesheets
+        loadStylesheet('https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css');
+        loadStylesheet('https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css');
+        
+        // Set the HTML structure
+        container.innerHTML = `
+            <style>
+                .directory-container { padding: 1rem; }
+                h2 { margin-top: 0; }
+                .back-link { display: inline-block; margin-top: 1rem; color: #007bff; text-decoration: none; }
+                .back-link:hover { text-decoration: underline; }
+                html.is-mobile-landscape .directory-container { overflow-x: auto; }
+            </style>
+            <div class="directory-container">
+                <h2>SCCCC Directory</h2>
+                <table id="data-table" class="display">
+                    <thead>
+                        <tr>
+                            <th>First</th>
+                            <th>Last</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <a href="#" class="back-link" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+            </div>
+        `;
+        
+        // Load scripts and initialize DataTable
+        Promise.all([
+            loadScript('https://code.jquery.com/jquery-3.6.0.min.js'),
+            loadScript('https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js'),
+            loadScript('https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js')
+        ]).then(() => {
+            console.log('Directory: All scripts loaded, initializing DataTable');
+            
+            const rawTableData = data.directoryEntries || [];
+            console.log('Directory: rawTableData:', rawTableData);
+            console.log('Directory: Number of entries:', rawTableData.length);
+            
+            const tableData = rawTableData.map(function(entry) {
+                console.log('Processing entry:', entry);
+                return [
+                    entry.First || '',
+                    entry.Last || '',
+                    entry.email || entry.Email || '',
+                    entry.phone || entry.Phone || ''
+                ];
+            });
+            
+            console.log('Directory: tableData for DataTable:', tableData);
+            
+            window.jQuery(document).ready(function($) {
+                console.log('Directory: Initializing DataTable');
+                $('#data-table').DataTable({
+                    data: tableData,
+                    responsive: true,
+                    pageLength: 25,
+                    order: [[1, 'asc'], [0, 'asc']]
+                });
+                console.log('Directory: DataTable initialized');
+            });
+        }).catch(error => {
+            console.error('Directory: Error loading scripts:', error);
+            container.innerHTML += '<p style="color: red;">Error loading DataTables library</p>';
+        });
+    }
+    
+    // Generic service renderer - used for services not yet fully migrated
+    function renderGenericService(serviceName, data, container) {
+        container.innerHTML = `
+            <div style="padding: 1rem;">
+                <h2>${escapeHtml(serviceName)}</h2>
+                <p>Service data loaded. This service needs a custom renderer.</p>
+                <pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>
+                <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+            </div>
+        `;
+    }
+    
+    // Main service renderer - routes to specific service renderers
+    function renderService(serviceId, data, container) {
+        console.log('renderService:', serviceId, data);
+        
+        if (data.error) {
+            container.innerHTML = `
+                <div style="padding: 1rem;">
+                    <h2>Error</h2>
+                    <p>${escapeHtml(data.error)}</p>
+                    <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                </div>
+            `;
+            return;
+        }
+        
+        // Route to appropriate renderer based on service
+        switch(serviceId) {
+            case 'DirectoryService':
+                renderDirectoryService(data, container);
+                break;
+            case 'GroupManagementService':
+            case 'ProfileManagementService':
+            case 'EmailChangeService':
+            case 'VotingService':
+                // These will need their own renderers
+                renderGenericService(data.serviceName || serviceId, data, container);
+                break;
+            default:
+                renderGenericService(serviceId, data, container);
+                break;
+        }
+    }
+    
     // Make page renderer and utility functions globally available
     window.renderHomePage = renderHomePage;
+    window.renderService = renderService;
     window.loadServiceFromHomePage = loadServiceFromHomePage;
     window.handleSignOutFromCache = handleSignOutFromCache;
     

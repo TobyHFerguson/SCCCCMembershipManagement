@@ -84,12 +84,14 @@ function verifyCode(email, code, service) {
 }
 
 /**
- * Render service HTML content for authenticated user
+ * Get service data for authenticated user
  * Called after successful verification code validation
  * 
+ * For SPA architecture, this returns pure data (not HTML). The client will render the HTML.
+ * 
  * @param {string} email - Authenticated user email
- * @param {string} service - Service name
- * @returns {string} HTML content for the service
+ * @param {string} service - Service name (e.g., 'DirectoryService')
+ * @returns {object} Service-specific data for client-side rendering
  */
 function getServiceContent(email, service) {
   console.log('getServiceContent(', email, service, ')');
@@ -97,50 +99,34 @@ function getServiceContent(email, service) {
   const webService = WebServices[service];
   if (!webService) {
     console.error('Invalid service:', service);
-    return '<html><body><h1>Error</h1><p>Invalid service specified.</p></body></html>';
+    return { error: 'Invalid service specified' };
   }
   
-  // Build a mock doGet event with authenticated email
-  const mockEvent = {
-    parameter: {
-      service: service
-    }
+  // Call service's API to get data (not HTML)
+  // Each service should have an Api.getData() method
+  if (webService.Api && webService.Api.getData) {
+    return webService.Api.getData(email);
+  }
+  
+  // Fallback for services not yet migrated to new architecture
+  console.warn(`Service ${service} does not have Api.getData() - using legacy approach`);
+  
+  // For DirectoryService specifically
+  if (service === 'DirectoryService') {
+    const directoryEntries = DirectoryService.getDirectoryEntries();
+    console.log('getServiceContent: DirectoryService entries count:', directoryEntries ? directoryEntries.length : 0);
+    console.log('getServiceContent: First entry:', directoryEntries && directoryEntries.length > 0 ? directoryEntries[0] : 'none');
+    return {
+      serviceName: 'Directory',
+      directoryEntries: directoryEntries
+    };
+  }
+  
+  // Generic fallback
+  return {
+    serviceName: webService.name || service,
+    error: 'Service data not available'
   };
-  
-  // For container replacement, we create a minimal "content-only" template
-  // that services can populate directly without the full _Layout wrapper
-  const contentTemplate = {};
-  contentTemplate.include = _includeHtml;
-  contentTemplate.serviceName = webService.name;
-  contentTemplate.userEmail = email;
-  
-  // Get the service's content file path
-  // Each service defines its content file (e.g., 'services/DirectoryService/html/directory.html')
-  // We'll call the service's doGet which will set contentFileName on our template
-  const mockTemplate = {
-    ...contentTemplate,
-    contentFileName: '',  // Service will set this
-    evaluate: function() {
-      // After service sets contentFileName, evaluate just that file
-      if (!this.contentFileName) {
-        throw new Error(`Service ${service} did not set contentFileName`);
-      }
-      const template = HtmlService.createTemplateFromFile(this.contentFileName);
-      // Copy all properties from this mock template to the real template
-      Object.keys(this).forEach(key => {
-        if (key !== 'evaluate' && key !== 'contentFileName') {
-          template[key] = this[key];
-        }
-      });
-      return template.evaluate();
-    }
-  };
-  
-  // Call service's doGet - it will populate mockTemplate and call evaluate()
-  const output = webService.WebApp.doGet(mockEvent, email, mockTemplate);
-  
-  // Return just the content HTML (no layout wrapper)
-  return output.getContent();
 }
 
 /**
