@@ -486,6 +486,63 @@ describe('VerificationCode - GAS Layer', () => {
     delete global.Logger;
   });
 
+  // ==================== getVerificationConfig Tests ====================
+  
+  describe('getVerificationConfig', () => {
+    beforeEach(() => {
+      // Mock PropertiesService for config tests
+      global.PropertiesService = {
+        getScriptProperties: () => ({
+          getProperty: (key) => {
+            // Return some test values
+            const props = {
+              'VERIFICATION_CODE_LENGTH': '8',
+              'VERIFICATION_CODE_EXPIRY_MINUTES': '15',
+              'VERIFICATION_MAX_ATTEMPTS': '5',
+              'VERIFICATION_MAX_CODES_PER_HOUR': '100',
+              'VERIFICATION_RATE_LIMIT_MINUTES': '30'
+            };
+            return props[key];
+          }
+        })
+      };
+    });
+
+    afterEach(() => {
+      delete global.PropertiesService;
+    });
+
+    test('reads config from PropertiesService when available', () => {
+      const config = VerificationCode.getVerificationConfig();
+      
+      expect(config.CODE_LENGTH).toBe(8);
+      expect(config.CODE_EXPIRY_MINUTES).toBe(15);
+      expect(config.MAX_VERIFICATION_ATTEMPTS).toBe(5);
+      expect(config.MAX_CODES_PER_EMAIL_PER_HOUR).toBe(100);
+      expect(config.RATE_LIMIT_WINDOW_MINUTES).toBe(30);
+    });
+
+    test('falls back to defaults when PropertiesService throws error', () => {
+      const originalPropertiesService = global.PropertiesService;
+      global.PropertiesService = {
+        getScriptProperties: () => {
+          throw new Error('Properties error');
+        }
+      };
+      
+      const config = VerificationCode.getVerificationConfig();
+      
+      // Should return defaults
+      expect(config.CODE_LENGTH).toBe(6);
+      expect(config.CODE_EXPIRY_MINUTES).toBe(10);
+      expect(config.MAX_VERIFICATION_ATTEMPTS).toBe(3);
+      expect(config.MAX_CODES_PER_EMAIL_PER_HOUR).toBe(5);
+      expect(config.RATE_LIMIT_WINDOW_MINUTES).toBe(60);
+      
+      global.PropertiesService = originalPropertiesService;
+    });
+  });
+
   // ==================== generateAndStore Tests ====================
   
   describe('generateAndStore', () => {
@@ -538,6 +595,16 @@ describe('VerificationCode - GAS Layer', () => {
       // user2 should not be rate limited
       const result = VerificationCode.generateAndStore('user2@example.com');
       expect(result.success).toBe(true);
+    });
+
+    test('handles corrupt rate limit data gracefully', () => {
+      // Put corrupt data in cache
+      mockCache['rl_test@example.com'] = 'not valid json';
+      
+      // Should still work, falling back to empty history
+      const result = VerificationCode.generateAndStore('test@example.com');
+      expect(result.success).toBe(true);
+      expect(global.Logger.log).toHaveBeenCalledWith(expect.stringContaining('[VerificationCode._getRateLimitHistory] Error'));
     });
   });
 
@@ -669,6 +736,69 @@ describe('VerificationCode - GAS Layer', () => {
       VerificationCode.clearCodes('TEST@Example.COM');
       
       expect(mockCache['vc_test@example.com']).toBeUndefined();
+    });
+  });
+
+  // ==================== clearRateLimitForEmail Tests ====================
+  
+  describe('clearRateLimitForEmail', () => {
+    test('clears rate limit for specific email', () => {
+      // Generate some codes to create rate limit history
+      VerificationCode.generateAndStore('test@example.com');
+      expect(mockCache['rl_test@example.com']).toBeDefined();
+      
+      const result = VerificationCode.clearRateLimitForEmail('test@example.com');
+      
+      expect(result).toBe(true);
+      expect(mockCache['rl_test@example.com']).toBeUndefined();
+    });
+
+    test('normalizes email', () => {
+      VerificationCode.generateAndStore('test@example.com');
+      
+      const result = VerificationCode.clearRateLimitForEmail('TEST@Example.COM');
+      
+      expect(result).toBe(true);
+      expect(mockCache['rl_test@example.com']).toBeUndefined();
+    });
+
+    test('handles errors gracefully', () => {
+      // Mock CacheService to throw error
+      const originalGetScriptCache = global.CacheService.getScriptCache;
+      global.CacheService.getScriptCache = jest.fn(() => {
+        throw new Error('Cache error');
+      });
+      
+      const result = VerificationCode.clearRateLimitForEmail('test@example.com');
+      
+      expect(result).toBe(false);
+      global.CacheService.getScriptCache = originalGetScriptCache;
+    });
+  });
+
+  // ==================== clearAllVerificationData Tests ====================
+  
+  describe('clearAllVerificationData', () => {
+    test('returns expected result structure', () => {
+      const result = VerificationCode.clearAllVerificationData();
+      
+      expect(result).toHaveProperty('cleared');
+      expect(result).toHaveProperty('errors');
+      expect(result.cleared).toBe(0);
+      expect(result.errors).toBe(0);
+    });
+
+    test('handles errors gracefully', () => {
+      // Mock CacheService to throw error
+      const originalGetScriptCache = global.CacheService.getScriptCache;
+      global.CacheService.getScriptCache = jest.fn(() => {
+        throw new Error('Cache error');
+      });
+      
+      const result = VerificationCode.clearAllVerificationData();
+      
+      expect(result.errors).toBe(1);
+      global.CacheService.getScriptCache = originalGetScriptCache;
     });
   });
 });

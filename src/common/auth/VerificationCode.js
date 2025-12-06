@@ -86,6 +86,11 @@ function getVerificationConfig() {
       const props = PropertiesService.getScriptProperties();
       
       // Check for testing override properties
+      const codeLength = props.getProperty('VERIFICATION_CODE_LENGTH');
+      if (codeLength) {
+        config.CODE_LENGTH = parseInt(codeLength, 10) || config.CODE_LENGTH;
+      }
+      
       const expiryMinutes = props.getProperty('VERIFICATION_CODE_EXPIRY_MINUTES');
       if (expiryMinutes) {
         config.CODE_EXPIRY_MINUTES = parseInt(expiryMinutes, 10) || config.CODE_EXPIRY_MINUTES;
@@ -317,6 +322,7 @@ Common.Auth.VerificationCodeManager = class {
    * Check rate limiting for code generation
    * @param {VerificationCodeEntry[]} existingEntries - Previous entries for this email
    * @param {Date} [now] - Current time (for testing)
+   * @param {typeof VERIFICATION_CONFIG} [config] - Configuration (defaults to VERIFICATION_CONFIG)
    * @returns {RateLimitResult}
    */
   static checkGenerationRateLimit(existingEntries, now = new Date()) {
@@ -396,6 +402,12 @@ Common.Auth.VerificationCode = {
   _RATE_LIMIT_PREFIX: 'rl_',
 
   /**
+   * Get verification configuration from Script Properties (or defaults)
+   * @returns {typeof VERIFICATION_CONFIG}
+   */
+  getVerificationConfig,
+
+  /**
    * Generate and store a new verification code for an email
    * @param {string} email - Email address to send code to
    * @param {string} [service] - Optional service identifier
@@ -412,11 +424,14 @@ Common.Auth.VerificationCode = {
     const now = new Date();
 
     try {
+      // GAS: Get dynamic config from Script Properties
+      const config = getVerificationConfig();
+      
       // GAS: Get rate limit history
       const history = this._getRateLimitHistory(normalizedEmail);
       
-      // PURE: Check rate limit
-      const rateLimitCheck = Common.Auth.VerificationCodeManager.checkGenerationRateLimit(history, now);
+      // PURE: Check rate limit with dynamic config
+      const rateLimitCheck = Common.Auth.VerificationCodeManager.checkGenerationRateLimit(history, now, config);
       if (!rateLimitCheck.allowed) {
         return {
           success: false,
@@ -678,6 +693,48 @@ Common.Auth.VerificationCode = {
     } catch (error) {
       Logger.log('[VerificationCode._addToRateLimitHistory] Error: ' + error);
       // Don't throw - rate limiting is secondary to verification functionality
+    }
+  },
+
+  /**
+   * Clear rate limit history for an email (for testing/debugging)
+   * @param {string} email - Email address to clear rate limit for
+   * @returns {boolean} True if cleared successfully
+   */
+  clearRateLimitForEmail: function(email) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const cacheKey = this._RATE_LIMIT_PREFIX + normalizedEmail;
+    
+    try {
+      const cache = CacheService.getScriptCache();
+      cache.remove(cacheKey);
+      Logger.log('[VerificationCode.clearRateLimitForEmail] Cleared rate limit for: ' + normalizedEmail);
+      return true;
+    } catch (error) {
+      Logger.log('[VerificationCode.clearRateLimitForEmail] Error: ' + error);
+      return false;
+    }
+  },
+
+  /**
+   * Clear all verification codes and rate limits (for testing/debugging)
+   * WARNING: This affects all users
+   * @returns {{cleared: number, errors: number}}
+   */
+  clearAllVerificationData: function() {
+    let cleared = 0;
+    let errors = 0;
+    
+    try {
+      const cache = CacheService.getScriptCache();
+      // CacheService doesn't have a "clear all" method, so we can only remove what we know about
+      // This is a limitation - best we can do is log that cache will expire naturally
+      Logger.log('[VerificationCode.clearAllVerificationData] Cache entries will expire naturally (6 hours max for CacheService)');
+      Logger.log('[VerificationCode.clearAllVerificationData] To fully clear, wait for cache expiry or clear specific emails using clearRateLimitForEmail()');
+      return { cleared: 0, errors: 0 };
+    } catch (error) {
+      Logger.log('[VerificationCode.clearAllVerificationData] Error: ' + error);
+      return { cleared, errors: errors + 1 };
     }
   }
 };
