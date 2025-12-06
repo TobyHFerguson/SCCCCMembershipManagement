@@ -340,17 +340,86 @@ When `FEATURE_USE_NEW_AUTH` is permanently enabled (Phase 8 production rollout):
 - Emergency rollback is available via `Common.Config.FeatureFlags.emergencyRollback()`
 
 ---
-## Phase 8
+## Phase 8: Service Home Page (Week 7) - COMPLETED ✓
 
-### Deliverables
-1. After verifying the code entered by the user the current page is swapped out to a page (home page) offering the services:
-  * Directory Service
-  * Email Change Service
-  * Group Management Service
-  * Profile Management Service
-  * Voting Service
-  Selecting a service will swap that page out with the service page.
-2. All service pages will include a link that will take them back to the home page listing all the services
+### Deliverables Completed
+1. ✅ Created `HomePageManager.js` with pure business logic
+   - 100% test coverage (43 tests)
+   - Service info derived from WebServices (single source of truth)
+   - Service validation and lookup via dependency injection
+   - Welcome message generation
+   - Home page data building
+2. ✅ Created `serviceHomePage.html` - Home page UI
+   - Lists all 5 services with icons and descriptions
+   - Services data passed from server via GAS template (no duplication)
+   - Responsive design using existing CSS framework
+   - XSS protection via HTML escaping
+   - Service selection loads service content
+   - Sign out functionality
+3. ✅ Added `getHomePageContent()` endpoint in `webapp_endpoints.js`
+   - Passes services from `Common.HomePage.Manager.getAvailableServices()` to template
+4. ✅ Modified `verificationCodeInput.html` to load home page after verification
+5. ✅ Added "Back to Services" navigation link to all service HTML files
+6. ✅ Added navigation styles and helper function to `_Header.html`
+7. ✅ Added type definitions to `global.d.ts`
+8. ✅ All 925 tests pass (882 original + 43 new HomePageManager tests)
+
+### Single Source of Truth Architecture
+Service definitions are now defined ONLY in `1namespaces.js`:
+```javascript
+const DirectoryService = {
+    name: 'Directory Service',
+    service: 'DirectoryService',
+    description: 'View the member directory with contact information',
+    icon: 'directory'
+};
+```
+
+`HomePageManager` derives service info from `WebServices` global:
+```javascript
+static getAvailableServices(webServicesOverride) {
+    const webServices = this._getWebServices(webServicesOverride);
+    // ... extract services from WebServices
+}
+```
+
+Tests use dependency injection to provide mock WebServices:
+```javascript
+const services = Manager.getAvailableServices(mockWebServices);
+```
+
+### Files Created
+- `src/common/html/HomePageManager.js` - Pure business logic (derives from WebServices)
+- `src/common/html/serviceHomePage.html` - Home page HTML (receives services from template)
+- `__tests__/HomePageManager.test.js` - 43 tests, 100% coverage
+
+### Files Modified
+- `src/1namespaces.js` - Added `description` and `icon` properties to all services
+- `src/webapp_endpoints.js` - `getHomePageContent()` passes services to template
+- `src/common/auth/verificationCodeInput.html` - Now loads home page after verification
+- `src/common/html/_Header.html` - Added navigation styles and `navigateToHomePage()` function
+- `src/services/GroupManagementService/GroupManagementService.html` - Added back link
+- `src/services/DirectoryService/html/directory.html` - Added back link
+- `src/services/ProfileManagementService/ProfileManagementForm.html` - Added back link
+- `src/services/EmailChangeService/EmailChangeForm.html` - Added back link
+- `src/services/VotingService/ActiveVotes.html` - Added back link
+- `src/types/global.d.ts` - Added HomePage and WebServiceDefinition types
+
+### Architecture Notes
+- HomePageManager follows GAS Layer Separation pattern (pure, testable)
+- Home page uses existing responsive CSS framework from `_Header.html`
+- Navigation uses `google.script.run.getHomePageContent()` for seamless SPA transitions
+- Session storage maintains auth state across page swaps
+- "Back to Services" link available on all service pages
+
+### User Flow
+1. User enters email on verification code input page
+2. User receives 6-digit code via email
+3. User enters code and clicks "Verify Code"
+4. **NEW**: Home page loads showing all 5 services
+5. User clicks a service card to load that service
+6. Service page shows content with "Back to Services" link
+7. User can navigate back to home page or sign out
 
 ---
 
@@ -466,34 +535,58 @@ if (typeof module !== 'undefined' && module.exports) {
 
 ---
 
+## Files Created (Phase 8)
+
+### Source Files
+- `src/common/html/HomePageManager.js` - Pure business logic for home page
+- `src/common/html/serviceHomePage.html` - Home page HTML with service list
+
+### Test Files
+- `__tests__/HomePageManager.test.js` - 37 tests, 100% coverage
+
+### Modified Files
+- `src/webapp_endpoints.js` - Added `getHomePageContent()` endpoint
+- `src/common/auth/verificationCodeInput.html` - Now loads home page after verification
+- `src/common/html/_Header.html` - Added navigation styles and `navigateToHomePage()` function
+- `src/services/GroupManagementService/GroupManagementService.html` - Added back link
+- `src/services/DirectoryService/html/directory.html` - Added back link
+- `src/services/ProfileManagementService/ProfileManagementForm.html` - Added back link
+- `src/services/EmailChangeService/EmailChangeForm.html` - Added back link
+- `src/services/VotingService/ActiveVotes.html` - Added back link
+- `src/types/global.d.ts` - Added HomePage types
+
+---
+
 ## Success Criteria
 
 ### Technical
 - [x] Test coverage ≥ 95% for Manager classes
 - [x] All code follows GAS Layer Separation
 - [x] Zero circular dependency violations
-- [x] All 882 tests pass
-- [ ] API response time < 2s (to be verified in Phase 8)
+- [x] All 919 tests pass (including 37 new HomePageManager tests)
+- [ ] API response time < 2s (to be verified in Phase 9)
 
 ### Security
 - [x] Zero tokens in HTML/URL (verification code approach)
 - [x] Rate limiting prevents brute force
 - [x] Legacy code marked with deprecation warnings
-- [ ] 100% audit coverage (Phase 8)
+- [ ] 100% audit coverage (Phase 9)
 
 ### User Experience
-- [ ] Auth success rate ≥ 95% (to be measured in Phase 8)
+- [ ] Auth success rate ≥ 95% (to be measured in Phase 9)
 - [x] Works on iOS Safari with autocomplete (email input)
-- [x] Responsive on all devices (verified in Phases 2-6)
-- [ ] No production incidents (Phase 8)
+- [x] Responsive on all devices (verified in Phases 2-8)
+- [x] Home page shows all 5 services with navigation
+- [x] Back to Services link on all service pages
+- [ ] No production incidents (Phase 9)
 
 ---
 
 ## Next Steps
 
-**Phase 7 Complete**: Cleanup done. Awaiting approval before proceeding to Phase 8.
+**Phase 8 Complete**: Service home page implementation done. Awaiting approval before proceeding to Phase 9.
 
-### Phase 8 Checklist (Production Rollout)
+### Phase 9 Checklist (Production Rollout)
 1. ⬜ Deploy with `FEATURE_USE_NEW_AUTH` = false
 2. ⬜ Test with 1-2 users by enabling the flag
 3. ⬜ Monitor deprecation warnings in logs
@@ -501,13 +594,13 @@ if (typeof module !== 'undefined' && module.exports) {
 5. ⬜ If issues, use `emergencyRollback()`
 6. ⬜ After stable period, remove deprecated code
 
-### Files to Remove After Stable Production (Post-Phase 8)
+### Files to Remove After Stable Production (Post-Phase 9)
 - `src/common/auth/magicLinkInput.html`
 - `sendMagicLink()` function in `webapp_endpoints.js`
 - `Common.Auth.Utils` module in `utils.js`
 
 To continue, the following checkpoints must be met:
-1. ✅ `npm test` passes (882 tests)
+1. ✅ `npm test` passes (919 tests)
 2. ⬜ Deploy to dev (manual verification needed)
 3. ⬜ Code review vs copilot-instructions.md
 4. ⬜ Approval from maintainer

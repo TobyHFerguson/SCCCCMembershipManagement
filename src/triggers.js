@@ -300,7 +300,7 @@ function handleElectionsSheetEdit(e) {
             // Verify this is the correct Elections spreadsheet and sheet
             const expectedElectionsSpreadsheetId = getElectionsSpreadsheetId();
             if (spreadsheetId !== expectedElectionsSpreadsheetId) {
-                console.log(`Ignoring edit from unexpected spreadsheet: ${spreadsheetId}`);
+                console.log(`Ignoring edit from unexpected spreadsheet: ${spreadsheetId} (expected: ${expectedElectionsSpreadsheetId})`);
                 return;
             }
             

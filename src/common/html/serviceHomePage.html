@@ -1,0 +1,350 @@
+<style>
+  .service-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .service-card {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border: 0.0625rem solid #ddd;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .service-card:hover {
+    background-color: #e9ecef;
+    border-color: #007bff;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.1);
+  }
+
+  .service-card:active {
+    background-color: #dee2e6;
+  }
+
+  .service-icon {
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #007bff;
+    border-radius: 0.5rem;
+    margin-right: 1rem;
+    flex-shrink: 0;
+  }
+
+  .service-icon svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    fill: white;
+  }
+
+  .service-info {
+    flex: 1;
+  }
+
+  .service-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    color: #333;
+  }
+
+  .service-description {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0;
+  }
+
+  .service-arrow {
+    color: #999;
+    font-size: 1.2rem;
+    margin-left: 0.5rem;
+  }
+
+  .welcome-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .welcome-message {
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 0.5rem;
+  }
+
+  .sign-out-link {
+    display: block;
+    margin-top: 1.5rem;
+    text-align: center;
+    color: #666;
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .sign-out-link:hover {
+    color: #007bff;
+  }
+
+  .loading-message {
+    text-align: center;
+    color: #666;
+    padding: 2rem;
+  }
+
+  /* Responsive styles */
+  html.is-mobile-portrait .service-card {
+    padding: 1.2rem;
+  }
+
+  html.is-mobile-portrait .service-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  html.is-mobile-portrait .service-icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  html.is-mobile-portrait .service-name {
+    font-size: 1rem;
+  }
+
+  html.is-mobile-portrait .service-description {
+    font-size: 0.85rem;
+  }
+
+  html.is-tablet .service-card {
+    padding: 1.1rem;
+  }
+</style>
+
+<div class="welcome-header">
+  <h2>SCCCC Services</h2>
+  <p class="welcome-message" id="welcomeMessage"></p>
+</div>
+
+<div id="serviceList" class="service-list">
+  <!-- Services will be populated by JavaScript -->
+  <div class="loading-message">Loading services...</div>
+</div>
+
+<a class="sign-out-link" onclick="handleSignOut()">Sign out</a>
+
+<script>
+  // SVG icons for services (inline to avoid external dependencies)
+  const serviceIcons = {
+    directory: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>',
+    email: '<svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>',
+    groups: '<svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>',
+    profile: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM7.07 18.28c.43-.9 3.05-1.78 4.93-1.78s4.51.88 4.93 1.78C15.57 19.36 13.86 20 12 20s-3.57-.64-4.93-1.72zm11.29-1.45c-1.43-1.74-4.9-2.33-6.36-2.33s-4.93.59-6.36 2.33C4.62 15.49 4 13.82 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 1.82-.62 3.49-1.64 4.83zM12 6c-1.94 0-3.5 1.56-3.5 3.5S10.06 13 12 13s3.5-1.56 3.5-3.5S13.94 6 12 6zm0 5c-.83 0-1.5-.67-1.5-1.5S11.17 8 12 8s1.5.67 1.5 1.5S12.83 11 12 11z"/></svg>',
+    voting: '<svg viewBox="0 0 24 24"><path d="M18 13h-.68l-2 2h1.91L19 17H5l1.78-2h2.05l-2-2H6l-3 3v4c0 1.1.89 2 1.99 2H19c1.1 0 2-.89 2-2v-4l-3-3zm-1-5.05l-4.95 4.95-3.54-3.54 4.95-4.95 3.54 3.54zm-4.24-5.66L6.39 8.66a.996.996 0 0 0 0 1.41l4.95 4.95c.39.39 1.02.39 1.41 0l6.36-6.36a.996.996 0 0 0 0-1.41L14.16 2.3c-.38-.4-1.01-.4-1.4-.01z"/></svg>'
+  };
+
+  // Get the authenticated email from sessionStorage
+  function getAuthenticatedEmail() {
+    try {
+      return sessionStorage.getItem('authenticatedEmail') || '';
+    } catch (e) {
+      console.warn('Could not read from sessionStorage:', e);
+      return '';
+    }
+  }
+
+  // Get the auth token from sessionStorage
+  function getAuthToken() {
+    try {
+      return sessionStorage.getItem('authToken') || '';
+    } catch (e) {
+      console.warn('Could not read authToken from sessionStorage:', e);
+      return '';
+    }
+  }
+
+  // HTML escape function to prevent XSS
+  function escapeHtml(str) {
+    if (typeof str !== 'string') return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // Render services list
+  function renderServices(services) {
+    const container = document.getElementById('serviceList');
+    if (!container) return;
+
+    container.innerHTML = services.map(service => `
+      <div class="service-card" onclick="loadService('${escapeHtml(service.id)}')" role="button" tabindex="0">
+        <div class="service-icon">
+          ${serviceIcons[service.icon] || serviceIcons.profile}
+        </div>
+        <div class="service-info">
+          <h3 class="service-name">${escapeHtml(service.name)}</h3>
+          <p class="service-description">${escapeHtml(service.description)}</p>
+        </div>
+        <span class="service-arrow">›</span>
+      </div>
+    `).join('');
+
+    // Add keyboard navigation
+    container.querySelectorAll('.service-card').forEach(card => {
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          card.click();
+        }
+      });
+    });
+  }
+
+  // Load a specific service
+  function loadService(serviceId) {
+    // Get service name from cached services for title and loading message
+    let serviceName = serviceId.replace('Service', ' Service');
+    try {
+      const cachedServicesJson = sessionStorage.getItem('cachedServices');
+      if (cachedServicesJson) {
+        const services = JSON.parse(cachedServicesJson);
+        const service = services.find(s => s.id === serviceId);
+        if (service && service.name) {
+          serviceName = service.name;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not read cached services:', e);
+    }
+
+    // Update browser tab title immediately
+    document.title = serviceName + ' - SCCCC';
+
+    const container = document.getElementById('serviceList');
+    if (container) {
+      container.innerHTML = '<div class="loading-message">Loading ' + serviceName + '...</div>';
+    }
+
+    const email = getAuthenticatedEmail();
+    
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run
+        .withSuccessHandler(function(htmlContent) {
+          // Replace the container content with the service content
+          const mainContainer = document.querySelector('.container');
+          if (mainContainer) {
+            mainContainer.innerHTML = htmlContent;
+          } else if (container) {
+            container.innerHTML = htmlContent;
+          }
+        })
+        .withFailureHandler(function(error) {
+          if (container) {
+            container.innerHTML = '<div class="loading-message error">Error loading service: ' + error.message + '</div>';
+          }
+        })
+        .getServiceContent(email, serviceId);
+    } else {
+      if (container) {
+        container.innerHTML = '<div class="loading-message error">Error: google.script.run is not available.</div>';
+      }
+    }
+  }
+  
+  // Make loadService available globally for navigation back to services
+  window.loadService = loadService;
+
+  // Handle sign out
+  function handleSignOut() {
+    try {
+      sessionStorage.removeItem('authToken');
+      sessionStorage.removeItem('authenticatedEmail');
+      sessionStorage.removeItem('cachedServices');
+    } catch (e) {
+      console.warn('Could not clear sessionStorage:', e);
+    }
+    
+    // Load the initial verification code input page
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      const serviceListContainer = document.getElementById('serviceList');
+      if (serviceListContainer) {
+        serviceListContainer.innerHTML = '<div class="loading-message">Signing out...</div>';
+      }
+      
+      google.script.run
+        .withSuccessHandler(function(htmlContent) {
+          // Update browser title
+          document.title = 'Request Access - Verification Code';
+          
+          // Replace main container content
+          const mainContainer = document.querySelector('.container');
+          if (mainContainer) {
+            mainContainer.innerHTML = htmlContent;
+          } else if (serviceListContainer) {
+            serviceListContainer.innerHTML = htmlContent;
+          }
+        })
+        .withFailureHandler(function(error) {
+          // If there's an error, show error message
+          if (serviceListContainer) {
+            serviceListContainer.innerHTML = '<div class="loading-message error">Error signing out: ' + error.message + '</div>';
+          }
+        })
+        .getVerificationPageContent();
+    } else {
+      // Fallback to reload if google.script.run not available
+      window.location.reload();
+    }
+  }
+
+  // Initialize the page with services data
+  function initHomePageWithData(services, email) {
+    // Update browser tab title
+    document.title = 'SCCCC Services';
+    
+    // Update welcome message
+    const welcomeDiv = document.getElementById('welcomeMessage');
+    if (welcomeDiv) {
+      welcomeDiv.textContent = email ? 'Signed in as ' + email : 'Welcome to SCCCC Services';
+    }
+
+    // Cache services in sessionStorage for quick navigation back from service pages
+    try {
+      sessionStorage.setItem('cachedServices', JSON.stringify(services));
+    } catch (e) {
+      console.warn('Could not cache services in sessionStorage:', e);
+    }
+
+    renderServices(services);
+  }
+
+  // Initialize the page (for initial page load via doGet)
+  function initHomePage() {
+    const email = getAuthenticatedEmail();
+    
+    // Services are passed from server-side via GAS template
+    // This ensures single source of truth - services are defined in 1namespaces.js
+    // and derived via HomePageManager.getAvailableServices()
+    const services = JSON.parse('<?= JSON.stringify(services) ?>');
+    
+    initHomePageWithData(services, email);
+  }
+  
+  // Make function globally available for manual initialization after container replacement
+  window.initHomePageWithData = initHomePageWithData;
+
+  // Initialize on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHomePage);
+  } else {
+    initHomePage();
+  }
+</script>

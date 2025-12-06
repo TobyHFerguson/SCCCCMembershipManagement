@@ -211,6 +211,18 @@
       }
       
       validateCodeInputs();
+      
+      // Auto-submit if all 6 digits are filled
+      if (value && index === 5) {
+        const code = getCodeValue();
+        if (code.length === 6 && /^\d{6}$/.test(code)) {
+          setTimeout(() => {
+            if (!verifyButton.disabled) {
+              verifyButton.click();
+            }
+          }, 100);
+        }
+      }
     });
 
     input.addEventListener('keydown', (e) => {
@@ -247,6 +259,16 @@
       }
       
       validateCodeInputs();
+      
+      // Auto-submit if we have 6 digits
+      if (digits.length === 6) {
+        // Small delay to show the filled inputs before submitting
+        setTimeout(() => {
+          if (!verifyButton.disabled) {
+            verifyButton.click();
+          }
+        }, 100);
+      }
     });
   });
 
@@ -322,7 +344,7 @@
       google.script.run
         .withSuccessHandler(function(response) {
           if (response && response.success) {
-            displayMessage(codeMessageDiv, 'Verified! Loading service...', false);
+            displayMessage(codeMessageDiv, 'Verified! Loading services...', false);
             
             // Store the multi-use token in sessionStorage for SPA API calls
             if (response.token) {
@@ -334,19 +356,26 @@
               }
             }
             
-            // Get the service content and replace the entire page
+            // Get the home page content (now returns data, not HTML)
             google.script.run
-              .withSuccessHandler(function(htmlContent) {
-                // Replace the entire document with the service content
-                document.open();
-                document.write(htmlContent);
-                document.close();
+              .withSuccessHandler(function(data) {
+                // Update browser title
+                document.title = 'SCCCC Services';
+                
+                // Render home page using client-side renderer
+                const container = document.querySelector('.container');
+                if (container && window.renderHomePage) {
+                  const html = window.renderHomePage(data.services, response.email);
+                  container.innerHTML = html;
+                } else {
+                  console.error('Container or renderHomePage not found');
+                }
               })
               .withFailureHandler(function(error) {
-                displayMessage(codeMessageDiv, 'Error loading service: ' + error.message, true);
+                displayMessage(codeMessageDiv, 'Error loading services: ' + error.message, true);
                 enableForm(codeForm);
               })
-              .getServiceContent(response.email, response.service);
+              .getHomePageContent(response.email);
           } else {
             enableForm(codeForm);
             const errorMessage = response && response.error ? response.error : 'Verification failed.';

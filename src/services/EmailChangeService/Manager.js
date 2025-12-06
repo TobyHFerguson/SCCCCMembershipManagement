@@ -416,7 +416,7 @@ EmailChangeService.Manager = class {
    */
   static buildVerificationEmailContent(code) {
     const subject = 'Verify Your New Email Address';
-    const body = `Your verification code is: ${code}\n\nThis code will expire in ${EmailChangeService.VERIFICATION_CONFIG.EXPIRY_MINUTES} minutes.\n\nIf you did not request this email change, please ignore this message.`;
+    const body = `Your verification code is: ${code}\n\nType, or Copy/Paste this code into the code verification field.\n\nThis code will expire in ${EmailChangeService.VERIFICATION_CONFIG.EXPIRY_MINUTES} minutes.\n\nIf you did not request this email change, please ignore this message.`;
     const htmlBody = `
       <p>Your verification code is: <strong>${code}</strong></p>
       <p>This code will expire in ${EmailChangeService.VERIFICATION_CONFIG.EXPIRY_MINUTES} minutes.</p>

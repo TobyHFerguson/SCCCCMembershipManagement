@@ -18,6 +18,37 @@
 // Namespace declaration pattern (works in both GAS and Jest)
 if (typeof VotingService === 'undefined') VotingService = {};
 
+VotingService.Api = VotingService.Api || {};
+
+/**
+ * Get initial data for rendering VotingService
+ * Called by getServiceContent() for SPA initial page load
+ * 
+ * @param {string} email - Authenticated user email
+ * @returns {{serviceName: string, elections: Array}} Service data
+ */
+VotingService.Api.getData = function(email) {
+  console.log('VotingService.Api.getData(', email, ')');
+  
+  try {
+    // Get processed elections (already filtered and formatted for display)
+    // This reuses the existing WebApp logic
+    const elections = VotingService.WebApp._getElectionsForTemplate(email);
+    
+    return {
+      serviceName: 'Voting',
+      elections: elections
+    };
+  } catch (error) {
+    console.error('VotingService.Api.getData error:', error);
+    return {
+      serviceName: 'Voting',
+      error: `Failed to load elections: ${error.message}`,
+      elections: []
+    };
+  }
+};
+
 /**
  * Initialize API handlers for VotingService
  * This should be called once during application startup
@@ -57,16 +88,16 @@ VotingService.initApi = function () {
 /**
  * VotingService.Api - API handlers and GAS orchestration
  */
-VotingService.Api = {
-  /**
-   * Handle getActiveElections API request
-   * Returns list of elections with status for current user
-   *
-   * @param {Object} params - Request parameters
-   * @param {string} params._authenticatedEmail - Authenticated user's email
-   * @returns {Common.Api.ApiResponse}
-   */
-  handleGetActiveElections: function (params) {
+
+/**
+ * Handle getActiveElections API request
+ * Returns list of elections with status for current user
+ *
+ * @param {Object} params - Request parameters
+ * @param {string} params._authenticatedEmail - Authenticated user's email
+ * @returns {Common.Api.ApiResponse}
+ */
+VotingService.Api.handleGetActiveElections = function (params) {
     const userEmail = params._authenticatedEmail;
 
     // Validate user email is available
@@ -146,17 +177,17 @@ VotingService.Api = {
       Logger.log('[VotingService.Api] handleGetActiveElections error: ' + error);
       return Common.Api.ClientManager.errorResponse('Failed to get elections', 'GET_ELECTIONS_ERROR');
     }
-  },
+  };
 
-  /**
-   * Handle getElectionStats API request
-   * Returns statistics about elections
-   *
-   * @param {Object} params - Request parameters
-   * @param {string} params._authenticatedEmail - Authenticated user's email
-   * @returns {Common.Api.ApiResponse}
-   */
-  handleGetElectionStats: function (params) {
+/**
+ * Handle getElectionStats API request
+ * Returns statistics about elections
+ *
+ * @param {Object} params - Request parameters
+ * @param {string} params._authenticatedEmail - Authenticated user's email
+ * @returns {Common.Api.ApiResponse}
+ */
+VotingService.Api.handleGetElectionStats = function (params) {
     const userEmail = params._authenticatedEmail;
 
     // Validate user email is available
@@ -183,18 +214,18 @@ VotingService.Api = {
         'GET_STATS_ERROR'
       );
     }
-  },
+  };
 
-  /**
-   * Handle generateBallotToken API request
-   * Generates a voting token for a specific ballot
-   *
-   * @param {Object} params - Request parameters
-   * @param {string} params._authenticatedEmail - Authenticated user's email
-   * @param {string} params.electionTitle - Title of the election
-   * @returns {Common.Api.ApiResponse}
-   */
-  handleGenerateBallotToken: function (params) {
+/**
+ * Handle generateBallotToken API request
+ * Generates a voting token for a specific ballot
+ *
+ * @param {Object} params - Request parameters
+ * @param {string} params._authenticatedEmail - Authenticated user's email
+ * @param {string} params.electionTitle - Title of the election
+ * @returns {Common.Api.ApiResponse}
+ */
+VotingService.Api.handleGenerateBallotToken = function (params) {
     const userEmail = params._authenticatedEmail;
     const electionTitle = params.electionTitle;
 
@@ -283,8 +314,7 @@ VotingService.Api = {
         'GENERATE_TOKEN_ERROR'
       );
     }
-  }
-};
+  };
 
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {

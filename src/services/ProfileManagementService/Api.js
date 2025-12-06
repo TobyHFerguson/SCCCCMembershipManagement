@@ -17,6 +17,42 @@
 // Namespace declaration pattern (works in both GAS and Jest)
 if (typeof ProfileManagementService === 'undefined') ProfileManagementService = {};
 
+ProfileManagementService.Api = ProfileManagementService.Api || {};
+
+/**
+ * Get initial data for rendering ProfileManagementService
+ * Called by getServiceContent() for SPA initial page load
+ * 
+ * @param {string} email - Authenticated user email
+ * @returns {{serviceName: string, profile: Object}} Service data
+ */
+ProfileManagementService.Api.getData = function(email) {
+  console.log('ProfileManagementService.Api.getData(', email, ')');
+  
+  // PURE: Normalize email
+  const normalizedEmail = ProfileManagementService.Manager.normalizeEmail(email);
+  
+  // GAS: Get member profile
+  const profile = Common.Data.Access.getMember(normalizedEmail);
+  
+  if (!profile) {
+    return {
+      serviceName: 'Profile Management',
+      error: 'Profile not found',
+      email: email
+    };
+  }
+  
+  // PURE: Format profile for display (client-safe view)
+  const displayProfile = ProfileManagementService.Manager.formatProfileForDisplay(profile);
+  
+  return {
+    serviceName: 'Profile Management',
+    profile: displayProfile,
+    email: email
+  };
+};
+
 /**
  * Initialize API handlers for ProfileManagementService
  * This should be called once during application startup
@@ -56,16 +92,16 @@ ProfileManagementService.initApi = function() {
 /**
  * ProfileManagementService.Api - API handlers and GAS orchestration
  */
-ProfileManagementService.Api = {
-  /**
-   * Handle getProfile API request
-   * Gets user's full profile data
-   * 
-   * @param {Object} params - Request parameters
-   * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
-   * @returns {Common.Api.ApiResponse}
-   */
-  handleGetProfile: function(params) {
+
+/**
+ * Handle getProfile API request
+ * Gets user's full profile data
+ * 
+ * @param {Object} params - Request parameters
+ * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
+ * @returns {Common.Api.ApiResponse}
+ */
+ProfileManagementService.Api.handleGetProfile = function(params) {
     const userEmail = params._authenticatedEmail;
     
     if (!userEmail) {
@@ -103,17 +139,17 @@ ProfileManagementService.Api = {
         'GET_PROFILE_ERROR'
       );
     }
-  },
+  };
 
-  /**
-   * Handle getEditableFields API request
-   * Gets only the editable fields from user's profile
-   * 
-   * @param {Object} params - Request parameters
-   * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
-   * @returns {Common.Api.ApiResponse}
-   */
-  handleGetEditableFields: function(params) {
+/**
+ * Handle getEditableFields API request
+ * Gets only the editable fields from user's profile
+ * 
+ * @param {Object} params - Request parameters
+ * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
+ * @returns {Common.Api.ApiResponse}
+ */
+ProfileManagementService.Api.handleGetEditableFields = function(params) {
     const userEmail = params._authenticatedEmail;
     
     if (!userEmail) {
@@ -152,18 +188,18 @@ ProfileManagementService.Api = {
         'GET_FIELDS_ERROR'
       );
     }
-  },
+  };
 
-  /**
-   * Handle updateProfile API request
-   * Updates user's profile data
-   * 
-   * @param {Object} params - Request parameters
-   * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
-   * @param {Object} params.updates - Profile updates to apply
-   * @returns {Common.Api.ApiResponse}
-   */
-  handleUpdateProfile: function(params) {
+/**
+ * Handle updateProfile API request
+ * Updates user's profile data
+ * 
+ * @param {Object} params - Request parameters
+ * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
+ * @param {Object} params.updates - Profile updates to apply
+ * @returns {Common.Api.ApiResponse}
+ */
+ProfileManagementService.Api.handleUpdateProfile = function(params) {
     const userEmail = params._authenticatedEmail;
     const updates = params.updates;
 
@@ -228,8 +264,7 @@ ProfileManagementService.Api = {
         'UPDATE_PROFILE_ERROR'
       );
     }
-  }
-};
+  };
 
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {

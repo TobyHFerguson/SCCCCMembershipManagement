@@ -84,12 +84,14 @@ function verifyCode(email, code, service) {
 }
 
 /**
- * Render service HTML content for authenticated user
+ * Get service data for authenticated user
  * Called after successful verification code validation
  * 
+ * For SPA architecture, this returns pure data (not HTML). The client will render the HTML.
+ * 
  * @param {string} email - Authenticated user email
- * @param {string} service - Service name
- * @returns {string} HTML content for the service
+ * @param {string} service - Service name (e.g., 'DirectoryService')
+ * @returns {object} Service-specific data for client-side rendering
  */
 function getServiceContent(email, service) {
   console.log('getServiceContent(', email, service, ')');
@@ -97,37 +99,95 @@ function getServiceContent(email, service) {
   const webService = WebServices[service];
   if (!webService) {
     console.error('Invalid service:', service);
-    return '<html><body><h1>Error</h1><p>Invalid service specified.</p></body></html>';
+    return { error: 'Invalid service specified' };
   }
   
-  // Build a mock doGet event with authenticated email
-  const mockEvent = {
-    parameter: {
-      service: service
+  // Debug logging
+  console.log(`webService.Api:`, webService.Api);
+  console.log(`Api keys:`, webService.Api ? Object.keys(webService.Api) : 'Api undefined');
+  console.log(`typeof webService.Api.getData:`, webService.Api ? typeof webService.Api.getData : 'Api undefined');
+  
+  // Call service's API to get data (not HTML)
+  // Access service namespace directly (e.g., GroupManagementService.Api.getData)
+  // Note: webService IS the service namespace (e.g., GroupManagementService)
+  if (webService.Api && typeof webService.Api.getData === 'function') {
+    console.log(`Calling ${service}.Api.getData(${email})`);
+    try {
+      const data = webService.Api.getData(email);
+      console.log(`${service}.Api.getData returned:`, data);
+      return data;
+    } catch (error) {
+      console.error(`Error in ${service}.Api.getData:`, error);
+      return { 
+        error: `Failed to load ${service}: ${error.message}`,
+        serviceName: service 
+      };
     }
+  }
+  
+  // Fallback for services not yet migrated to new architecture
+  console.warn(`Service ${service} does not have Api.getData() - using legacy approach`);
+  console.warn(`webService:`, JSON.stringify(Object.keys(webService)));
+  
+  // For DirectoryService specifically (legacy)
+  if (service === 'DirectoryService') {
+    const directoryEntries = DirectoryService.getDirectoryEntries();
+    console.log('getServiceContent: DirectoryService entries count:', directoryEntries ? directoryEntries.length : 0);
+    console.log('getServiceContent: First entry:', directoryEntries && directoryEntries.length > 0 ? directoryEntries[0] : 'none');
+    return {
+      serviceName: 'Directory',
+      directoryEntries: directoryEntries
+    };
+  }
+  
+  // Generic fallback
+  console.error(`Service ${service} has no Api.getData() method`);
+  return {
+    serviceName: webService.name || service,
+    error: 'Service data not available'
   };
+}
+
+/**
+ * Render home page HTML content for authenticated user
+ * Called after successful verification code validation to show available services
+ * 
+ * For SPA architecture, this returns pure data (not HTML). The client will render the HTML.
+ * 
+ * @param {string} email - Authenticated user email
+ * @returns {{services: Array}} Services data for client-side rendering
+ */
+function getHomePageContent(email) {
+  console.log('getHomePageContent(', email, ')');
   
-  // Get service properties
-  const scriptProperties = PropertiesService.getScriptProperties();
-  const mobileBreakpoint = scriptProperties.getProperty('MOBILE_BREAKPOINT') || '767';
-  const tabletMinBreakpoint = scriptProperties.getProperty('TABLET_MIN_BREAKPOINT') || '768';
-  const tabletMaxBreakpoint = scriptProperties.getProperty('TABLET_MAX_BREAKPOINT') || '1032';
-  
-  // Create template
-  const template = HtmlService.createTemplateFromFile('common/html/_Layout.html');
-  template.breakpoints = {
-    mobile: mobileBreakpoint,
-    tabletMin: tabletMinBreakpoint,
-    tabletMax: tabletMaxBreakpoint
+  // Return just the data - client will render the HTML
+  return {
+    services: Common.HomePage.Manager.getAvailableServices()
   };
-  template.include = _includeHtml;
-  template.serviceName = webService.name;
+}
+
+/**
+ * Render verification page HTML content for sign-out flow
+ * Returns the initial verification code input page
+ * 
+ * @returns {string} HTML content for the verification page
+ */
+function getVerificationPageContent() {
+  console.log('getVerificationPageContent()');
   
-  // Call service's WebApp.doGet to render content
-  const output = webService.WebApp.doGet(mockEvent, email, template);
+  // Check feature flag to determine which auth flow to use
+  const useNewAuth = Common.Config.FeatureFlags.isNewAuthEnabled();
+  const VERIFICATION_CODE_INPUT = 'common/auth/verificationCodeInput';
+  const MAGIC_LINK_INPUT = 'common/auth/magicLinkInput';
+  const contentFileName = useNewAuth ? VERIFICATION_CODE_INPUT : MAGIC_LINK_INPUT;
   
-  // Return the HTML content as string
-  return output.getContent();
+  // Create template for just the content (no layout wrapper)
+  // This is used for container replacement when signing out
+  const template = HtmlService.createTemplateFromFile(contentFileName);
+  template.service = ''; // No specific service for verification page
+  
+  // Evaluate and return just the inner HTML content
+  return template.evaluate().getContent();
 }
 
 /**

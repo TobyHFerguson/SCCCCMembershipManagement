@@ -249,6 +249,27 @@
     }
 
     /* Input, button, message styles can inherit or be overridden here */
+
+    /* Navigation links (Back to Services, etc.) */
+    .nav-back-link {
+        display: block;
+        margin-top: 1.5rem;
+        text-align: center;
+        color: #007bff;
+        cursor: pointer;
+        text-decoration: underline;
+        font-size: 0.95rem;
+    }
+
+    .nav-back-link:hover {
+        color: #0056b3;
+    }
+
+    html.is-mobile-portrait .nav-back-link,
+    html.is-mobile-landscape .nav-back-link {
+        font-size: 1rem;
+        margin-top: 1.25rem;
+    }
 </style>
 <script>
     function checkViewportAndApplyClasses() {
@@ -349,6 +370,1120 @@
             delete formElement.dataset.customDisabled;
         }
     }
+
+    /**
+     * Navigate back to the services home page
+     * Uses cached services from sessionStorage for instant navigation (no server call)
+     * Made globally available so it persists after document.write() calls
+     */
+    function navigateToHomePage() {
+        let email = '';
+        let cachedServices = null;
+        
+        try {
+            email = sessionStorage.getItem('authenticatedEmail') || '';
+            const cachedServicesJson = sessionStorage.getItem('cachedServices');
+            if (cachedServicesJson) {
+                cachedServices = JSON.parse(cachedServicesJson);
+            }
+        } catch (e) {
+            console.warn('Could not read from sessionStorage:', e);
+        }
+        
+        // If we have cached services, render them directly without a server call
+        if (cachedServices && Array.isArray(cachedServices) && cachedServices.length > 0) {
+            renderHomePageFromCache(email, cachedServices);
+            // Update browser tab title
+            document.title = 'SCCCC Services';
+            return;
+        }
+        
+        // Fallback to server call if no cached services
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+            // Show loading indicator
+            const container = document.querySelector('.container');
+            if (container) {
+                container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">Loading services...</div>';
+            }
+            
+            google.script.run
+                .withSuccessHandler(function(data) {
+                    // Update browser title
+                    document.title = 'SCCCC Services';
+                    
+                    // Render home page using client-side renderer
+                    if (container && window.renderHomePage) {
+                        const html = window.renderHomePage(data.services, email);
+                        container.innerHTML = html;
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    if (container) {
+                        container.innerHTML = '<div style="text-align: center; padding: 2rem; color: red;">Error loading services: ' + error.message + '</div>';
+                    }
+                })
+                .getHomePageContent(email);
+        } else {
+            console.error('google.script.run is not available');
+        }
+    }
+
+    /**
+     * Render the home page directly from cached services (no server call)
+     */
+    function renderHomePageFromCache(email, services) {
+        // Update browser tab title
+        document.title = 'SCCCC Services';
+        
+        // Use the global renderer
+        const container = document.querySelector('.container');
+        if (container && window.renderHomePage) {
+            const html = window.renderHomePage(services, email);
+            container.innerHTML = html;
+        } else {
+            console.error('Container or renderHomePage not found');
+        }
+    }
+
+    /**
+     * Load a service from the cached home page view
+     */
+    function loadServiceFromHomePage(serviceId) {
+        // Get service name for loading message and title
+        let serviceName = serviceId.replace('Service', ' Service');
+        try {
+            const cachedServicesJson = sessionStorage.getItem('cachedServices');
+            if (cachedServicesJson) {
+                const services = JSON.parse(cachedServicesJson);
+                const service = services.find(s => s.id === serviceId);
+                if (service && service.name) {
+                    serviceName = service.name;
+                }
+            }
+        } catch (e) {
+            console.warn('Could not read cached services:', e);
+        }
+
+        // Update browser tab title immediately
+        document.title = serviceName + ' - SCCCC';
+        
+        const container = document.querySelector('.container');
+        if (container) {
+            container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">Loading ' + serviceName + '...</div>';
+        }
+
+        let email = '';
+        try {
+            email = sessionStorage.getItem('authenticatedEmail') || '';
+        } catch (e) {
+            console.warn('Could not read from sessionStorage:', e);
+        }
+        
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+            google.script.run
+                .withSuccessHandler(function(data) {
+                    console.log('loadServiceFromHomePage: Received data for', serviceId, ':', data);
+                    // Render service using client-side renderer
+                    if (container && window.renderService) {
+                        window.renderService(serviceId, data, container);
+                    } else {
+                        console.error('Container or renderService not found');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    console.error('loadServiceFromHomePage: Error loading service:', error);
+                    if (container) {
+                        container.innerHTML = '<div style="text-align: center; padding: 2rem; color: red;">Error loading service: ' + error.message + '</div>';
+                    }
+                })
+                .getServiceContent(email, serviceId);
+        } else {
+            if (container) {
+                container.innerHTML = '<div style="text-align: center; padding: 2rem; color: red;">Error: google.script.run is not available.</div>';
+            }
+        }
+    }
+
+    // Make navigation functions globally available so they persist after document.write()
+    window.navigateToHomePage = navigateToHomePage;
+    window.loadHomePage = navigateToHomePage; // Alias for compatibility
+    
+    /**
+     * Handle sign out - clears session and returns to verification page
+     */
+    function handleSignOutFromCache() {
+        try {
+            sessionStorage.removeItem('authToken');
+            sessionStorage.removeItem('authenticatedEmail');
+            sessionStorage.removeItem('cachedServices');
+        } catch (e) {
+            console.warn('Could not clear sessionStorage:', e);
+        }
+        
+        // Load the initial verification code input page
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+            const container = document.querySelector('.container');
+            if (container) {
+                container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">Signing out...</div>';
+            }
+            
+            google.script.run
+                .withSuccessHandler(function(htmlContent) {
+                    // Update browser title
+                    document.title = 'Request Access - Verification Code';
+                    
+                    // Replace container content
+                    if (container) {
+                        container.innerHTML = htmlContent;
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    // If there's an error, just reload the page
+                    window.location.reload();
+                })
+                .getVerificationPageContent();
+        } else {
+            // Fallback to reload if google.script.run not available
+            window.location.reload();
+        }
+    }
+    
+    /**
+     * Client-Side Page Renderers
+     * These functions generate HTML purely on the client side from data.
+     * This solves the innerHTML script execution problem - no scripts in the generated HTML.
+     */
+    
+    // SVG icons for services
+    const serviceIcons = {
+        directory: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>',
+        email: '<svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>',
+        groups: '<svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>',
+        profile: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM7.07 18.28c.43-.9 3.05-1.78 4.93-1.78s4.51.88 4.93 1.78C15.57 19.36 13.86 20 12 20s-3.57-.64-4.93-1.72zm11.29-1.45c-1.43-1.74-4.9-2.33-6.36-2.33s-4.93.59-6.36 2.33C4.62 15.49 4 13.82 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 1.82-.62 3.49-1.64 4.83zM12 6c-1.94 0-3.5 1.56-3.5 3.5S10.06 13 12 13s3.5-1.56 3.5-3.5S13.94 6 12 6zm0 5c-.83 0-1.5-.67-1.5-1.5S11.17 8 12 8s1.5.67 1.5 1.5S12.83 11 12 11z"/></svg>',
+        voting: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>'
+    };
+    
+    function escapeHtml(str) {
+        if (typeof str !== 'string') return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+    
+    // Render the home page with services
+    function renderHomePage(services, email) {
+        const html = `
+            <style>
+                .service-list { display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; }
+                .service-card { display: flex; align-items: center; padding: 1rem; background-color: #f8f9fa; border: 0.0625rem solid #ddd; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s ease; text-decoration: none; color: inherit; }
+                .service-card:hover { background-color: #e9ecef; border-color: #007bff; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.1); }
+                .service-card:active { background-color: #dee2e6; }
+                .service-icon { width: 3rem; height: 3rem; display: flex; align-items: center; justify-content: center; background-color: #007bff; border-radius: 0.5rem; margin-right: 1rem; flex-shrink: 0; }
+                .service-icon svg { width: 1.5rem; height: 1.5rem; fill: white; }
+                .service-info { flex: 1; }
+                .service-name { font-size: 1.1rem; font-weight: 600; margin: 0 0 0.25rem 0; color: #333; }
+                .service-description { font-size: 0.9rem; color: #666; margin: 0; }
+                .service-arrow { color: #999; font-size: 1.2rem; margin-left: 0.5rem; }
+                .welcome-header { text-align: center; margin-bottom: 1.5rem; }
+                .welcome-message { font-size: 0.9rem; color: #666; margin-top: 0.5rem; }
+                .sign-out-link { display: block; margin-top: 1.5rem; text-align: center; color: #666; font-size: 0.9rem; cursor: pointer; text-decoration: underline; }
+                .sign-out-link:hover { color: #007bff; }
+                html.is-mobile-portrait .service-card { padding: 1.2rem; }
+                html.is-mobile-portrait .service-icon { width: 2.5rem; height: 2.5rem; }
+                html.is-mobile-portrait .service-icon svg { width: 1.25rem; height: 1.25rem; }
+                html.is-mobile-portrait .service-name { font-size: 1rem; }
+                html.is-mobile-portrait .service-description { font-size: 0.85rem; }
+                html.is-tablet .service-card { padding: 1.1rem; }
+            </style>
+            <div class="welcome-header">
+                <h2>SCCCC Services</h2>
+                <p class="welcome-message">Signed in as ${escapeHtml(email)}</p>
+            </div>
+            <div id="serviceList" class="service-list">
+                ${services.map(service => `
+                    <div class="service-card" onclick="window.loadServiceFromHomePage('${escapeHtml(service.id)}')" role="button" tabindex="0">
+                        <div class="service-icon">${serviceIcons[service.icon] || serviceIcons.profile}</div>
+                        <div class="service-info">
+                            <h3 class="service-name">${escapeHtml(service.name)}</h3>
+                            <p class="service-description">${escapeHtml(service.description)}</p>
+                        </div>
+                        <span class="service-arrow">›</span>
+                    </div>
+                `).join('')}
+            </div>
+            <a class="sign-out-link" onclick="window.handleSignOutFromCache()">Sign out</a>
+        `;
+        
+        // Cache services for quick navigation
+        try {
+            sessionStorage.setItem('cachedServices', JSON.stringify(services));
+        } catch (e) {
+            console.warn('Could not cache services:', e);
+        }
+        
+        return html;
+    }
+    
+    /**
+     * Load external script dynamically (scripts in innerHTML don't execute reliably)
+     */
+    function loadScript(src) {
+        return new Promise((resolve, reject) => {
+            // Check if script already loaded
+            if (document.querySelector(`script[src="${src}"]`)) {
+                resolve();
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+    
+    /**
+     * Load external stylesheet dynamically
+     */
+    function loadStylesheet(href) {
+        // Check if stylesheet already loaded
+        if (document.querySelector(`link[href="${href}"]`)) {
+            return;
+        }
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = href;
+        document.head.appendChild(link);
+    }
+    
+    /**
+     * Client-Side Service Renderers
+     * Each service has a dedicated renderer that generates HTML from data
+     */
+    
+    // Render Directory Service
+    function renderDirectoryService(data, container) {
+        console.log('renderDirectoryService called with data:', data);
+        
+        // Load required stylesheets
+        loadStylesheet('https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css');
+        loadStylesheet('https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css');
+        
+        // Set the HTML structure
+        container.innerHTML = `
+            <style>
+                .directory-container { padding: 1rem; }
+                h2 { margin-top: 0; }
+                .back-link { display: inline-block; margin-top: 1rem; color: #007bff; text-decoration: none; }
+                .back-link:hover { text-decoration: underline; }
+                html.is-mobile-landscape .directory-container { overflow-x: auto; }
+            </style>
+            <div class="directory-container">
+                <h2>SCCCC Directory</h2>
+                <table id="data-table" class="display">
+                    <thead>
+                        <tr>
+                            <th>First</th>
+                            <th>Last</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <a href="#" class="back-link" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+            </div>
+        `;
+        
+        // Load scripts and initialize DataTable
+        Promise.all([
+            loadScript('https://code.jquery.com/jquery-3.6.0.min.js'),
+            loadScript('https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js'),
+            loadScript('https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js')
+        ]).then(() => {
+            console.log('Directory: All scripts loaded, initializing DataTable');
+            
+            const rawTableData = data.directoryEntries || [];
+            console.log('Directory: rawTableData:', rawTableData);
+            console.log('Directory: Number of entries:', rawTableData.length);
+            
+            const tableData = rawTableData.map(function(entry) {
+                console.log('Processing entry:', entry);
+                return [
+                    entry.First || '',
+                    entry.Last || '',
+                    entry.email || entry.Email || '',
+                    entry.phone || entry.Phone || ''
+                ];
+            });
+            
+            console.log('Directory: tableData for DataTable:', tableData);
+            
+            window.jQuery(document).ready(function($) {
+                console.log('Directory: Initializing DataTable');
+                $('#data-table').DataTable({
+                    data: tableData,
+                    responsive: true,
+                    pageLength: 25,
+                    order: [[1, 'asc'], [0, 'asc']]
+                });
+                console.log('Directory: DataTable initialized');
+            });
+        }).catch(error => {
+            console.error('Directory: Error loading scripts:', error);
+            container.innerHTML += '<p style="color: red;">Error loading DataTables library</p>';
+        });
+    }
+    
+    // Generic service renderer - used for services not yet fully migrated
+    function renderGenericService(serviceName, data, container) {
+        container.innerHTML = `
+            <div style="padding: 1rem;">
+                <h2>${escapeHtml(serviceName)}</h2>
+                <p>Service data loaded. This service needs a custom renderer.</p>
+                <pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>
+                <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+            </div>
+        `;
+    }
+    
+    // GroupManagementService renderer
+    function renderGroupManagementService(data, container) {
+        console.log('renderGroupManagementService:', data);
+        
+        // Get subscription data and delivery options
+        const subscriptions = data.subscriptions || [];
+        const deliveryOptions = data.deliveryOptions || {};
+        
+        // Build subscription rows HTML
+        const subscriptionRows = subscriptions.map(sub => {
+            const optionsHTML = Object.entries(deliveryOptions).map(([valueKey, [displayValue, tooltip]]) => {
+                const selected = sub.deliveryValue === valueKey ? 'selected' : '';
+                return `<option value="${escapeHtml(valueKey)}" ${selected} data-tooltip="${escapeHtml(tooltip)}" title="${escapeHtml(tooltip)}">${escapeHtml(displayValue)}</option>`;
+            }).join('');
+            
+            return `
+                <div class="subscription-row" data-group-name="${escapeHtml(sub.groupName)}" data-group-email="${escapeHtml(sub.groupEmail)}" data-original-delivery-value="${escapeHtml(sub.deliveryValue)}">
+                    <span class="group-name">${escapeHtml(sub.groupName)}</span>
+                    <div class="delivery-select-container">
+                        <select class="delivery-select" name="${escapeHtml(sub.groupEmail)}">
+                            ${optionsHTML}
+                        </select>
+                        <div class="custom-tooltip" id="tooltip-${escapeHtml(sub.groupEmail)}"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        container.innerHTML = `
+            <style>
+                #subscriptionForm {
+                    margin: 0 auto;
+                    padding: 20px;
+                    border-radius: 8px;
+                    box-shadow: none;
+                    width: 100%;
+                    max-width: 600px;
+                    display: grid;
+                    grid-template-columns: auto 1fr;
+                    gap: 10px;
+                    align-items: center;
+                }
+                
+                .subscription-row {
+                    display: contents;
+                    border-bottom: 1px solid #eee;
+                    padding-bottom: 8px;
+                    margin-bottom: 8px;
+                }
+                
+                .subscription-row:last-child {
+                    border-bottom: none;
+                    margin-bottom: 0;
+                    padding-bottom: 0;
+                }
+                
+                .group-name {
+                    text-align: left;
+                    padding-right: 10px;
+                }
+                
+                .delivery-select-container {
+                    position: relative;
+                    text-align: left;
+                }
+                
+                .delivery-select {
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                    box-sizing: border-box;
+                }
+                
+                .custom-tooltip {
+                    position: absolute;
+                    background-color: rgba(0, 0, 0, 0.8);
+                    color: #f9f9f9;
+                    padding: 5px 8px;
+                    border-radius: 3px;
+                    font-size: 0.8em;
+                    z-index: 10;
+                    display: none;
+                    white-space: nowrap;
+                    top: 100%;
+                    left: 0;
+                    transform: translateY(5px);
+                    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+                }
+                
+                .buttons-container {
+                    grid-column: 1 / 3;
+                    margin-top: 20px;
+                    text-align: center;
+                }
+                
+                .message {
+                    grid-column: 1 / 3;
+                    margin-top: 10px;
+                    padding: 10px;
+                    border-radius: 4px;
+                    display: none;
+                    text-align: center;
+                }
+                
+                .message.success {
+                    background-color: #d4edda;
+                    color: #155724;
+                    border: 1px solid #c3e6cb;
+                }
+                
+                .message.error {
+                    background-color: #f8d7da;
+                    color: #721c24;
+                    border: 1px solid #f5c6cb;
+                }
+            </style>
+            
+            <div style="padding: 1rem;">
+                <h2>Manage Your SCCCC Group Subscriptions</h2>
+                
+                <form id="subscriptionForm">
+                    ${subscriptionRows}
+                    
+                    <div class="buttons-container">
+                        <button type="button" id="resetButton">Reset</button>
+                        <button type="submit" id="applyButton" disabled>Apply Changes</button>
+                    </div>
+                    
+                    <div id="submissionMessage" class="message"></div>
+                </form>
+                
+                <p style="margin-top: 2rem;">
+                    <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                </p>
+            </div>
+        `;
+        
+        // Initialize form behavior after rendering
+        initializeGroupManagementForm();
+    }
+    
+    // Initialize GroupManagement form interactions
+    function initializeGroupManagementForm() {
+        const subscriptionForm = document.getElementById('subscriptionForm');
+        const deliverySelects = document.querySelectorAll('.delivery-select');
+        const tooltipDelay = 50;
+        const resetButton = document.getElementById('resetButton');
+        const applyButton = document.getElementById('applyButton');
+        const submissionMessage = document.getElementById('submissionMessage');
+        
+        let changesMade = false;
+        const originalSubscriptions = {};
+        
+        // Store original state
+        deliverySelects.forEach(select => {
+            const row = select.closest('.subscription-row');
+            const groupEmail = row.dataset.groupEmail;
+            const originalDeliveryValue = row.dataset.originalDeliveryValue;
+            const selectedOption = select.options[select.selectedIndex];
+            const originalDeliveryName = selectedOption.textContent;
+            originalSubscriptions[groupEmail] = { name: originalDeliveryName, value: originalDeliveryValue };
+        });
+        
+        function checkChanges() {
+            changesMade = false;
+            deliverySelects.forEach(select => {
+                const groupEmail = select.name;
+                const selectedValue = select.value;
+                if (originalSubscriptions[groupEmail] && originalSubscriptions[groupEmail].value !== selectedValue) {
+                    changesMade = true;
+                }
+            });
+            applyButton.disabled = !changesMade;
+            if (changesMade) {
+                clearMessage();
+            }
+        }
+        
+        function displayMessage(message, type) {
+            submissionMessage.textContent = message;
+            submissionMessage.classList.remove('success', 'error');
+            submissionMessage.classList.add(type);
+            submissionMessage.style.display = 'block';
+        }
+        
+        function clearMessage() {
+            submissionMessage.textContent = '';
+            submissionMessage.classList.remove('success', 'error');
+            submissionMessage.style.display = 'none';
+        }
+        
+        // Change detection
+        deliverySelects.forEach(select => {
+            select.addEventListener('change', checkChanges);
+        });
+        
+        // Tooltip logic
+        deliverySelects.forEach(select => {
+            let tooltipTimeout;
+            const tooltipId = `tooltip-${select.name}`;
+            const tooltipElement = document.getElementById(tooltipId);
+            
+            select.addEventListener('mouseenter', () => {
+                const selectedOption = select.options[select.selectedIndex];
+                if (selectedOption && selectedOption.dataset.tooltip) {
+                    tooltipTimeout = setTimeout(() => {
+                        tooltipElement.textContent = selectedOption.dataset.tooltip;
+                        tooltipElement.style.display = 'block';
+                    }, tooltipDelay);
+                }
+            });
+            
+            select.addEventListener('mouseleave', () => {
+                clearTimeout(tooltipTimeout);
+                tooltipElement.style.display = 'none';
+            });
+            
+            select.addEventListener('blur', () => {
+                clearTimeout(tooltipTimeout);
+                tooltipElement.style.display = 'none';
+            });
+        });
+        
+        // Reset button
+        resetButton.addEventListener('click', function() {
+            clearMessage();
+            deliverySelects.forEach(select => {
+                const groupEmail = select.name;
+                if (originalSubscriptions[groupEmail]) {
+                    select.value = originalSubscriptions[groupEmail].value;
+                }
+            });
+            changesMade = false;
+            applyButton.disabled = true;
+        });
+        
+        // Form submission
+        subscriptionForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const updatedSubscriptions = [];
+            deliverySelects.forEach(select => {
+                const groupEmail = select.name;
+                const newDeliveryValue = select.value;
+                if (originalSubscriptions[groupEmail] && originalSubscriptions[groupEmail].value !== newDeliveryValue) {
+                    updatedSubscriptions.push({
+                        groupEmail: groupEmail,
+                        deliveryValue: newDeliveryValue
+                    });
+                }
+            });
+            
+            if (updatedSubscriptions.length === 0) {
+                displayMessage('No changes to apply.', 'error');
+                return;
+            }
+            
+            disableForm(subscriptionForm);
+            displayMessage('Updating subscriptions...', 'success');
+            
+            // Call server API to update subscriptions
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    enableForm(subscriptionForm);
+                    const result = typeof response === 'string' ? JSON.parse(response) : response;
+                    if (result.success) {
+                        displayMessage(result.message, 'success');
+                        // Update original subscriptions to reflect new state
+                        updatedSubscriptions.forEach(updated => {
+                            const select = document.querySelector(`.delivery-select[name="${updated.groupEmail}"]`);
+                            if (select) {
+                                const row = select.closest('.subscription-row');
+                                row.dataset.originalDeliveryValue = updated.deliveryValue;
+                                const selectedOption = select.options[select.selectedIndex];
+                                originalSubscriptions[updated.groupEmail] = {
+                                    name: selectedOption.textContent,
+                                    value: updated.deliveryValue
+                                };
+                            }
+                        });
+                        changesMade = false;
+                        applyButton.disabled = true;
+                    } else {
+                        displayMessage(result.message || 'Update failed', 'error');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    enableForm(subscriptionForm);
+                    displayMessage('Error updating subscriptions: ' + error.message, 'error');
+                })
+                .updateUserSubscriptions(updatedSubscriptions, sessionStorage.getItem('authToken'));
+        });
+    }
+    
+    // ProfileManagementService renderer
+    function renderProfileManagementService(data, container) {
+        console.log('renderProfileManagementService:', data);
+        
+        const profile = data.profile || {};
+        
+        container.innerHTML = `
+            <style>
+                #profileForm {
+                    margin: 0 auto;
+                    padding: 20px;
+                    max-width: 600px;
+                    display: grid;
+                    grid-template-columns: auto 1fr;
+                    gap: 15px;
+                    align-items: center;
+                }
+                
+                #profileForm label {
+                    text-align: right;
+                    padding-right: 10px;
+                    font-weight: bold;
+                }
+                
+                #profileForm input {
+                    padding: 8px;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                }
+                
+                .buttons-container {
+                    grid-column: 1 / 3;
+                    margin-top: 20px;
+                    text-align: center;
+                }
+                
+                .message {
+                    grid-column: 1 / 3;
+                    margin-top: 10px;
+                    padding: 10px;
+                    border-radius: 4px;
+                    display: none;
+                    text-align: center;
+                }
+                
+                .message.success {
+                    background-color: #d4edda;
+                    color: #155724;
+                }
+                
+                .message.error {
+                    background-color: #f8d7da;
+                    color: #721c24;
+                }
+            </style>
+            
+            <div style="padding: 1rem;">
+                <h2>Manage Your Profile</h2>
+                
+                <form id="profileForm">
+                    <label for="firstName">First Name:</label>
+                    <input type="text" id="firstName" name="firstName" value="${escapeHtml(profile.firstName || '')}" required>
+                    
+                    <label for="lastName">Last Name:</label>
+                    <input type="text" id="lastName" name="lastName" value="${escapeHtml(profile.lastName || '')}" required>
+                    
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" value="${escapeHtml(profile.email || data.email || '')}" readonly>
+                    
+                    <label for="phone">Phone:</label>
+                    <input type="tel" id="phone" name="phone" value="${escapeHtml(profile.phone || '')}">
+                    
+                    <div class="buttons-container">
+                        <button type="button" id="resetButton">Reset</button>
+                        <button type="submit" id="saveButton" disabled>Save Changes</button>
+                    </div>
+                    
+                    <div id="profileMessage" class="message"></div>
+                </form>
+                
+                <p style="margin-top: 2rem;">
+                    <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                </p>
+            </div>
+        `;
+        
+        initializeProfileManagementForm(profile);
+    }
+    
+    // Initialize ProfileManagement form
+    function initializeProfileManagementForm(originalProfile) {
+        const form = document.getElementById('profileForm');
+        const resetButton = document.getElementById('resetButton');
+        const saveButton = document.getElementById('saveButton');
+        const message = document.getElementById('profileMessage');
+        const inputs = form.querySelectorAll('input:not([readonly])');
+        
+        function checkChanges() {
+            let changed = false;
+            inputs.forEach(input => {
+                if (input.value !== (originalProfile[input.name] || '')) {
+                    changed = true;
+                }
+            });
+            saveButton.disabled = !changed;
+        }
+        
+        function displayMessage(msg, type) {
+            message.textContent = msg;
+            message.classList.remove('success', 'error');
+            message.classList.add(type);
+            message.style.display = 'block';
+        }
+        
+        function clearMessage() {
+            message.textContent = '';
+            message.classList.remove('success', 'error');
+            message.style.display = 'none';
+        }
+        
+        inputs.forEach(input => {
+            input.addEventListener('input', checkChanges);
+        });
+        
+        resetButton.addEventListener('click', function() {
+            inputs.forEach(input => {
+                input.value = originalProfile[input.name] || '';
+            });
+            clearMessage();
+            saveButton.disabled = true;
+        });
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const updatedProfile = {};
+            inputs.forEach(input => {
+                updatedProfile[input.name] = input.value;
+            });
+            
+            disableForm(form);
+            displayMessage('Saving profile...', 'success');
+            
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    enableForm(form);
+                    const result = typeof response === 'string' ? JSON.parse(response) : response;
+                    if (result.success) {
+                        displayMessage(result.message, 'success');
+                        // Update original profile
+                        Object.assign(originalProfile, updatedProfile);
+                        saveButton.disabled = true;
+                    } else {
+                        displayMessage(result.message || 'Save failed', 'error');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    enableForm(form);
+                    displayMessage('Error saving profile: ' + error.message, 'error');
+                })
+                .updateProfile(sessionStorage.getItem('authToken'), updatedProfile);
+        });
+    }
+    
+    // EmailChangeService renderer
+    function renderEmailChangeService(data, container) {
+        console.log('renderEmailChangeService:', data);
+        
+        container.innerHTML = `
+            <style>
+                #emailChangeForm {
+                    margin: 0 auto;
+                    padding: 20px;
+                    max-width: 500px;
+                }
+                
+                #emailChangeForm label {
+                    display: block;
+                    margin-top: 15px;
+                    font-weight: bold;
+                }
+                
+                #emailChangeForm input {
+                    width: 100%;
+                    padding: 8px;
+                    margin-top: 5px;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                    box-sizing: border-box;
+                }
+                
+                .buttons-container {
+                    margin-top: 20px;
+                    text-align: center;
+                }
+                
+                .message {
+                    margin-top: 15px;
+                    padding: 10px;
+                    border-radius: 4px;
+                    display: none;
+                    text-align: center;
+                }
+                
+                .message.success {
+                    background-color: #d4edda;
+                    color: #155724;
+                }
+                
+                .message.error {
+                    background-color: #f8d7da;
+                    color: #721c24;
+                }
+            </style>
+            
+            <div style="padding: 1rem;">
+                <h2>Change Your Email Address</h2>
+                
+                <form id="emailChangeForm">
+                    <label for="currentEmail">Current Email:</label>
+                    <input type="email" id="currentEmail" value="${escapeHtml(data.currentEmail || '')}" readonly>
+                    
+                    <label for="newEmail">New Email:</label>
+                    <input type="email" id="newEmail" name="newEmail" required>
+                    
+                    <label for="confirmEmail">Confirm New Email:</label>
+                    <input type="email" id="confirmEmail" name="confirmEmail" required>
+                    
+                    <div class="buttons-container">
+                        <button type="submit" id="submitButton">Request Email Change</button>
+                    </div>
+                    
+                    <div id="emailChangeMessage" class="message"></div>
+                </form>
+                
+                <p style="margin-top: 2rem;">
+                    <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                </p>
+            </div>
+        `;
+        
+        initializeEmailChangeForm();
+    }
+    
+    // Initialize EmailChange form
+    function initializeEmailChangeForm() {
+        const form = document.getElementById('emailChangeForm');
+        const newEmail = document.getElementById('newEmail');
+        const confirmEmail = document.getElementById('confirmEmail');
+        const message = document.getElementById('emailChangeMessage');
+        
+        function displayMessage(msg, type) {
+            message.textContent = msg;
+            message.classList.remove('success', 'error');
+            message.classList.add(type);
+            message.style.display = 'block';
+        }
+        
+        function clearMessage() {
+            message.textContent = '';
+            message.classList.remove('success', 'error');
+            message.style.display = 'none';
+        }
+        
+        [newEmail, confirmEmail].forEach(input => {
+            input.addEventListener('input', clearMessage);
+        });
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (newEmail.value !== confirmEmail.value) {
+                displayMessage('Email addresses do not match', 'error');
+                return;
+            }
+            
+            disableForm(form);
+            displayMessage('Processing email change request...', 'success');
+            
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    enableForm(form);
+                    const result = typeof response === 'string' ? JSON.parse(response) : response;
+                    if (result.success) {
+                        displayMessage(result.message || 'Verification code sent to new email address', 'success');
+                        form.reset();
+                    } else {
+                        displayMessage(result.message || 'Request failed', 'error');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    enableForm(form);
+                    displayMessage('Error: ' + error.message, 'error');
+                })
+                .handleSendVerificationCode(newEmail.value, document.getElementById('currentEmail').value);
+        });
+    }
+    
+    // VotingService renderer
+    function renderVotingService(data, container) {
+        console.log('renderVotingService:', data);
+        
+        const elections = data.elections || [];
+        
+        const electionsHTML = elections.length === 0 
+            ? '<p>There are no active elections at this time.</p>'
+            : elections.map(election => {
+                const statusClass = election.status === 'Active' ? 'active' : 'inactive';
+                return `
+                    <div class="election ${statusClass}">
+                        <h3>${escapeHtml(election.title)}</h3>
+                        ${election.opens ? `<p><strong>Opens:</strong> ${escapeHtml(new Date(election.opens).toLocaleString())}</p>` : ''}
+                        ${election.closes ? `<p><strong>Closes:</strong> ${escapeHtml(new Date(election.closes).toLocaleString())}</p>` : ''}
+                        <p><strong>Status:</strong> ${escapeHtml(election.status)}</p>
+                        ${election.url ? `<p><a href="${escapeHtml(election.url)}" target="_blank" class="vote-button">Vote Now</a></p>` : ''}
+                    </div>
+                `;
+            }).join('');
+        
+        container.innerHTML = `
+            <style>
+                .elections-container {
+                    margin: 0 auto;
+                    padding: 20px;
+                    max-width: 800px;
+                }
+                
+                .election {
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    padding: 20px;
+                    margin-bottom: 20px;
+                    background-color: #fff;
+                }
+                
+                .election.active {
+                    border-color: #28a745;
+                    background-color: #f0fff4;
+                }
+                
+                .election.inactive {
+                    background-color: #f8f9fa;
+                }
+                
+                .election h3 {
+                    margin-top: 0;
+                    color: #333;
+                }
+                
+                .vote-button {
+                    display: inline-block;
+                    padding: 10px 20px;
+                    background-color: #007bff;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 4px;
+                    font-weight: bold;
+                }
+                
+                .vote-button:hover {
+                    background-color: #0056b3;
+                }
+            </style>
+            
+            <div class="elections-container">
+                <h2>SCCCC Voting</h2>
+                ${electionsHTML}
+                <p style="margin-top: 2rem;">
+                    <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                </p>
+            </div>
+        `;
+    }
+    
+    function renderGenericService(serviceName, data, container) {
+        container.innerHTML = `
+            <div style="padding: 1rem;">
+                <h2>${escapeHtml(serviceName)}</h2>
+                <p>Service data loaded. This service needs a custom renderer.</p>
+                <pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>
+                <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+            </div>
+        `;
+    }
+    
+    // Main service renderer - routes to specific service renderers
+    function renderService(serviceId, data, container) {
+        console.log('renderService:', serviceId, data);
+        
+        // Handle null or undefined data
+        if (!data) {
+            container.innerHTML = `
+                <div style="padding: 1rem;">
+                    <h2>Error</h2>
+                    <p>Service data not available</p>
+                    <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                </div>
+            `;
+            return;
+        }
+        
+        if (data.error) {
+            container.innerHTML = `
+                <div style="padding: 1rem;">
+                    <h2>Error</h2>
+                    <p>${escapeHtml(data.error)}</p>
+                    <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                </div>
+            `;
+            return;
+        }
+        
+        // Route to appropriate renderer based on service
+        switch(serviceId) {
+            case 'DirectoryService':
+                renderDirectoryService(data, container);
+                break;
+            case 'GroupManagementService':
+                renderGroupManagementService(data, container);
+                break;
+            case 'ProfileManagementService':
+                renderProfileManagementService(data, container);
+                break;
+            case 'EmailChangeService':
+                renderEmailChangeService(data, container);
+                break;
+            case 'VotingService':
+                renderVotingService(data, container);
+                break;
+            default:
+                renderGenericService(serviceId, data, container);
+                break;
+        }
+    }
+    
+    // Make page renderer and utility functions globally available
+    window.renderHomePage = renderHomePage;
+    window.renderService = renderService;
+    window.loadServiceFromHomePage = loadServiceFromHomePage;
+    window.handleSignOutFromCache = handleSignOutFromCache;
+    
     // Initial check on load
     checkViewportAndApplyClasses();
     // Re-check on window resize (for orientation changes)
