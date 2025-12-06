@@ -171,19 +171,27 @@
     }
   }
 
+  // HTML escape function to prevent XSS
+  function escapeHtml(str) {
+    if (typeof str !== 'string') return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
   // Render services list
   function renderServices(services) {
     const container = document.getElementById('serviceList');
     if (!container) return;
 
     container.innerHTML = services.map(service => `
-      <div class="service-card" onclick="loadService('${service.id}')" role="button" tabindex="0">
+      <div class="service-card" onclick="loadService('${escapeHtml(service.id)}')" role="button" tabindex="0">
         <div class="service-icon">
           ${serviceIcons[service.icon] || serviceIcons.profile}
         </div>
         <div class="service-info">
-          <h3 class="service-name">${service.name}</h3>
-          <p class="service-description">${service.description}</p>
+          <h3 class="service-name">${escapeHtml(service.name)}</h3>
+          <p class="service-description">${escapeHtml(service.description)}</p>
         </div>
         <span class="service-arrow">›</span>
       </div>
@@ -249,42 +257,10 @@
       welcomeDiv.textContent = email ? 'Signed in as ' + email : 'Welcome to SCCCC Services';
     }
 
-    // Define services (this matches HomePageManager.SERVICE_DEFINITIONS)
-    // NOTE: This is duplicated from HomePageManager.SERVICE_DEFINITIONS because
-    // this client-side JavaScript cannot access server-side GAS code directly.
-    // If services change, update both HomePageManager.SERVICE_DEFINITIONS and this array.
-    const services = [
-      {
-        id: 'DirectoryService',
-        name: 'Directory Service',
-        description: 'View the member directory with contact information',
-        icon: 'directory'
-      },
-      {
-        id: 'EmailChangeService',
-        name: 'Email Change Service',
-        description: 'Update your email address across all SCCCC systems',
-        icon: 'email'
-      },
-      {
-        id: 'GroupManagementService',
-        name: 'Group Management Service',
-        description: 'Manage your mailing list subscriptions',
-        icon: 'groups'
-      },
-      {
-        id: 'ProfileManagementService',
-        name: 'Profile Management Service',
-        description: 'Update your member profile and preferences',
-        icon: 'profile'
-      },
-      {
-        id: 'VotingService',
-        name: 'Voting Service',
-        description: 'Participate in SCCCC elections',
-        icon: 'voting'
-      }
-    ];
+    // Services are passed from server-side via GAS template
+    // This ensures single source of truth - services are defined in 1namespaces.js
+    // and derived via HomePageManager.getAvailableServices()
+    const services = JSON.parse('<?= JSON.stringify(services) ?>');
 
     renderServices(services);
   }

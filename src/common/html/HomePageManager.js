@@ -12,6 +12,9 @@
  * - Manager: Pure logic (testable)
  * - GAS layer: Orchestration and GAS API calls
  * 
+ * Service definitions are sourced from WebServices (defined in 1namespaces.js)
+ * to ensure a single source of truth for service metadata.
+ * 
  * @namespace Common.HomePage.Manager
  */
 
@@ -38,81 +41,96 @@ if (typeof Common.HomePage === 'undefined') Common.HomePage = {};
  * Common.HomePage.Manager - Pure logic class for home page operations
  * All business logic is here and is fully testable with Jest.
  * 
+ * Service definitions are derived from WebServices to ensure single source of truth.
+ * In GAS environment, WebServices is defined in 1namespaces.js.
+ * In Jest environment, WebServices can be mocked or the Manager uses injected services.
+ * 
  * @class
  */
 Common.HomePage.Manager = class {
   /**
-   * Service definitions with metadata
-   * @type {Object.<string, {name: string, description: string, icon: string}>}
+   * Get WebServices object (allows dependency injection for testing)
+   * @private
+   * @param {Object} [webServicesOverride] - Optional WebServices override for testing
+   * @returns {Object} WebServices object
    */
-  static SERVICE_DEFINITIONS = {
-    DirectoryService: {
-      name: 'Directory Service',
-      description: 'View the member directory with contact information',
-      icon: 'directory'
-    },
-    EmailChangeService: {
-      name: 'Email Change Service',
-      description: 'Update your email address across all SCCCC systems',
-      icon: 'email'
-    },
-    GroupManagementService: {
-      name: 'Group Management Service',
-      description: 'Manage your Google Group subscriptions',
-      icon: 'groups'
-    },
-    ProfileManagementService: {
-      name: 'Profile Management Service',
-      description: 'Update your member profile and preferences',
-      icon: 'profile'
-    },
-    VotingService: {
-      name: 'Voting Service',
-      description: 'Participate in SCCCC elections',
-      icon: 'voting'
+  static _getWebServices(webServicesOverride) {
+    if (webServicesOverride) {
+      return webServicesOverride;
     }
-  };
+    // In GAS environment, WebServices is a global
+    if (typeof WebServices !== 'undefined') {
+      return WebServices;
+    }
+    // Fallback for Jest - return empty object (tests should provide mock)
+    return {};
+  }
+
+  /**
+   * Extract service info from a service definition object
+   * @private
+   * @param {string} serviceId - The service identifier
+   * @param {Object} serviceObj - The service object from WebServices
+   * @returns {ServiceInfo|null} Service info or null if invalid
+   */
+  static _extractServiceInfo(serviceId, serviceObj) {
+    // Require serviceObj and a non-empty name property
+    if (!serviceObj || !serviceObj.name) {
+      return null;
+    }
+    return {
+      id: serviceId,
+      name: serviceObj.name, // Already validated as truthy above
+      description: serviceObj.description || '',
+      icon: serviceObj.icon || 'profile'
+    };
+  }
 
   /**
    * Get all available services as ServiceInfo array
+   * Services are derived from WebServices defined in 1namespaces.js
+   * @param {Object} [webServicesOverride] - Optional WebServices override for testing
    * @returns {ServiceInfo[]} Array of service information
    */
-  static getAvailableServices() {
-    return Object.entries(this.SERVICE_DEFINITIONS).map(([id, info]) => ({
-      id,
-      name: info.name,
-      description: info.description,
-      icon: info.icon
-    }));
+  static getAvailableServices(webServicesOverride) {
+    const webServices = this._getWebServices(webServicesOverride);
+    const services = [];
+    
+    for (const [serviceId, serviceObj] of Object.entries(webServices)) {
+      const info = this._extractServiceInfo(serviceId, serviceObj);
+      if (info) {
+        services.push(info);
+      }
+    }
+    
+    return services;
   }
 
   /**
    * Get service info by ID
    * @param {string} serviceId - The service identifier
+   * @param {Object} [webServicesOverride] - Optional WebServices override for testing
    * @returns {ServiceInfo|null} Service info or null if not found
    */
-  static getServiceById(serviceId) {
+  static getServiceById(serviceId, webServicesOverride) {
     if (!serviceId || typeof serviceId !== 'string') {
       return null;
     }
-    const info = this.SERVICE_DEFINITIONS[serviceId];
-    if (!info) {
+    const webServices = this._getWebServices(webServicesOverride);
+    const serviceObj = webServices[serviceId];
+    if (!serviceObj) {
       return null;
     }
-    return {
-      id: serviceId,
-      name: info.name,
-      description: info.description,
-      icon: info.icon
-    };
+    return this._extractServiceInfo(serviceId, serviceObj);
   }
 
   /**
    * Validate a service ID
    * @param {string} serviceId - The service identifier to validate
+   * @param {Object} [webServicesOverride] - Optional WebServices override for testing
    * @returns {{valid: boolean, error?: string, errorCode?: string}}
    */
-  static validateServiceId(serviceId) {
+  static validateServiceId(serviceId, webServicesOverride) {
     if (!serviceId || typeof serviceId !== 'string') {
       return {
         valid: false,
@@ -120,7 +138,8 @@ Common.HomePage.Manager = class {
         errorCode: 'MISSING_SERVICE_ID'
       };
     }
-    if (!this.SERVICE_DEFINITIONS[serviceId]) {
+    const webServices = this._getWebServices(webServicesOverride);
+    if (!webServices[serviceId]) {
       return {
         valid: false,
         error: `Unknown service: ${serviceId}`,
@@ -145,12 +164,13 @@ Common.HomePage.Manager = class {
   /**
    * Build complete home page data
    * @param {string} email - Authenticated user email
+   * @param {Object} [webServicesOverride] - Optional WebServices override for testing
    * @returns {HomePageData} Complete home page data
    */
-  static buildHomePageData(email) {
+  static buildHomePageData(email, webServicesOverride) {
     return {
       email: email || '',
-      services: this.getAvailableServices(),
+      services: this.getAvailableServices(webServicesOverride),
       welcomeMessage: this.generateWelcomeMessage(email)
     };
   }
@@ -169,10 +189,11 @@ Common.HomePage.Manager = class {
 
   /**
    * Get service count
+   * @param {Object} [webServicesOverride] - Optional WebServices override for testing
    * @returns {number} Total number of available services
    */
-  static getServiceCount() {
-    return Object.keys(this.SERVICE_DEFINITIONS).length;
+  static getServiceCount(webServicesOverride) {
+    return this.getAvailableServices(webServicesOverride).length;
   }
 };
 

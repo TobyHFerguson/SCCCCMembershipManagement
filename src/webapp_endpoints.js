@@ -157,6 +157,9 @@ function getHomePageContent(email) {
   template.serviceName = 'Home';
   template.contentFileName = 'common/html/serviceHomePage';
   
+  // Pass services data to template - derived from WebServices (single source of truth)
+  template.services = Common.HomePage.Manager.getAvailableServices();
+  
   // Evaluate the template and return HTML content
   const output = template.evaluate().setTitle('SCCCC Services');
   

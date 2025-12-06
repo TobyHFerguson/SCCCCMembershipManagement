@@ -412,15 +412,17 @@ declare namespace Common {
         }
         
         // Manager class - Pure business logic for home page
+        // Service definitions are derived from WebServices (defined in 1namespaces.js)
         class Manager {
-            static SERVICE_DEFINITIONS: Record<string, { name: string; description: string; icon: string }>;
-            static getAvailableServices(): ServiceInfo[];
-            static getServiceById(serviceId: string): ServiceInfo | null;
-            static validateServiceId(serviceId: string): ValidationResult;
+            static _getWebServices(webServicesOverride?: object): object;
+            static _extractServiceInfo(serviceId: string, serviceObj: object): ServiceInfo | null;
+            static getAvailableServices(webServicesOverride?: object): ServiceInfo[];
+            static getServiceById(serviceId: string, webServicesOverride?: object): ServiceInfo | null;
+            static validateServiceId(serviceId: string, webServicesOverride?: object): ValidationResult;
             static generateWelcomeMessage(email: string): string;
-            static buildHomePageData(email: string): HomePageData;
+            static buildHomePageData(email: string, webServicesOverride?: object): HomePageData;
             static requiresAdditionalAuth(serviceId: string): boolean;
-            static getServiceCount(): number;
+            static getServiceCount(webServicesOverride?: object): number;
         }
     }
 }
@@ -445,14 +447,29 @@ declare namespace GroupsSettings {
     }
 }
 
+// WebService type - defines service metadata structure
+// Additional service-specific properties like WebApp, Data, etc. are typed as object
+interface WebServiceDefinition {
+    name: string;
+    service: string;
+    description: string;
+    icon: string;
+    WebApp?: object;
+    Data?: object;
+    Trigger?: object;
+    Internal?: object;
+    Menu?: object;
+    [key: string]: string | object | undefined;
+}
+
 // WebServices global definition
 declare const WebServices: {
-    DirectoryService: any;
-    EmailChangeService: any;
-    GroupManagementService: any;
-    ProfileManagementService: any;
-    VotingService: any;
-    [key: string]: { name?: string; [key: string]: any };
+    DirectoryService: WebServiceDefinition;
+    EmailChangeService: WebServiceDefinition;
+    GroupManagementService: WebServiceDefinition;
+    ProfileManagementService: WebServiceDefinition;
+    VotingService: WebServiceDefinition;
+    [key: string]: WebServiceDefinition;
 };
 
 // bmPreFiddler namespace - consolidated from fiddler.d.ts

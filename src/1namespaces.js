@@ -16,7 +16,9 @@ const GroupSubscription = {};
 
 const EmailChangeService = {
     name: 'Email Change Service',
-    service: 'EmailChangeService'
+    service: 'EmailChangeService',
+    description: 'Update your email address across all SCCCC systems',
+    icon: 'email'
 }
 
 const EmailService = { Menu: {} }
@@ -24,17 +26,23 @@ const DocsService = { Internal: {} };
 const MembershipManagement = { Internal: {}, Utils: {} }
 const DirectoryService = {
     name: 'Directory Service',
-    service: 'DirectoryService'
+    service: 'DirectoryService',
+    description: 'View the member directory with contact information',
+    icon: 'directory'
 };
 
 const GroupManagementService = {
     name: 'Group Management Service',
-    service: 'GroupManagementService'
+    service: 'GroupManagementService',
+    description: 'Manage your Google Group subscriptions',
+    icon: 'groups'
 };
 
 const ProfileManagementService = {
     name: 'Profile Management Service',
-    service: 'ProfileManagementService'
+    service: 'ProfileManagementService',
+    description: 'Update your member profile and preferences',
+    icon: 'profile'
 }
 
 // Extend VotingService if it already exists (from 0Constants.js), otherwise create it
@@ -46,6 +54,8 @@ if (typeof VotingService === 'undefined') {
 Object.assign(VotingService, {
     name: 'Voting Service',
     service: 'VotingService',
+    description: 'Participate in SCCCC elections',
+    icon: 'voting',
     Data: VotingService.Data || {},
     WebApp: VotingService.WebApp || {},
     Trigger: VotingService.Trigger || {}

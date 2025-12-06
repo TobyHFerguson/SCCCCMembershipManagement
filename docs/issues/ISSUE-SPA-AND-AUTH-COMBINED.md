@@ -344,30 +344,58 @@ When `FEATURE_USE_NEW_AUTH` is permanently enabled (Phase 8 production rollout):
 
 ### Deliverables Completed
 1. ✅ Created `HomePageManager.js` with pure business logic
-   - 100% test coverage (37 tests)
-   - Service definitions for all 5 services
-   - Service validation and lookup
+   - 100% test coverage (43 tests)
+   - Service info derived from WebServices (single source of truth)
+   - Service validation and lookup via dependency injection
    - Welcome message generation
    - Home page data building
 2. ✅ Created `serviceHomePage.html` - Home page UI
    - Lists all 5 services with icons and descriptions
+   - Services data passed from server via GAS template (no duplication)
    - Responsive design using existing CSS framework
+   - XSS protection via HTML escaping
    - Service selection loads service content
    - Sign out functionality
 3. ✅ Added `getHomePageContent()` endpoint in `webapp_endpoints.js`
+   - Passes services from `Common.HomePage.Manager.getAvailableServices()` to template
 4. ✅ Modified `verificationCodeInput.html` to load home page after verification
 5. ✅ Added "Back to Services" navigation link to all service HTML files
 6. ✅ Added navigation styles and helper function to `_Header.html`
 7. ✅ Added type definitions to `global.d.ts`
-8. ✅ All 919 tests pass (882 original + 37 new)
+8. ✅ All 925 tests pass (882 original + 43 new HomePageManager tests)
+
+### Single Source of Truth Architecture
+Service definitions are now defined ONLY in `1namespaces.js`:
+```javascript
+const DirectoryService = {
+    name: 'Directory Service',
+    service: 'DirectoryService',
+    description: 'View the member directory with contact information',
+    icon: 'directory'
+};
+```
+
+`HomePageManager` derives service info from `WebServices` global:
+```javascript
+static getAvailableServices(webServicesOverride) {
+    const webServices = this._getWebServices(webServicesOverride);
+    // ... extract services from WebServices
+}
+```
+
+Tests use dependency injection to provide mock WebServices:
+```javascript
+const services = Manager.getAvailableServices(mockWebServices);
+```
 
 ### Files Created
-- `src/common/html/HomePageManager.js` - Pure business logic
-- `src/common/html/serviceHomePage.html` - Home page HTML with service list
-- `__tests__/HomePageManager.test.js` - 37 tests, 100% coverage
+- `src/common/html/HomePageManager.js` - Pure business logic (derives from WebServices)
+- `src/common/html/serviceHomePage.html` - Home page HTML (receives services from template)
+- `__tests__/HomePageManager.test.js` - 43 tests, 100% coverage
 
 ### Files Modified
-- `src/webapp_endpoints.js` - Added `getHomePageContent()` endpoint
+- `src/1namespaces.js` - Added `description` and `icon` properties to all services
+- `src/webapp_endpoints.js` - `getHomePageContent()` passes services to template
 - `src/common/auth/verificationCodeInput.html` - Now loads home page after verification
 - `src/common/html/_Header.html` - Added navigation styles and `navigateToHomePage()` function
 - `src/services/GroupManagementService/GroupManagementService.html` - Added back link
@@ -375,7 +403,7 @@ When `FEATURE_USE_NEW_AUTH` is permanently enabled (Phase 8 production rollout):
 - `src/services/ProfileManagementService/ProfileManagementForm.html` - Added back link
 - `src/services/EmailChangeService/EmailChangeForm.html` - Added back link
 - `src/services/VotingService/ActiveVotes.html` - Added back link
-- `src/types/global.d.ts` - Added HomePage types
+- `src/types/global.d.ts` - Added HomePage and WebServiceDefinition types
 
 ### Architecture Notes
 - HomePageManager follows GAS Layer Separation pattern (pure, testable)
