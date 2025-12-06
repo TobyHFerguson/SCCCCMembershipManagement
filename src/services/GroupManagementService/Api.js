@@ -79,16 +79,16 @@ GroupManagementService.initApi = function() {
 /**
  * GroupManagementService.Api - API handlers and GAS orchestration
  */
-GroupManagementService.Api = {
-  /**
-   * Handle getSubscriptions API request
-   * Gets user's current group subscription settings
-   * 
-   * @param {Object} params - Request parameters
-   * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
-   * @returns {Common.Api.ApiResponse}
-   */
-  handleGetSubscriptions: function(params) {
+
+/**
+ * Handle getSubscriptions API request
+ * Gets user's current group subscription settings
+ * 
+ * @param {Object} params - Request parameters
+ * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
+ * @returns {Common.Api.ApiResponse}
+ */
+GroupManagementService.Api.handleGetSubscriptions = function(params) {
     const userEmail = params._authenticatedEmail;
     
     if (!userEmail) {
@@ -139,18 +139,18 @@ GroupManagementService.Api = {
         'GET_SUBSCRIPTIONS_ERROR'
       );
     }
-  },
+  };
 
-  /**
-   * Handle updateSubscriptions API request
-   * Updates user's group subscription settings
-   * 
-   * @param {Object} params - Request parameters
-   * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
-   * @param {Array} params.updates - Array of subscription updates
-   * @returns {Common.Api.ApiResponse}
-   */
-  handleUpdateSubscriptions: function(params) {
+/**
+ * Handle updateSubscriptions API request
+ * Updates user's group subscription settings
+ * 
+ * @param {Object} params - Request parameters
+ * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
+ * @param {Array} params.updates - Array of subscription updates
+ * @returns {Common.Api.ApiResponse}
+ */
+GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
     const userEmail = params._authenticatedEmail;
     const updates = params.updates;
 
@@ -236,15 +236,15 @@ GroupManagementService.Api = {
         'UPDATE_SUBSCRIPTIONS_ERROR'
       );
     }
-  },
+  };
 
-  /**
-   * Handle getDeliveryOptions API request
-   * Returns available delivery options for the dropdown
-   * 
-   * @returns {Common.Api.ApiResponse}
-   */
-  handleGetDeliveryOptions: function() {
+/**
+ * Handle getDeliveryOptions API request
+ * Returns available delivery options for the dropdown
+ * 
+ * @returns {Common.Api.ApiResponse}
+ */
+GroupManagementService.Api.handleGetDeliveryOptions = function() {
     try {
       const options = GroupManagementService.Manager.getDeliveryOptionsArray(
         GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions()
@@ -260,18 +260,18 @@ GroupManagementService.Api = {
         'GET_OPTIONS_ERROR'
       );
     }
-  },
+  };
 
-  /**
-   * Execute a subscription action
-   * @private
-   * @param {Object} action - The action to execute
-   * @param {'subscribe'|'update'|'unsubscribe'} action.action - Action type
-   * @param {string} action.groupEmail - Group email
-   * @param {string} action.userEmail - User email
-   * @param {string} [action.deliveryValue] - Delivery setting (for subscribe/update)
-   */
-  _executeAction: function(action) {
+/**
+ * Execute a subscription action
+ * @private
+ * @param {Object} action - The action to execute
+ * @param {'subscribe'|'update'|'unsubscribe'} action.action - Action type
+ * @param {string} action.groupEmail - Group email
+ * @param {string} action.userEmail - User email
+ * @param {string} [action.deliveryValue] - Delivery setting (for subscribe/update)
+ */
+GroupManagementService.Api._executeAction = function(action) {
     switch (action.action) {
       case 'unsubscribe':
         // GAS: Remove member from group
@@ -315,8 +315,7 @@ GroupManagementService.Api = {
       default:
         throw new Error('Unknown action: ' + action.action);
     }
-  }
-};
+  };
 
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {

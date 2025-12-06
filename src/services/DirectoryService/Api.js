@@ -16,6 +16,25 @@
 
 // Namespace declaration pattern (works in both GAS and Jest)
 if (typeof DirectoryService === 'undefined') DirectoryService = {};
+DirectoryService.Api = DirectoryService.Api || {};
+
+/**
+ * Get initial data for DirectoryService SPA
+ * Called by getServiceContent to provide data to client renderer
+ * 
+ * @param {string} email - Authenticated user's email
+ * @returns {Object} Service data for client renderer
+ */
+DirectoryService.Api.getData = function(email) {
+  // GAS: Get directory entries
+  const directoryEntries = DirectoryService.getDirectoryEntries();
+  
+  return {
+    serviceName: 'Directory',
+    directoryEntries: directoryEntries,
+    email: email
+  };
+};
 
 /**
  * Initialize API handlers for DirectoryService
@@ -46,17 +65,17 @@ DirectoryService.initApi = function() {
 /**
  * DirectoryService.Api - API handlers and GAS orchestration
  */
-DirectoryService.Api = {
-  /**
-   * Handle getEntries API request
-   * Gets directory entries for active public members
-   * 
-   * @param {Object} params - Request parameters
-   * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
-   * @param {string} [params.searchTerm] - Optional search term to filter results
-   * @returns {Common.Api.ApiResponse}
-   */
-  handleGetEntries: function(params) {
+
+/**
+ * Handle getEntries API request
+ * Gets directory entries for active public members
+ * 
+ * @param {Object} params - Request parameters
+ * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
+ * @param {string} [params.searchTerm] - Optional search term to filter results
+ * @returns {Common.Api.ApiResponse}
+ */
+DirectoryService.Api.handleGetEntries = function(params) {
     const userEmail = params._authenticatedEmail;
     const searchTerm = params.searchTerm;
     
@@ -99,17 +118,17 @@ DirectoryService.Api = {
         'GET_ENTRIES_ERROR'
       );
     }
-  },
+  };
 
-  /**
-   * Handle getStats API request
-   * Gets directory statistics
-   * 
-   * @param {Object} params - Request parameters
-   * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
-   * @returns {Common.Api.ApiResponse}
-   */
-  handleGetStats: function(params) {
+/**
+ * Handle getStats API request
+ * Gets directory statistics
+ * 
+ * @param {Object} params - Request parameters
+ * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
+ * @returns {Common.Api.ApiResponse}
+ */
+DirectoryService.Api.handleGetStats = function(params) {
     const userEmail = params._authenticatedEmail;
     
     if (!userEmail) {
@@ -137,8 +156,7 @@ DirectoryService.Api = {
         'GET_STATS_ERROR'
       );
     }
-  }
-};
+  };
 
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {
