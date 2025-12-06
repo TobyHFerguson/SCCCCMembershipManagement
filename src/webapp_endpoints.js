@@ -167,6 +167,39 @@ function getHomePageContent(email) {
 }
 
 /**
+ * Render verification page HTML content for sign-out flow
+ * Returns the initial verification code input page
+ * 
+ * @returns {string} HTML content for the verification page
+ */
+function getVerificationPageContent() {
+  console.log('getVerificationPageContent()');
+  
+  // Get service properties
+  const scriptProperties = PropertiesService.getScriptProperties();
+  const mobileBreakpoint = scriptProperties.getProperty('MOBILE_BREAKPOINT') || '767';
+  const tabletMinBreakpoint = scriptProperties.getProperty('TABLET_MIN_BREAKPOINT') || '768';
+  const tabletMaxBreakpoint = scriptProperties.getProperty('TABLET_MAX_BREAKPOINT') || '1032';
+  
+  // Create template
+  const template = HtmlService.createTemplateFromFile('common/html/_Layout.html');
+  template.breakpoints = {
+    mobile: mobileBreakpoint,
+    tabletMin: tabletMinBreakpoint,
+    tabletMax: tabletMaxBreakpoint
+  };
+  template.include = _includeHtml;
+  template.serviceName = '';
+  template.service = '';
+  template.contentFileName = 'common/auth/verificationCodeInput';
+  
+  // Evaluate the template and return HTML content
+  const output = template.evaluate().setTitle('Request Access');
+  
+  return output.getContent();
+}
+
+/**
  * Refresh a session token.
  * Extends the expiration of an existing multi-use token.
  * 

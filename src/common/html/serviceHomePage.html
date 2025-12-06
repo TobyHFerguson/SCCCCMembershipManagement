@@ -239,17 +239,43 @@
     try {
       sessionStorage.removeItem('authToken');
       sessionStorage.removeItem('authenticatedEmail');
+      sessionStorage.removeItem('cachedServices');
     } catch (e) {
       console.warn('Could not clear sessionStorage:', e);
     }
     
-    // Reload the page to go back to the verification code input
-    window.location.reload();
+    // Load the initial verification code input page
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      const container = document.getElementById('serviceList');
+      if (container) {
+        container.innerHTML = '<div class="loading-message">Signing out...</div>';
+      }
+      
+      google.script.run
+        .withSuccessHandler(function(htmlContent) {
+          document.open();
+          document.write(htmlContent);
+          document.close();
+        })
+        .withFailureHandler(function(error) {
+          // If there's an error, show error message
+          if (container) {
+            container.innerHTML = '<div class="loading-message error">Error signing out: ' + error.message + '</div>';
+          }
+        })
+        .getVerificationPageContent();
+    } else {
+      // Fallback to reload if google.script.run not available
+      window.location.reload();
+    }
   }
 
   // Initialize the page
   function initHomePage() {
     const email = getAuthenticatedEmail();
+    
+    // Update browser tab title
+    document.title = 'SCCCC Services';
     
     // Update welcome message
     const welcomeDiv = document.getElementById('welcomeMessage');

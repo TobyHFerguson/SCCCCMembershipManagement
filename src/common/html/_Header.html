@@ -392,6 +392,8 @@
         // If we have cached services, render them directly without a server call
         if (cachedServices && Array.isArray(cachedServices) && cachedServices.length > 0) {
             renderHomePageFromCache(email, cachedServices);
+            // Update browser tab title
+            document.title = 'SCCCC Services';
             return;
         }
         
@@ -441,9 +443,9 @@
             return div.innerHTML;
         }
 
-        // Build the service cards HTML
+        // Build the service cards HTML with data attributes for service IDs
         const serviceCardsHtml = services.map(service => `
-            <div class="service-card" onclick="loadServiceFromHomePage('${escapeHtml(service.id)}')" role="button" tabindex="0">
+            <div class="service-card" data-service-id="${escapeHtml(service.id)}" role="button" tabindex="0">
                 <div class="service-icon">
                     ${serviceIcons[service.icon] || serviceIcons.profile}
                 </div>
@@ -481,11 +483,17 @@
                 <div class="service-list">
                     ${serviceCardsHtml}
                 </div>
-                <a class="sign-out-link" onclick="handleSignOutFromCache()">Sign out</a>
+                <a class="sign-out-link" id="signOutLink">Sign out</a>
             `;
 
-            // Add keyboard navigation to service cards
+            // Add click handlers to service cards using event delegation
             container.querySelectorAll('.service-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const serviceId = this.getAttribute('data-service-id');
+                    if (serviceId) {
+                        loadServiceFromHomePage(serviceId);
+                    }
+                });
                 card.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
@@ -493,6 +501,12 @@
                     }
                 });
             });
+
+            // Add click handler to sign out link
+            const signOutLink = container.querySelector('#signOutLink');
+            if (signOutLink) {
+                signOutLink.addEventListener('click', handleSignOutFromCache);
+            }
         }
     }
 
@@ -533,7 +547,7 @@
     }
 
     /**
-     * Handle sign out from the cached home page view
+     * Handle sign out - clears session and returns to verification page
      */
     function handleSignOutFromCache() {
         try {
@@ -543,7 +557,29 @@
         } catch (e) {
             console.warn('Could not clear sessionStorage:', e);
         }
-        window.location.reload();
+        
+        // Load the initial verification code input page
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+            const container = document.querySelector('.container');
+            if (container) {
+                container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">Signing out...</div>';
+            }
+            
+            google.script.run
+                .withSuccessHandler(function(htmlContent) {
+                    document.open();
+                    document.write(htmlContent);
+                    document.close();
+                })
+                .withFailureHandler(function(error) {
+                    // If there's an error, just reload the page
+                    window.location.reload();
+                })
+                .getVerificationPageContent();
+        } else {
+            // Fallback to reload if google.script.run not available
+            window.location.reload();
+        }
     }
     // Initial check on load
     checkViewportAndApplyClasses();
