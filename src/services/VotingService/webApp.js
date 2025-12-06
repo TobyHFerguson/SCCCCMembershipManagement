@@ -57,8 +57,9 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
         const result = {};
         try {
             result.title = election.Title;
-            result.opens = new Date(election.Start);
-            result.closes = new Date(election.End);
+            // Convert Date objects to ISO strings for serialization via google.script.run
+            result.opens = new Date(election.Start).toISOString();
+            result.closes = new Date(election.End).toISOString();
             if (VotingService.Data.hasVotedAlreadyInThisElection(userEmail, election)) {
                 result.status = "Inactive - you've already voted"
                 return result; // Skip further processing if user has already voted
