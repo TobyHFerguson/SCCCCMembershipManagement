@@ -250,6 +250,9 @@
     }
 
     // Define services (this matches HomePageManager.SERVICE_DEFINITIONS)
+    // NOTE: This is duplicated from HomePageManager.SERVICE_DEFINITIONS because
+    // this client-side JavaScript cannot access server-side GAS code directly.
+    // If services change, update both HomePageManager.SERVICE_DEFINITIONS and this array.
     const services = [
       {
         id: 'DirectoryService',
