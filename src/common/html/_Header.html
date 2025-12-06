@@ -426,6 +426,9 @@
      * Render the home page directly from cached services (no server call)
      */
     function renderHomePageFromCache(email, services) {
+        // Update browser tab title
+        document.title = 'SCCCC Services';
+        
         // SVG icons for services
         const serviceIcons = {
             directory: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>',
@@ -514,9 +517,27 @@
      * Load a service from the cached home page view
      */
     function loadServiceFromHomePage(serviceId) {
+        // Get service name for loading message and title
+        let serviceName = serviceId.replace('Service', ' Service');
+        try {
+            const cachedServicesJson = sessionStorage.getItem('cachedServices');
+            if (cachedServicesJson) {
+                const services = JSON.parse(cachedServicesJson);
+                const service = services.find(s => s.id === serviceId);
+                if (service && service.name) {
+                    serviceName = service.name;
+                }
+            }
+        } catch (e) {
+            console.warn('Could not read cached services:', e);
+        }
+
+        // Update browser tab title immediately
+        document.title = serviceName + ' - SCCCC';
+        
         const container = document.querySelector('.container');
         if (container) {
-            container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">Loading ' + serviceId.replace('Service', ' Service') + '...</div>';
+            container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">Loading ' + serviceName + '...</div>';
         }
 
         let email = '';

@@ -57,7 +57,12 @@ if (typeof Common.Auth === 'undefined') Common.Auth = {};
  */
 
 /**
- * Configuration constants
+ * Configuration constants - can be overridden via script properties for testing
+ * Properties:
+ * - VERIFICATION_CODE_EXPIRY_MINUTES: Minutes until code expires (default: 10)
+ * - VERIFICATION_MAX_ATTEMPTS: Max verification attempts per code (default: 3)
+ * - VERIFICATION_MAX_CODES_PER_HOUR: Max codes per email per hour (default: 5)
+ * - VERIFICATION_RATE_LIMIT_MINUTES: Rate limit window in minutes (default: 60)
  */
 const VERIFICATION_CONFIG = {
   CODE_LENGTH: 6,
@@ -66,6 +71,48 @@ const VERIFICATION_CONFIG = {
   MAX_CODES_PER_EMAIL_PER_HOUR: 5,
   RATE_LIMIT_WINDOW_MINUTES: 60
 };
+
+/**
+ * Get configuration with property overrides for testing
+ * Reads from script properties to allow rate limiting to be disabled/modified for testing
+ * @returns {typeof VERIFICATION_CONFIG}
+ */
+function getVerificationConfig() {
+  const config = { ...VERIFICATION_CONFIG };
+  
+  try {
+    // Only try to read properties in GAS environment
+    if (typeof PropertiesService !== 'undefined') {
+      const props = PropertiesService.getScriptProperties();
+      
+      // Check for testing override properties
+      const expiryMinutes = props.getProperty('VERIFICATION_CODE_EXPIRY_MINUTES');
+      if (expiryMinutes) {
+        config.CODE_EXPIRY_MINUTES = parseInt(expiryMinutes, 10) || config.CODE_EXPIRY_MINUTES;
+      }
+      
+      const maxAttempts = props.getProperty('VERIFICATION_MAX_ATTEMPTS');
+      if (maxAttempts) {
+        config.MAX_VERIFICATION_ATTEMPTS = parseInt(maxAttempts, 10) || config.MAX_VERIFICATION_ATTEMPTS;
+      }
+      
+      const maxCodesPerHour = props.getProperty('VERIFICATION_MAX_CODES_PER_HOUR');
+      if (maxCodesPerHour) {
+        config.MAX_CODES_PER_EMAIL_PER_HOUR = parseInt(maxCodesPerHour, 10) || config.MAX_CODES_PER_EMAIL_PER_HOUR;
+      }
+      
+      const rateLimitMinutes = props.getProperty('VERIFICATION_RATE_LIMIT_MINUTES');
+      if (rateLimitMinutes) {
+        config.RATE_LIMIT_WINDOW_MINUTES = parseInt(rateLimitMinutes, 10) || config.RATE_LIMIT_WINDOW_MINUTES;
+      }
+    }
+  } catch (e) {
+    // In Jest environment, PropertiesService won't be available
+    // That's fine - just use defaults
+  }
+  
+  return config;
+}
 
 /**
  * VerificationCodeManager - Pure logic for verification code operations
@@ -83,10 +130,11 @@ Common.Auth.VerificationCodeManager = class {
    * @returns {string} 6-digit code padded with leading zeros
    */
   static generateCode(randomFn = Math.random) {
+    const config = getVerificationConfig();
     // Generate number 0-999999
     const num = Math.floor(randomFn() * 1000000);
     // Pad to 6 digits
-    return String(num).padStart(VERIFICATION_CONFIG.CODE_LENGTH, '0');
+    return String(num).padStart(config.CODE_LENGTH, '0');
   }
 
   /**
@@ -95,12 +143,13 @@ Common.Auth.VerificationCodeManager = class {
    * @returns {{valid: boolean, error?: string}}
    */
   static validateCodeFormat(code) {
+    const config = getVerificationConfig();
     if (!code || typeof code !== 'string') {
       return { valid: false, error: 'Code must be a non-empty string' };
     }
     const trimmed = code.trim();
-    if (trimmed.length !== VERIFICATION_CONFIG.CODE_LENGTH) {
-      return { valid: false, error: `Code must be exactly ${VERIFICATION_CONFIG.CODE_LENGTH} digits` };
+    if (trimmed.length !== config.CODE_LENGTH) {
+      return { valid: false, error: `Code must be exactly ${config.CODE_LENGTH} digits` };
     }
     if (!/^\d+$/.test(trimmed)) {
       return { valid: false, error: 'Code must contain only digits' };
@@ -129,11 +178,13 @@ Common.Auth.VerificationCodeManager = class {
   /**
    * Calculate expiration time from creation time
    * @param {Date} createdAt - When the code was created
-   * @param {number} [expiryMinutes] - Minutes until expiry
+   * @param {number} [expiryMinutes] - Minutes until expiry (uses config if not provided)
    * @returns {Date} Expiration time
    */
-  static calculateExpiry(createdAt, expiryMinutes = VERIFICATION_CONFIG.CODE_EXPIRY_MINUTES) {
-    return new Date(createdAt.getTime() + expiryMinutes * 60 * 1000);
+  static calculateExpiry(createdAt, expiryMinutes) {
+    const config = getVerificationConfig();
+    const minutes = expiryMinutes !== undefined ? expiryMinutes : config.CODE_EXPIRY_MINUTES;
+    return new Date(createdAt.getTime() + minutes * 60 * 1000);
   }
 
   /**
@@ -156,11 +207,13 @@ Common.Auth.VerificationCodeManager = class {
   /**
    * Check if max attempts exceeded
    * @param {number} attempts - Current attempt count
-   * @param {number} [maxAttempts] - Maximum allowed attempts
+   * @param {number} [maxAttempts] - Maximum allowed attempts (uses config if not provided)
    * @returns {boolean} True if max attempts exceeded
    */
-  static isMaxAttemptsExceeded(attempts, maxAttempts = VERIFICATION_CONFIG.MAX_VERIFICATION_ATTEMPTS) {
-    return attempts >= maxAttempts;
+  static isMaxAttemptsExceeded(attempts, maxAttempts) {
+    const config = getVerificationConfig();
+    const max = maxAttempts !== undefined ? maxAttempts : config.MAX_VERIFICATION_ATTEMPTS;
+    return attempts >= max;
   }
 
   /**
@@ -267,7 +320,8 @@ Common.Auth.VerificationCodeManager = class {
    * @returns {RateLimitResult}
    */
   static checkGenerationRateLimit(existingEntries, now = new Date()) {
-    const windowStart = new Date(now.getTime() - VERIFICATION_CONFIG.RATE_LIMIT_WINDOW_MINUTES * 60 * 1000);
+    const config = getVerificationConfig();
+    const windowStart = new Date(now.getTime() - config.RATE_LIMIT_WINDOW_MINUTES * 60 * 1000);
     
     // Count codes generated in the rate limit window
     const recentCodes = existingEntries.filter(entry => {
@@ -275,7 +329,7 @@ Common.Auth.VerificationCodeManager = class {
       return created >= windowStart && created <= now;
     });
 
-    const remaining = VERIFICATION_CONFIG.MAX_CODES_PER_EMAIL_PER_HOUR - recentCodes.length;
+    const remaining = config.MAX_CODES_PER_EMAIL_PER_HOUR - recentCodes.length;
     
     if (remaining <= 0) {
       // Calculate when the oldest code in the window will expire from rate limit
@@ -284,7 +338,7 @@ Common.Auth.VerificationCodeManager = class {
         .sort((a, b) => a.getTime() - b.getTime())[0];
       
       const retryAfter = Math.ceil(
-        (oldestInWindow.getTime() + VERIFICATION_CONFIG.RATE_LIMIT_WINDOW_MINUTES * 60 * 1000 - now.getTime()) / 1000
+        (oldestInWindow.getTime() + config.RATE_LIMIT_WINDOW_MINUTES * 60 * 1000 - now.getTime()) / 1000
       );
 
       return {
@@ -320,7 +374,7 @@ Common.Auth.VerificationCodeManager = class {
    * @returns {typeof VERIFICATION_CONFIG}
    */
   static getConfig() {
-    return { ...VERIFICATION_CONFIG };
+    return getVerificationConfig();
   }
 };
 
@@ -449,7 +503,8 @@ Common.Auth.VerificationCode = {
       // Normalize email address
       const normalizedEmail = email.trim().toLowerCase();
       const formattedCode = code.slice(0, 3) + '-' + code.slice(3);
-      const expiryMinutes = VERIFICATION_CONFIG.CODE_EXPIRY_MINUTES;
+      const config = getVerificationConfig();
+      const expiryMinutes = config.CODE_EXPIRY_MINUTES;
       
       const message = {
         to: normalizedEmail,
@@ -548,8 +603,9 @@ Common.Auth.VerificationCode = {
     
     try {
       const cache = CacheService.getScriptCache();
-      // Store for 1 hour (rate limit window)
-      cache.put(cacheKey, JSON.stringify(entry), VERIFICATION_CONFIG.RATE_LIMIT_WINDOW_MINUTES * 60);
+      const config = getVerificationConfig();
+      // Store for the rate limit window duration
+      cache.put(cacheKey, JSON.stringify(entry), config.RATE_LIMIT_WINDOW_MINUTES * 60);
     } catch (error) {
       Logger.log('[VerificationCode._storeEntry] Error: ' + error);
       throw error;
@@ -604,6 +660,7 @@ Common.Auth.VerificationCode = {
     
     try {
       const cache = CacheService.getScriptCache();
+      const config = getVerificationConfig();
       const data = cache.get(cacheKey);
       
       // Get existing history or start fresh
@@ -613,11 +670,11 @@ Common.Auth.VerificationCode = {
       timestamps.push(now.toISOString());
       
       // Clean up old entries (older than rate limit window)
-      const windowStart = new Date(now.getTime() - VERIFICATION_CONFIG.RATE_LIMIT_WINDOW_MINUTES * 60 * 1000);
+      const windowStart = new Date(now.getTime() - config.RATE_LIMIT_WINDOW_MINUTES * 60 * 1000);
       timestamps = timestamps.filter(ts => new Date(ts) >= windowStart);
       
       // Store updated history
-      cache.put(cacheKey, JSON.stringify(timestamps), VERIFICATION_CONFIG.RATE_LIMIT_WINDOW_MINUTES * 60);
+      cache.put(cacheKey, JSON.stringify(timestamps), config.RATE_LIMIT_WINDOW_MINUTES * 60);
     } catch (error) {
       Logger.log('[VerificationCode._addToRateLimitHistory] Error: ' + error);
       // Don't throw - rate limiting is secondary to verification functionality
@@ -630,6 +687,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = { 
     VerificationCode: Common.Auth.VerificationCode,
     VerificationCodeManager: Common.Auth.VerificationCodeManager,
-    VERIFICATION_CONFIG
+    VERIFICATION_CONFIG,
+    getVerificationConfig
   };
 }

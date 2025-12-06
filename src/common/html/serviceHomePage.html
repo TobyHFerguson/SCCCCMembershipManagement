@@ -210,9 +210,27 @@
 
   // Load a specific service
   function loadService(serviceId) {
+    // Get service name from cached services for title and loading message
+    let serviceName = serviceId.replace('Service', ' Service');
+    try {
+      const cachedServicesJson = sessionStorage.getItem('cachedServices');
+      if (cachedServicesJson) {
+        const services = JSON.parse(cachedServicesJson);
+        const service = services.find(s => s.id === serviceId);
+        if (service && service.name) {
+          serviceName = service.name;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not read cached services:', e);
+    }
+
+    // Update browser tab title immediately
+    document.title = serviceName + ' - SCCCC';
+
     const container = document.getElementById('serviceList');
     if (container) {
-      container.innerHTML = '<div class="loading-message">Loading ' + serviceId.replace('Service', ' Service') + '...</div>';
+      container.innerHTML = '<div class="loading-message">Loading ' + serviceName + '...</div>';
     }
 
     const email = getAuthenticatedEmail();
