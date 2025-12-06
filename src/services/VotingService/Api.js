@@ -18,6 +18,28 @@
 // Namespace declaration pattern (works in both GAS and Jest)
 if (typeof VotingService === 'undefined') VotingService = {};
 
+VotingService.Api = VotingService.Api || {};
+
+/**
+ * Get initial data for rendering VotingService
+ * Called by getServiceContent() for SPA initial page load
+ * 
+ * @param {string} email - Authenticated user email
+ * @returns {{serviceName: string, elections: Array}} Service data
+ */
+VotingService.Api.getData = function(email) {
+  console.log('VotingService.Api.getData(', email, ')');
+  
+  // Get processed elections (already filtered and formatted for display)
+  // This reuses the existing WebApp logic
+  const elections = VotingService.WebApp._getElectionsForTemplate(email);
+  
+  return {
+    serviceName: 'Voting',
+    elections: elections
+  };
+};
+
 /**
  * Initialize API handlers for VotingService
  * This should be called once during application startup

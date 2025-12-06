@@ -748,6 +748,686 @@
         `;
     }
     
+    // GroupManagementService renderer
+    function renderGroupManagementService(data, container) {
+        console.log('renderGroupManagementService:', data);
+        
+        // Get subscription data and delivery options
+        const subscriptions = data.subscriptions || [];
+        const deliveryOptions = data.deliveryOptions || {};
+        
+        // Build subscription rows HTML
+        const subscriptionRows = subscriptions.map(sub => {
+            const optionsHTML = Object.entries(deliveryOptions).map(([valueKey, [displayValue, tooltip]]) => {
+                const selected = sub.deliveryValue === valueKey ? 'selected' : '';
+                return `<option value="${escapeHtml(valueKey)}" ${selected} data-tooltip="${escapeHtml(tooltip)}" title="${escapeHtml(tooltip)}">${escapeHtml(displayValue)}</option>`;
+            }).join('');
+            
+            return `
+                <div class="subscription-row" data-group-name="${escapeHtml(sub.groupName)}" data-group-email="${escapeHtml(sub.groupEmail)}" data-original-delivery-value="${escapeHtml(sub.deliveryValue)}">
+                    <span class="group-name">${escapeHtml(sub.groupName)}</span>
+                    <div class="delivery-select-container">
+                        <select class="delivery-select" name="${escapeHtml(sub.groupEmail)}">
+                            ${optionsHTML}
+                        </select>
+                        <div class="custom-tooltip" id="tooltip-${escapeHtml(sub.groupEmail)}"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        container.innerHTML = `
+            <style>
+                #subscriptionForm {
+                    margin: 0 auto;
+                    padding: 20px;
+                    border-radius: 8px;
+                    box-shadow: none;
+                    width: 100%;
+                    max-width: 600px;
+                    display: grid;
+                    grid-template-columns: auto 1fr;
+                    gap: 10px;
+                    align-items: center;
+                }
+                
+                .subscription-row {
+                    display: contents;
+                    border-bottom: 1px solid #eee;
+                    padding-bottom: 8px;
+                    margin-bottom: 8px;
+                }
+                
+                .subscription-row:last-child {
+                    border-bottom: none;
+                    margin-bottom: 0;
+                    padding-bottom: 0;
+                }
+                
+                .group-name {
+                    text-align: left;
+                    padding-right: 10px;
+                }
+                
+                .delivery-select-container {
+                    position: relative;
+                    text-align: left;
+                }
+                
+                .delivery-select {
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                    box-sizing: border-box;
+                }
+                
+                .custom-tooltip {
+                    position: absolute;
+                    background-color: rgba(0, 0, 0, 0.8);
+                    color: #f9f9f9;
+                    padding: 5px 8px;
+                    border-radius: 3px;
+                    font-size: 0.8em;
+                    z-index: 10;
+                    display: none;
+                    white-space: nowrap;
+                    top: 100%;
+                    left: 0;
+                    transform: translateY(5px);
+                    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+                }
+                
+                .buttons-container {
+                    grid-column: 1 / 3;
+                    margin-top: 20px;
+                    text-align: center;
+                }
+                
+                .message {
+                    grid-column: 1 / 3;
+                    margin-top: 10px;
+                    padding: 10px;
+                    border-radius: 4px;
+                    display: none;
+                    text-align: center;
+                }
+                
+                .message.success {
+                    background-color: #d4edda;
+                    color: #155724;
+                    border: 1px solid #c3e6cb;
+                }
+                
+                .message.error {
+                    background-color: #f8d7da;
+                    color: #721c24;
+                    border: 1px solid #f5c6cb;
+                }
+            </style>
+            
+            <div style="padding: 1rem;">
+                <h2>Manage Your SCCCC Group Subscriptions</h2>
+                
+                <form id="subscriptionForm">
+                    ${subscriptionRows}
+                    
+                    <div class="buttons-container">
+                        <button type="button" id="resetButton">Reset</button>
+                        <button type="submit" id="applyButton" disabled>Apply Changes</button>
+                    </div>
+                    
+                    <div id="submissionMessage" class="message"></div>
+                </form>
+                
+                <p style="margin-top: 2rem;">
+                    <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                </p>
+            </div>
+        `;
+        
+        // Initialize form behavior after rendering
+        initializeGroupManagementForm();
+    }
+    
+    // Initialize GroupManagement form interactions
+    function initializeGroupManagementForm() {
+        const subscriptionForm = document.getElementById('subscriptionForm');
+        const deliverySelects = document.querySelectorAll('.delivery-select');
+        const tooltipDelay = 50;
+        const resetButton = document.getElementById('resetButton');
+        const applyButton = document.getElementById('applyButton');
+        const submissionMessage = document.getElementById('submissionMessage');
+        
+        let changesMade = false;
+        const originalSubscriptions = {};
+        
+        // Store original state
+        deliverySelects.forEach(select => {
+            const row = select.closest('.subscription-row');
+            const groupEmail = row.dataset.groupEmail;
+            const originalDeliveryValue = row.dataset.originalDeliveryValue;
+            const selectedOption = select.options[select.selectedIndex];
+            const originalDeliveryName = selectedOption.textContent;
+            originalSubscriptions[groupEmail] = { name: originalDeliveryName, value: originalDeliveryValue };
+        });
+        
+        function checkChanges() {
+            changesMade = false;
+            deliverySelects.forEach(select => {
+                const groupEmail = select.name;
+                const selectedValue = select.value;
+                if (originalSubscriptions[groupEmail] && originalSubscriptions[groupEmail].value !== selectedValue) {
+                    changesMade = true;
+                }
+            });
+            applyButton.disabled = !changesMade;
+            if (changesMade) {
+                clearMessage();
+            }
+        }
+        
+        function displayMessage(message, type) {
+            submissionMessage.textContent = message;
+            submissionMessage.classList.remove('success', 'error');
+            submissionMessage.classList.add(type);
+            submissionMessage.style.display = 'block';
+        }
+        
+        function clearMessage() {
+            submissionMessage.textContent = '';
+            submissionMessage.classList.remove('success', 'error');
+            submissionMessage.style.display = 'none';
+        }
+        
+        // Change detection
+        deliverySelects.forEach(select => {
+            select.addEventListener('change', checkChanges);
+        });
+        
+        // Tooltip logic
+        deliverySelects.forEach(select => {
+            let tooltipTimeout;
+            const tooltipId = `tooltip-${select.name}`;
+            const tooltipElement = document.getElementById(tooltipId);
+            
+            select.addEventListener('mouseenter', () => {
+                const selectedOption = select.options[select.selectedIndex];
+                if (selectedOption && selectedOption.dataset.tooltip) {
+                    tooltipTimeout = setTimeout(() => {
+                        tooltipElement.textContent = selectedOption.dataset.tooltip;
+                        tooltipElement.style.display = 'block';
+                    }, tooltipDelay);
+                }
+            });
+            
+            select.addEventListener('mouseleave', () => {
+                clearTimeout(tooltipTimeout);
+                tooltipElement.style.display = 'none';
+            });
+            
+            select.addEventListener('blur', () => {
+                clearTimeout(tooltipTimeout);
+                tooltipElement.style.display = 'none';
+            });
+        });
+        
+        // Reset button
+        resetButton.addEventListener('click', function() {
+            clearMessage();
+            deliverySelects.forEach(select => {
+                const groupEmail = select.name;
+                if (originalSubscriptions[groupEmail]) {
+                    select.value = originalSubscriptions[groupEmail].value;
+                }
+            });
+            changesMade = false;
+            applyButton.disabled = true;
+        });
+        
+        // Form submission
+        subscriptionForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const updatedSubscriptions = [];
+            deliverySelects.forEach(select => {
+                const groupEmail = select.name;
+                const newDeliveryValue = select.value;
+                if (originalSubscriptions[groupEmail] && originalSubscriptions[groupEmail].value !== newDeliveryValue) {
+                    updatedSubscriptions.push({
+                        groupEmail: groupEmail,
+                        deliveryValue: newDeliveryValue
+                    });
+                }
+            });
+            
+            if (updatedSubscriptions.length === 0) {
+                displayMessage('No changes to apply.', 'error');
+                return;
+            }
+            
+            disableForm(subscriptionForm);
+            displayMessage('Updating subscriptions...', 'success');
+            
+            // Call server API to update subscriptions
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    enableForm(subscriptionForm);
+                    const result = typeof response === 'string' ? JSON.parse(response) : response;
+                    if (result.success) {
+                        displayMessage(result.message, 'success');
+                        // Update original subscriptions to reflect new state
+                        updatedSubscriptions.forEach(updated => {
+                            const select = document.querySelector(`.delivery-select[name="${updated.groupEmail}"]`);
+                            if (select) {
+                                const row = select.closest('.subscription-row');
+                                row.dataset.originalDeliveryValue = updated.deliveryValue;
+                                const selectedOption = select.options[select.selectedIndex];
+                                originalSubscriptions[updated.groupEmail] = {
+                                    name: selectedOption.textContent,
+                                    value: updated.deliveryValue
+                                };
+                            }
+                        });
+                        changesMade = false;
+                        applyButton.disabled = true;
+                    } else {
+                        displayMessage(result.message || 'Update failed', 'error');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    enableForm(subscriptionForm);
+                    displayMessage('Error updating subscriptions: ' + error.message, 'error');
+                })
+                .updateUserSubscriptions(updatedSubscriptions, sessionStorage.getItem('authToken'));
+        });
+    }
+    
+    // ProfileManagementService renderer
+    function renderProfileManagementService(data, container) {
+        console.log('renderProfileManagementService:', data);
+        
+        const profile = data.profile || {};
+        
+        container.innerHTML = `
+            <style>
+                #profileForm {
+                    margin: 0 auto;
+                    padding: 20px;
+                    max-width: 600px;
+                    display: grid;
+                    grid-template-columns: auto 1fr;
+                    gap: 15px;
+                    align-items: center;
+                }
+                
+                #profileForm label {
+                    text-align: right;
+                    padding-right: 10px;
+                    font-weight: bold;
+                }
+                
+                #profileForm input {
+                    padding: 8px;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                }
+                
+                .buttons-container {
+                    grid-column: 1 / 3;
+                    margin-top: 20px;
+                    text-align: center;
+                }
+                
+                .message {
+                    grid-column: 1 / 3;
+                    margin-top: 10px;
+                    padding: 10px;
+                    border-radius: 4px;
+                    display: none;
+                    text-align: center;
+                }
+                
+                .message.success {
+                    background-color: #d4edda;
+                    color: #155724;
+                }
+                
+                .message.error {
+                    background-color: #f8d7da;
+                    color: #721c24;
+                }
+            </style>
+            
+            <div style="padding: 1rem;">
+                <h2>Manage Your Profile</h2>
+                
+                <form id="profileForm">
+                    <label for="firstName">First Name:</label>
+                    <input type="text" id="firstName" name="firstName" value="${escapeHtml(profile.firstName || '')}" required>
+                    
+                    <label for="lastName">Last Name:</label>
+                    <input type="text" id="lastName" name="lastName" value="${escapeHtml(profile.lastName || '')}" required>
+                    
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" value="${escapeHtml(profile.email || data.email || '')}" readonly>
+                    
+                    <label for="phone">Phone:</label>
+                    <input type="tel" id="phone" name="phone" value="${escapeHtml(profile.phone || '')}">
+                    
+                    <div class="buttons-container">
+                        <button type="button" id="resetButton">Reset</button>
+                        <button type="submit" id="saveButton" disabled>Save Changes</button>
+                    </div>
+                    
+                    <div id="profileMessage" class="message"></div>
+                </form>
+                
+                <p style="margin-top: 2rem;">
+                    <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                </p>
+            </div>
+        `;
+        
+        initializeProfileManagementForm(profile);
+    }
+    
+    // Initialize ProfileManagement form
+    function initializeProfileManagementForm(originalProfile) {
+        const form = document.getElementById('profileForm');
+        const resetButton = document.getElementById('resetButton');
+        const saveButton = document.getElementById('saveButton');
+        const message = document.getElementById('profileMessage');
+        const inputs = form.querySelectorAll('input:not([readonly])');
+        
+        function checkChanges() {
+            let changed = false;
+            inputs.forEach(input => {
+                if (input.value !== (originalProfile[input.name] || '')) {
+                    changed = true;
+                }
+            });
+            saveButton.disabled = !changed;
+        }
+        
+        function displayMessage(msg, type) {
+            message.textContent = msg;
+            message.classList.remove('success', 'error');
+            message.classList.add(type);
+            message.style.display = 'block';
+        }
+        
+        function clearMessage() {
+            message.textContent = '';
+            message.classList.remove('success', 'error');
+            message.style.display = 'none';
+        }
+        
+        inputs.forEach(input => {
+            input.addEventListener('input', checkChanges);
+        });
+        
+        resetButton.addEventListener('click', function() {
+            inputs.forEach(input => {
+                input.value = originalProfile[input.name] || '';
+            });
+            clearMessage();
+            saveButton.disabled = true;
+        });
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const updatedProfile = {};
+            inputs.forEach(input => {
+                updatedProfile[input.name] = input.value;
+            });
+            
+            disableForm(form);
+            displayMessage('Saving profile...', 'success');
+            
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    enableForm(form);
+                    const result = typeof response === 'string' ? JSON.parse(response) : response;
+                    if (result.success) {
+                        displayMessage(result.message, 'success');
+                        // Update original profile
+                        Object.assign(originalProfile, updatedProfile);
+                        saveButton.disabled = true;
+                    } else {
+                        displayMessage(result.message || 'Save failed', 'error');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    enableForm(form);
+                    displayMessage('Error saving profile: ' + error.message, 'error');
+                })
+                .updateProfile(sessionStorage.getItem('authToken'), updatedProfile);
+        });
+    }
+    
+    // EmailChangeService renderer
+    function renderEmailChangeService(data, container) {
+        console.log('renderEmailChangeService:', data);
+        
+        container.innerHTML = `
+            <style>
+                #emailChangeForm {
+                    margin: 0 auto;
+                    padding: 20px;
+                    max-width: 500px;
+                }
+                
+                #emailChangeForm label {
+                    display: block;
+                    margin-top: 15px;
+                    font-weight: bold;
+                }
+                
+                #emailChangeForm input {
+                    width: 100%;
+                    padding: 8px;
+                    margin-top: 5px;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                    box-sizing: border-box;
+                }
+                
+                .buttons-container {
+                    margin-top: 20px;
+                    text-align: center;
+                }
+                
+                .message {
+                    margin-top: 15px;
+                    padding: 10px;
+                    border-radius: 4px;
+                    display: none;
+                    text-align: center;
+                }
+                
+                .message.success {
+                    background-color: #d4edda;
+                    color: #155724;
+                }
+                
+                .message.error {
+                    background-color: #f8d7da;
+                    color: #721c24;
+                }
+            </style>
+            
+            <div style="padding: 1rem;">
+                <h2>Change Your Email Address</h2>
+                
+                <form id="emailChangeForm">
+                    <label for="currentEmail">Current Email:</label>
+                    <input type="email" id="currentEmail" value="${escapeHtml(data.currentEmail || '')}" readonly>
+                    
+                    <label for="newEmail">New Email:</label>
+                    <input type="email" id="newEmail" name="newEmail" required>
+                    
+                    <label for="confirmEmail">Confirm New Email:</label>
+                    <input type="email" id="confirmEmail" name="confirmEmail" required>
+                    
+                    <div class="buttons-container">
+                        <button type="submit" id="submitButton">Request Email Change</button>
+                    </div>
+                    
+                    <div id="emailChangeMessage" class="message"></div>
+                </form>
+                
+                <p style="margin-top: 2rem;">
+                    <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                </p>
+            </div>
+        `;
+        
+        initializeEmailChangeForm();
+    }
+    
+    // Initialize EmailChange form
+    function initializeEmailChangeForm() {
+        const form = document.getElementById('emailChangeForm');
+        const newEmail = document.getElementById('newEmail');
+        const confirmEmail = document.getElementById('confirmEmail');
+        const message = document.getElementById('emailChangeMessage');
+        
+        function displayMessage(msg, type) {
+            message.textContent = msg;
+            message.classList.remove('success', 'error');
+            message.classList.add(type);
+            message.style.display = 'block';
+        }
+        
+        function clearMessage() {
+            message.textContent = '';
+            message.classList.remove('success', 'error');
+            message.style.display = 'none';
+        }
+        
+        [newEmail, confirmEmail].forEach(input => {
+            input.addEventListener('input', clearMessage);
+        });
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (newEmail.value !== confirmEmail.value) {
+                displayMessage('Email addresses do not match', 'error');
+                return;
+            }
+            
+            disableForm(form);
+            displayMessage('Processing email change request...', 'success');
+            
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    enableForm(form);
+                    const result = typeof response === 'string' ? JSON.parse(response) : response;
+                    if (result.success) {
+                        displayMessage(result.message || 'Verification code sent to new email address', 'success');
+                        form.reset();
+                    } else {
+                        displayMessage(result.message || 'Request failed', 'error');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    enableForm(form);
+                    displayMessage('Error: ' + error.message, 'error');
+                })
+                .handleSendVerificationCode(newEmail.value, document.getElementById('currentEmail').value);
+        });
+    }
+    
+    // VotingService renderer
+    function renderVotingService(data, container) {
+        console.log('renderVotingService:', data);
+        
+        const elections = data.elections || [];
+        
+        const electionsHTML = elections.length === 0 
+            ? '<p>There are no active elections at this time.</p>'
+            : elections.map(election => {
+                const statusClass = election.status === 'Active' ? 'active' : 'inactive';
+                return `
+                    <div class="election ${statusClass}">
+                        <h3>${escapeHtml(election.title)}</h3>
+                        ${election.opens ? `<p><strong>Opens:</strong> ${escapeHtml(new Date(election.opens).toLocaleString())}</p>` : ''}
+                        ${election.closes ? `<p><strong>Closes:</strong> ${escapeHtml(new Date(election.closes).toLocaleString())}</p>` : ''}
+                        <p><strong>Status:</strong> ${escapeHtml(election.status)}</p>
+                        ${election.url ? `<p><a href="${escapeHtml(election.url)}" target="_blank" class="vote-button">Vote Now</a></p>` : ''}
+                    </div>
+                `;
+            }).join('');
+        
+        container.innerHTML = `
+            <style>
+                .elections-container {
+                    margin: 0 auto;
+                    padding: 20px;
+                    max-width: 800px;
+                }
+                
+                .election {
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    padding: 20px;
+                    margin-bottom: 20px;
+                    background-color: #fff;
+                }
+                
+                .election.active {
+                    border-color: #28a745;
+                    background-color: #f0fff4;
+                }
+                
+                .election.inactive {
+                    background-color: #f8f9fa;
+                }
+                
+                .election h3 {
+                    margin-top: 0;
+                    color: #333;
+                }
+                
+                .vote-button {
+                    display: inline-block;
+                    padding: 10px 20px;
+                    background-color: #007bff;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 4px;
+                    font-weight: bold;
+                }
+                
+                .vote-button:hover {
+                    background-color: #0056b3;
+                }
+            </style>
+            
+            <div class="elections-container">
+                <h2>SCCCC Voting</h2>
+                ${electionsHTML}
+                <p style="margin-top: 2rem;">
+                    <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                </p>
+            </div>
+        `;
+    }
+    
+    function renderGenericService(serviceName, data, container) {
+        container.innerHTML = `
+            <div style="padding: 1rem;">
+                <h2>${escapeHtml(serviceName)}</h2>
+                <p>Service data loaded. This service needs a custom renderer.</p>
+                <pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>
+                <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+            </div>
+        `;
+    }
+    
     // Main service renderer - routes to specific service renderers
     function renderService(serviceId, data, container) {
         console.log('renderService:', serviceId, data);
@@ -769,11 +1449,16 @@
                 renderDirectoryService(data, container);
                 break;
             case 'GroupManagementService':
+                renderGroupManagementService(data, container);
+                break;
             case 'ProfileManagementService':
+                renderProfileManagementService(data, container);
+                break;
             case 'EmailChangeService':
+                renderEmailChangeService(data, container);
+                break;
             case 'VotingService':
-                // These will need their own renderers
-                renderGenericService(data.serviceName || serviceId, data, container);
+                renderVotingService(data, container);
                 break;
             default:
                 renderGenericService(serviceId, data, container);

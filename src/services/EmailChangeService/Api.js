@@ -17,6 +17,25 @@
 // Namespace declaration pattern (works in both GAS and Jest)
 if (typeof EmailChangeService === 'undefined') EmailChangeService = {};
 
+EmailChangeService.Api = EmailChangeService.Api || {};
+
+/**
+ * Get initial data for rendering EmailChangeService
+ * Called by getServiceContent() for SPA initial page load
+ * 
+ * @param {string} email - Authenticated user email
+ * @returns {{serviceName: string, currentEmail: string}} Service data
+ */
+EmailChangeService.Api.getData = function(email) {
+  console.log('EmailChangeService.Api.getData(', email, ')');
+  
+  return {
+    serviceName: 'Email Change',
+    currentEmail: email,
+    email: email
+  };
+};
+
 /**
  * Script properties key prefix for verification data
  */
@@ -64,21 +83,21 @@ EmailChangeService.initApi = function() {
 };
 
 /**
- * EmailChangeService.Api - API handlers and GAS orchestration
+ * EmailChangeService.Api handlers - Add to existing Api object
  */
-EmailChangeService.Api = {
-  /**
-   * Handle sendVerificationCode API request
-   * Generates and sends a verification code to the new email
-   * 
-   * @param {Object} params - Request parameters
-   * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
-   * @param {string} params.newEmail - The new email address to verify
-   * @returns {Common.Api.ApiResponse}
-   */
-  handleSendVerificationCode: function(params) {
-    const originalEmail = params._authenticatedEmail;
-    const newEmail = params.newEmail;
+
+/**
+ * Handle sendVerificationCode API request
+ * Generates and sends a verification code to the new email
+ * 
+ * @param {Object} params - Request parameters
+ * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
+ * @param {string} params.newEmail - The new email address to verify
+ * @returns {Common.Api.ApiResponse}
+ */
+EmailChangeService.Api.handleSendVerificationCode = function(params) {
+  const originalEmail = params._authenticatedEmail;
+  const newEmail = params.newEmail;
 
     // Validate original email is available
     if (!originalEmail) {
@@ -150,17 +169,17 @@ EmailChangeService.Api = {
     }
   },
 
-  /**
-   * Handle verifyAndGetGroups API request
-   * Verifies the code and returns list of groups to update
-   * 
-   * @param {Object} params - Request parameters
-   * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
-   * @param {string} params.newEmail - The new email address
-   * @param {string} params.verificationCode - The verification code
-   * @returns {Common.Api.ApiResponse}
-   */
-  handleVerifyAndGetGroups: function(params) {
+/**
+ * Handle verifyAndGetGroups API request
+ * Verifies the code and returns list of groups the user is a member of
+ * 
+ * @param {Object} params - Request parameters
+ * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
+ * @param {string} params.newEmail - The new email address
+ * @param {string} params.verificationCode - The verification code
+ * @returns {Common.Api.ApiResponse}
+ */
+EmailChangeService.Api.handleVerifyAndGetGroups = function(params) {
     const originalEmail = params._authenticatedEmail;
     const newEmail = params.newEmail;
     const verificationCode = params.verificationCode;
@@ -234,19 +253,19 @@ EmailChangeService.Api = {
         'VERIFY_ERROR'
       );
     }
-  },
+};
 
-  /**
-   * Handle changeEmail API request
-   * Executes the email change in all groups and spreadsheets
-   * 
-   * @param {Object} params - Request parameters
-   * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
-   * @param {string} params.newEmail - The new email address
-   * @param {Array} params.groups - Array of group membership info
-   * @returns {Common.Api.ApiResponse}
-   */
-  handleChangeEmail: function(params) {
+/**
+ * Handle changeEmail API request
+ * Executes the email change in all groups and spreadsheets
+ * 
+ * @param {Object} params - Request parameters
+ * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
+ * @param {string} params.newEmail - The new email address
+ * @param {Array} params.groups - Array of group membership info
+ * @returns {Common.Api.ApiResponse}
+ */
+EmailChangeService.Api.handleChangeEmail = function(params) {
     const originalEmail = params._authenticatedEmail;
     const newEmail = params.newEmail;
     const groups = params.groups;
@@ -332,23 +351,23 @@ EmailChangeService.Api = {
 
   // ==================== GAS Helper Functions ====================
 
-  /**
-   * Store verification data in Script Properties
-   * @param {string} code - The verification code (used as key suffix)
-   * @param {Object} data - The verification data to store
-   */
-  storeVerificationData: function(code, data) {
+/**
+ * Store verification data in Script Properties
+ * @param {string} code - The verification code (used as key suffix)
+ * @param {Object} data - The verification data to store
+ */
+EmailChangeService.Api.storeVerificationData = function(code, data) {
     const key = VERIFICATION_KEY_PREFIX + code;
     const value = JSON.stringify(data);
     PropertiesService.getScriptProperties().setProperty(key, value);
-  },
+};
 
-  /**
-   * Get verification data from Script Properties
-   * @param {string} code - The verification code
-   * @returns {Object|null} The verification data or null if not found/expired
-   */
-  getVerificationData: function(code) {
+/**
+ * Retrieve verification data from Script Properties
+ * @param {string} code - The verification code (used as key suffix)
+ * @returns {Object|null} The verification data or null if not found/expired
+ */
+EmailChangeService.Api.getVerificationData = function(code) {
     const key = VERIFICATION_KEY_PREFIX + code;
     const storedData = PropertiesService.getScriptProperties().getProperty(key);
     
@@ -369,24 +388,24 @@ EmailChangeService.Api = {
       Logger.log('[EmailChangeService.Api] Error parsing verification data: ' + e);
       return null;
     }
-  },
+};
 
-  /**
-   * Delete verification data from Script Properties
-   * @param {string} code - The verification code
-   */
-  deleteVerificationData: function(code) {
+/**
+ * Delete verification data from Script Properties
+ * @param {string} code - The verification code
+ */
+EmailChangeService.Api.deleteVerificationData = function(code) {
     const key = VERIFICATION_KEY_PREFIX + code;
     PropertiesService.getScriptProperties().deleteProperty(key);
-  },
+};
 
-  /**
-   * Send verification email
-   * @param {string} email - The email address to send to
-   * @param {{subject: string, body: string, htmlBody: string}} content - Email content
-   * @returns {boolean} True if email was sent successfully
-   */
-  sendVerificationEmail: function(email, content) {
+/**
+ * Send verification email
+ * @param {string} email - The email address to send to
+ * @param {{subject: string, body: string, htmlBody: string}} content - Email content
+ * @returns {boolean} True if email was sent successfully
+ */
+EmailChangeService.Api.sendVerificationEmail = function(email, content) {
     try {
       MailApp.sendEmail({
         to: email,
@@ -399,14 +418,14 @@ EmailChangeService.Api = {
       Logger.log('[EmailChangeService.Api] Error sending verification email: ' + error);
       return false;
     }
-  },
+};
 
-  /**
-   * Change email in spreadsheets
-   * @param {string} oldEmail - The original email (normalized)
-   * @param {string} newEmail - The new email (normalized)
-   */
-  changeEmailInSpreadsheets: function(oldEmail, newEmail) {
+/**
+ * Change email in spreadsheets
+ * @param {string} oldEmail - The original email (normalized)
+ * @param {string} newEmail - The new email (normalized)
+ */
+EmailChangeService.Api.changeEmailInSpreadsheets = function(oldEmail, newEmail) {
     for (const ref of EMAIL_CHANGE_SHEET_REFS) {
       try {
         const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler(ref);
@@ -421,26 +440,25 @@ EmailChangeService.Api = {
         Logger.log('[EmailChangeService.Api] Error updating ' + ref + ': ' + error);
       }
     }
-  },
+};
 
-  /**
-   * Log email change to EmailChange sheet
-   * @param {string} oldEmail - The original email (normalized)
-   * @param {string} newEmail - The new email (normalized)
-   */
-  logEmailChange: function(oldEmail, newEmail) {
-    try {
-      // PURE: Create log entry
-      const entry = EmailChangeService.Manager.createChangeLogEntry(oldEmail, newEmail);
-      
-      // GAS: Append to log sheet
-      const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('EmailChange');
-      const data = fiddler.getData();
-      data.push(entry);
-      fiddler.setData(data).dumpValues();
-    } catch (error) {
-      Logger.log('[EmailChangeService.Api] Error logging email change: ' + error);
-    }
+/**
+ * Log email change to EmailChange sheet
+ * @param {string} oldEmail - The original email (normalized)
+ * @param {string} newEmail - The new email (normalized)
+ */
+EmailChangeService.Api.logEmailChange = function(oldEmail, newEmail) {
+  try {
+    // PURE: Create log entry
+    const entry = EmailChangeService.Manager.createChangeLogEntry(oldEmail, newEmail);
+    
+    // GAS: Append to log sheet
+    const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('EmailChange');
+    const data = fiddler.getData();
+    data.push(entry);
+    fiddler.setData(data).dumpValues();
+  } catch (error) {
+    Logger.log('[EmailChangeService.Api] Error logging email change: ' + error);
   }
 };
 

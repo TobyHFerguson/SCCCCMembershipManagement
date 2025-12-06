@@ -7,6 +7,8 @@ applyTo: '**'
 ## Project Overview
 Google Apps Script (GAS) membership management system for SCCCC. Hybrid TypeScript/JavaScript with pure-logic core functions tested via Jest, and GAS-specific wrappers for runtime integration.
 
+**Architecture**: Data-driven Single Page Application (SPA) where server returns JSON data and client renders HTML. See `docs/SPA_ARCHITECTURE.md` for complete documentation.
+
 ## Setup and Commands
 
 **Install dependencies:**
@@ -228,10 +230,68 @@ function onOpen() {
 Each service (`MembershipManagement`, `VotingService`, `DirectoryService`, etc.) follows namespace pattern:
 - **`Service.Internal`**: Private GAS-dependent initialization helpers
 - **`Service.Manager`**: Pure logic class (testable)
-- **`Service.WebApp`**: Web UI handlers (doGet/doPost endpoints)
+- **`Service.WebApp`**: Web UI handlers (doGet/doPost endpoints) - DEPRECATED for SPA services
+- **`Service.Api`**: Data endpoints for SPA services (returns JSON, not HTML)
 - **`Service.Trigger`**: Time/form-based trigger functions
 
 Services registered in `src/1namespaces.js` and routed via `src/webApp.js` doGet handler using `?service=` parameter.
+
+### SPA Architecture (CRITICAL for Web Services)
+
+**ALL web services use data-driven Single Page Application architecture**. See `docs/SPA_ARCHITECTURE.md` for complete documentation.
+
+**Core Rules**:
+1. **Server returns JSON data ONLY** - never return HTML from `getServiceContent()`
+2. **Client renders HTML from data** - all rendering in `_Header.html` renderer functions
+3. **Scripts in innerHTML don't execute** - use `loadScript()` for external libraries
+4. **Always escape user data** - use `escapeHtml()` to prevent XSS
+
+**Adding a New Service**:
+```javascript
+// 1. Server endpoint (webapp_endpoints.js)
+function getServiceContent(email, service) {
+  if (service === 'YourService') {
+    return {
+      serviceName: 'Your Service',
+      yourData: YourService.getData(email)
+    };
+  }
+}
+
+// 2. Client renderer (_Header.html)
+function renderYourService(data, container) {
+  // Set HTML structure
+  container.innerHTML = `<div>...</div>`;
+  
+  // Load external scripts if needed
+  loadScript('https://cdn.example.com/lib.js').then(() => {
+    initLibrary(data.yourData);
+  });
+}
+
+// 3. Add to router (_Header.html)
+function renderService(serviceId, data, container) {
+  switch(serviceId) {
+    case 'YourService':
+      renderYourService(data, container);
+      break;
+  }
+}
+```
+
+**NEVER**:
+- Return HTML from `getServiceContent()` for SPA navigation
+- Put `<script>` tags in template literals for `innerHTML`
+- Use `document.write()` (destroys entire document)
+- Skip `escapeHtml()` when inserting user data
+
+**ALWAYS**:
+- Use `loadScript(src)` for external JavaScript libraries
+- Use `loadStylesheet(href)` for external CSS
+- Pass `container` to renderer functions
+- Include "Back to Services" navigation link
+- Log to console during development
+- Test on all responsive breakpoints
 
 ### Responsive CSS Framework (SPA Services)
 

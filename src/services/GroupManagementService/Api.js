@@ -17,6 +17,29 @@
 // Namespace declaration pattern (works in both GAS and Jest)
 if (typeof GroupManagementService === 'undefined') GroupManagementService = {};
 
+GroupManagementService.Api = GroupManagementService.Api || {};
+
+/**
+ * Get initial data for rendering GroupManagementService
+ * Called by getServiceContent() for SPA initial page load
+ * 
+ * @param {string} email - Authenticated user email
+ * @returns {{serviceName: string, subscriptions: Array, deliveryOptions: Object}} Service data
+ */
+GroupManagementService.Api.getData = function(email) {
+  console.log('GroupManagementService.Api.getData(', email, ')');
+  
+  // Get user's current subscriptions
+  const subscriptions = GroupManagementService.getUserGroupSubscription(email);
+  
+  return {
+    serviceName: 'Group Management',
+    subscriptions: subscriptions,
+    deliveryOptions: GroupSubscription.deliveryOptions,
+    email: email
+  };
+};
+
 /**
  * Initialize API handlers for GroupManagementService
  * This should be called once during application startup

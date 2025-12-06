@@ -17,6 +17,28 @@
 // Namespace declaration pattern (works in both GAS and Jest)
 if (typeof ProfileManagementService === 'undefined') ProfileManagementService = {};
 
+ProfileManagementService.Api = ProfileManagementService.Api || {};
+
+/**
+ * Get initial data for rendering ProfileManagementService
+ * Called by getServiceContent() for SPA initial page load
+ * 
+ * @param {string} email - Authenticated user email
+ * @returns {{serviceName: string, profile: Object}} Service data
+ */
+ProfileManagementService.Api.getData = function(email) {
+  console.log('ProfileManagementService.Api.getData(', email, ')');
+  
+  // Get user's profile data
+  const profile = ProfileManagementService.Manager.getProfile(email);
+  
+  return {
+    serviceName: 'Profile Management',
+    profile: profile,
+    email: email
+  };
+};
+
 /**
  * Initialize API handlers for ProfileManagementService
  * This should be called once during application startup

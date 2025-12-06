@@ -102,16 +102,24 @@ function getServiceContent(email, service) {
     return { error: 'Invalid service specified' };
   }
   
+  // Debug logging
+  console.log(`webService.Api:`, webService.Api);
+  console.log(`Api keys:`, webService.Api ? Object.keys(webService.Api) : 'Api undefined');
+  console.log(`typeof webService.Api.getData:`, webService.Api ? typeof webService.Api.getData : 'Api undefined');
+  
   // Call service's API to get data (not HTML)
-  // Each service should have an Api.getData() method
-  if (webService.Api && webService.Api.getData) {
+  // Access service namespace directly (e.g., GroupManagementService.Api.getData)
+  // Note: webService IS the service namespace (e.g., GroupManagementService)
+  if (webService.Api && typeof webService.Api.getData === 'function') {
+    console.log(`Calling ${service}.Api.getData(${email})`);
     return webService.Api.getData(email);
   }
   
   // Fallback for services not yet migrated to new architecture
   console.warn(`Service ${service} does not have Api.getData() - using legacy approach`);
+  console.warn(`webService:`, JSON.stringify(Object.keys(webService)));
   
-  // For DirectoryService specifically
+  // For DirectoryService specifically (legacy)
   if (service === 'DirectoryService') {
     const directoryEntries = DirectoryService.getDirectoryEntries();
     console.log('getServiceContent: DirectoryService entries count:', directoryEntries ? directoryEntries.length : 0);
@@ -123,6 +131,7 @@ function getServiceContent(email, service) {
   }
   
   // Generic fallback
+  console.error(`Service ${service} has no Api.getData() method`);
   return {
     serviceName: webService.name || service,
     error: 'Service data not available'
