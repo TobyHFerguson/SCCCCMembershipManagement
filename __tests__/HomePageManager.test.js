@@ -110,7 +110,7 @@ describe('Common.HomePage.Manager', () => {
     it('should return correct service info for GroupManagementService', () => {
       const service = Manager.getServiceById('GroupManagementService');
       expect(service.name).toBe('Group Management Service');
-      expect(service.description).toContain('mailing list');
+      expect(service.description).toContain('Google Group');
       expect(service.icon).toBe('groups');
     });
 

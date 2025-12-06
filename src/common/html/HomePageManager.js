@@ -58,7 +58,7 @@ Common.HomePage.Manager = class {
     },
     GroupManagementService: {
       name: 'Group Management Service',
-      description: 'Manage your mailing list subscriptions',
+      description: 'Manage your Google Group subscriptions',
       icon: 'groups'
     },
     ProfileManagementService: {
