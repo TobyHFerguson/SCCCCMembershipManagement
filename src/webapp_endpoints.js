@@ -73,21 +73,61 @@ function verifyCode(email, code, service) {
   // Generate a multi-use token for the session
   const token = Common.Auth.TokenManager.getMultiUseToken(email);
   
-  // Store a single-use token in TokenStorage for initial page load
-  // This ensures backward compatibility with services expecting TokenStorage tokens
-  const singleUseToken = Common.Auth.TokenStorage.generateAndStoreToken(email);
-  
-  // Build redirect URL with the token
-  const baseUrl = ScriptApp.getService().getUrl();
-  const redirectUrl = baseUrl + '?token=' + singleUseToken + '&service=' + service;
-  
-  console.log('verifyCode: success, redirecting to', redirectUrl);
+  console.log('verifyCode: success, returning token for in-place content swap');
   
   return {
     success: true,
-    redirectUrl: redirectUrl,
-    token: token  // Also return the multi-use token for SPAs
+    token: token,
+    email: email,
+    service: service
   };
+}
+
+/**
+ * Render service HTML content for authenticated user
+ * Called after successful verification code validation
+ * 
+ * @param {string} email - Authenticated user email
+ * @param {string} service - Service name
+ * @returns {string} HTML content for the service
+ */
+function getServiceContent(email, service) {
+  console.log('getServiceContent(', email, service, ')');
+  
+  const webService = WebServices[service];
+  if (!webService) {
+    console.error('Invalid service:', service);
+    return '<html><body><h1>Error</h1><p>Invalid service specified.</p></body></html>';
+  }
+  
+  // Build a mock doGet event with authenticated email
+  const mockEvent = {
+    parameter: {
+      service: service
+    }
+  };
+  
+  // Get service properties
+  const scriptProperties = PropertiesService.getScriptProperties();
+  const mobileBreakpoint = scriptProperties.getProperty('MOBILE_BREAKPOINT') || '767';
+  const tabletMinBreakpoint = scriptProperties.getProperty('TABLET_MIN_BREAKPOINT') || '768';
+  const tabletMaxBreakpoint = scriptProperties.getProperty('TABLET_MAX_BREAKPOINT') || '1032';
+  
+  // Create template
+  const template = HtmlService.createTemplateFromFile('common/html/_Layout.html');
+  template.breakpoints = {
+    mobile: mobileBreakpoint,
+    tabletMin: tabletMinBreakpoint,
+    tabletMax: tabletMaxBreakpoint
+  };
+  template.include = _includeHtml;
+  template.serviceName = webService.name;
+  
+  // Call service's WebApp.doGet to render content
+  const output = webService.WebApp.doGet(mockEvent, email, template);
+  
+  // Return the HTML content as string
+  return output.getContent();
 }
 
 /**
