@@ -358,7 +358,31 @@ MembershipManagement.Internal.getGroupEmailReplacer_ = function () {
       return { success: true, message: 'Test mode - no changes made.' };
     }
   } else {
-    return (originalEmail, newEmail) => { return this.changeSubscribersEmailInAllGroups_(originalEmail, newEmail) };
+    return (originalEmail, newEmail) => { 
+      // Get all groups from PublicGroups spreadsheet
+      const publicGroups = Common.Data.Access.getPublicGroups();
+      const groupData = publicGroups.map(group => ({
+        groupEmail: group.Email,
+        oldEmail: originalEmail,
+        newEmail: newEmail,
+        status: 'Pending'
+      }));
+      
+      // Use EmailChangeService to update groups (it also logs the change)
+      // Note: EmailChangeService.handleChangeEmailInGroupsUI also updates ActiveMembers and ExpirySchedule sheets,
+      // but since we're already handling those in the calling code, we only use it for group membership updates
+      const results = EmailChangeService.handleChangeEmailInGroupsUI(originalEmail, newEmail, groupData);
+      
+      // Check for any failures
+      const failures = results.filter(r => r.status === 'Failed');
+      if (failures.length > 0) {
+        const errMsg = failures.map(f => `${f.groupEmail}: ${f.error}`).join('; ');
+        console.error(`getGroupEmailReplacer_: Errors changing email in groups: ${errMsg}`);
+        return { success: false, message: `Errors updating groups: ${errMsg}` };
+      }
+      
+      return { success: true, message: `Successfully updated email from ${originalEmail} to ${newEmail} in groups.` };
+    };
   }
 }
 

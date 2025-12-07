@@ -52,6 +52,15 @@ function findPossibleRenewalsFromMenu() {
     const activeMembers = Common.Data.Access.getMembers();
     const similarMemberPairs = MembershipManagement.Manager.findPossibleRenewals(activeMembers);
     console.log(similarMemberPairs);
+    
+    if (similarMemberPairs.length === 0) {
+        SpreadsheetApp.getUi().alert(
+            'No Possible Renewals Found',
+            'No member pairs were found that look like they might be a join when they should be a renewal.\n\nAll membership records appear to be unique.',
+            SpreadsheetApp.getUi().ButtonSet.OK);
+        return;
+    }
+    
     const msg = similarMemberPairs.map(p => `${p[0] + 2} & ${p[1] + 2}`).join('\n');
     SpreadsheetApp.getUi().alert(
         `The following row pairs look as if they might be a join when they should be a renewal.

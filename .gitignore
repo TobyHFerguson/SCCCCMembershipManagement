@@ -12,3 +12,5 @@ creds.json
 coverage/
 clasp-wrapper.sh
 .clasp-credentials.json
+
+.clasp.json
