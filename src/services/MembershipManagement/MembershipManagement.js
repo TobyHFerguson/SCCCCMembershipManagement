@@ -359,7 +359,7 @@ MembershipManagement.Internal.getGroupEmailReplacer_ = function () {
     }
   } else {
     return (originalEmail, newEmail) => { 
-      // Get all groups from PublicGroups spreadsheet
+      // Get all groups from PublicGroups spreadsheet (as specified in requirements)
       const publicGroups = Common.Data.Access.getPublicGroups();
       const groupData = publicGroups.map(group => ({
         groupEmail: group.Email,
@@ -368,10 +368,28 @@ MembershipManagement.Internal.getGroupEmailReplacer_ = function () {
         status: 'Pending'
       }));
       
-      // Use EmailChangeService to update groups (it also logs the change)
-      // Note: EmailChangeService.handleChangeEmailInGroupsUI also updates ActiveMembers and ExpirySchedule sheets,
-      // but since we're already handling those in the calling code, we only use it for group membership updates
-      const results = EmailChangeService.handleChangeEmailInGroupsUI(originalEmail, newEmail, groupData);
+      // Use EmailChangeService.Internal.updateUserEmailInGroup for each group
+      // Note: We don't call handleChangeEmailInGroupsUI directly because it also updates 
+      // ActiveMembers/ExpirySchedule sheets, which are already handled by the calling code
+      const results = [];
+      for (let i = 0; i < groupData.length; i++) {
+        const updateResult = EmailChangeService.Internal.updateUserEmailInGroup(
+          groupData[i].groupEmail, 
+          originalEmail, 
+          newEmail
+        );
+        results.push(updateResult);
+      }
+      
+      // Log the email change to EmailChange sheet (for audit purposes)
+      try {
+        const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('EmailChange');
+        const data = fiddler.getData();
+        data.push({ date: new Date(), from: originalEmail, to: newEmail });
+        fiddler.setData(data).dumpValues();
+      } catch (logErr) {
+        console.error('getGroupEmailReplacer_: Error logging email change:', logErr);
+      }
       
       // Check for any failures
       const failures = results.filter(r => r.status === 'Failed');
