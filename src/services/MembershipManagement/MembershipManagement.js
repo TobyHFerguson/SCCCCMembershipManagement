@@ -358,49 +358,7 @@ MembershipManagement.Internal.getGroupEmailReplacer_ = function () {
       return { success: true, message: 'Test mode - no changes made.' };
     }
   } else {
-    return (originalEmail, newEmail) => { 
-      // Get all groups from PublicGroups spreadsheet (as specified in requirements)
-      const publicGroups = Common.Data.Access.getPublicGroups();
-      const groupData = publicGroups.map(group => ({
-        groupEmail: group.Email,
-        oldEmail: originalEmail,
-        newEmail: newEmail,
-        status: 'Pending'
-      }));
-      
-      // Use EmailChangeService.Internal.updateUserEmailInGroup for each group
-      // Note: We don't call handleChangeEmailInGroupsUI directly because it also updates 
-      // ActiveMembers/ExpirySchedule sheets, which are already handled by the calling code
-      const results = [];
-      for (let i = 0; i < groupData.length; i++) {
-        const updateResult = EmailChangeService.Internal.updateUserEmailInGroup(
-          groupData[i].groupEmail, 
-          originalEmail, 
-          newEmail
-        );
-        results.push(updateResult);
-      }
-      
-      // Log the email change to EmailChange sheet (for audit purposes)
-      try {
-        const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('EmailChange');
-        const data = fiddler.getData();
-        data.push({ date: new Date(), from: originalEmail, to: newEmail });
-        fiddler.setData(data).dumpValues();
-      } catch (logErr) {
-        console.error('getGroupEmailReplacer_: Error logging email change:', logErr);
-      }
-      
-      // Check for any failures
-      const failures = results.filter(r => r.status === 'Failed');
-      if (failures.length > 0) {
-        const errMsg = failures.map(f => `${f.groupEmail}: ${f.error}`).join('; ');
-        console.error(`getGroupEmailReplacer_: Errors changing email in groups: ${errMsg}`);
-        return { success: false, message: `Errors updating groups: ${errMsg}` };
-      }
-      
-      return { success: true, message: `Successfully updated email from ${originalEmail} to ${newEmail} in groups.` };
-    };
+    return (originalEmail, newEmail) => { return this.changeSubscribersEmailInAllGroups_(originalEmail, newEmail) };
   }
 }
 
