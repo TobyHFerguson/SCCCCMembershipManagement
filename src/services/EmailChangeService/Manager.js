@@ -411,19 +411,22 @@ EmailChangeService.Manager = class {
 
   /**
    * Build verification email content
+   * Matches the format of the initial authentication verification email
    * @param {string} code - The verification code
-   * @returns {{subject: string, body: string, htmlBody: string}}
+   * @returns {{subject: string, body: string}}
    */
   static buildVerificationEmailContent(code) {
-    const subject = 'Verify Your New Email Address';
-    const body = `Your verification code is: ${code}\n\nType, or Copy/Paste this code into the code verification field.\n\nThis code will expire in ${EmailChangeService.VERIFICATION_CONFIG.EXPIRY_MINUTES} minutes.\n\nIf you did not request this email change, please ignore this message.`;
-    const htmlBody = `
-      <p>Your verification code is: <strong>${code}</strong></p>
-      <p>This code will expire in ${EmailChangeService.VERIFICATION_CONFIG.EXPIRY_MINUTES} minutes.</p>
-      <p>If you did not request this email change, please ignore this message.</p>
-    `.trim();
+    const formattedCode = code.slice(0, 3) + '-' + code.slice(3);
+    const expiryMinutes = EmailChangeService.VERIFICATION_CONFIG.EXPIRY_MINUTES;
+    
+    const subject = 'SCCCC Email Change - Verification Code';
+    const body = `Your verification code for SCCCC Email Change is:\n\n` +
+                 `    ${formattedCode}\n\n` +
+                 `This code will expire in ${expiryMinutes} minutes.\n\n` +
+                 `If you did not request this code, please ignore this email.\n\n` +
+                 `- SCCCC Membership System`;
 
-    return { subject, body, htmlBody };
+    return { subject, body };
   }
 
   /**

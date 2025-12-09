@@ -203,9 +203,10 @@ EmailChangeService.Api.handleSendVerificationCode = function(params) {
  * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
  * @param {string} params.newEmail - The new email address
  * @param {string} params.verificationCode - The verification code
+ * @param {string} token - The authentication token (passed by ApiClient)
  * @returns {Common.Api.ApiResponse}
  */
-EmailChangeService.Api.handleVerifyAndChangeEmail = function(params) {
+EmailChangeService.Api.handleVerifyAndChangeEmail = function(params, token) {
     Logger.log('[EmailChangeService.Api] handleVerifyAndChangeEmail called');
     
     const originalEmail = params._authenticatedEmail;
@@ -330,6 +331,14 @@ EmailChangeService.Api.handleVerifyAndChangeEmail = function(params) {
       // GAS: Log the change
       Logger.log('[EmailChangeService.Api] Logging email change');
       EmailChangeService.Api.logEmailChange(normalizedOld, normalizedNew);
+
+      // GAS: Update the session token with new email
+      if (token) {
+        const tokenUpdated = Common.Auth.TokenManager.updateTokenEmail(token, normalizedNew);
+        if (!tokenUpdated) {
+          Logger.log('[EmailChangeService.Api] Warning: Could not update token email');
+        }
+      }
 
       // PURE: Aggregate results
       const aggregated = EmailChangeService.Manager.aggregateGroupResults(results);
@@ -595,7 +604,7 @@ EmailChangeService.Api.deleteVerificationData = function(code) {
 /**
  * Send verification email
  * @param {string} email - The email address to send to
- * @param {{subject: string, body: string, htmlBody: string}} content - Email content
+ * @param {{subject: string, body: string}} content - Email content
  * @returns {boolean} True if email was sent successfully
  */
 EmailChangeService.Api.sendVerificationEmail = function(email, content) {
@@ -603,8 +612,7 @@ EmailChangeService.Api.sendVerificationEmail = function(email, content) {
       MailApp.sendEmail({
         to: email,
         subject: content.subject,
-        body: content.body,
-        htmlBody: content.htmlBody
+        body: content.body
       });
       return true;
     } catch (error) {

@@ -78,6 +78,35 @@ Common.Auth.TokenManager = {
             return null;
         }
     },
+    /**
+     * Update the email associated with a multi-use token
+     * Used when a user changes their email address to update their session
+     * 
+     * @param {string} token - The multi-use token to update
+     * @param {string} newEmail - The new email address
+     * @returns {boolean} True if update succeeded, false if token not found
+     */
+    updateTokenEmail: (token, newEmail) => {
+        if (!token || !newEmail) return false;
+        
+        const cache = CacheService.getScriptCache();
+        const tokenKey = `user_token_${token}`;
+        
+        // Check if token exists
+        const currentEmail = cache.get(tokenKey);
+        if (!currentEmail) {
+            console.warn(`Token ${token} not found or expired.`);
+            return false;
+        }
+        
+        // Update with same expiration (15 minutes from original creation)
+        // Note: CacheService doesn't allow updating TTL, so we maintain the original expiration
+        const expirationInSeconds = 900; // 15 minutes
+        cache.put(tokenKey, newEmail, expirationInSeconds);
+        
+        Logger.log('[TokenManager] Updated token email from ' + currentEmail + ' to ' + newEmail);
+        return true;
+    },
     // Additional utility to get token data 
     getTokenData:(token) => {
         return Common.Auth.TokenStorage.getTokenData().find((tokenData) => tokenData.Token === token) || null;

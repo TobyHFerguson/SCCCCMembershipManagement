@@ -616,8 +616,7 @@ describe('EmailChangeService.Api', () => {
     test('sends email with correct parameters', () => {
       const content = {
         subject: 'Test Subject',
-        body: 'Test body',
-        htmlBody: '<p>Test body</p>'
+        body: 'Test body'
       };
 
       const result = EmailChangeService.Api.sendVerificationEmail('test@example.com', content);
@@ -626,8 +625,7 @@ describe('EmailChangeService.Api', () => {
       expect(MailApp.sendEmail).toHaveBeenCalledWith({
         to: 'test@example.com',
         subject: 'Test Subject',
-        body: 'Test body',
-        htmlBody: '<p>Test body</p>'
+        body: 'Test body'
       });
     });
 

@@ -599,27 +599,31 @@ describe('EmailChangeService.Manager', () => {
   // ==================== buildVerificationEmailContent Tests ====================
   
   describe('buildVerificationEmailContent', () => {
-    test('includes code in body', () => {
+    test('includes formatted code in body', () => {
       const content = Manager.buildVerificationEmailContent('123456');
-      expect(content.body).toContain('123456');
-    });
-
-    test('includes code in HTML body', () => {
-      const content = Manager.buildVerificationEmailContent('123456');
-      expect(content.htmlBody).toContain('123456');
-      expect(content.htmlBody).toContain('<strong>');
+      expect(content.body).toContain('123-456'); // Code formatted with dash
     });
 
     test('includes expiry time', () => {
       const content = Manager.buildVerificationEmailContent('123456');
       expect(content.body).toContain('15 minutes');
-      expect(content.htmlBody).toContain('15 minutes');
     });
 
     test('has appropriate subject', () => {
       const content = Manager.buildVerificationEmailContent('123456');
-      expect(content.subject).toContain('Verify');
-      expect(content.subject).toContain('Email');
+      expect(content.subject).toContain('Email Change');
+      expect(content.subject).toContain('Verification');
+    });
+    
+    test('includes service branding', () => {
+      const content = Manager.buildVerificationEmailContent('123456');
+      expect(content.body).toContain('SCCCC');
+      expect(content.body).toContain('Membership System');
+    });
+    
+    test('no htmlBody returned', () => {
+      const content = Manager.buildVerificationEmailContent('123456');
+      expect(content.htmlBody).toBeUndefined();
     });
   });
 

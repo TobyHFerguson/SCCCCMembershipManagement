@@ -1457,6 +1457,13 @@
             // Enable button only if both fields have values and they match
             if (newEmailValue && confirmEmailValue && newEmailValue === confirmEmailValue) {
                 submitButton.disabled = false;
+                // Auto-submit after a brief delay to allow user to review
+                setTimeout(() => {
+                    // Double-check they still match (in case user kept typing)
+                    if (newEmail.value.trim() === confirmEmail.value.trim() && !submitButton.disabled) {
+                        submitButton.click();
+                    }
+                }, 300);
             } else {
                 submitButton.disabled = true;
             }
@@ -1483,6 +1490,16 @@
             input.addEventListener('input', function() {
                 clearMessage(emailMessage);
                 checkEmailsMatch();
+            });
+            
+            // Auto-submit on Enter key when emails match
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (!submitButton.disabled) {
+                        submitButton.click();
+                    }
+                }
             });
         });
         
