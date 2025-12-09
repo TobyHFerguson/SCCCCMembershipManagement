@@ -1,4 +1,6 @@
 {
+  // Ensure Git is enabled when opening this folder/workspace
+  "git.enabled": true,
   "githubPullRequests.ignoredPullRequestBranches": [
     "main"
   ],
