@@ -4,62 +4,40 @@ const _LAYOUT_FILE = 'common/html/_Layout.html'; // Name of the layout file
 
 // @ts-check
 /**
+ * Main entry point for SCCCC Services web application.
+ * Always returns the verification code request page which bootstraps the SPA.
+ * No query parameters required - this is the single entry point.
  * 
  * @param {GoogleAppsScript.Events.DoGet} e 
- * @returns 
+ * @returns {GoogleAppsScript.HTML.HtmlOutput}
  */
 function doGet(e) {
-    if (!e.parameter.service) {
-        return createTextResponse('No service parameter given. The url must have a service parameter!');
-    }
-    const service = WebServices[e.parameter.service];
-    if (!service) {
-        console.error('Got an invalid service: ', e.parameter.service)
-        console.error('Available services: ', Object.keys(WebServices));
-        return createTextResponse("We're sorry - an internal error occurred. We've notified the developers and theres nothing you can do but wait until they fix it")
-    }
-    const page = e.parameter.page;
     const scriptProperties = PropertiesService.getScriptProperties();
     const mobileBreakpoint = scriptProperties.getProperty('MOBILE_BREAKPOINT') || '767';
     const tabletMinBreakpoint = scriptProperties.getProperty('TABLET_MIN_BREAKPOINT') || '768';
     const tabletMaxBreakpoint = scriptProperties.getProperty('TABLET_MAX_BREAKPOINT') || '1032';
+    
     const template = HtmlService.createTemplateFromFile(_LAYOUT_FILE);
     template.breakpoints = {
         mobile: mobileBreakpoint,
         tabletMin: tabletMinBreakpoint,
         tabletMax: tabletMaxBreakpoint
     };
-    template.include = _includeHtml; 
-    template.serviceName = service.name
-
-    if (page === 'request') {
-        // Check feature flag to determine which auth flow to use
-        const useNewAuth = Common.Config.FeatureFlags.isNewAuthEnabled();
-        template.contentFileName = useNewAuth ? VERIFICATION_CODE_INPUT : MAGIC_LINK_INPUT;
-        template.service = service.service;
-        const authFlowName = useNewAuth ? 'Verification Code' : 'Magic Link';
-        
-        // Log which auth flow is being used for monitoring
-        if (!useNewAuth) {
-            console.warn('[DEPRECATED] Using legacy Magic Link authentication flow. ' +
-                'Call Common.Config.FeatureFlags.enableNewAuth() to use the new Verification Code flow.');
-        }
-        
-        const output = template.evaluate()
-            .setTitle(`Request Access - ${authFlowName}`)
-        return output;
-    }
-    const token = e.parameter.token;
-    const tokenData = Common.Auth.TokenStorage.consumeToken(token);
-    console.log('doGet() called with token: ', token, ' and tokenData: ', tokenData);
-    if (!tokenData || tokenData.Used) {
-        return createTextResponse('Invalid or Used Link - The access link is either invalid or has already been used.');
-    }
-    if (!tokenData.Email) {
-        throw new Error('tokenData.Email === null')
+    template.include = _includeHtml;
+    
+    // Check feature flag to determine which auth flow to use
+    const useNewAuth = Common.Config.FeatureFlags.isNewAuthEnabled();
+    template.contentFileName = useNewAuth ? VERIFICATION_CODE_INPUT : MAGIC_LINK_INPUT;
+    
+    // Log which auth flow is being used for monitoring
+    if (!useNewAuth) {
+        console.warn('[DEPRECATED] Using legacy Magic Link authentication flow. ' +
+            'Call Common.Config.FeatureFlags.enableNewAuth() to use the new Verification Code flow.');
     }
     
-    return service.WebApp.doGet(e, tokenData.Email, template);
+    const output = template.evaluate()
+        .setTitle('SCCCC Services - Request Verification Code')
+    return output;
 }
 function doPost(e) {
     return createTextResponse('doPost() unimplemented');
@@ -86,7 +64,7 @@ function _includeHtml(filename) {
   // When a helper function like 'includeHtml' is called from within an HTML template,
   // 'this' inside 'includeHtml' refers to the template object's context (i.e., 'template' from doGet).
   // We need to copy all variables from the parent template to the partial template
-  // so that the partials can access variables like mobileBreakpoint, serviceName, etc.
+  // so that the partials can access variables like breakpoints, etc.
   const data = this; 
   for (const key in data) {
     partialTemplate[key] = data[key];

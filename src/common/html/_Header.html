@@ -394,7 +394,7 @@
         if (cachedServices && Array.isArray(cachedServices) && cachedServices.length > 0) {
             renderHomePageFromCache(email, cachedServices);
             // Update browser tab title
-            document.title = 'SCCCC Services';
+            document.title = 'SCCCC Services - Home';
             return;
         }
         
@@ -409,7 +409,7 @@
             google.script.run
                 .withSuccessHandler(function(data) {
                     // Update browser title
-                    document.title = 'SCCCC Services';
+                    document.title = 'SCCCC Services - Home';
                     
                     // Render home page using client-side renderer
                     if (container && window.renderHomePage) {
@@ -433,7 +433,7 @@
      */
     function renderHomePageFromCache(email, services) {
         // Update browser tab title
-        document.title = 'SCCCC Services';
+        document.title = 'SCCCC Services - Home';
         
         // Use the global renderer
         const container = document.querySelector('.container');
@@ -465,7 +465,7 @@
         }
 
         // Update browser tab title immediately
-        document.title = serviceName + ' - SCCCC';
+        document.title = serviceName + ' - SCCCC Services';
         
         const container = document.querySelector('.container');
         if (container) {
@@ -530,7 +530,7 @@
             google.script.run
                 .withSuccessHandler(function(htmlContent) {
                     // Update browser title
-                    document.title = 'Request Access - Verification Code';
+                    document.title = 'SCCCC Services - Request Verification Code';
                     
                     // Replace container content
                     if (container) {

@@ -5,6 +5,9 @@
 /// <reference path="./VotingService.d.ts" />
 
 /**
+ * @deprecated This WebApp.doGet is no longer used in the SPA flow.
+ * Voting service is accessed via API endpoints from the SPA home page.
+ * This remains for backward compatibility with legacy magic link flow only.
  * 
  * @param {GoogleAppsScript.Events.DoGet} e 
  * @param {string} userEmail
@@ -12,13 +15,6 @@
  * @returns 
  */
 VotingService.WebApp.doGet = function (e, userEmail, htmlTemplate) {
-    const service = e.parameter.service;
-    // @ts-ignore
-    if (service !== VotingService.service) {
-        // @ts-ignore
-        return HtmlService.createHtmlOutput(`<h1>Invalid service. Was expecting ${VotingService.service} but got ${service}</p>`);
-
-    }
     htmlTemplate.contentFileName = 'services/VotingService/ActiveVotes.html';
     return this._renderVotingOptions(userEmail, htmlTemplate);
 }

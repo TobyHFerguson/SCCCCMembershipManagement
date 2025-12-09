@@ -45,6 +45,14 @@ const ProfileManagementService = {
     icon: 'profile'
 }
 
+// HomePageService - default service for generic access
+const HomePageService = {
+    name: 'SCCCC Services',
+    service: 'HomePageService',
+    description: 'Access SCCCC member services',
+    icon: 'home'
+};
+
 // Extend VotingService if it already exists (from 0Constants.js), otherwise create it
 if (typeof VotingService === 'undefined') {
     var VotingService = {};
@@ -62,6 +70,7 @@ Object.assign(VotingService, {
 });
 
 const WebServices = {
+    HomePageService: HomePageService,
     DirectoryService: DirectoryService,
     EmailChangeService: EmailChangeService,
     GroupManagementService: GroupManagementService,
