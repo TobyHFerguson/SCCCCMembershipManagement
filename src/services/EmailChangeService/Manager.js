@@ -447,6 +447,100 @@ EmailChangeService.Manager = class {
       errorCode: 'EMAIL_SEND_FAILED'
     };
   }
+
+  /**
+   * Calculate backoff delay for retry attempts
+   * @param {number} attempt - The attempt number (1-indexed)
+   * @param {number} initialBackoffMs - Initial backoff in milliseconds (default 1000)
+   * @returns {number} Backoff delay in milliseconds
+   */
+  static calculateBackoff(attempt, initialBackoffMs = 1000) {
+    if (attempt < 1) return 0;
+    return initialBackoffMs * Math.pow(2, attempt - 1);
+  }
+
+  /**
+   * Process a single group update with retry logic
+   * This is a pure function that returns the next action to take
+   * 
+   * @param {Object} params - Parameters
+   * @param {number} params.attempt - Current attempt number (1-indexed)
+   * @param {number} params.maxRetries - Maximum number of retry attempts
+   * @param {Error} [params.error] - Error from previous attempt (if any)
+   * @returns {{action: 'retry'|'fail'|'initial', backoffMs?: number, errorMessage?: string}}
+   */
+  static getRetryAction(params) {
+    const { attempt, maxRetries, error } = params;
+    
+    if (!error) {
+      // No error - this is the initial attempt or a success
+      return { action: 'initial' };
+    }
+    
+    if (attempt >= maxRetries) {
+      // All retries exhausted
+      return {
+        action: 'fail',
+        errorMessage: `Failed after ${maxRetries} attempts: ${error.message || 'Unknown error'}`
+      };
+    }
+    
+    // Retry with backoff
+    return {
+      action: 'retry',
+      backoffMs: this.calculateBackoff(attempt)
+    };
+  }
+
+  /**
+   * Create a group update result entry
+   * @param {Object} group - Group info from GroupSubscription
+   * @param {string} group.email - Group email address
+   * @param {string} [group.name] - Group display name
+   * @param {boolean} success - Whether the update succeeded
+   * @param {string} [error] - Error message if failed
+   * @returns {{groupEmail: string, groupName: string, success: boolean, error?: string}}
+   */
+  static createGroupUpdateResult(group, success, error) {
+    return {
+      groupEmail: group.email,
+      groupName: group.name || group.email,
+      success: success,
+      error: error || null
+    };
+  }
+
+  /**
+   * Aggregate group update results into a summary
+   * @param {Array<{success: boolean, error?: string}>} results - Individual group results
+   * @returns {{successCount: number, failedCount: number, overallSuccess: boolean}}
+   */
+  static aggregateGroupResults(results) {
+    const successCount = results.filter(r => r.success).length;
+    const failedCount = results.filter(r => !r.success).length;
+    
+    return {
+      successCount,
+      failedCount,
+      overallSuccess: failedCount === 0
+    };
+  }
+
+  /**
+   * Format the final email change result message
+   * @param {boolean} overallSuccess - Whether all operations succeeded
+   * @param {string} oldEmail - Original email (normalized)
+   * @param {string} newEmail - New email (normalized)
+   * @param {number} successCount - Number of successful group updates
+   * @param {number} failedCount - Number of failed group updates
+   * @returns {string} Formatted message
+   */
+  static formatEmailChangeMessage(overallSuccess, oldEmail, newEmail, successCount, failedCount) {
+    if (overallSuccess) {
+      return `Email changed successfully from ${oldEmail} to ${newEmail}`;
+    }
+    return `Email change completed with ${failedCount} error(s). ${successCount} group(s) updated successfully.`;
+  }
 };
 
 // Node.js export for testing

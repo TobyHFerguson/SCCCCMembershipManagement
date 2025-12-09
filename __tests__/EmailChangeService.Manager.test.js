@@ -19,6 +19,11 @@
  * 13. normalizeEmail - Email normalization
  * 14. buildVerificationEmailContent - Build email content
  * 15. formatSendCodeResult - Format send code result
+ * 16. calculateBackoff - Calculate exponential backoff for retries
+ * 17. getRetryAction - Determine retry action based on attempt
+ * 18. createGroupUpdateResult - Create group update result entry
+ * 19. aggregateGroupResults - Aggregate group update results
+ * 20. formatEmailChangeMessage - Format final email change message
  */
 
 const { Manager, VERIFICATION_CONFIG, EMAIL_REGEX } = require('../src/services/EmailChangeService/Manager');
@@ -641,6 +646,239 @@ describe('EmailChangeService.Manager', () => {
       const result = Manager.formatSendCodeResult(false, 'user@example.com');
       
       expect(result.error).toBe('Unknown error');
+    });
+  });
+
+  // ==================== calculateBackoff Tests ====================
+  
+  describe('calculateBackoff', () => {
+    test('calculates exponential backoff correctly', () => {
+      expect(Manager.calculateBackoff(1, 1000)).toBe(1000);   // 1000 * 2^0
+      expect(Manager.calculateBackoff(2, 1000)).toBe(2000);   // 1000 * 2^1
+      expect(Manager.calculateBackoff(3, 1000)).toBe(4000);   // 1000 * 2^2
+      expect(Manager.calculateBackoff(4, 1000)).toBe(8000);   // 1000 * 2^3
+    });
+
+    test('uses default initial backoff of 1000ms', () => {
+      expect(Manager.calculateBackoff(1)).toBe(1000);
+      expect(Manager.calculateBackoff(2)).toBe(2000);
+    });
+
+    test('handles edge cases', () => {
+      expect(Manager.calculateBackoff(0, 1000)).toBe(0);
+      expect(Manager.calculateBackoff(-1, 1000)).toBe(0);
+    });
+
+    test('works with custom initial backoff', () => {
+      expect(Manager.calculateBackoff(1, 500)).toBe(500);
+      expect(Manager.calculateBackoff(2, 500)).toBe(1000);
+      expect(Manager.calculateBackoff(3, 500)).toBe(2000);
+    });
+  });
+
+  // ==================== getRetryAction Tests ====================
+  
+  describe('getRetryAction', () => {
+    test('returns initial action when no error', () => {
+      const action = Manager.getRetryAction({
+        attempt: 1,
+        maxRetries: 3
+      });
+      
+      expect(action.action).toBe('initial');
+      expect(action.backoffMs).toBeUndefined();
+      expect(action.errorMessage).toBeUndefined();
+    });
+
+    test('returns retry action on first failure', () => {
+      const error = new Error('Network timeout');
+      const action = Manager.getRetryAction({
+        attempt: 1,
+        maxRetries: 3,
+        error: error
+      });
+      
+      expect(action.action).toBe('retry');
+      expect(action.backoffMs).toBe(1000); // First retry backoff
+    });
+
+    test('returns retry action on second failure', () => {
+      const error = new Error('Network timeout');
+      const action = Manager.getRetryAction({
+        attempt: 2,
+        maxRetries: 3,
+        error: error
+      });
+      
+      expect(action.action).toBe('retry');
+      expect(action.backoffMs).toBe(2000); // Second retry backoff
+    });
+
+    test('returns fail action when max retries reached', () => {
+      const error = new Error('Persistent failure');
+      const action = Manager.getRetryAction({
+        attempt: 3,
+        maxRetries: 3,
+        error: error
+      });
+      
+      expect(action.action).toBe('fail');
+      expect(action.errorMessage).toContain('Failed after 3 attempts');
+      expect(action.errorMessage).toContain('Persistent failure');
+      expect(action.backoffMs).toBeUndefined();
+    });
+
+    test('handles error without message', () => {
+      const error = new Error();
+      const action = Manager.getRetryAction({
+        attempt: 3,
+        maxRetries: 3,
+        error: error
+      });
+      
+      expect(action.errorMessage).toContain('Unknown error');
+    });
+  });
+
+  // ==================== createGroupUpdateResult Tests ====================
+  
+  describe('createGroupUpdateResult', () => {
+    test('creates success result', () => {
+      const group = { email: 'team@example.com', name: 'Team Group' };
+      const result = Manager.createGroupUpdateResult(group, true);
+      
+      expect(result.groupEmail).toBe('team@example.com');
+      expect(result.groupName).toBe('Team Group');
+      expect(result.success).toBe(true);
+      expect(result.error).toBeNull();
+    });
+
+    test('creates failure result with error', () => {
+      const group = { email: 'team@example.com', name: 'Team Group' };
+      const result = Manager.createGroupUpdateResult(group, false, 'API rate limit exceeded');
+      
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('API rate limit exceeded');
+    });
+
+    test('uses email as name when name not provided', () => {
+      const group = { email: 'team@example.com' };
+      const result = Manager.createGroupUpdateResult(group, true);
+      
+      expect(result.groupName).toBe('team@example.com');
+    });
+
+    test('handles null error as null (not undefined)', () => {
+      const group = { email: 'team@example.com', name: 'Team' };
+      const result = Manager.createGroupUpdateResult(group, true);
+      
+      expect(result.error).toBeNull();
+    });
+  });
+
+  // ==================== aggregateGroupResults Tests ====================
+  
+  describe('aggregateGroupResults', () => {
+    test('aggregates all successful results', () => {
+      const results = [
+        { success: true },
+        { success: true },
+        { success: true }
+      ];
+      
+      const aggregated = Manager.aggregateGroupResults(results);
+      
+      expect(aggregated.successCount).toBe(3);
+      expect(aggregated.failedCount).toBe(0);
+      expect(aggregated.overallSuccess).toBe(true);
+    });
+
+    test('aggregates mixed results', () => {
+      const results = [
+        { success: true },
+        { success: false, error: 'Error 1' },
+        { success: true },
+        { success: false, error: 'Error 2' }
+      ];
+      
+      const aggregated = Manager.aggregateGroupResults(results);
+      
+      expect(aggregated.successCount).toBe(2);
+      expect(aggregated.failedCount).toBe(2);
+      expect(aggregated.overallSuccess).toBe(false);
+    });
+
+    test('aggregates all failed results', () => {
+      const results = [
+        { success: false, error: 'Error 1' },
+        { success: false, error: 'Error 2' }
+      ];
+      
+      const aggregated = Manager.aggregateGroupResults(results);
+      
+      expect(aggregated.successCount).toBe(0);
+      expect(aggregated.failedCount).toBe(2);
+      expect(aggregated.overallSuccess).toBe(false);
+    });
+
+    test('handles empty results array', () => {
+      const aggregated = Manager.aggregateGroupResults([]);
+      
+      expect(aggregated.successCount).toBe(0);
+      expect(aggregated.failedCount).toBe(0);
+      expect(aggregated.overallSuccess).toBe(true); // No failures = success
+    });
+  });
+
+  // ==================== formatEmailChangeMessage Tests ====================
+  
+  describe('formatEmailChangeMessage', () => {
+    test('formats success message', () => {
+      const message = Manager.formatEmailChangeMessage(
+        true,
+        'old@example.com',
+        'new@example.com',
+        3,
+        0
+      );
+      
+      expect(message).toContain('successfully');
+      expect(message).toContain('old@example.com');
+      expect(message).toContain('new@example.com');
+    });
+
+    test('formats partial failure message', () => {
+      const message = Manager.formatEmailChangeMessage(
+        false,
+        'old@example.com',
+        'new@example.com',
+        2,
+        1
+      );
+      
+      expect(message).toContain('1 error');
+      expect(message).toContain('2 group(s) updated successfully');
+    });
+
+    test('formats complete failure message', () => {
+      const message = Manager.formatEmailChangeMessage(
+        false,
+        'old@example.com',
+        'new@example.com',
+        0,
+        3
+      );
+      
+      expect(message).toContain('3 error');
+      expect(message).toContain('0 group(s) updated successfully');
+    });
+
+    test('uses proper pluralization', () => {
+      const singular = Manager.formatEmailChangeMessage(false, 'old@test.com', 'new@test.com', 1, 1);
+      expect(singular).toContain('1 error');
+      
+      const plural = Manager.formatEmailChangeMessage(false, 'old@test.com', 'new@test.com', 1, 2);
+      expect(plural).toContain('2 error');
     });
   });
 

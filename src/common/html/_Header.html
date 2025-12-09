@@ -1222,25 +1222,62 @@
         
         container.innerHTML = `
             <style>
-                #emailChangeForm {
+                .email-change-container {
                     margin: 0 auto;
                     padding: 20px;
                     max-width: 500px;
                 }
                 
-                #emailChangeForm label {
+                .email-change-step {
+                    display: none;
+                }
+                
+                .email-change-step.active {
+                    display: block;
+                }
+                
+                .email-change-container label {
                     display: block;
                     margin-top: 15px;
                     font-weight: bold;
                 }
                 
-                #emailChangeForm input {
+                .email-change-container input[type="email"] {
                     width: 100%;
                     padding: 8px;
                     margin-top: 5px;
                     border: 1px solid #ccc;
                     border-radius: 4px;
                     box-sizing: border-box;
+                }
+                
+                .code-input-container {
+                    display: flex;
+                    justify-content: center;
+                    gap: 0.5rem;
+                    margin: 1.5rem 0;
+                }
+                
+                .code-input {
+                    width: 2.5rem;
+                    height: 3rem;
+                    font-size: 1.5rem;
+                    text-align: center;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                    padding: 0;
+                }
+                
+                .code-input:focus {
+                    border-color: #007bff;
+                    outline: none;
+                    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+                }
+                
+                .code-separator {
+                    font-size: 1.5rem;
+                    line-height: 3rem;
+                    color: #666;
                 }
                 
                 .buttons-container {
@@ -1265,88 +1302,417 @@
                     background-color: #f8d7da;
                     color: #721c24;
                 }
+                
+                .back-link {
+                    display: block;
+                    margin-top: 1rem;
+                    text-align: center;
+                    color: #007bff;
+                    cursor: pointer;
+                    text-decoration: underline;
+                }
             </style>
             
-            <div style="padding: 1rem;">
+            <div class="email-change-container">
                 <h2>Change Your Email Address</h2>
                 
-                <form id="emailChangeForm">
-                    <label for="currentEmail">Current Email:</label>
-                    <input type="email" id="currentEmail" value="${escapeHtml(data.currentEmail || '')}" readonly>
+                <!-- Step 1: Email Entry -->
+                <div id="emailStep" class="email-change-step active">
+                    <form id="emailChangeForm">
+                        <label for="currentEmail">Current Email:</label>
+                        <input type="email" id="currentEmail" value="${escapeHtml(data.currentEmail || '')}" readonly>
+                        
+                        <label for="newEmail">New Email:</label>
+                        <input type="email" id="newEmail" name="newEmail" required>
+                        
+                        <label for="confirmEmail">Confirm New Email:</label>
+                        <input type="email" id="confirmEmail" name="confirmEmail" required>
+                        
+                        <div class="buttons-container">
+                            <button type="submit" id="submitButton">Request Email Change</button>
+                        </div>
+                        
+                        <div id="emailChangeMessage" class="message"></div>
+                    </form>
+                </div>
+                
+                <!-- Step 2: Verification Code Entry -->
+                <div id="verificationStep" class="email-change-step">
+                    <p style="text-align: center; color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                        We've sent a 6-digit code to <strong><span id="displayNewEmail"></span></strong>
+                    </p>
                     
-                    <label for="newEmail">New Email:</label>
-                    <input type="email" id="newEmail" name="newEmail" required>
+                    <form id="verificationForm">
+                        <div class="code-input-container">
+                            <input type="text" class="code-input" id="code1" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" autofocus>
+                            <input type="text" class="code-input" id="code2" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                            <input type="text" class="code-input" id="code3" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                            <span class="code-separator">-</span>
+                            <input type="text" class="code-input" id="code4" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                            <input type="text" class="code-input" id="code5" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                            <input type="text" class="code-input" id="code6" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                        </div>
+                        
+                        <div class="buttons-container">
+                            <button type="submit" id="verifyButton" disabled>Verify and Change Email</button>
+                        </div>
+                        
+                        <div id="verificationMessage" class="message"></div>
+                    </form>
                     
-                    <label for="confirmEmail">Confirm New Email:</label>
-                    <input type="email" id="confirmEmail" name="confirmEmail" required>
-                    
-                    <div class="buttons-container">
-                        <button type="submit" id="submitButton">Request Email Change</button>
+                    <a class="back-link" id="backToEmailLink">← Use a different email</a>
+                </div>
+                
+                <!-- Step 3: Success -->
+                <div id="successStep" class="email-change-step">
+                    <div class="message success" style="display: block;">
+                        <strong>Email changed successfully!</strong>
+                        <p style="margin-top: 0.5rem;">Your email has been updated in all systems.</p>
                     </div>
                     
-                    <div id="emailChangeMessage" class="message"></div>
-                </form>
+                    <div class="buttons-container" style="margin-top: 2rem;">
+                        <button onclick="window.navigateToHomePage()">Return to Services</button>
+                    </div>
+                </div>
                 
-                <p style="margin-top: 2rem;">
+                <p style="margin-top: 2rem; text-align: center;">
                     <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
                 </p>
             </div>
         `;
         
-        initializeEmailChangeForm();
+        initializeEmailChangeForm(data);
     }
     
     // Initialize EmailChange form
-    function initializeEmailChangeForm() {
+    function initializeEmailChangeForm(data) {
+        // State
+        let pendingNewEmail = '';
+        let pendingVerificationCode = '';
+        
+        // Step 1: Email Entry Elements
+        const emailStep = document.getElementById('emailStep');
         const form = document.getElementById('emailChangeForm');
         const newEmail = document.getElementById('newEmail');
         const confirmEmail = document.getElementById('confirmEmail');
-        const message = document.getElementById('emailChangeMessage');
+        const submitButton = document.getElementById('submitButton');
+        const emailMessage = document.getElementById('emailChangeMessage');
         
-        function displayMessage(msg, type) {
-            message.textContent = msg;
-            message.classList.remove('success', 'error');
-            message.classList.add(type);
-            message.style.display = 'block';
+        // Step 2: Verification Elements
+        const verificationStep = document.getElementById('verificationStep');
+        const verificationForm = document.getElementById('verificationForm');
+        const displayNewEmail = document.getElementById('displayNewEmail');
+        const verifyButton = document.getElementById('verifyButton');
+        const verificationMessage = document.getElementById('verificationMessage');
+        const backToEmailLink = document.getElementById('backToEmailLink');
+        const codeInputs = [
+            document.getElementById('code1'),
+            document.getElementById('code2'),
+            document.getElementById('code3'),
+            document.getElementById('code4'),
+            document.getElementById('code5'),
+            document.getElementById('code6')
+        ];
+        
+        // Step 3: Success Elements
+        const successStep = document.getElementById('successStep');
+        
+        // Disable submit button initially
+        submitButton.disabled = true;
+        
+        // Helper functions
+        function showStep(step) {
+            emailStep.classList.remove('active');
+            verificationStep.classList.remove('active');
+            successStep.classList.remove('active');
+            
+            if (step === 'email') {
+                emailStep.classList.add('active');
+            } else if (step === 'verification') {
+                verificationStep.classList.add('active');
+                displayNewEmail.textContent = pendingNewEmail;
+                codeInputs[0].focus();
+            } else if (step === 'success') {
+                successStep.classList.add('active');
+            }
         }
         
-        function clearMessage() {
-            message.textContent = '';
-            message.classList.remove('success', 'error');
-            message.style.display = 'none';
+        function displayMessage(element, msg, type) {
+            element.textContent = msg;
+            element.classList.remove('success', 'error');
+            element.classList.add(type);
+            element.style.display = 'block';
         }
         
+        function clearMessage(element) {
+            element.textContent = '';
+            element.classList.remove('success', 'error');
+            element.style.display = 'none';
+        }
+        
+        function checkEmailsMatch() {
+            const newEmailValue = newEmail.value.trim();
+            const confirmEmailValue = confirmEmail.value.trim();
+            
+            // Enable button only if both fields have values and they match
+            if (newEmailValue && confirmEmailValue && newEmailValue === confirmEmailValue) {
+                submitButton.disabled = false;
+            } else {
+                submitButton.disabled = true;
+            }
+        }
+        
+        function getCodeValue() {
+            return codeInputs.map(input => input.value).join('');
+        }
+        
+        function clearCodeInputs() {
+            codeInputs.forEach(input => {
+                input.value = '';
+            });
+            verifyButton.disabled = true;
+        }
+        
+        function validateCodeInputs() {
+            const code = getCodeValue();
+            verifyButton.disabled = code.length !== 6 || !/^\d{6}$/.test(code);
+        }
+        
+        // Step 1: Email entry event handlers
         [newEmail, confirmEmail].forEach(input => {
-            input.addEventListener('input', clearMessage);
+            input.addEventListener('input', function() {
+                clearMessage(emailMessage);
+                checkEmailsMatch();
+            });
         });
         
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             
             if (newEmail.value !== confirmEmail.value) {
-                displayMessage('Email addresses do not match', 'error');
+                displayMessage(emailMessage, 'Email addresses do not match', 'error');
                 return;
             }
             
+            pendingNewEmail = newEmail.value.trim();
+            
             disableForm(form);
-            displayMessage('Processing email change request...', 'success');
+            displayMessage(emailMessage, 'Sending verification code...', 'success');
+            
+            console.log('Sending verification code request');
+            
+            // Get auth token from sessionStorage
+            let authToken = '';
+            try {
+                authToken = sessionStorage.getItem('authToken') || '';
+            } catch (e) {
+                console.error('Could not read authToken from sessionStorage:', e);
+            }
+            
+            if (!authToken) {
+                enableForm(form);
+                displayMessage(emailMessage, 'Authentication required. Please sign in again.', 'error');
+                return;
+            }
+            
+            // Use the SPA API pattern with handleApiRequest
+            const request = {
+                action: 'emailChange.sendVerificationCode',
+                params: {
+                    newEmail: pendingNewEmail
+                },
+                token: authToken
+            };
+            
+            console.log('Request:', request);
             
             google.script.run
-                .withSuccessHandler(function(response) {
+                .withSuccessHandler(function(responseJson) {
+                    console.log('sendVerificationCode response:', responseJson);
                     enableForm(form);
-                    const result = typeof response === 'string' ? JSON.parse(response) : response;
-                    if (result.success) {
-                        displayMessage(result.message || 'Verification code sent to new email address', 'success');
-                        form.reset();
+                    
+                    const response = typeof responseJson === 'string' ? JSON.parse(responseJson) : responseJson;
+                    
+                    if (response.success) {
+                        // Move to verification step
+                        showStep('verification');
+                        clearMessage(emailMessage);
                     } else {
-                        displayMessage(result.message || 'Request failed', 'error');
+                        displayMessage(emailMessage, response.error || 'Request failed', 'error');
                     }
                 })
                 .withFailureHandler(function(error) {
+                    console.error('sendVerificationCode error:', error);
                     enableForm(form);
-                    displayMessage('Error: ' + error.message, 'error');
+                    displayMessage(emailMessage, 'Error: ' + error.message, 'error');
                 })
-                .handleSendVerificationCode(newEmail.value, document.getElementById('currentEmail').value);
+                .handleApiRequest(request);
+        });
+        
+        // Step 2: Verification code event handlers
+        codeInputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                const value = e.target.value;
+                
+                // Only allow digits
+                if (value && !/^\d$/.test(value)) {
+                    e.target.value = '';
+                    return;
+                }
+                
+                // Move to next input on valid digit
+                if (value && index < 5) {
+                    codeInputs[index + 1].focus();
+                }
+                
+                validateCodeInputs();
+                
+                // Auto-submit if all 6 digits are filled
+                if (value && index === 5) {
+                    const code = getCodeValue();
+                    if (code.length === 6 && /^\d{6}$/.test(code)) {
+                        setTimeout(() => {
+                            if (!verifyButton.disabled) {
+                                verifyButton.click();
+                            }
+                        }, 100);
+                    }
+                }
+            });
+
+            input.addEventListener('keydown', (e) => {
+                // Handle backspace - move to previous input if current is empty
+                if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                    codeInputs[index - 1].focus();
+                }
+                
+                // Handle left/right arrow keys
+                if (e.key === 'ArrowLeft' && index > 0) {
+                    codeInputs[index - 1].focus();
+                }
+                if (e.key === 'ArrowRight' && index < 5) {
+                    codeInputs[index + 1].focus();
+                }
+            });
+
+            // Handle paste - fill all inputs from paste
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pastedData = (e.clipboardData || window.clipboardData).getData('text');
+                const digits = pastedData.replace(/\D/g, '').slice(0, 6);
+                
+                digits.split('').forEach((digit, i) => {
+                    if (codeInputs[i]) {
+                        codeInputs[i].value = digit;
+                    }
+                });
+                
+                // Focus last filled input or last input
+                const lastIndex = Math.min(digits.length, 6) - 1;
+                if (lastIndex >= 0) {
+                    codeInputs[Math.min(lastIndex, 5)].focus();
+                }
+                
+                validateCodeInputs();
+                
+                // Auto-submit if we have 6 digits
+                if (digits.length === 6) {
+                    setTimeout(() => {
+                        if (!verifyButton.disabled) {
+                            verifyButton.click();
+                        }
+                    }, 100);
+                }
+            });
+        });
+        
+        verificationForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const code = getCodeValue();
+            pendingVerificationCode = code;
+            
+            disableForm(verificationForm);
+            displayMessage(verificationMessage, 'Verifying code and changing email (this may take a moment)...', 'success');
+            
+            // Get auth token from sessionStorage
+            let authToken = '';
+            try {
+                authToken = sessionStorage.getItem('authToken') || '';
+            } catch (e) {
+                console.error('Could not read authToken from sessionStorage:', e);
+            }
+            
+            if (!authToken) {
+                enableForm(verificationForm);
+                displayMessage(verificationMessage, 'Authentication required. Please sign in again.', 'error');
+                return;
+            }
+            
+            // Call API to verify code and execute email change
+            const request = {
+                action: 'emailChange.verifyAndChangeEmail',
+                params: {
+                    newEmail: pendingNewEmail,
+                    verificationCode: code
+                },
+                token: authToken
+            };
+            
+            console.log('Verify and change email request:', request);
+            
+            google.script.run
+                .withSuccessHandler(function(responseJson) {
+                    console.log('verifyAndChangeEmail response:', responseJson);
+                    enableForm(verificationForm);
+                    
+                    const response = typeof responseJson === 'string' ? JSON.parse(responseJson) : responseJson;
+                    
+                    if (response.success) {
+                        // Show detailed results if there were any group failures
+                        if (response.data && response.data.failedCount > 0) {
+                            const failedGroups = response.data.groupResults
+                                .filter(r => !r.success)
+                                .map(r => r.groupName + ': ' + r.error)
+                                .join('\n');
+                            
+                            displayMessage(verificationMessage, 
+                                'Email changed with warnings:\n' + response.data.message + '\n\nFailed groups:\n' + failedGroups,
+                                'error');
+                        } else {
+                            // Complete success - show success step
+                            showStep('success');
+                            
+                            // Update session email if needed
+                            try {
+                                sessionStorage.setItem('authenticatedEmail', pendingNewEmail);
+                            } catch (e) {
+                                console.warn('Could not update sessionStorage:', e);
+                            }
+                        }
+                    } else {
+                        displayMessage(verificationMessage, response.error || 'Verification failed', 'error');
+                        clearCodeInputs();
+                        codeInputs[0].focus();
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    console.error('verifyAndChangeEmail error:', error);
+                    enableForm(verificationForm);
+                    displayMessage(verificationMessage, 'Error: ' + error.message, 'error');
+                    clearCodeInputs();
+                    codeInputs[0].focus();
+                })
+                .handleApiRequest(request);
+        });
+        
+        backToEmailLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            showStep('email');
+            clearCodeInputs();
+            clearMessage(verificationMessage);
+            form.reset();
+            submitButton.disabled = true;
         });
     }
     

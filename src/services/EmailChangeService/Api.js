@@ -61,6 +61,16 @@ EmailChangeService.initApi = function() {
     }
   );
 
+  // Register verifyAndChangeEmail handler (combined verify + change)
+  Common.Api.Client.registerHandler(
+    'emailChange.verifyAndChangeEmail',
+    EmailChangeService.Api.handleVerifyAndChangeEmail,
+    {
+      requiresAuth: true,
+      description: 'Verify code and execute email change in one step'
+    }
+  );
+
   // Register verifyAndGetGroups handler
   Common.Api.Client.registerHandler(
     'emailChange.verifyAndGetGroups',
@@ -96,11 +106,16 @@ EmailChangeService.initApi = function() {
  * @returns {Common.Api.ApiResponse}
  */
 EmailChangeService.Api.handleSendVerificationCode = function(params) {
+  Logger.log('[EmailChangeService.Api] handleSendVerificationCode called with params: ' + JSON.stringify(params));
+  
   const originalEmail = params._authenticatedEmail;
   const newEmail = params.newEmail;
 
+  Logger.log('[EmailChangeService.Api] originalEmail: ' + originalEmail + ', newEmail: ' + newEmail);
+
     // Validate original email is available
     if (!originalEmail) {
+      Logger.log('[EmailChangeService.Api] ERROR: No original email provided');
       return Common.Api.ClientManager.errorResponse(
         'User email not available',
         'NO_EMAIL'
@@ -109,6 +124,7 @@ EmailChangeService.Api.handleSendVerificationCode = function(params) {
 
     // Validate new email is provided
     if (!newEmail) {
+      Logger.log('[EmailChangeService.Api] ERROR: No new email provided');
       return Common.Api.ClientManager.errorResponse(
         'New email address is required',
         'MISSING_NEW_EMAIL'
@@ -116,8 +132,10 @@ EmailChangeService.Api.handleSendVerificationCode = function(params) {
     }
 
     // PURE: Validate email change (old vs new)
+    Logger.log('[EmailChangeService.Api] Validating email change');
     const validation = EmailChangeService.Manager.validateEmailChange(originalEmail, newEmail);
     if (!validation.valid) {
+      Logger.log('[EmailChangeService.Api] Validation failed: ' + validation.error);
       return Common.Api.ClientManager.errorResponse(
         validation.error,
         validation.errorCode
@@ -126,22 +144,28 @@ EmailChangeService.Api.handleSendVerificationCode = function(params) {
 
     try {
       // PURE: Generate verification code
+      Logger.log('[EmailChangeService.Api] Generating verification code');
       const code = EmailChangeService.Manager.generateVerificationCode();
+      Logger.log('[EmailChangeService.Api] Code generated: ' + code);
       
       // PURE: Create verification entry
       const entry = EmailChangeService.Manager.createVerificationEntry(originalEmail, newEmail, code);
       
       // GAS: Store verification data
+      Logger.log('[EmailChangeService.Api] Storing verification data');
       EmailChangeService.Api.storeVerificationData(code, entry);
 
       // PURE: Build email content
+      Logger.log('[EmailChangeService.Api] Building email content');
       const emailContent = EmailChangeService.Manager.buildVerificationEmailContent(code);
 
       // GAS: Send verification email
       const normalizedNewEmail = EmailChangeService.Manager.normalizeEmail(newEmail);
+      Logger.log('[EmailChangeService.Api] Sending verification email to: ' + normalizedNewEmail);
       const emailSent = EmailChangeService.Api.sendVerificationEmail(normalizedNewEmail, emailContent);
 
       if (!emailSent) {
+        Logger.log('[EmailChangeService.Api] ERROR: Email send failed');
         // Clean up stored verification data on email failure
         EmailChangeService.Api.deleteVerificationData(code);
         
@@ -153,7 +177,7 @@ EmailChangeService.Api.handleSendVerificationCode = function(params) {
         );
       }
 
-      Logger.log('[EmailChangeService.Api] Verification code sent to: ' + normalizedNewEmail);
+      Logger.log('[EmailChangeService.Api] SUCCESS: Verification code sent to: ' + normalizedNewEmail);
 
       // PURE: Format success result
       const result = EmailChangeService.Manager.formatSendCodeResult(true, normalizedNewEmail);
@@ -162,12 +186,181 @@ EmailChangeService.Api.handleSendVerificationCode = function(params) {
       });
     } catch (error) {
       Logger.log('[EmailChangeService.Api] handleSendVerificationCode error: ' + error);
+      Logger.log('[EmailChangeService.Api] Error stack: ' + error.stack);
       return Common.Api.ClientManager.errorResponse(
         'Failed to send verification code',
         'SEND_CODE_ERROR'
       );
     }
-  },
+  };
+
+/**
+ * Handle verifyAndChangeEmail API request
+ * Combined handler that verifies the code and executes the email change in one step
+ * This simplifies the client flow for the 3-step UI
+ * 
+ * @param {Object} params - Request parameters
+ * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
+ * @param {string} params.newEmail - The new email address
+ * @param {string} params.verificationCode - The verification code
+ * @returns {Common.Api.ApiResponse}
+ */
+EmailChangeService.Api.handleVerifyAndChangeEmail = function(params) {
+    Logger.log('[EmailChangeService.Api] handleVerifyAndChangeEmail called');
+    
+    const originalEmail = params._authenticatedEmail;
+    const newEmail = params.newEmail;
+    const verificationCode = params.verificationCode;
+
+    // Validate inputs
+    if (!originalEmail) {
+      Logger.log('[EmailChangeService.Api] ERROR: No original email');
+      return Common.Api.ClientManager.errorResponse(
+        'User email not available',
+        'NO_EMAIL'
+      );
+    }
+
+    if (!newEmail) {
+      Logger.log('[EmailChangeService.Api] ERROR: No new email');
+      return Common.Api.ClientManager.errorResponse(
+        'New email address is required',
+        'MISSING_NEW_EMAIL'
+      );
+    }
+
+    if (!verificationCode) {
+      Logger.log('[EmailChangeService.Api] ERROR: No verification code');
+      return Common.Api.ClientManager.errorResponse(
+        'Verification code is required',
+        'MISSING_CODE'
+      );
+    }
+
+    try {
+      // GAS: Get stored verification data
+      Logger.log('[EmailChangeService.Api] Retrieving verification data for code');
+      const storedData = EmailChangeService.Api.getVerificationData(verificationCode);
+
+      // PURE: Verify code
+      Logger.log('[EmailChangeService.Api] Verifying code');
+      const verifyResult = EmailChangeService.Manager.verifyCode(
+        verificationCode,
+        originalEmail,
+        newEmail,
+        storedData
+      );
+
+      if (!verifyResult.valid) {
+        Logger.log('[EmailChangeService.Api] Verification failed: ' + verifyResult.error);
+        return Common.Api.ClientManager.errorResponse(
+          verifyResult.error,
+          verifyResult.errorCode
+        );
+      }
+
+      Logger.log('[EmailChangeService.Api] Code verified, proceeding with email change');
+
+      // GAS: Invalidate the verification code (single-use)
+      EmailChangeService.Api.deleteVerificationData(verificationCode);
+
+      const results = [];
+      const normalizedOld = EmailChangeService.Manager.normalizeEmail(originalEmail);
+      const normalizedNew = EmailChangeService.Manager.normalizeEmail(newEmail);
+
+      // GAS: Get user's group memberships
+      Logger.log('[EmailChangeService.Api] Getting groups for user');
+      const groups = GroupSubscription.listGroupsFor(normalizedOld);
+      Logger.log('[EmailChangeService.Api] Found ' + groups.length + ' groups');
+
+      // GAS: Update email in each group with automatic retry
+      if (Array.isArray(groups) && groups.length > 0) {
+        const MAX_RETRIES = 3;
+        
+        for (const group of groups) {
+          const groupEmail = group.email;
+          let success = false;
+          let lastError = null;
+
+          // Retry loop using pure function for logic
+          for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+              Logger.log('[EmailChangeService.Api] Updating group: ' + groupEmail + ' (attempt ' + attempt + '/' + MAX_RETRIES + ')');
+              
+              // GAS: Change member's email in group
+              GroupSubscription.changeMembersEmail(groupEmail, normalizedOld, normalizedNew);
+              success = true;
+              Logger.log('[EmailChangeService.Api] Successfully updated group: ' + groupEmail);
+              break; // Success - exit retry loop
+            } catch (e) {
+              lastError = e;
+              Logger.log('[EmailChangeService.Api] Error updating group ' + groupEmail + ' (attempt ' + attempt + '): ' + e);
+              
+              // PURE: Get retry decision
+              const retryAction = EmailChangeService.Manager.getRetryAction({
+                attempt: attempt,
+                maxRetries: MAX_RETRIES,
+                error: e
+              });
+              
+              if (retryAction.action === 'retry') {
+                // GAS: Sleep with backoff
+                const backoffMs = retryAction.backoffMs;
+                Logger.log('[EmailChangeService.Api] Retrying in ' + backoffMs + 'ms...');
+                Utilities.sleep(backoffMs);
+              } else if (retryAction.action === 'fail') {
+                // All retries exhausted
+                Logger.log('[EmailChangeService.Api] All retries exhausted for group ' + groupEmail);
+                break;
+              }
+            }
+          }
+
+          // PURE: Create result entry
+          const errorMessage = success ? null : (lastError ? lastError.message || 'Unknown error' : 'Unknown error');
+          const result = EmailChangeService.Manager.createGroupUpdateResult(group, success, errorMessage);
+          results.push(result);
+        }
+      }
+
+      // GAS: Update email in spreadsheets
+      Logger.log('[EmailChangeService.Api] Updating spreadsheets');
+      EmailChangeService.Api.changeEmailInSpreadsheets(normalizedOld, normalizedNew);
+
+      // GAS: Log the change
+      Logger.log('[EmailChangeService.Api] Logging email change');
+      EmailChangeService.Api.logEmailChange(normalizedOld, normalizedNew);
+
+      // PURE: Aggregate results
+      const aggregated = EmailChangeService.Manager.aggregateGroupResults(results);
+      const message = EmailChangeService.Manager.formatEmailChangeMessage(
+        aggregated.overallSuccess,
+        normalizedOld,
+        normalizedNew,
+        aggregated.successCount,
+        aggregated.failedCount
+      );
+
+      Logger.log('[EmailChangeService.Api] Email change complete: ' + aggregated.successCount + ' successes, ' + aggregated.failedCount + ' failures');
+
+      return Common.Api.ClientManager.successResponse({
+        success: aggregated.overallSuccess,
+        message: message,
+        oldEmail: normalizedOld,
+        newEmail: normalizedNew,
+        groupResults: results,
+        successCount: aggregated.successCount,
+        failedCount: aggregated.failedCount
+      });
+    } catch (error) {
+      Logger.log('[EmailChangeService.Api] handleVerifyAndChangeEmail error: ' + error);
+      Logger.log('[EmailChangeService.Api] Error stack: ' + error.stack);
+      return Common.Api.ClientManager.errorResponse(
+        'Failed to verify and change email: ' + error.message,
+        'VERIFY_CHANGE_ERROR'
+      );
+    }
+};
 
 /**
  * Handle verifyAndGetGroups API request
