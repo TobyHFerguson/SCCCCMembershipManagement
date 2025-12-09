@@ -26,7 +26,7 @@ DirectoryService.Api = DirectoryService.Api || {};
  * @returns {Object} Service data for client renderer
  */
 DirectoryService.Api.getData = function(email) {
-  // GAS: Get directory entries
+  // GAS: Get directory entries (security boundary - only returns public data)
   const directoryEntries = DirectoryService.getDirectoryEntries();
   
   return {

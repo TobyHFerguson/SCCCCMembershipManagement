@@ -696,44 +696,53 @@
             </div>
         `;
         
-        // Load scripts and initialize DataTable
-        Promise.all([
-            loadScript('https://code.jquery.com/jquery-3.6.0.min.js'),
-            loadScript('https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js'),
-            loadScript('https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js')
-        ]).then(() => {
-            console.log('Directory: All scripts loaded, initializing DataTable');
-            
-            const rawTableData = data.directoryEntries || [];
-            console.log('Directory: rawTableData:', rawTableData);
-            console.log('Directory: Number of entries:', rawTableData.length);
-            
-            const tableData = rawTableData.map(function(entry) {
-                console.log('Processing entry:', entry);
-                return [
-                    entry.First || '',
-                    entry.Last || '',
-                    entry.email || entry.Email || '',
-                    entry.phone || entry.Phone || ''
-                ];
-            });
-            
-            console.log('Directory: tableData for DataTable:', tableData);
-            
-            window.jQuery(document).ready(function($) {
-                console.log('Directory: Initializing DataTable');
-                $('#data-table').DataTable({
-                    data: tableData,
-                    responsive: true,
-                    pageLength: 25,
-                    order: [[1, 'asc'], [0, 'asc']]
+        // Load scripts sequentially (DataTables requires jQuery to be loaded first)
+        loadScript('https://code.jquery.com/jquery-3.6.0.min.js')
+            .then(() => {
+                console.log('Directory: jQuery loaded');
+                return Promise.all([
+                    loadScript('https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js'),
+                    loadScript('https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js')
+                ]);
+            })
+            .then(() => {
+                console.log('Directory: All scripts loaded, initializing DataTable');
+                
+                const rawTableData = data.directoryEntries || [];
+                console.log('Directory: rawTableData:', rawTableData);
+                console.log('Directory: Number of entries:', rawTableData.length);
+                
+                const tableData = rawTableData.map(function(entry) {
+                    console.log('Processing entry:', entry);
+                    return [
+                        entry.First || '',
+                        entry.Last || '',
+                        entry.email || entry.Email || '',
+                        entry.phone || entry.Phone || ''
+                    ];
                 });
-                console.log('Directory: DataTable initialized');
+                
+                console.log('Directory: tableData for DataTable:', tableData);
+                
+                // DataTable initialization - document is already ready when scripts load
+                try {
+                    console.log('Directory: Initializing DataTable');
+                    window.jQuery('#data-table').DataTable({
+                        data: tableData,
+                        responsive: true,
+                        pageLength: 25,
+                        order: [[1, 'asc'], [0, 'asc']]
+                    });
+                    console.log('Directory: DataTable initialized successfully');
+                } catch (error) {
+                    console.error('Directory: Error initializing DataTable:', error);
+                    container.innerHTML += '<p style="color: red;">Error initializing directory table: ' + error.message + '</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Directory: Error loading scripts:', error);
+                container.innerHTML += '<p style="color: red;">Error loading DataTables library</p>';
             });
-        }).catch(error => {
-            console.error('Directory: Error loading scripts:', error);
-            container.innerHTML += '<p style="color: red;">Error loading DataTables library</p>';
-        });
     }
     
     // Generic service renderer - used for services not yet fully migrated
