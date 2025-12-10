@@ -309,40 +309,62 @@ function renderService(serviceId, data, container) {
 
 All web services MUST use the existing responsive CSS framework in `src/common/html/_Header.html`. DO NOT duplicate or reimplement the responsive breakpoint logic.
 
+**CRITICAL: GAS Does NOT Support CSS Media Queries**
+- Media queries (`@media`) do not work in GAS HTML templates
+- Instead, use class-based selectors on the `<html>` element
+- Classes are applied via JavaScript: `is-mobile-portrait`, `is-mobile-landscape`, `is-tablet`
+- Desktop has no class (default styles)
+
 Features:
-- Breakpoint-based responsive design using classes applied to the `<html>` element.
-- Device classes: `is-mobile-portrait`, `is-mobile-landscape`, `is-tablet`.
-- Base font-size scaling per device; use `rem` units for service styles.
-- Shared utilities: `checkViewportAndApplyClasses()`, `disableForm()`, `enableForm()` are provided by `_Header.html`.
+- Breakpoint-based responsive design using classes applied to the `<html>` element
+- Device classes: `is-mobile-portrait`, `is-mobile-landscape`, `is-tablet`
+- Base font-size scaling per device; use `rem` units for service styles
+- Shared utilities: `checkViewportAndApplyClasses()`, `disableForm()`, `enableForm()` are provided by `_Header.html`
 
 Service authoring pattern:
+```css
+/* Desktop defaults (no class on html) */
+#serviceForm { 
+  display: grid; 
+  grid-template-columns: 150px 1fr; 
+  gap: 15px; 
+}
+
+/* Tablet */
+html.is-tablet #serviceForm { 
+  grid-template-columns: 130px 1fr; 
+  gap: 12px; 
+}
+
+/* Mobile Landscape */
+html.is-mobile-landscape #serviceForm { 
+  grid-template-columns: 120px 1fr; 
+}
+
+/* Mobile Portrait - single column, stack everything */
+html.is-mobile-portrait #serviceForm { 
+  grid-template-columns: 1fr; 
+  gap: 10px; 
+}
+
+html.is-mobile-portrait label {
+  text-align: left; /* Override right-aligned desktop labels */
+}
+
+html.is-mobile-portrait button {
+  width: 100%; /* Full-width buttons for touch */
+  padding: 14px; /* Larger touch targets */
+}
 ```
-<!-- Service HTML (e.g. GroupManagementApp.html) -->
-<!-- _Layout.html includes _Header.html which sets up the classes and utilities -->
-<style>
-  /* Desktop defaults */
-  #serviceForm { display: grid; grid-template-columns: auto 1fr; gap: 10px; }
 
-  /* Tablet */
-  html.is-tablet #serviceForm { grid-template-columns: 1fr; }
-
-  /* Mobile portrait */
-  html.is-mobile-portrait #serviceForm { padding: 15px; gap: 12px; }
-</style>
-
-<script>
-  async function saveData() {
-    const form = document.getElementById('serviceForm');
-    disableForm(form);
-    try {
-      await google.script.run.withSuccessHandler(() => enableForm(form)).saveData(data);
-    } catch (e) {
-      enableForm(form);
-      throw e;
-    }
-  }
-</script>
-```
+**Responsive Development Checklist**:
+- ✅ Write desktop styles first (no html class prefix)
+- ✅ Add `html.is-tablet` overrides for medium screens
+- ✅ Add `html.is-mobile-landscape` overrides for horizontal mobile
+- ✅ Add `html.is-mobile-portrait` overrides for vertical mobile (single column)
+- ✅ Test on ALL four breakpoints before committing
+- ❌ NEVER use `@media` queries - they don't work in GAS
+- ❌ NEVER duplicate the viewport detection logic from `_Header.html`
 
 CRITICAL: always reference `_Header.html` for breakpoint behavior and UX helpers; test on desktop, tablet, mobile-portrait and mobile-landscape.
 

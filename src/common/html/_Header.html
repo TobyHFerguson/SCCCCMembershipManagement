@@ -1074,153 +1074,321 @@
                 #profileForm {
                     margin: 0 auto;
                     padding: 20px;
-                    max-width: 600px;
+                    max-width: 700px;
+                }
+                
+                .form-grid {
                     display: grid;
-                    grid-template-columns: auto 1fr auto;
-                    gap: 15px;
+                    grid-template-columns: 150px 1fr;
+                    gap: 15px 20px;
                     align-items: center;
                 }
                 
                 .section-header {
-                    grid-column: 1 / 4;
-                    font-size: 1.2rem;
-                    font-weight: bold;
-                    margin-top: 20px;
-                    margin-bottom: 10px;
-                    padding-bottom: 5px;
+                    grid-column: 1 / -1;
+                    font-size: 1.3rem;
+                    font-weight: 600;
+                    margin-top: 30px;
+                    margin-bottom: 15px;
+                    padding-bottom: 8px;
                     border-bottom: 2px solid #007bff;
+                    color: #333;
                 }
                 
                 .section-header:first-child {
                     margin-top: 0;
                 }
                 
-                #profileForm label {
+                #profileForm label.field-label {
                     text-align: right;
-                    padding-right: 10px;
-                    font-weight: bold;
+                    padding-right: 15px;
+                    font-weight: 600;
+                    color: #555;
                 }
                 
                 #profileForm input[type="text"],
                 #profileForm input[type="email"],
                 #profileForm input[type="tel"] {
-                    padding: 8px;
+                    padding: 10px 12px;
                     border: 1px solid #ccc;
                     border-radius: 4px;
+                    font-size: 1rem;
+                    width: 100%;
+                    box-sizing: border-box;
                 }
                 
                 #profileForm input:disabled {
-                    background-color: #f5f5f5;
-                    color: #666;
+                    background-color: #f8f9fa;
+                    color: #6c757d;
                     cursor: not-allowed;
+                    border-color: #dee2e6;
                 }
                 
-                .checkbox-cell {
+                #profileForm input:focus:not(:disabled) {
+                    outline: none;
+                    border-color: #007bff;
+                    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+                }
+                
+                .checkbox-row {
+                    grid-column: 1 / -1;
+                    display: grid;
+                    grid-template-columns: 150px 1fr;
+                    gap: 20px;
+                    align-items: center;
+                    padding: 8px 0;
+                }
+                
+                .checkbox-row label.field-label {
+                    text-align: right;
+                    padding-right: 15px;
+                    font-weight: 600;
+                    color: #555;
+                }
+                
+                .checkbox-content {
                     display: flex;
                     align-items: center;
-                    gap: 5px;
+                    gap: 10px;
+                }
+                
+                .checkbox-content input[type="checkbox"] {
+                    width: 20px;
+                    height: 20px;
+                    cursor: pointer;
+                    margin: 0;
+                }
+                
+                .checkbox-content label {
+                    font-weight: normal;
+                    color: #333;
+                    cursor: pointer;
+                    user-select: none;
+                    margin: 0;
                 }
                 
                 .buttons-container {
-                    grid-column: 1 / 4;
-                    margin-top: 20px;
-                    text-align: center;
+                    grid-column: 1 / -1;
+                    margin-top: 30px;
+                    display: flex;
+                    gap: 15px;
+                    justify-content: center;
+                }
+                
+                .buttons-container button {
+                    padding: 12px 30px;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    min-width: 120px;
+                }
+                
+                #resetButton {
+                    background-color: #6c757d;
+                    color: white;
+                    border: none;
+                }
+                
+                #resetButton:hover {
+                    background-color: #5a6268;
+                }
+                
+                #applyButton {
+                    background-color: #007bff;
+                    color: white;
+                    border: none;
+                }
+                
+                #applyButton:hover:not(:disabled) {
+                    background-color: #0056b3;
+                }
+                
+                #applyButton:disabled {
+                    background-color: #ccc;
+                    cursor: not-allowed;
+                    opacity: 0.6;
                 }
                 
                 .message {
-                    grid-column: 1 / 4;
-                    margin-top: 10px;
-                    padding: 10px;
+                    grid-column: 1 / -1;
+                    margin-top: 15px;
+                    padding: 12px;
                     border-radius: 4px;
                     display: none;
                     text-align: center;
+                    font-weight: 500;
                 }
                 
                 .message.success {
                     background-color: #d4edda;
                     color: #155724;
+                    border: 1px solid #c3e6cb;
                 }
                 
                 .message.error {
                     background-color: #f8d7da;
                     color: #721c24;
+                    border: 1px solid #f5c6cb;
+                }
+                
+                .back-link {
+                    display: block;
+                    margin-top: 30px;
+                    text-align: center;
+                    color: #007bff;
+                    text-decoration: none;
+                    font-weight: 500;
+                }
+                
+                .back-link:hover {
+                    text-decoration: underline;
+                }
+                
+                /* Responsive: Mobile Portrait */
+                html.is-mobile-portrait #profileForm {
+                    padding: 15px;
+                }
+                
+                html.is-mobile-portrait .form-grid,
+                html.is-mobile-portrait .checkbox-row {
+                    grid-template-columns: 1fr;
+                    gap: 10px;
+                }
+                
+                html.is-mobile-portrait #profileForm label.field-label,
+                html.is-mobile-portrait .checkbox-row label.field-label {
+                    text-align: left;
+                    padding-right: 0;
+                    margin-bottom: 5px;
+                }
+                
+                html.is-mobile-portrait .section-header {
+                    font-size: 1.2rem;
+                    margin-top: 25px;
+                    margin-bottom: 12px;
+                }
+                
+                html.is-mobile-portrait .buttons-container {
+                    flex-direction: column;
+                    gap: 10px;
+                }
+                
+                html.is-mobile-portrait .buttons-container button {
+                    width: 100%;
+                    padding: 14px;
+                    font-size: 1.1rem;
+                }
+                
+                /* Responsive: Mobile Landscape */
+                html.is-mobile-landscape #profileForm {
+                    padding: 18px;
+                }
+                
+                html.is-mobile-landscape .form-grid {
+                    grid-template-columns: 120px 1fr;
+                }
+                
+                html.is-mobile-landscape .section-header {
+                    font-size: 1.2rem;
+                }
+                
+                html.is-mobile-landscape .buttons-container button {
+                    padding: 12px 25px;
+                    min-width: 110px;
+                }
+                
+                /* Responsive: Tablet */
+                html.is-tablet #profileForm {
+                    max-width: 650px;
+                }
+                
+                html.is-tablet .form-grid {
+                    grid-template-columns: 130px 1fr;
+                    gap: 12px 18px;
+                }
+                
+                html.is-tablet .section-header {
+                    font-size: 1.25rem;
+                }
+                
+                html.is-tablet .buttons-container button {
+                    padding: 11px 28px;
                 }
             </style>
             
             <div style="padding: 1rem;">
-                <h2>Manage Your Profile</h2>
+                <h2 style="text-align: center; margin-bottom: 30px;">Manage Your Profile</h2>
                 
                 <form id="profileForm">
                     <div class="section-header">Membership Information</div>
                     
-                    <label for="status">Status:</label>
-                    <input type="text" id="status" name="status" value="${escapeHtml(profile.Status || '')}" disabled>
-                    <div></div>
-                    
-                    <label for="joined">Joined:</label>
-                    <input type="text" id="joined" name="joined" value="${escapeHtml(profile.JoinedFormatted || '')}" disabled>
-                    <div></div>
-                    
-                    <label for="expires">Expires:</label>
-                    <input type="text" id="expires" name="expires" value="${escapeHtml(profile.ExpiresFormatted || '')}" disabled>
-                    <div></div>
-                    
-                    <label for="renewedOn">Renewed On:</label>
-                    <input type="text" id="renewedOn" name="renewedOn" value="${escapeHtml(profile.RenewedOnFormatted || '')}" disabled>
-                    <div></div>
+                    <div class="form-grid">
+                        <label for="status" class="field-label">Status:</label>
+                        <input type="text" id="status" name="status" value="${escapeHtml(profile.Status || '')}" disabled>
+                        
+                        <label for="joined" class="field-label">Joined:</label>
+                        <input type="text" id="joined" name="joined" value="${escapeHtml(profile.JoinedFormatted || '')}" disabled>
+                        
+                        <label for="expires" class="field-label">Expires:</label>
+                        <input type="text" id="expires" name="expires" value="${escapeHtml(profile.ExpiresFormatted || '')}" disabled>
+                        
+                        <label for="renewedOn" class="field-label">Renewed On:</label>
+                        <input type="text" id="renewedOn" name="renewedOn" value="${escapeHtml(profile.RenewedOnFormatted || '')}" disabled>
+                    </div>
                     
                     <div class="section-header">Contact Information</div>
                     
-                    <label for="email">Email:</label>
-                    <input type="email" id="email" name="email" value="${escapeHtml(profile.Email || data.email || '')}" disabled>
-                    <div></div>
-                    
-                    <label for="firstName">First Name:</label>
-                    <input type="text" id="firstName" name="firstName" value="${escapeHtml(profile.First || '')}" required>
-                    <div></div>
-                    
-                    <label for="lastName">Last Name:</label>
-                    <input type="text" id="lastName" name="lastName" value="${escapeHtml(profile.Last || '')}" required>
-                    <div></div>
-                    
-                    <label for="phone">Phone:</label>
-                    <input type="tel" id="phone" name="phone" value="${escapeHtml(profile.Phone || '')}">
-                    <div></div>
+                    <div class="form-grid">
+                        <label for="email" class="field-label">Email:</label>
+                        <input type="email" id="email" name="email" value="${escapeHtml(profile.Email || data.email || '')}" disabled>
+                        
+                        <label for="firstName" class="field-label">First Name:</label>
+                        <input type="text" id="firstName" name="firstName" value="${escapeHtml(profile.First || '')}" required>
+                        
+                        <label for="lastName" class="field-label">Last Name:</label>
+                        <input type="text" id="lastName" name="lastName" value="${escapeHtml(profile.Last || '')}" required>
+                        
+                        <label for="phone" class="field-label">Phone:</label>
+                        <input type="tel" id="phone" name="phone" value="${escapeHtml(profile.Phone || '')}">
+                    </div>
                     
                     <div class="section-header">Directory Sharing Preferences</div>
                     
-                    <label for="directoryShareName">Share Name:</label>
-                    <div></div>
-                    <div class="checkbox-cell">
-                        <input type="checkbox" id="directoryShareName" name="directoryShareName" ${profile['Directory Share Name'] ? 'checked' : ''}>
-                        <label for="directoryShareName" style="font-weight: normal;">Make my name visible in member directory</label>
+                    <div class="checkbox-row">
+                        <label class="field-label">Share Name:</label>
+                        <div class="checkbox-content">
+                            <input type="checkbox" id="directoryShareName" name="directoryShareName" ${profile['Directory Share Name'] ? 'checked' : ''}>
+                            <label for="directoryShareName">Make my name visible in member directory</label>
+                        </div>
                     </div>
                     
-                    <label for="directoryShareEmail">Share Email:</label>
-                    <div></div>
-                    <div class="checkbox-cell">
-                        <input type="checkbox" id="directoryShareEmail" name="directoryShareEmail" ${profile['Directory Share Email'] ? 'checked' : ''}>
-                        <label for="directoryShareEmail" style="font-weight: normal;">Make my email visible in member directory</label>
+                    <div class="checkbox-row">
+                        <label class="field-label">Share Email:</label>
+                        <div class="checkbox-content">
+                            <input type="checkbox" id="directoryShareEmail" name="directoryShareEmail" ${profile['Directory Share Email'] ? 'checked' : ''}>
+                            <label for="directoryShareEmail">Make my email visible in member directory</label>
+                        </div>
                     </div>
                     
-                    <label for="directorySharePhone">Share Phone:</label>
-                    <div></div>
-                    <div class="checkbox-cell">
-                        <input type="checkbox" id="directorySharePhone" name="directorySharePhone" ${profile['Directory Share Phone'] ? 'checked' : ''}>
-                        <label for="directorySharePhone" style="font-weight: normal;">Make my phone visible in member directory</label>
+                    <div class="checkbox-row">
+                        <label class="field-label">Share Phone:</label>
+                        <div class="checkbox-content">
+                            <input type="checkbox" id="directorySharePhone" name="directorySharePhone" ${profile['Directory Share Phone'] ? 'checked' : ''}>
+                            <label for="directorySharePhone">Make my phone visible in member directory</label>
+                        </div>
                     </div>
                     
                     <div class="buttons-container">
                         <button type="button" id="resetButton">Reset</button>
-                        <button type="submit" id="applyButton" disabled>Apply</button>
+                        <button type="submit" id="applyButton" disabled>Apply Changes</button>
                     </div>
                     
                     <div id="profileMessage" class="message"></div>
                 </form>
                 
-                <p style="margin-top: 2rem;">
-                    <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
-                </p>
+                <a href="#" class="back-link" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
             </div>
         `;
         
