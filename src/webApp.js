@@ -29,6 +29,9 @@ function doGet(e) {
     const useNewAuth = Common.Config.FeatureFlags.isNewAuthEnabled();
     template.contentFileName = useNewAuth ? VERIFICATION_CODE_INPUT : MAGIC_LINK_INPUT;
     
+    // Set empty service for SPA flow (service selected after authentication)
+    template.service = '';
+    
     // Log which auth flow is being used for monitoring
     if (!useNewAuth) {
         console.warn('[DEPRECATED] Using legacy Magic Link authentication flow. ' +
