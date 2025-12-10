@@ -97,6 +97,11 @@ Common.HomePage.Manager = class {
     const services = [];
     
     for (const [serviceId, serviceObj] of Object.entries(webServices)) {
+      // Skip HomePageService - it shouldn't appear as a tile on the home page
+      if (serviceId === 'HomePageService') {
+        continue;
+      }
+      
       const info = this._extractServiceInfo(serviceId, serviceObj);
       if (info) {
         services.push(info);

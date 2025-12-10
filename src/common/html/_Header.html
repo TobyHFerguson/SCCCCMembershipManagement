@@ -1074,7 +1074,12 @@
                 #profileForm {
                     margin: 0 auto;
                     padding: 1.25rem;
-                    max-width: 43.75rem;
+                    max-width: 37.5rem;
+                }
+                
+                .profile-container {
+                    max-width: 100%;
+                    margin: 0 auto;
                 }
                 
                 .form-grid {
@@ -1249,7 +1254,8 @@
                 
                 /* Responsive: Tablet */
                 html.is-tablet #profileForm {
-                    max-width: 40.625rem;
+                    max-width: 34.375rem;
+                    padding: 1.125rem;
                 }
                 
                 html.is-tablet .form-grid,
@@ -1268,7 +1274,8 @@
                 
                 /* Responsive: Mobile Landscape */
                 html.is-mobile-landscape #profileForm {
-                    padding: 1.125rem;
+                    padding: 1rem;
+                    max-width: 31.25rem;
                 }
                 
                 html.is-mobile-landscape .form-grid,
@@ -1289,6 +1296,11 @@
                 /* Responsive: Mobile Portrait - single column */
                 html.is-mobile-portrait #profileForm {
                     padding: 0.9375rem;
+                    max-width: 100%;
+                }
+                
+                html.is-mobile-portrait .profile-container {
+                    padding: 0 0.5rem;
                 }
                 
                 html.is-mobile-portrait .form-grid,
@@ -1330,7 +1342,7 @@
                 }
             </style>
             
-            <div style="padding: 1rem;">
+            <div class="profile-container" style="padding: 1rem;">
                 <h2 style="text-align: center; margin-bottom: 1.875rem;">Manage Your Profile</h2>
                 
                 <form id="profileForm">
