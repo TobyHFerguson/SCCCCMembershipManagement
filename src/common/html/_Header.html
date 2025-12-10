@@ -1073,14 +1073,14 @@
             <style>
                 #profileForm {
                     margin: 0 auto;
-                    padding: 20px;
-                    max-width: 700px;
+                    padding: 1.25rem;
+                    max-width: 43.75rem;
                 }
                 
                 .form-grid {
                     display: grid;
-                    grid-template-columns: 150px 1fr;
-                    gap: 15px 20px;
+                    grid-template-columns: 9.375rem 1fr;
+                    gap: 0.9375rem 1.25rem;
                     align-items: center;
                 }
                 
@@ -1088,10 +1088,10 @@
                     grid-column: 1 / -1;
                     font-size: 1.3rem;
                     font-weight: 600;
-                    margin-top: 30px;
-                    margin-bottom: 15px;
-                    padding-bottom: 8px;
-                    border-bottom: 2px solid #007bff;
+                    margin-top: 1.875rem;
+                    margin-bottom: 0.9375rem;
+                    padding-bottom: 0.5rem;
+                    border-bottom: 0.125rem solid #007bff;
                     color: #333;
                 }
                 
@@ -1101,7 +1101,7 @@
                 
                 #profileForm label.field-label {
                     text-align: right;
-                    padding-right: 15px;
+                    padding-right: 0.9375rem;
                     font-weight: 600;
                     color: #555;
                 }
@@ -1109,9 +1109,9 @@
                 #profileForm input[type="text"],
                 #profileForm input[type="email"],
                 #profileForm input[type="tel"] {
-                    padding: 10px 12px;
-                    border: 1px solid #ccc;
-                    border-radius: 4px;
+                    padding: 0.625rem 0.75rem;
+                    border: 0.0625rem solid #ccc;
+                    border-radius: 0.25rem;
                     font-size: 1rem;
                     width: 100%;
                     box-sizing: border-box;
@@ -1127,21 +1127,21 @@
                 #profileForm input:focus:not(:disabled) {
                     outline: none;
                     border-color: #007bff;
-                    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+                    box-shadow: 0 0 0 0.1875rem rgba(0, 123, 255, 0.1);
                 }
                 
                 .checkbox-row {
                     grid-column: 1 / -1;
                     display: grid;
-                    grid-template-columns: 150px 1fr;
-                    gap: 20px;
+                    grid-template-columns: 9.375rem 1fr;
+                    gap: 1.25rem;
                     align-items: center;
-                    padding: 8px 0;
+                    padding: 0.5rem 0;
                 }
                 
                 .checkbox-row label.field-label {
                     text-align: right;
-                    padding-right: 15px;
+                    padding-right: 0.9375rem;
                     font-weight: 600;
                     color: #555;
                 }
@@ -1149,14 +1149,15 @@
                 .checkbox-content {
                     display: flex;
                     align-items: center;
-                    gap: 10px;
+                    gap: 0.625rem;
                 }
                 
                 .checkbox-content input[type="checkbox"] {
-                    width: 20px;
-                    height: 20px;
+                    width: 1.25rem;
+                    height: 1.25rem;
                     cursor: pointer;
                     margin: 0;
+                    flex-shrink: 0;
                 }
                 
                 .checkbox-content label {
@@ -1169,20 +1170,20 @@
                 
                 .buttons-container {
                     grid-column: 1 / -1;
-                    margin-top: 30px;
+                    margin-top: 1.875rem;
                     display: flex;
-                    gap: 15px;
+                    gap: 0.9375rem;
                     justify-content: center;
                 }
                 
                 .buttons-container button {
-                    padding: 12px 30px;
+                    padding: 0.75rem 1.875rem;
                     font-size: 1rem;
                     font-weight: 600;
-                    border-radius: 4px;
+                    border-radius: 0.25rem;
                     cursor: pointer;
                     transition: all 0.2s ease;
-                    min-width: 120px;
+                    min-width: 7.5rem;
                 }
                 
                 #resetButton {
@@ -1213,9 +1214,9 @@
                 
                 .message {
                     grid-column: 1 / -1;
-                    margin-top: 15px;
-                    padding: 12px;
-                    border-radius: 4px;
+                    margin-top: 0.9375rem;
+                    padding: 0.75rem;
+                    border-radius: 0.25rem;
                     display: none;
                     text-align: center;
                     font-weight: 500;
@@ -1224,18 +1225,18 @@
                 .message.success {
                     background-color: #d4edda;
                     color: #155724;
-                    border: 1px solid #c3e6cb;
+                    border: 0.0625rem solid #c3e6cb;
                 }
                 
                 .message.error {
                     background-color: #f8d7da;
                     color: #721c24;
-                    border: 1px solid #f5c6cb;
+                    border: 0.0625rem solid #f5c6cb;
                 }
                 
                 .back-link {
                     display: block;
-                    margin-top: 30px;
+                    margin-top: 1.875rem;
                     text-align: center;
                     color: #007bff;
                     text-decoration: none;
@@ -1246,67 +1247,15 @@
                     text-decoration: underline;
                 }
                 
-                /* Responsive: Mobile Portrait */
-                html.is-mobile-portrait #profileForm {
-                    padding: 15px;
-                }
-                
-                html.is-mobile-portrait .form-grid,
-                html.is-mobile-portrait .checkbox-row {
-                    grid-template-columns: 1fr;
-                    gap: 10px;
-                }
-                
-                html.is-mobile-portrait #profileForm label.field-label,
-                html.is-mobile-portrait .checkbox-row label.field-label {
-                    text-align: left;
-                    padding-right: 0;
-                    margin-bottom: 5px;
-                }
-                
-                html.is-mobile-portrait .section-header {
-                    font-size: 1.2rem;
-                    margin-top: 25px;
-                    margin-bottom: 12px;
-                }
-                
-                html.is-mobile-portrait .buttons-container {
-                    flex-direction: column;
-                    gap: 10px;
-                }
-                
-                html.is-mobile-portrait .buttons-container button {
-                    width: 100%;
-                    padding: 14px;
-                    font-size: 1.1rem;
-                }
-                
-                /* Responsive: Mobile Landscape */
-                html.is-mobile-landscape #profileForm {
-                    padding: 18px;
-                }
-                
-                html.is-mobile-landscape .form-grid {
-                    grid-template-columns: 120px 1fr;
-                }
-                
-                html.is-mobile-landscape .section-header {
-                    font-size: 1.2rem;
-                }
-                
-                html.is-mobile-landscape .buttons-container button {
-                    padding: 12px 25px;
-                    min-width: 110px;
-                }
-                
                 /* Responsive: Tablet */
                 html.is-tablet #profileForm {
-                    max-width: 650px;
+                    max-width: 40.625rem;
                 }
                 
-                html.is-tablet .form-grid {
-                    grid-template-columns: 130px 1fr;
-                    gap: 12px 18px;
+                html.is-tablet .form-grid,
+                html.is-tablet .checkbox-row {
+                    grid-template-columns: 8.125rem 1fr;
+                    gap: 0.75rem 1.125rem;
                 }
                 
                 html.is-tablet .section-header {
@@ -1314,12 +1263,75 @@
                 }
                 
                 html.is-tablet .buttons-container button {
-                    padding: 11px 28px;
+                    padding: 0.6875rem 1.75rem;
+                }
+                
+                /* Responsive: Mobile Landscape */
+                html.is-mobile-landscape #profileForm {
+                    padding: 1.125rem;
+                }
+                
+                html.is-mobile-landscape .form-grid,
+                html.is-mobile-landscape .checkbox-row {
+                    grid-template-columns: 7.5rem 1fr;
+                    gap: 0.625rem 1rem;
+                }
+                
+                html.is-mobile-landscape .section-header {
+                    font-size: 1.2rem;
+                }
+                
+                html.is-mobile-landscape .buttons-container button {
+                    padding: 0.75rem 1.5625rem;
+                    min-width: 6.875rem;
+                }
+                
+                /* Responsive: Mobile Portrait - single column */
+                html.is-mobile-portrait #profileForm {
+                    padding: 0.9375rem;
+                }
+                
+                html.is-mobile-portrait .form-grid,
+                html.is-mobile-portrait .checkbox-row {
+                    grid-template-columns: 1fr;
+                    gap: 0.625rem;
+                }
+                
+                html.is-mobile-portrait #profileForm label.field-label,
+                html.is-mobile-portrait .checkbox-row label.field-label {
+                    text-align: left;
+                    padding-right: 0;
+                    margin-bottom: 0.3125rem;
+                }
+                
+                html.is-mobile-portrait .section-header {
+                    font-size: 1.2rem;
+                    margin-top: 1.5625rem;
+                    margin-bottom: 0.75rem;
+                }
+                
+                html.is-mobile-portrait .checkbox-content {
+                    gap: 0.75rem;
+                }
+                
+                html.is-mobile-portrait .checkbox-content input[type="checkbox"] {
+                    width: 1.5rem;
+                    height: 1.5rem;
+                }
+                
+                html.is-mobile-portrait .buttons-container {
+                    flex-direction: column;
+                    gap: 0.625rem;
+                }
+                
+                html.is-mobile-portrait .buttons-container button {
+                    width: 100%;
+                    padding: 0.875rem;
                 }
             </style>
             
             <div style="padding: 1rem;">
-                <h2 style="text-align: center; margin-bottom: 30px;">Manage Your Profile</h2>
+                <h2 style="text-align: center; margin-bottom: 1.875rem;">Manage Your Profile</h2>
                 
                 <form id="profileForm">
                     <div class="section-header">Membership Information</div>
