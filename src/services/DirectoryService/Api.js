@@ -23,18 +23,30 @@ DirectoryService.Api = DirectoryService.Api || {};
  * Get initial data for DirectoryService SPA
  * Called by getServiceContent to provide data to client renderer
  * 
+ * CRITICAL: No Date objects in return value - google.script.run cannot serialize them
+ * 
  * @param {string} email - Authenticated user's email
- * @returns {Object} Service data for client renderer
+ * @returns {{serviceName: string, directoryEntries: Array, email: string, error?: string}} Service data for client renderer
  */
 DirectoryService.Api.getData = function(email) {
-  // GAS: Get directory entries (security boundary - only returns public data)
-  const directoryEntries = DirectoryService.getDirectoryEntries();
-  
-  return {
-    serviceName: 'Directory',
-    directoryEntries: directoryEntries,
-    email: email
-  };
+  try {
+    // GAS: Get directory entries (security boundary - only returns public data)
+    const directoryEntries = DirectoryService.getDirectoryEntries();
+    
+    return {
+      serviceName: 'Directory',
+      directoryEntries: directoryEntries,
+      email: email
+    };
+  } catch (error) {
+    console.error('DirectoryService.Api.getData error:', error);
+    return {
+      serviceName: 'Directory',
+      error: `Failed to load directory: ${error.message}`,
+      directoryEntries: [],
+      email: email
+    };
+  }
 };
 
 /**

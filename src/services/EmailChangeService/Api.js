@@ -24,16 +24,27 @@ EmailChangeService.Api = EmailChangeService.Api || {};
  * Get initial data for rendering EmailChangeService
  * Called by getServiceContent() for SPA initial page load
  * 
+ * CRITICAL: No Date objects in return value - google.script.run cannot serialize them
+ * 
  * @param {string} email - Authenticated user email
- * @returns {{serviceName: string, currentEmail: string}} Service data
+ * @returns {{serviceName: string, currentEmail: string, error?: string}} Service data
  */
 EmailChangeService.Api.getData = function(email) {
   console.log('EmailChangeService.Api.getData(', email, ')');
   
-  return {
-    serviceName: 'Email Change',
-    currentEmail: email
-  };
+  try {
+    return {
+      serviceName: 'Email Change',
+      currentEmail: email
+    };
+  } catch (error) {
+    console.error('EmailChangeService.Api.getData error:', error);
+    return {
+      serviceName: 'Email Change',
+      error: `Failed to load email change service: ${error.message}`,
+      currentEmail: email
+    };
+  }
 };
 
 /**

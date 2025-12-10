@@ -194,6 +194,426 @@ function renderService(serviceId, data, container) {
 
 Update the switch statement in `renderService()` to include your new service.
 
+## Code Quality Requirements
+
+### Date Serialization (CRITICAL)
+
+**Problem**: `google.script.run` cannot serialize JavaScript Date objects. When returned to client, they become `null`.
+
+**Impact**: Silent data loss. Client receives `null` instead of dates, causing undefined behavior.
+
+**Solution**: ALWAYS remove or convert Date objects before returning from `Service.Api.getData()`.
+
+#### Pattern A: Format and Delete (Recommended for Display)
+
+Use when dates are only for display (not for calculations on client).
+
+```javascript
+// In ProfileManagementService/Api.js
+ProfileManagementService.Api.getData = function(token) {
+  try {
+    const session = Common.Auth.TokenStorage.validateToken(token);
+    if (!session || !session.email) {
+      return { 
+        serviceName: 'Profile Management', 
+        error: 'Invalid or expired session' 
+      };
+    }
+    
+    // Get profile with Date objects
+    const profile = manager.getProfile(session.email);
+    
+    // Format dates to human-readable strings
+    const displayProfile = { ...profile };
+    displayProfile.JoinedFormatted = Utilities.formatDate(
+      profile.Joined, 
+      'America/Los_Angeles', 
+      'MMMM dd, yyyy'
+    );
+    displayProfile.ExpiresFormatted = Utilities.formatDate(
+      profile.Expires, 
+      'America/Los_Angeles', 
+      'MMMM dd, yyyy'
+    );
+    
+    // CRITICAL: Delete original Date objects
+    delete displayProfile.Joined;
+    delete displayProfile.Expires;
+    delete displayProfile['Renewed On'];  // If exists
+    
+    return { 
+      serviceName: 'Profile Management', 
+      profile: displayProfile, 
+      email: session.email 
+    };
+  } catch (error) {
+    Common.Logger.error('ProfileManagementService', 'Error in getData: ' + error.message);
+    return { 
+      serviceName: 'Profile Management', 
+      error: error.message 
+    };
+  }
+};
+```
+
+#### Pattern B: Convert to ISO Strings (For Client-Side Date Logic)
+
+Use when client needs to perform date calculations or comparisons.
+
+```javascript
+// In VotingService/Api.js helper
+function _getElectionsForTemplate() {
+  const elections = getActiveElections();
+  
+  return elections.map(election => ({
+    id: election.id,
+    name: election.name,
+    // Convert Date objects to ISO strings
+    Start: election.Start.toISOString(),
+    End: election.End.toISOString()
+  }));
+}
+
+// Client can parse back to Date if needed
+function renderVotingService(data, container) {
+  const elections = data.elections || [];
+  const now = new Date();
+  
+  elections.forEach(election => {
+    const startDate = new Date(election.Start);  // Parse ISO string
+    const isUpcoming = startDate > now;
+    // ... render logic
+  });
+}
+```
+
+#### Anti-Pattern: Returning Date Objects
+
+```javascript
+// ❌ WRONG: Returns Date objects - will be null on client
+Service.Api.getData = function(token) {
+  const profile = {
+    name: 'John Doe',
+    joined: new Date('2024-01-15'),  // ❌ Will become null
+    expires: new Date('2025-01-15')  // ❌ Will become null
+  };
+  return { serviceName: 'Profile', profile };
+};
+
+// Client receives:
+// { serviceName: 'Profile', profile: { name: 'John Doe', joined: null, expires: null } }
+```
+
+### Error Handling
+
+**Principle**: Return errors as data, never throw from `Service.Api.getData()`.
+
+**Why**: Uncaught exceptions break the entire SPA. Returning errors allows graceful client-side handling.
+
+```javascript
+// ✅ CORRECT: Comprehensive error handling
+Service.Api.getData = function(token) {
+  try {
+    // Validate authentication
+    const session = Common.Auth.TokenStorage.validateToken(token);
+    if (!session || !session.email) {
+      return { 
+        serviceName: 'Your Service', 
+        error: 'Invalid or expired session. Please sign in again.' 
+      };
+    }
+    
+    // Get data with business logic validation
+    const data = manager.getData(session.email);
+    if (!data) {
+      return { 
+        serviceName: 'Your Service', 
+        error: 'No data available for your account.' 
+      };
+    }
+    
+    // Remove Date objects before return
+    const safeData = removeDateObjects(data);
+    
+    return { 
+      serviceName: 'Your Service', 
+      yourData: safeData, 
+      email: session.email 
+    };
+    
+  } catch (error) {
+    // Log server-side for debugging
+    Common.Logger.error('YourService', 'Error in getData: ' + error.message);
+    
+    // Return user-friendly error
+    return { 
+      serviceName: 'Your Service', 
+      error: 'An error occurred loading your data. Please try again.' 
+    };
+  }
+};
+
+// Client-side error handling
+function renderYourService(data, container) {
+  if (data.error) {
+    container.innerHTML = `
+      <div style="padding: 1rem;">
+        <h2>${escapeHtml(data.serviceName || 'Service')}</h2>
+        <div style="background: #f8d7da; color: #721c24; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
+          <strong>Error:</strong> ${escapeHtml(data.error)}
+        </div>
+        <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+      </div>
+    `;
+    return;
+  }
+  
+  // Render normal UI
+  // ...
+}
+```
+
+### Null Safety
+
+**Principle**: ALL client-side code must handle missing/undefined data gracefully.
+
+**Pattern**: Use `|| defaults` for every data access.
+
+```javascript
+// ✅ CORRECT: Null-safe data access
+function renderYourService(data, container) {
+  // Top-level defaults
+  const serviceName = data.serviceName || 'Service';
+  const items = data.items || [];
+  const config = data.config || {};
+  const userName = data.userName || 'Unknown User';
+  
+  // Nested defaults in config
+  const pageSize = config.pageSize || 10;
+  const sortOrder = config.sortOrder || 'asc';
+  
+  // Defaults in loops
+  const itemsHtml = items.map(item => {
+    const name = item.name || 'Unnamed';
+    const description = item.description || '';
+    const count = item.count || 0;
+    const tags = item.tags || [];
+    
+    return `
+      <div class="item">
+        <h3>${escapeHtml(name)}</h3>
+        <p>${escapeHtml(description)}</p>
+        <span>Count: ${count}</span>
+        <div>Tags: ${tags.map(t => escapeHtml(t || '')).join(', ')}</div>
+      </div>
+    `;
+  }).join('');
+  
+  container.innerHTML = `
+    <div>
+      <h2>${escapeHtml(serviceName)}</h2>
+      <p>Welcome, ${escapeHtml(userName)}</p>
+      ${itemsHtml}
+    </div>
+  `;
+}
+
+// ❌ WRONG: No defaults - will crash on missing data
+function renderYourService(data, container) {
+  // Crashes if data.items is undefined
+  const itemsHtml = data.items.map(item => {
+    // Crashes if item.name is undefined
+    return `<div>${item.name}</div>`;
+  }).join('');
+  
+  container.innerHTML = `<div>${itemsHtml}</div>`;
+}
+```
+
+### Form Validation
+
+**Principle**: Validate trimmed values, not raw input. Users can submit whitespace.
+
+```javascript
+// ✅ CORRECT: Trim before validation
+function initializeYourForm() {
+  const nameInput = document.getElementById('name');
+  const emailInput = document.getElementById('email');
+  const submitButton = document.getElementById('submit');
+  
+  function allFieldsValid() {
+    const nameValid = nameInput.value.trim() !== '';
+    const emailValid = emailInput.value.trim() !== '' && 
+                       emailInput.value.includes('@');
+    
+    return nameValid && emailValid;
+  }
+  
+  function checkChanges() {
+    // Check if values changed from original
+    const changed = (
+      nameInput.value !== originalName ||
+      emailInput.value !== originalEmail
+    );
+    
+    const isValid = allFieldsValid();
+    
+    // Submit requires BOTH changed AND valid
+    submitButton.disabled = !(changed && isValid);
+  }
+  
+  // Add listeners
+  nameInput.addEventListener('input', checkChanges);
+  emailInput.addEventListener('input', checkChanges);
+  
+  // Initial state
+  checkChanges();
+}
+
+// ❌ WRONG: Allows whitespace-only submission
+function allFieldsValid() {
+  return nameInput.value !== '' && emailInput.value !== '';
+  // User can submit '   ' (spaces only)
+}
+
+// ❌ WRONG: Submit enabled if changed, even if invalid
+function checkChanges() {
+  const changed = nameInput.value !== originalName;
+  submitButton.disabled = !changed;  // Missing validity check
+}
+```
+
+### JSDoc Standards
+
+**Requirement**: Document Date handling, serialization constraints, and error returns.
+
+```javascript
+/**
+ * Get service data for authenticated user
+ * 
+ * CRITICAL: This function MUST NOT return any Date objects.
+ * google.script.run cannot serialize Date objects - they become null on client.
+ * All dates are formatted to strings via Utilities.formatDate() and original
+ * Date properties are deleted before return.
+ * 
+ * @param {string} token - Authentication token from sessionStorage
+ * @returns {Object} Service data object containing:
+ *   - serviceName {string} - Display name of service
+ *   - yourData {Object} - Business data (all dates as formatted strings)
+ *   - email {string} - Authenticated user email
+ *   - error {string} - Error message if operation failed (mutually exclusive with data)
+ * 
+ * @example
+ * // Success case
+ * { 
+ *   serviceName: 'Your Service', 
+ *   yourData: { items: [...], dateFormatted: 'January 15, 2024' },
+ *   email: 'user@example.com'
+ * }
+ * 
+ * @example
+ * // Error case
+ * { 
+ *   serviceName: 'Your Service', 
+ *   error: 'Invalid session' 
+ * }
+ */
+Service.Api.getData = function(token) {
+  try {
+    // Implementation
+  } catch (error) {
+    Common.Logger.error('YourService', 'Error in getData: ' + error.message);
+    return { serviceName: 'Your Service', error: error.message };
+  }
+};
+```
+
+### Common Anti-Patterns
+
+#### 1. Object Literal Overwrites Methods
+
+```javascript
+// ❌ WRONG: This DESTROYS getData if it was already defined
+Service.Api = {
+  getData: function(token) { /* ... */ }
+};
+// If getData was defined earlier, it's now GONE
+
+// ✅ CORRECT: Extend namespace without overwriting
+if (typeof Service.Api === 'undefined') Service.Api = {};
+Service.Api.getData = function(token) { /* ... */ };
+```
+
+#### 2. Missing Try-Catch in getData
+
+```javascript
+// ❌ WRONG: Uncaught exceptions break SPA
+Service.Api.getData = function(token) {
+  const data = manager.getData(email);  // Throws if email invalid
+  return { serviceName: 'Service', data };
+};
+
+// ✅ CORRECT: All exceptions caught and returned as data
+Service.Api.getData = function(token) {
+  try {
+    const data = manager.getData(email);
+    return { serviceName: 'Service', data };
+  } catch (error) {
+    return { serviceName: 'Service', error: error.message };
+  }
+};
+```
+
+#### 3. No Null Safety in Renderer
+
+```javascript
+// ❌ WRONG: Crashes if data.items is undefined
+function renderService(data, container) {
+  container.innerHTML = data.items.map(i => `<div>${i.name}</div>`).join('');
+}
+
+// ✅ CORRECT: Handles missing data gracefully
+function renderService(data, container) {
+  const items = data.items || [];
+  container.innerHTML = items.map(i => `<div>${escapeHtml(i.name || '')}</div>`).join('');
+}
+```
+
+#### 4. Scripts in innerHTML
+
+```javascript
+// ❌ WRONG: Scripts in innerHTML don't execute
+container.innerHTML = `
+  <div id="chart"></div>
+  <script src="https://cdn.example.com/chart.js"></script>
+  <script>
+    initChart();  // Never runs!
+  </script>
+`;
+
+// ✅ CORRECT: Load scripts dynamically
+container.innerHTML = `<div id="chart"></div>`;
+loadScript('https://cdn.example.com/chart.js').then(() => {
+  initChart();  // Runs after script loads
+});
+```
+
+### Pre-PR Quality Checklist
+
+Before opening a PR that modifies SPA services:
+
+- [ ] **Tests Pass**: `npm test` shows 100% pass rate
+- [ ] **Error Handling**: All `Service.Api.getData()` methods have try-catch
+- [ ] **Date Safety**: No Date objects in returned data (formatted and deleted)
+- [ ] **Null Safety**: All renderers use `|| defaults` for data access  
+- [ ] **Form Validation**: Checks `.trim() !== ''` not just `!== ''`
+- [ ] **Submit Logic**: Buttons check `changed && valid` not just `changed`
+- [ ] **JSDoc**: Includes CRITICAL Date serialization notes
+- [ ] **Manual Testing**: Tested on desktop, tablet, mobile-portrait, mobile-landscape
+- [ ] **Console Clean**: No errors during normal operation
+- [ ] **Error Display**: Error states show gracefully (no white screen)
+- [ ] **No Anti-Patterns**: No object literal overwrites, no scripts in innerHTML
+
 ## Utility Functions
 
 ### loadScript(src)

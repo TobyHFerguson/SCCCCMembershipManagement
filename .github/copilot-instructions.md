@@ -305,6 +305,169 @@ function renderService(serviceId, data, container) {
 - Test on all responsive breakpoints
 - **Remove Date objects before returning data from `Service.Api.getData()`** - `google.script.run` cannot serialize Date objects and will return `null` to the client. Format dates to strings using `Utilities.formatDate()` and delete the original Date properties.
 
+### SPA Code Quality Requirements (MANDATORY)
+
+**CRITICAL: These requirements prevent production bugs. ALL must pass before PR approval.**
+
+**1. Date Serialization Safety**
+
+`google.script.run` CANNOT serialize Date objects - they become `null` on the client. ALWAYS remove or convert Dates before returning from `Service.Api.getData()`.
+
+**Two approved patterns**:
+
+Pattern A: Format and delete (ProfileManagementService):
+```javascript
+Service.Api.getData = function(token) {
+  try {
+    // Get data with Date objects
+    const profile = manager.getProfile(email);
+    
+    // Format dates to strings
+    profile.JoinedFormatted = Utilities.formatDate(profile.Joined, 'America/Los_Angeles', 'MMMM dd, yyyy');
+    profile.ExpiresFormatted = Utilities.formatDate(profile.Expires, 'America/Los_Angeles', 'MMMM dd, yyyy');
+    
+    // CRITICAL: Delete original Date objects
+    delete profile.Joined;
+    delete profile.Expires;
+    
+    return { serviceName: 'Profile Management', profile, email };
+  } catch (error) {
+    return { serviceName: 'Profile Management', error: error.message };
+  }
+};
+```
+
+Pattern B: Convert to ISO strings (VotingService):
+```javascript
+function _getElectionsForTemplate() {
+  const elections = getActiveElections();
+  return elections.map(election => ({
+    ...election,
+    Start: election.Start.toISOString(),  // Date -> ISO string
+    End: election.End.toISOString()        // Date -> ISO string
+  }));
+}
+```
+
+**2. Error Handling in getData()**
+
+ALL `Service.Api.getData()` methods MUST wrap logic in try-catch and return error as data (not throw).
+
+```javascript
+Service.Api.getData = function(token) {
+  try {
+    // Validation
+    const session = Common.Auth.TokenStorage.validateToken(token);
+    if (!session || !session.email) {
+      return { serviceName: 'Your Service', error: 'Invalid or expired session' };
+    }
+    
+    // Business logic
+    const data = getYourData(session.email);
+    
+    return { serviceName: 'Your Service', yourData: data, email: session.email };
+  } catch (error) {
+    Common.Logger.error('YourService', 'Error in getData: ' + error.message);
+    return { serviceName: 'Your Service', error: error.message };
+  }
+};
+```
+
+**Why**: Uncaught exceptions break the entire SPA. Returning errors as data allows graceful client-side error display.
+
+**3. Null Safety in Client Renderers**
+
+ALL client-side renderer functions MUST use `|| defaults` for data access to prevent `Cannot read property 'X' of undefined`.
+
+```javascript
+function renderYourService(data, container) {
+  // CORRECT: Null-safe access with defaults
+  const items = data.items || [];
+  const config = data.config || {};
+  const userName = data.userName || 'Unknown';
+  
+  const html = items.map(item => {
+    // Null-safe access within loops too
+    const name = item.name || '';
+    const value = item.value || 0;
+    return `<div>${escapeHtml(name)}: ${value}</div>`;
+  }).join('');
+  
+  container.innerHTML = `
+    <div>
+      <h2>${escapeHtml(data.serviceName || 'Service')}</h2>
+      ${html}
+    </div>
+  `;
+}
+```
+
+**4. Form Validation with Trim**
+
+ALL form validation MUST check trimmed values, not just non-empty. Users can submit forms with only whitespace.
+
+```javascript
+// ❌ WRONG: Allows whitespace-only submission
+function isValid() {
+  return firstNameInput.value !== '' && lastNameInput.value !== '';
+}
+
+// ✅ CORRECT: Checks trimmed values
+function allFieldsValid() {
+  return (
+    firstNameInput.value.trim() !== '' &&
+    lastNameInput.value.trim() !== '' &&
+    phoneInput.value.trim() !== ''
+  );
+}
+
+// Submit button logic: requires BOTH changed AND valid
+function checkChanges() {
+  const changed = (/* check if any field changed */);
+  const isValid = allFieldsValid();
+  submitButton.disabled = !(changed && isValid);  // Both required
+}
+```
+
+**5. JSDoc Documentation Standards**
+
+ALL `Service.Api.getData()` methods MUST document Date handling in JSDoc.
+
+```javascript
+/**
+ * Get service data for authenticated user
+ * 
+ * CRITICAL: This function MUST NOT return any Date objects.
+ * google.script.run cannot serialize Date objects - they become null on client.
+ * All dates converted to formatted strings via Utilities.formatDate().
+ * 
+ * @param {string} token - Authentication token from session
+ * @returns {Object} Service data with:
+ *   - serviceName {string}
+ *   - yourData {Object} - Business data (all dates as strings)
+ *   - email {string} - User email
+ *   - error {string} - Error message if operation failed
+ */
+Service.Api.getData = function(token) { /* ... */ };
+```
+
+**Pre-PR Checklist**:
+
+Before opening ANY PR that touches SPA services, verify:
+
+- [ ] Run `npm test` - ALL tests pass (100%)
+- [ ] All `Service.Api.getData()` methods have try-catch
+- [ ] No Date objects in returned data (formatted to strings and deleted)
+- [ ] All client renderers use `|| defaults` for data access
+- [ ] Form validation checks `.trim() !== ''` not just `!== ''`
+- [ ] Submit buttons check `changed && valid` not just `changed`
+- [ ] JSDoc includes CRITICAL Date serialization notes
+- [ ] Manually tested on all responsive breakpoints (desktop, tablet, mobile-portrait, mobile-landscape)
+- [ ] Console shows no errors during normal operation
+- [ ] Error states display gracefully (no white screen of death)
+
+**See**: `docs/SPA_ARCHITECTURE.md` for complete code quality examples and anti-patterns.
+
 ### Responsive CSS Framework (SPA Services)
 
 All web services MUST use the existing responsive CSS framework in `src/common/html/_Header.html`. DO NOT duplicate or reimplement the responsive breakpoint logic.

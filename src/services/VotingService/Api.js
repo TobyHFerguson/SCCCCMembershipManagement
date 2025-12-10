@@ -24,15 +24,18 @@ VotingService.Api = VotingService.Api || {};
  * Get initial data for rendering VotingService
  * Called by getServiceContent() for SPA initial page load
  * 
+ * CRITICAL: Date objects converted to ISO strings via _getElectionsForTemplate
+ * (opens/closes fields are ISO strings, safe for google.script.run serialization)
+ * 
  * @param {string} email - Authenticated user email
- * @returns {{serviceName: string, elections: Array}} Service data
+ * @returns {{serviceName: string, elections: Array<VotingService.ProcessedElection>, error?: string}} Service data
  */
 VotingService.Api.getData = function(email) {
   console.log('VotingService.Api.getData(', email, ')');
   
   try {
     // Get processed elections (already filtered and formatted for display)
-    // This reuses the existing WebApp logic
+    // This reuses the existing WebApp logic which converts Date to ISO strings
     const elections = VotingService.WebApp._getElectionsForTemplate(email);
     
     return {

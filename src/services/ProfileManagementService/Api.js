@@ -23,48 +23,60 @@ ProfileManagementService.Api = ProfileManagementService.Api || {};
  * Get initial data for rendering ProfileManagementService
  * Called by getServiceContent() for SPA initial page load
  * 
+ * CRITICAL: Removes all Date objects from return value - google.script.run cannot serialize them
+ * Converts dates to formatted strings using Utilities.formatDate()
+ * 
  * @param {string} email - Authenticated user email
- * @returns {{serviceName: string, profile: Object}} Service data
+ * @returns {{serviceName: string, profile: Object, email: string, error?: string}} Service data
  */
 ProfileManagementService.Api.getData = function(email) {
   console.log('ProfileManagementService.Api.getData(', email, ')');
   
-  // PURE: Normalize email
-  const normalizedEmail = ProfileManagementService.Manager.normalizeEmail(email);
-  
-  // GAS: Get member profile
-  const profile = Common.Data.Access.getMember(normalizedEmail);
-  
-  if (!profile) {
+  try {
+    // PURE: Normalize email
+    const normalizedEmail = ProfileManagementService.Manager.normalizeEmail(email);
+    
+    // GAS: Get member profile
+    const profile = Common.Data.Access.getMember(normalizedEmail);
+    
+    if (!profile) {
+      return {
+        serviceName: 'Profile Management',
+        error: 'Profile not found',
+        email: email
+      };
+    }
+    
+    // PURE: Format profile for display (client-safe view)
+    const displayProfile = ProfileManagementService.Manager.formatProfileForDisplay(profile);
+    
+    // GAS: Format dates for local timezone display and remove Date objects (google.script.run can't serialize them)
+    if (displayProfile.Joined) {
+      displayProfile.JoinedFormatted = Utilities.formatDate(displayProfile.Joined, Session.getScriptTimeZone(), 'MMM d, yyyy');
+      delete displayProfile.Joined; // Remove Date object
+    }
+    if (displayProfile.Expires) {
+      displayProfile.ExpiresFormatted = Utilities.formatDate(displayProfile.Expires, Session.getScriptTimeZone(), 'MMM d, yyyy');
+      delete displayProfile.Expires; // Remove Date object
+    }
+    if (displayProfile['Renewed On']) {
+      displayProfile.RenewedOnFormatted = Utilities.formatDate(displayProfile['Renewed On'], Session.getScriptTimeZone(), 'MMM d, yyyy');
+      delete displayProfile['Renewed On']; // Remove Date object
+    }
+    
     return {
       serviceName: 'Profile Management',
-      error: 'Profile not found',
+      profile: displayProfile,
+      email: email
+    };
+  } catch (error) {
+    console.error('ProfileManagementService.Api.getData error:', error);
+    return {
+      serviceName: 'Profile Management',
+      error: `Failed to load profile: ${error.message}`,
       email: email
     };
   }
-  
-  // PURE: Format profile for display (client-safe view)
-  const displayProfile = ProfileManagementService.Manager.formatProfileForDisplay(profile);
-  
-  // GAS: Format dates for local timezone display and remove Date objects (google.script.run can't serialize them)
-  if (displayProfile.Joined) {
-    displayProfile.JoinedFormatted = Utilities.formatDate(displayProfile.Joined, Session.getScriptTimeZone(), 'MMM d, yyyy');
-    delete displayProfile.Joined; // Remove Date object
-  }
-  if (displayProfile.Expires) {
-    displayProfile.ExpiresFormatted = Utilities.formatDate(displayProfile.Expires, Session.getScriptTimeZone(), 'MMM d, yyyy');
-    delete displayProfile.Expires; // Remove Date object
-  }
-  if (displayProfile['Renewed On']) {
-    displayProfile.RenewedOnFormatted = Utilities.formatDate(displayProfile['Renewed On'], Session.getScriptTimeZone(), 'MMM d, yyyy');
-    delete displayProfile['Renewed On']; // Remove Date object
-  }
-  
-  return {
-    serviceName: 'Profile Management',
-    profile: displayProfile,
-    email: email
-  };
 };
 
 /**

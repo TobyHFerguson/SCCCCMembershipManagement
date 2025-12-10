@@ -24,20 +24,32 @@ GroupManagementService.Api = GroupManagementService.Api || {};
  * Get initial data for rendering GroupManagementService
  * Called by getServiceContent() for SPA initial page load
  * 
+ * CRITICAL: No Date objects in return value - google.script.run cannot serialize them
+ * 
  * @param {string} email - Authenticated user email
- * @returns {{serviceName: string, subscriptions: Array, deliveryOptions: Object}} Service data
+ * @returns {{serviceName: string, subscriptions: Array, deliveryOptions: Object, error?: string}} Service data
  */
 GroupManagementService.Api.getData = function(email) {
   console.log('GroupManagementService.Api.getData(', email, ')');
   
-  // Get user's current subscriptions
-  const subscriptions = GroupManagementService.getUserGroupSubscription(email);
-  
-  return {
-    serviceName: 'Group Management',
-    subscriptions: subscriptions,
-    deliveryOptions: GroupSubscription.deliveryOptions
-  };
+  try {
+    // Get user's current subscriptions
+    const subscriptions = GroupManagementService.getUserGroupSubscription(email);
+    
+    return {
+      serviceName: 'Group Management',
+      subscriptions: subscriptions,
+      deliveryOptions: GroupSubscription.deliveryOptions
+    };
+  } catch (error) {
+    console.error('GroupManagementService.Api.getData error:', error);
+    return {
+      serviceName: 'Group Management',
+      error: `Failed to load subscriptions: ${error.message}`,
+      subscriptions: [],
+      deliveryOptions: {}
+    };
+  }
 };
 
 /**
