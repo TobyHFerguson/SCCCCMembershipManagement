@@ -114,8 +114,6 @@
 </div>
 
 <script>
-  console.log('Service value from template:', '<?= service ?>');
-
   // State
   let userEmail = '';
   let resendDisabled = false;
@@ -325,7 +323,7 @@
           enableForm(emailForm);
           displayMessage(emailMessageDiv, 'Error: ' + error.message, true);
         })
-        .sendVerificationCode(userEmail, '<?= service ?>');
+        .sendVerificationCode(userEmail);
     } else {
       enableForm(emailForm);
       displayMessage(emailMessageDiv, 'Error: google.script.run is not defined.', true);
@@ -419,7 +417,7 @@
           enableForm(codeForm);
           displayMessage(codeMessageDiv, 'Error: ' + error.message, true);
         })
-        .sendVerificationCode(userEmail, '<?= service ?>');
+        .sendVerificationCode(userEmail);
     } else {
       enableForm(codeForm);
       displayMessage(codeMessageDiv, 'Error: google.script.run is not defined.', true);

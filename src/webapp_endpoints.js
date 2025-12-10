@@ -39,8 +39,8 @@ function sendVerificationCode(email, service) {
     return { success: true };
   }
   
-  // Get the service name for the email
-  const serviceName = WebServices[service] ? WebServices[service].name : service;
+  // Get the service name for the email (use generic name if no service specified - SPA flow)
+  const serviceName = (service && WebServices[service]) ? WebServices[service].name : 'SCCCC Services';
   
   // Request verification code (generates + sends email)
   const result = Common.Auth.VerificationCode.requestCode(email, serviceName, service);
@@ -54,11 +54,11 @@ function sendVerificationCode(email, service) {
  * 
  * @param {string} email - The user's email address
  * @param {string} code - The 6-digit verification code
- * @param {string} service - The service identifier
+ * @param {string} [service] - The service identifier (optional in SPA flow)
  * @returns {{success: boolean, redirectUrl?: string, error?: string}} Result with redirect URL on success
  */
 function verifyCode(email, code, service) {
-  console.log('verifyCode(', email, service, ')');
+  console.log('verifyCode(', email, code, ')');
   
   // Normalize the email address
   email = email.toLowerCase().trim();
