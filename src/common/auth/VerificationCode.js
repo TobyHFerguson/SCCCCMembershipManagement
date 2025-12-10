@@ -523,8 +523,8 @@ Common.Auth.VerificationCode = {
       
       const message = {
         to: normalizedEmail,
-        subject: `SCCCC ${serviceName} - Verification Code`,
-        body: `Your verification code for SCCCC ${serviceName} is:\n\n` +
+        subject: `${serviceName} - Verification Code`,
+        body: `Your verification code for ${serviceName} is:\n\n` +
               `    ${formattedCode}\n\n` +
               `This code will expire in ${expiryMinutes} minutes.\n\n` +
               `If you did not request this code, please ignore this email.\n\n` +

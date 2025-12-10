@@ -64,6 +64,8 @@ Common.Data.Access = {
         Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').mapRows(member => {
             return (member.Email.toLowerCase() === email) ? newMember : member;
         }).dumpValues();
+        // Clear cache so subsequent reads get fresh data
+        Common.Data.Storage.SpreadsheetManager.clearFiddlerCache('ActiveMembers');
         return true;
     },
     isMember:(email) => {

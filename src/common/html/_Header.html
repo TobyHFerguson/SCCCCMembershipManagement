@@ -673,25 +673,98 @@
         // Set the HTML structure
         container.innerHTML = `
             <style>
-                .directory-container { padding: 1rem; }
-                h2 { margin-top: 0; }
-                .back-link { display: inline-block; margin-top: 1rem; color: #007bff; text-decoration: none; }
-                .back-link:hover { text-decoration: underline; }
-                html.is-mobile-landscape .directory-container { overflow-x: auto; }
+                .directory-container { 
+                    padding: 1rem;
+                    max-width: 100%;
+                    overflow-x: auto;
+                }
+                
+                .directory-container h2 { 
+                    margin-top: 0;
+                    margin-bottom: 1.25rem;
+                    text-align: center;
+                }
+                
+                .directory-table-wrapper {
+                    width: 100%;
+                    overflow-x: auto;
+                    margin-bottom: 1rem;
+                }
+                
+                #data-table {
+                    width: 100% !important;
+                    max-width: 100%;
+                }
+                
+                /* Override DataTables default styles */
+                .dataTables_wrapper {
+                    width: 100%;
+                    max-width: 100%;
+                }
+                
+                .dataTables_length,
+                .dataTables_filter {
+                    margin-bottom: 0.75rem;
+                }
+                
+                .dataTables_info,
+                .dataTables_paginate {
+                    margin-top: 0.75rem;
+                }
+                
+                .back-link { 
+                    display: inline-block; 
+                    margin-top: 1rem; 
+                    color: #007bff; 
+                    text-decoration: none;
+                    font-weight: 500;
+                }
+                
+                .back-link:hover { 
+                    text-decoration: underline; 
+                }
+                
+                /* Responsive adjustments */
+                html.is-tablet .directory-container {
+                    padding: 0.875rem;
+                }
+                
+                html.is-mobile-portrait .directory-container,
+                html.is-mobile-landscape .directory-container {
+                    padding: 0.75rem;
+                }
+                
+                html.is-mobile-portrait .directory-container h2 {
+                    font-size: 1.5rem;
+                }
+                
+                /* Ensure table cells don't cause overflow */
+                #data-table td,
+                #data-table th {
+                    word-wrap: break-word;
+                    max-width: 12.5rem;
+                }
+                
+                html.is-mobile-portrait #data-table td,
+                html.is-mobile-portrait #data-table th {
+                    max-width: 9.375rem;
+                }
             </style>
             <div class="directory-container">
                 <h2>SCCCC Directory</h2>
-                <table id="data-table" class="display">
-                    <thead>
-                        <tr>
-                            <th>First</th>
-                            <th>Last</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <div class="directory-table-wrapper">
+                    <table id="data-table" class="display">
+                        <thead>
+                            <tr>
+                                <th>First</th>
+                                <th>Last</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
                 <a href="#" class="back-link" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
             </div>
         `;
@@ -729,9 +802,28 @@
                     console.log('Directory: Initializing DataTable');
                     window.jQuery('#data-table').DataTable({
                         data: tableData,
+                        columns: [
+                            { title: 'First', data: 0 },
+                            { title: 'Last', data: 1 },
+                            { 
+                                title: 'Email', 
+                                data: 2,
+                                render: function(data, type, row) {
+                                    return data ? '<a href="mailto:' + data + '">' + data + '</a>' : '';
+                                }
+                            },
+                            { 
+                                title: 'Phone', 
+                                data: 3,
+                                render: function(data, type, row) {
+                                    return data ? '<a href="tel:' + data + '">' + data + '</a>' : '';
+                                }
+                            }
+                        ],
                         responsive: true,
                         pageLength: 25,
-                        order: [[1, 'asc'], [0, 'asc']]
+                        order: [[1, 'asc'], [0, 'asc']],
+                        autoWidth: false
                     });
                     console.log('Directory: DataTable initialized successfully');
                 } catch (error) {
