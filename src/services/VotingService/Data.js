@@ -22,7 +22,7 @@ VotingService.Data = {
      * It fetches the data from the sheet and returns it as an array of Election objects.
      */
     getElectionData: function () {
-        const electionData = this.getFiddler_().getData();
+        const electionData = VotingService.Data.getFiddler_().getData();
         return electionData;
     },
     /**
@@ -33,7 +33,7 @@ VotingService.Data = {
      * Each object should have properties like Title, Form ID, Managers, Start Date, End Date, and Voters.
      */
     storeElectionData: function (elections) {
-        this.getFiddler_().setData(elections).dumpValues();
+        VotingService.Data.getFiddler_().setData(elections).dumpValues();
     },
     /**
      * Checks if a user has already voted in a specific election.

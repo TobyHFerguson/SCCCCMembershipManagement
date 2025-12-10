@@ -50,7 +50,7 @@ VotingService.getBallotFolderId = function () {
  */
 VotingService.getBallotFolderIdSafe = function() {
     try {
-        return this.getBallotFolderId();
+        return VotingService.getBallotFolderId();
     } catch (error) {
         /** @type {Error} */
         const err = error instanceof Error ? error : new Error(String(error));
@@ -93,7 +93,7 @@ VotingService.manageElectionLifecycles = function () {
             console.warn(`Ballot with ID "${ballotId}" not found for election "${election.Title}". Skipping lifecycle management.`);
             return;
         }
-        switch (this.getElectionState(election)) {
+        switch (VotingService.getElectionState(election)) {
             case VotingService.Constants.ElectionState.UNOPENED:
                 break;
             case VotingService.Constants.ElectionState.ACTIVE:
@@ -102,14 +102,14 @@ VotingService.manageElectionLifecycles = function () {
                 if (!ballot.isPublished()) {
                     // If the form is not published and the start date has passed, publish it.
                     // Trigger IDs can overflow a spreadsheet number, so store as a string.
-                    election.TriggerId = this.openElection_(ballot, election);
+                    election.TriggerId = VotingService.openElection_(ballot, election);
                     console.log(`Opened election "${election.Title}" with ID "${ballotId}" as the start date has passed. Attached trigger ID: ${election.TriggerId} `);
                     changesMade = changesMade || true
                 }
                 break;
             case VotingService.Constants.ElectionState.CLOSED:
                 if (ballot.isPublished() || election.TriggerId) {
-                    this.closeElection_(this.getBallot(election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME]), election);
+                    VotingService.closeElection_(VotingService.getBallot(election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME]), election);
                     console.log(`Closed election "${election.Title}" with ID "${ballotId}" as the end date has passed.`);
                     election.TriggerId = ''; // Clear the trigger ID after closing
                     changesMade = changesMade || true;
@@ -157,7 +157,7 @@ VotingService.getElectionState = function (election) {
  * @returns {string}
  */
 VotingService.getSpreadsheetIdFromElection = function (election) {
-    const ballot = this.getBallot(election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME]);
+    const ballot = VotingService.getBallot(election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME]);
     if (!ballot) {
         throw new Error(`Ballot with ID "${election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME]}" not found for election "${election.Title}".`);
     }
@@ -182,9 +182,9 @@ VotingService.getSpreadsheetIdFromElection = function (election) {
  */
 VotingService.openElection_ = function (ballot, election) {
     const electionOfficers = election[VotingService.Constants.ELECTION_OFFICERS_COLUMN_NAME]
-    this.emailElectionOfficersAboutOpening_(electionOfficers, ballot);
+    VotingService.emailElectionOfficersAboutOpening_(electionOfficers, ballot);
     ballot.setPublished(true);
-    return this.attachOnSubmitTrigger_(ballot)
+    return VotingService.attachOnSubmitTrigger_(ballot)
 }
 
 /**
@@ -253,10 +253,10 @@ VotingService.cleanUpOrphanedTriggers = function (activeTriggerIds) {
  */
 VotingService.closeElection_ = function (ballot, election) {
     ballot.setPublished(false);
-    this.removeOnSubmitTrigger_(election.TriggerId)
+    VotingService.removeOnSubmitTrigger_(election.TriggerId)
     VotingService.Auth.deleteAllTokens(VotingService.getSpreadsheetIdFromElection(election));
     const electionOfficers = election[VotingService.Constants.ELECTION_OFFICERS_COLUMN_NAME];
-    this.emailElectionOfficersAboutClosure_(electionOfficers, ballot);
+    VotingService.emailElectionOfficersAboutClosure_(electionOfficers, ballot);
 }
 
 /**
@@ -265,7 +265,7 @@ VotingService.closeElection_ = function (ballot, election) {
  * @param {VotingService.Ballot} ballot
  */
 VotingService.emailElectionOfficersAboutClosure_ = function (electionOfficers, ballot) {
-    const closureMessage = { to: electionOfficers, ...this.getClosureMessage_(ballot) };
+    const closureMessage = { to: electionOfficers, ...VotingService.getClosureMessage_(ballot) };
     MailApp.sendEmail(closureMessage);
 }
 
@@ -275,7 +275,7 @@ VotingService.emailElectionOfficersAboutClosure_ = function (electionOfficers, b
  * @returns {GoogleAppsScript.Mail.MailAdvancedParameters}
  */
 VotingService.getClosureMessage_ = function (ballot) {
-    if (this.manualCountingRequired_(ballot)) {
+    if (VotingService.manualCountingRequired_(ballot)) {
         return {
             subject: `Election '${ballot.getTitle()}' has closed - Manual Counting Required`,
             body: `The ${ballot.getTitle()} election has now closed. The form is no longer accepting responses. The results sheet contains invalid votes that must be manually counted. You can view the form at: ${ballot.getEditUrl()}`
@@ -335,7 +335,7 @@ VotingService.removeOnSubmitTrigger_ = function (triggerId) {
  * @returns {BallotFormResult} Object containing the ballot title and edit URL
  */
 VotingService.createBallotForm = function (formId, electionOfficers) {
-    const { url, isSharedDrive } = this.makePublishedCopyOfFormInFolder_(formId, this.getBallotFolderIdSafe());
+    const { url, isSharedDrive } = VotingService.makePublishedCopyOfFormInFolder_(formId, VotingService.getBallotFolderIdSafe());
 
     /** @type {GoogleAppsScript.Forms.Form} */
     const form = FormApp.openByUrl(url);
@@ -366,12 +366,11 @@ VotingService.createBallotForm = function (formId, electionOfficers) {
     // I'd like to disable autosave, but autosaving only applies to Google account holders, and must be done manually.
 
     // Add a token question to the form
-    this.addTokenQuestion_(form)
+    VotingService.addTokenQuestion_(form)
 
     // create and share a results spreadsheet
-    this.createResultsSpreadsheet_(url);
-    this.setElectionOfficers(url, electionOfficers, isSharedDrive)
-
+    VotingService.createResultsSpreadsheet_(url);
+    VotingService.setElectionOfficers(url, electionOfficers, isSharedDrive)
     // unpublish the form
     form.setPublished(false);
 
@@ -454,7 +453,7 @@ VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFo
         isSharedDrive = true;
     }
 
-        const newForm = this.getBallot(copiedFileId);
+        const newForm = VotingService.getBallot(copiedFileId);
         
         // @ts-ignore - Logger is implemented in separate file
         Common.Logger.info('VotingService', `Ballot copy creation completed successfully`, {
@@ -503,7 +502,7 @@ VotingService.addTokenQuestion_ = function (form) {
  * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet} The created results spreadsheet.
  */
 VotingService.createResultsSpreadsheet_ = function (formId) {
-    const form = this.getBallot(formId);
+    const form = VotingService.getBallot(formId);
     const formTitle = form.getTitle();
     
     // Get the form's file to determine its folder location
@@ -547,15 +546,15 @@ VotingService.setElectionOfficers = function (editUrl, electionOfficers = [], is
         return new Set([...setA].filter(item => !setB.has(item)))
     }
     const newElectionOfficers = new Set(electionOfficers.filter(m => m)); //newElectionOfficers only contains non-empty email addresses
-    const form = this.getBallot(editUrl);
+    const form = VotingService.getBallot(editUrl);
     const resultsSpreadsheet = SpreadsheetApp.openById(form.getDestinationId())
     
     if (isSharedDrive) {
         console.log(`Working with Shared Drive files. Election Officer permissions will be limited to what's allowed by the Shared Drive settings.`);
     }
     
-    const formEditors = this.getEditorsExcludingOwner_(form);
-    const resultsEditors = this.getEditorsExcludingOwner_(resultsSpreadsheet);
+    const formEditors = VotingService.getEditorsExcludingOwner_(form);
+    const resultsEditors = VotingService.getEditorsExcludingOwner_(resultsSpreadsheet);
     // combine and deduplicate editors
     // Use a Set to automatically handle duplicates
     // This ensures that if an email is an editor on both the form and the results spreadsheet, it is only processed once.
@@ -573,7 +572,7 @@ VotingService.setElectionOfficers = function (editUrl, electionOfficers = [], is
         try {
             form.addEditor(email);
             resultsSpreadsheet.addEditor(email);
-            this.sendElectionOfficerAddEmail_(email, formTitle, editUrl, isSharedDrive);
+            VotingService.sendElectionOfficerAddEmail_(email, formTitle, editUrl, isSharedDrive);
             console.log(`Added '${email}' as election officer to '${formTitle}'`);
         } catch (error) {
             /** @type {Error} */
@@ -581,7 +580,7 @@ VotingService.setElectionOfficers = function (editUrl, electionOfficers = [], is
             if (isSharedDrive) {
                 console.log(`Note: Could not add '${email}' as editor to '${formTitle}' (Shared Drive limitation). They may need to be added at the Shared Drive level. Error: ${err.message}`);
                 // Still send the notification email, but with different messaging
-                this.sendElectionOfficerAddEmail_(email, formTitle, editUrl, true);
+                VotingService.sendElectionOfficerAddEmail_(email, formTitle, editUrl, true);
             } else {
                 console.log(`Error adding '${email}' as election officer to '${formTitle}': ${err.message}`);
             }
@@ -591,7 +590,7 @@ VotingService.setElectionOfficers = function (editUrl, electionOfficers = [], is
         try {
             form.removeEditor(email);
             resultsSpreadsheet.removeEditor(email);
-            this.sendElectionOfficerRemoveEmail_(email, formTitle, isSharedDrive);
+            VotingService.sendElectionOfficerRemoveEmail_(email, formTitle, isSharedDrive);
             console.log(`Removed '${email}' as election officer from  '${formTitle}'`);
         } catch (error) {
             /** @type {Error} */
@@ -599,7 +598,7 @@ VotingService.setElectionOfficers = function (editUrl, electionOfficers = [], is
             if (isSharedDrive) {
                 console.log(`Note: Could not remove '${email}' from '${formTitle}' (Shared Drive limitation). They may need to be removed at the Shared Drive level. Error: ${err.message}`);
                 // Still send the notification email
-                this.sendElectionOfficerRemoveEmail_(email, formTitle, true);
+                VotingService.sendElectionOfficerRemoveEmail_(email, formTitle, true);
             } else {
                 console.log(`Error removing '${email}' as election officer from '${formTitle}': ${err.message}`);
             }
@@ -669,7 +668,7 @@ VotingService.sendElectionOfficerRemoveEmail_ = function (email, title, isShared
  */
 VotingService.collectResponses = function (formId, active = true) {
     // console.log(`Setting form ID: ${formId} to ${active ? 'accept' : 'not accept'} responses.`);
-    const form = this.getBallot(formId);
+    const form = VotingService.getBallot(formId);
     form.setAcceptingResponses(active);
 }
 
@@ -679,7 +678,7 @@ VotingService.collectResponses = function (formId, active = true) {
  * @returns {{isSharedDrive: boolean, driveInfo: string, recommendations: string[]}}
  */
 VotingService.getElectionOfficerManagementInfo = function (editUrl) {
-    const form = this.getBallot(editUrl);
+    const form = VotingService.getBallot(editUrl);
     const resultsSpreadsheet = SpreadsheetApp.openById(form.getDestinationId());
     
     // Try to detect Shared Drive by attempting to set shareableByEditors
@@ -738,7 +737,7 @@ function runCreateResultsSpreadsheet() {
  * @return {string} A pre-filled URL for the form.
  */
 VotingService.createPrefilledUrlWithTitle = function (formId, questionTitle, answer = '1234') {
-    const form = this.getBallot(formId);
+    const form = VotingService.getBallot(formId);
 
     // Find the question item by its title
     const items = form.getItems();

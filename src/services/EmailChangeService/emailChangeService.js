@@ -16,12 +16,12 @@ EmailChangeService.handleSendVerificationCode = function (originalEmail, newEmai
 
 
   // 4. Generate and store the verification code
-  const verificationCode = this.Internal._generateVerificationCode();
-  this.Internal.storeVerificationData(newEmail, verificationCode, "emailUpdate", originalEmail); // Store with new token
+  const verificationCode = EmailChangeService.Internal._generateVerificationCode();
+  EmailChangeService.Internal.storeVerificationData(newEmail, verificationCode, "emailUpdate", originalEmail); // Store with new token
 
   console.log(`verificationCode: ${verificationCode}`)
   // 5. Send the verification email
-  const emailSent = this.Internal.sendVerificationEmail(newEmail, verificationCode);
+  const emailSent = EmailChangeService.Internal.sendVerificationEmail(newEmail, verificationCode);
   if (!emailSent) {
     throw new Error("Failed to send email.");
   }
@@ -44,7 +44,7 @@ EmailChangeService.handleVerifyAndGetGroups = function (originalEmail, newEmail,
   }
 
   // 2. Verify the token
-  const storedData = this.Internal.getVerificationData(verificationCode);
+  const storedData = EmailChangeService.Internal.getVerificationData(verificationCode);
   if (!storedData || storedData.type !== "emailUpdate" || storedData.oldEmail !== originalEmail || storedData.newEmail !== newEmail) {
     throw new Error("Invalid or expired verification code.");
   }
@@ -60,7 +60,7 @@ EmailChangeService.handleVerifyAndGetGroups = function (originalEmail, newEmail,
     }));
 
     // 4. Invalidate the token
-    this.Internal.deleteVerificationData(verificationCode);
+    EmailChangeService.Internal.deleteVerificationData(verificationCode);
 
     return groupData;
 
@@ -75,13 +75,13 @@ EmailChangeService.handleChangeEmailInGroupsUI = function (oldEmail, newEmail, g
 
   for (var i = 0; i < groupData.length; i++) {
     var groupEmail = groupData[i].groupEmail;
-    var updateResult = this.Internal.updateUserEmailInGroup(groupEmail, oldEmail, newEmail);
+    var updateResult = EmailChangeService.Internal.updateUserEmailInGroup(groupEmail, oldEmail, newEmail);
     results.push(updateResult);
   }
 
 
   const sheetRefs = ['ActiveMembers', 'ExpirySchedule'];
-  this.Internal.changeEmailInSpreadsheets(oldEmail, newEmail, sheetRefs)
+  EmailChangeService.Internal.changeEmailInSpreadsheets(oldEmail, newEmail, sheetRefs)
 
   // Log the change
   const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('EmailChange');
@@ -122,7 +122,7 @@ EmailChangeService.Internal = {
     if (storedData) {
       const data = JSON.parse(storedData);
       if (data.expiry < Date.now()) {
-        this.deleteVerificationData(verificationCode);
+        EmailChangeService.Internal.deleteVerificationData(verificationCode);
         return null;
       }
       return data;

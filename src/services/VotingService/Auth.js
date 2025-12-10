@@ -16,7 +16,7 @@ VotingService.Auth = {
      */
     generateAndStoreToken: function (email, spreadsheetId) {
         const token = Utilities.getUuid();
-        const key = this.createKey_(spreadsheetId);
+        const key = VotingService.Auth.createKey_(spreadsheetId);
         const tokenData = {
             Email: email,
             Token: token,
@@ -41,7 +41,7 @@ VotingService.Auth = {
      * @returns {Object | undefined} tokenData if found and marked as used, otherwise undefined.
      */
     consumeToken: function (token, spreadsheetId) {
-        const key = this.createKey_(spreadsheetId);
+        const key = VotingService.Auth.createKey_(spreadsheetId);
         const tokenString = PropertiesService.getScriptProperties().getProperty(key);
         if (!tokenString) {
             throw new Error('No tokens found for spreadsheetId: ' + spreadsheetId);
@@ -57,7 +57,7 @@ VotingService.Auth = {
         return tokenToBeReturned;
     },
     deleteAllTokens: function (spreadsheetId) {
-        const key = this.createKey_(spreadsheetId);
+        const key = VotingService.Auth.createKey_(spreadsheetId);
         PropertiesService.getScriptProperties().deleteProperty(key);
     },
     /**
@@ -66,7 +66,7 @@ VotingService.Auth = {
      * @returns {VotingTokenData[]} Array of all token data objects.
      */
     getAllTokens: function (spreadsheetId) {
-        const key = this.createKey_(spreadsheetId);
+        const key = VotingService.Auth.createKey_(spreadsheetId);
         const tokenString = PropertiesService.getScriptProperties().getProperty(key);
         return tokenString ? JSON.parse(tokenString) : [];
     }

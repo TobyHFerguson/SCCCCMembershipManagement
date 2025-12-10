@@ -34,8 +34,8 @@ MembershipManagement.Trigger = {
         PropertiesService.getScriptProperties().setProperty(SPREADSHEET_ID_PROPERTY, spreadsheetId);
 
         // Reset the payment check trigger to 1-minute and update the start time
-        this._deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
-        this._createMinuteTrigger(PAYMENT_STATUS_FUNCTION, 1); // Initial 1-minute trigger
+        MembershipManagement.Trigger._deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
+        MembershipManagement.Trigger._createMinuteTrigger(PAYMENT_STATUS_FUNCTION, 1); // Initial 1-minute trigger
         const startTime = new Date();
         PropertiesService.getScriptProperties().setProperty('paymentCheckStartTime', startTime); // Reset start time
     },
@@ -43,25 +43,25 @@ MembershipManagement.Trigger = {
     _checkPaymentStatus: function() {
         console.log(CHECK_PAYMENT_STATUS_LOG);
         const now = new Date();
-        const startTime = this._getTimeFromProperty('paymentCheckStartTime') || now;
+        const startTime = MembershipManagement.Trigger._getTimeFromProperty('paymentCheckStartTime') || now;
 
         const elapsedTime = now - startTime;
 
-        if (this._hasPendingPayments()) { // Still pending payments
+        if (MembershipManagement.Trigger._hasPendingPayments()) { // Still pending payments
             console.log(PAYMENTS_PENDING_LOG);
             if (elapsedTime > LONGER_PERIOD) { // 6 minutes - Back off to hourly 
                 console.log(BACKING_OFF_HOURLY_LOG);
-                this._deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
-                this._createHourlyTrigger(PAYMENT_STATUS_FUNCTION, 1); // Hourly
+                MembershipManagement.Trigger._deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
+                MembershipManagement.Trigger._createHourlyTrigger(PAYMENT_STATUS_FUNCTION, 1); // Hourly
                 PropertiesService.getScriptProperties().deleteProperty('paymentCheckStartTime'); // Clear start time
             } else if (elapsedTime > SHORTER_PERIOD) { // 3 minutes - Back off to 5-min checks
                 console.log(BACKING_OFF_5_MIN_LOG);
-                this._deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
-                this._createMinuteTrigger(PAYMENT_STATUS_FUNCTION, 5); // 5-minutely
+                MembershipManagement.Trigger._deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
+                MembershipManagement.Trigger._createMinuteTrigger(PAYMENT_STATUS_FUNCTION, 5); // 5-minutely
             }
         } else { // All payments processed
             console.log(PAYMENTS_PROCESSED_LOG);
-            this._deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
+            MembershipManagement.Trigger._deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
             PropertiesService.getScriptProperties().deleteProperty('paymentCheckStartTime'); // Clear start time
         }
     },
@@ -73,8 +73,8 @@ MembershipManagement.Trigger = {
 
     _hasPendingPayments: function() {
         const spreadsheetId = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_ID_PROPERTY);
-        const lastUpdateTime = this._getLastSpreadsheetUpdateTime(spreadsheetId); // Use current time as last update time
-        const lastProcessedTime = this._getTimeFromProperty('lastProcessedTime');
+        const lastUpdateTime = MembershipManagement.Trigger._getLastSpreadsheetUpdateTime(spreadsheetId); // Use current time as last update time
+        const lastProcessedTime = MembershipManagement.Trigger._getTimeFromProperty('lastProcessedTime');
 
         if (lastProcessedTime && lastUpdateTime <= lastProcessedTime) {
             console.log(NO_UPDATES_LOG);
@@ -92,7 +92,7 @@ MembershipManagement.Trigger = {
 
     _createMinuteTrigger: function(functionName, minutes) {
         console.log('_createMinuteTrigger', functionName, minutes);
-        this._deleteTriggersByFunctionName(functionName);
+        MembershipManagement.Trigger._deleteTriggersByFunctionName(functionName);
         const trigger = ScriptApp.newTrigger(functionName)
             .timeBased()
             .everyMinutes(minutes)
@@ -102,7 +102,7 @@ MembershipManagement.Trigger = {
 
     _createHourlyTrigger: function(functionName, hours) {
         console.log('_createHourlyTrigger', functionName, hours);
-        this._deleteTriggersByFunctionName(functionName);
+        MembershipManagement.Trigger._deleteTriggersByFunctionName(functionName);
         const trigger = ScriptApp.newTrigger(functionName)
             .timeBased()
             .everyHours(hours)
@@ -137,7 +137,7 @@ MembershipManagement.Trigger = {
     },
 
     testGetLastUpdateTime() {
-        var lastUpdated = this._getLastSpreadsheetUpdateTime();
+        var lastUpdated = MembershipManagement.Trigger._getLastSpreadsheetUpdateTime();
 
         if (lastUpdated) {
             console.log(LAST_UPDATED_LOG, lastUpdated);

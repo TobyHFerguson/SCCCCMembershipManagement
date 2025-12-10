@@ -582,7 +582,7 @@ EmailChangeService.Api.getVerificationData = function(code) {
       // Check expiry
       if (data.expiry < Date.now()) {
         // Clean up expired data
-        this.deleteVerificationData(code);
+        EmailChangeService.Api.deleteVerificationData(code);
         return null;
       }
       return data;

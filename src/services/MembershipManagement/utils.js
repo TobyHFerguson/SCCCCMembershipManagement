@@ -14,13 +14,13 @@ if (typeof require !== 'undefined') {
   };
 
   MembershipManagement.Utils.addDaysToDate = function(date, days = 0) {
-    const result = this.dateOnly(date);
+    const result = MembershipManagement.Utils.dateOnly(date);
     result.setDate(result.getDate() + days);
     return result;
   };
 
   MembershipManagement.Utils.addYearsToDate = function(date, years = 0) {
-    const result = this.dateOnly(date);
+    const result = MembershipManagement.Utils.dateOnly(date);
     result.setFullYear(result.getFullYear() + years);
     return result;
   };
@@ -53,10 +53,10 @@ if (typeof require !== 'undefined') {
   MembershipManagement.Utils.calculateExpirationDate = function(referenceDate, expires, period = 1) {
     if (!referenceDate) throw new Error('No reference date provided')
     if (!expires) throw new Error('No expiration date provided')
-    referenceDate = this.dateOnly(referenceDate)
-    expires = this.dateOnly(expires)
+    referenceDate = MembershipManagement.Utils.dateOnly(referenceDate)
+    expires = MembershipManagement.Utils.dateOnly(expires)
     const startDate = referenceDate < expires ? expires : referenceDate
-    const result = this.addYearsToDate(startDate, period);
+    const result = MembershipManagement.Utils.addYearsToDate(startDate, period);
     return result
   };
 
@@ -119,8 +119,8 @@ MembershipManagement.Utils.spreadsheetDateToIso = function(dateValue) {
 MembershipManagement.Utils.convertFIFOItemsToSpreadsheet = function(items) {
   return items.map(item => ({
     ...item,
-    lastAttemptAt: this.isoToSpreadsheetDate(item.lastAttemptAt),
-    nextAttemptAt: this.isoToSpreadsheetDate(item.nextAttemptAt)
+    lastAttemptAt: MembershipManagement.Utils.isoToSpreadsheetDate(item.lastAttemptAt),
+    nextAttemptAt: MembershipManagement.Utils.isoToSpreadsheetDate(item.nextAttemptAt)
   }));
 }
 
@@ -133,8 +133,8 @@ MembershipManagement.Utils.convertFIFOItemsToSpreadsheet = function(items) {
 MembershipManagement.Utils.convertFIFOItemsFromSpreadsheet = function(items) {
   return items.map(item => ({
     ...item,
-    lastAttemptAt: this.spreadsheetDateToIso(item.lastAttemptAt),
-    nextAttemptAt: this.spreadsheetDateToIso(item.nextAttemptAt)
+    lastAttemptAt: MembershipManagement.Utils.spreadsheetDateToIso(item.lastAttemptAt),
+    nextAttemptAt: MembershipManagement.Utils.spreadsheetDateToIso(item.nextAttemptAt)
   }));
 }
 
@@ -160,7 +160,7 @@ MembershipManagement.Utils.expandTemplate = function(template, row) {
         value = new Date(Date.parse(value));
       }
 
-      value = this.dateOnly(value);
+      value = MembershipManagement.Utils.dateOnly(value);
       return value.toLocaleDateString(); // Convert Date objects to local date and time string
     }
     return value || "";

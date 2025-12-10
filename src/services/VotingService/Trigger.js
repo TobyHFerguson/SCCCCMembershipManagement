@@ -219,7 +219,7 @@ VotingService.Trigger = {
         console.log('Ballot submit handler triggered', e.namedValues);
         console.log('Trigger event', e.source.getId(), e.triggerUid);
         const spreadsheetId = e.source.getId();
-        const vote = this.firstValues_(e.namedValues)
+        const vote = VotingService.Trigger.firstValues_(e.namedValues)
 
         const token = vote[VotingService.Constants.TOKEN_ENTRY_FIELD_TITLE];
         const tokenData = VotingService.Auth.consumeToken(token, spreadsheetId);
@@ -227,15 +227,15 @@ VotingService.Trigger = {
 
         if (!tokenData) {
             console.warn('Invalid vote: ', vote, ' - token not found');
-            this.addInvalidVote_(vote, fiddler.getSheet().getParent());
+            VotingService.Trigger.addInvalidVote_(vote, fiddler.getSheet().getParent());
             return;
         }
         // We have a tokenData object 
         const email = tokenData.Email;
         if (tokenData.Used) {
             console.warn('Invalid vote: ', vote, ' - token already used');
-            this.addInvalidVote_(vote, fiddler.getSheet().getParent());
-            this.sendInvalidVoteEmail_(email, this.getElectionTitle_(fiddler.getSheet().getParent()));
+            VotingService.Trigger.addInvalidVote_(vote, fiddler.getSheet().getParent());
+            VotingService.Trigger.sendInvalidVoteEmail_(email, VotingService.Trigger.getElectionTitle_(fiddler.getSheet().getParent()));
             return;
         }
 
@@ -243,8 +243,8 @@ VotingService.Trigger = {
         const duplicates = allTokenData.filter(td => td.Token !== token).some(td => td.Email === email);
         if (duplicates) {
             console.warn(`Duplicate vote detected for email: ${email}. Vote will not be recorded.`);
-            this.addInvalidVote_(vote, fiddler.getSheet().getParent());
-            this.sendInvalidVoteEmail_(email, this.getElectionTitle_(fiddler.getSheet().getParent()));
+            VotingService.Trigger.addInvalidVote_(vote, fiddler.getSheet().getParent());
+            VotingService.Trigger.sendInvalidVoteEmail_(email, VotingService.Trigger.getElectionTitle_(fiddler.getSheet().getParent()));
             return;
         }
 
@@ -252,7 +252,7 @@ VotingService.Trigger = {
         const votes = fiddler.getData();
         votes.push(vote);
         fiddler.setData(votes).dumpValues();
-        this.sendValidVoteEmail_(email, this.getElectionTitle_(fiddler.getSheet().getParent()));
+        VotingService.Trigger.sendValidVoteEmail_(email, VotingService.Trigger.getElectionTitle_(fiddler.getSheet().getParent()));
         return;
 
     },
@@ -320,9 +320,9 @@ VotingService.Trigger = {
             const votes = invalidFiddler.getData()
             votes.push(vote);
             invalidFiddler.setData(votes).dumpValues();
-            this.setAllSheetsBackgroundToLightRed_(spreadsheet)
-            const electionTitle = this.getElectionTitle_(spreadsheet)
-            this.sendManualCountNeededEmail_(this.getSpreadsheetUsers_(spreadsheet).join(','), vote, electionTitle);
+            VotingService.Trigger.setAllSheetsBackgroundToLightRed_(spreadsheet)
+            const electionTitle = VotingService.Trigger.getElectionTitle_(spreadsheet)
+            VotingService.Trigger.sendManualCountNeededEmail_(VotingService.Trigger.getSpreadsheetUsers_(spreadsheet).join(','), vote, electionTitle);
         } catch (error) {
             console.error(error.stack)
         }

@@ -16,7 +16,7 @@
  */
 VotingService.WebApp.doGet = function (e, userEmail, htmlTemplate) {
     htmlTemplate.contentFileName = 'services/VotingService/ActiveVotes.html';
-    return this._renderVotingOptions(userEmail, htmlTemplate);
+    return VotingService.WebApp._renderVotingOptions(userEmail, htmlTemplate);
 }
 
 /**
@@ -32,7 +32,7 @@ VotingService.WebApp.doGet = function (e, userEmail, htmlTemplate) {
  * @returns Google Apps HTML output for the voting options.
  */
 VotingService.WebApp._renderVotingOptions = function (userEmail, htmlTemplate) {
-    const electionDataForTemplate = this._getElectionsForTemplate(userEmail);
+    const electionDataForTemplate = VotingService.WebApp._getElectionsForTemplate(userEmail);
 
     htmlTemplate.userEmail = userEmail;
     htmlTemplate.elections = electionDataForTemplate;

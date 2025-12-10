@@ -204,7 +204,7 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
 
       for (const action of actions) {
         try {
-          this._executeAction(action);
+          GroupManagementService.Api._executeAction(action);
           successCount++;
         } catch (error) {
           failedCount++;

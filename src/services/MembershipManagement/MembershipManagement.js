@@ -23,7 +23,7 @@ MembershipManagement.processTransactions = function () {
   const membershipFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
   const expiryScheduleFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
 
-  const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
+  const { manager, membershipData, expiryScheduleData } = MembershipManagement.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
 
   const { recordsChanged, hasPendingPayments, errors, auditEntries } = manager.processPaidTransactions(transactions, membershipData, expiryScheduleData);
   if (recordsChanged) {
@@ -34,7 +34,7 @@ MembershipManagement.processTransactions = function () {
   
   // Persist audit log entries
   if (auditEntries && auditEntries.length > 0) {
-    this.Internal.persistAuditEntries_(auditEntries);
+    MembershipManagement.Internal.persistAuditEntries_(auditEntries);
   }
   
   errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack}`));
@@ -49,7 +49,7 @@ MembershipManagement.processMigrations = function () {
   const membershipFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
   const expiryScheduleFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
 
-  const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
+  const { manager, membershipData, expiryScheduleData } = MembershipManagement.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
   const mdLength = membershipData.length;
   const esdLength = expiryScheduleData.length;
 
@@ -69,7 +69,7 @@ MembershipManagement.processMigrations = function () {
   
   // Persist audit log entries
   if (auditEntries && auditEntries.length > 0) {
-    this.Internal.persistAuditEntries_(auditEntries);
+    MembershipManagement.Internal.persistAuditEntries_(auditEntries);
   }
   
   migratingMembersFiddler.setData(migratingMembers).dumpValues();
@@ -86,7 +86,7 @@ MembershipManagement.generateExpiringMembersList = function () {
     const expiryScheduleFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
     const expirationFIFO = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationFIFO');
 
-    const { manager, membershipData, expiryScheduleData } = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
+    const { manager, membershipData, expiryScheduleData } = MembershipManagement.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
     const prefillFormTemplate = Common.Config.Properties.getProperty('PREFILL_FORM_TEMPLATE');
     if (!prefillFormTemplate) {
       throw new Error("PREFILL_FORM_TEMPLATE property is not set.");
@@ -127,7 +127,7 @@ MembershipManagement.generateExpiringMembersList = function () {
     
     // Persist audit log entries
     if (result.auditEntries && result.auditEntries.length > 0) {
-      this.Internal.persistAuditEntries_(result.auditEntries);
+      MembershipManagement.Internal.persistAuditEntries_(result.auditEntries);
     }
 
     MembershipManagement.Utils.log(`Successfully appended ${expirationQueue.length} membership expiration plan(s) to FIFO`);
@@ -145,7 +145,7 @@ MembershipManagement.generateExpiringMembersList = function () {
     console.error(`${errorMessage}\nStack trace: ${error.stack}`);
 
     // Send email notification to membership automation
-    this.Internal.sendExpirationErrorNotification_(error);
+    MembershipManagement.Internal.sendExpirationErrorNotification_(error);
 
     throw error; // Re-throw to ensure trigger system knows about the failure
   }
@@ -198,12 +198,12 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
                           || Common.Config.Properties.getNumberProperty('maxAttempts', 0)
                           || Common.Config.Properties.getNumberProperty('maxRetries', 5);
     
-    const init = this.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
+    const init = MembershipManagement.Internal.initializeManagerData_(membershipFiddler, expiryScheduleFiddler);
     const manager = init.manager;
 
     // GAS: Get injected functions for side effects
-    const sendEmailFun = this.Internal.getEmailSender_();
-    const groupRemoveFun = this.Internal.getGroupRemover_();
+    const sendEmailFun = MembershipManagement.Internal.getEmailSender_();
+    const groupRemoveFun = MembershipManagement.Internal.getGroupRemover_();
 
     // PURE (with injected side effects): Process batch
     const result = manager.processExpiredMembers(eligibleItems, sendEmailFun, groupRemoveFun, { 
@@ -236,7 +236,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     if (!opts.dryRun) {
       // Persist audit log entries for DeadLetter events
       if (result.auditEntries && result.auditEntries.length > 0) {
-        this.Internal.persistAuditEntries_(result.auditEntries);
+        MembershipManagement.Internal.persistAuditEntries_(result.auditEntries);
       }
       
       if (deadItems.length > 0) {
@@ -297,7 +297,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     const errorMessage = `Expiration FIFO consumer failed: ${error.message}`;
     MembershipManagement.Utils.log(`ERROR: ${errorMessage}`);
     console.error(`${errorMessage}\nStack trace: ${error.stack}`);
-    try { this.Internal.sendExpirationErrorNotification_(error); } catch (e) { console.error('Failed to send error notification', e); }
+    try { MembershipManagement.Internal.sendExpirationErrorNotification_(error); } catch (e) { console.error('Failed to send error notification', e); }
     return { processed: 0, failed: 0, remaining: -1, error: errorMessage };
   }
 }
@@ -311,9 +311,9 @@ MembershipManagement.Internal.initializeManagerData_ = function (membershipFiddl
   //@ts-ignore
   const autoGroups = Common.Data.Access.getPublicGroups().filter(group => group.Subscription.toLowerCase() === 'auto');
   const groupManager = {
-    groupAddFun: this.getGroupAdder_(),
-    groupRemoveFun: this.getGroupRemover_(),
-    groupEmailReplaceFun: this.getGroupEmailReplacer_()
+    groupAddFun: MembershipManagement.Internal.getGroupAdder_(),
+    groupRemoveFun: MembershipManagement.Internal.getGroupRemover_(),
+    groupEmailReplaceFun: MembershipManagement.Internal.getGroupEmailReplacer_()
   }
   
   // Create audit logger if Audit.Logger is available
@@ -323,7 +323,7 @@ MembershipManagement.Internal.initializeManagerData_ = function (membershipFiddl
     Common.Data.Access.getActionSpecs(), 
     autoGroups, 
     groupManager, 
-    this.getEmailSender_(),
+    MembershipManagement.Internal.getEmailSender_(),
     undefined,  // today (uses default)
     auditLogger
   );
@@ -335,7 +335,7 @@ MembershipManagement.Internal.getGroupAdder_ = function () {
   if (Common.Config.Properties.getBooleanProperty('testGroupAdds', false)) {
     return (memberEmail, groupEmail) => MembershipManagement.Utils.log(`testGroupAdds: true. Would have added: `, memberEmail, ' to group:', groupEmail);
   } else {
-    return (memberEmail, groupEmail) => this.addMemberToGroup_(memberEmail, groupEmail);
+    return (memberEmail, groupEmail) => MembershipManagement.Internal.addMemberToGroup_(memberEmail, groupEmail);
   }
 }
 
@@ -347,7 +347,7 @@ MembershipManagement.Internal.getGroupRemover_ = function () {
   if (Common.Config.Properties.getBooleanProperty('testGroupRemoves', false)) {
     return (memberEmail, groupEmail) => MembershipManagement.Utils.log(`testGroupRemoves: true. Would have removed: `, memberEmail, ' from group:', groupEmail);
   } else {
-    return (memberEmail, groupEmail) => this.removeMemberFromGroup_(memberEmail, groupEmail);
+    return (memberEmail, groupEmail) => MembershipManagement.Internal.removeMemberFromGroup_(memberEmail, groupEmail);
   }
 }
 
@@ -358,7 +358,7 @@ MembershipManagement.Internal.getGroupEmailReplacer_ = function () {
       return { success: true, message: 'Test mode - no changes made.' };
     }
   } else {
-    return (originalEmail, newEmail) => { return this.changeSubscribersEmailInAllGroups_(originalEmail, newEmail) };
+    return (originalEmail, newEmail) => { return MembershipManagement.Internal.changeSubscribersEmailInAllGroups_(originalEmail, newEmail) };
   }
 }
 
@@ -445,7 +445,7 @@ MembershipManagement.Internal.getEmailSender_ = function () {
     if (testEmails) {
       MembershipManagement.Utils.log('testEmails is set to true - logging only: ', email);
     } else {
-      this.sendSingleEmail_(email);
+      MembershipManagement.Internal.sendSingleEmail_(email);
     }
   };
 }

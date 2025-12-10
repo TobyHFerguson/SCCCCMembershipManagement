@@ -1,6 +1,6 @@
 EmailService.UI = {
     showEmailDialog: function () {
-        var actionSpecTypes = this._getActionSpecTypes();
+        var actionSpecTypes = EmailService.UI._getActionSpecTypes();
         var template = HtmlService.createTemplateFromFile('services/EmailService/EmailDialog');
         template.actionSpecTypes = actionSpecTypes;
         var html = template.evaluate()
