@@ -323,6 +323,7 @@ describe('VerificationCodeManager - Pure Logic', () => {
 
     test('allows when under limit', () => {
       const now = new Date('2025-01-01T12:00:00Z');
+      /** @type {any[]} */
       const entries = [
         { createdAt: new Date('2025-01-01T11:30:00Z').toISOString() },
         { createdAt: new Date('2025-01-01T11:45:00Z').toISOString() }
@@ -344,6 +345,7 @@ describe('VerificationCodeManager - Pure Logic', () => {
         { createdAt: new Date('2025-01-01T11:50:00Z').toISOString() }
       ];
       
+      // @ts-expect-error - Partial test data, only testing rate limit logic
       const result = VerificationCodeManager.checkGenerationRateLimit(entries, now);
       
       expect(result.allowed).toBe(false);
@@ -355,9 +357,10 @@ describe('VerificationCodeManager - Pure Logic', () => {
       const now = new Date('2025-01-01T12:00:00Z');
       const entries = [
         { createdAt: new Date('2025-01-01T10:00:00Z').toISOString() }, // 2 hours ago - outside window
-        { createdAt: new Date('2025-01-01T11:30:00Z').toISOString() }  // Within window
+        { createdAt: new Date('2025-01-01T11:01:00Z').toISOString() }  // Inside window
       ];
       
+      // @ts-expect-error - Partial test data, only testing time window logic
       const result = VerificationCodeManager.checkGenerationRateLimit(entries, now);
       
       expect(result.allowed).toBe(true);
@@ -383,6 +386,7 @@ describe('VerificationCodeManager - Pure Logic', () => {
         }
       ];
       
+      // @ts-expect-error - Partial test data for filter logic
       const result = VerificationCodeManager.filterActiveEntries(entries, now);
       
       expect(result).toHaveLength(1);
@@ -403,6 +407,7 @@ describe('VerificationCodeManager - Pure Logic', () => {
         }
       ];
       
+      // @ts-expect-error - Partial test data for filter logic
       const result = VerificationCodeManager.filterActiveEntries(entries, now);
       
       expect(result).toHaveLength(1);
@@ -423,6 +428,7 @@ describe('VerificationCodeManager - Pure Logic', () => {
         }
       ];
       
+      // @ts-expect-error - Partial test data for filter logic
       const result = VerificationCodeManager.filterActiveEntries(entries, now);
       
       expect(result).toHaveLength(1);
@@ -462,9 +468,10 @@ describe('VerificationCode - GAS Layer', () => {
     // Mock CacheService
     global.CacheService = {
       getScriptCache: () => ({
-        get: (key) => mockCache[key] || null,
-        put: (key, value, expiration) => { mockCache[key] = value; },
-        remove: (key) => { delete mockCache[key]; }
+      get: (key) => mockCache[key] || null,
+        // @ts-expect-error - Simplified mock for testing
+        put: (key, value, expirationInSeconds) => { mockCache[key] = value; },
+        remove: (key) => { delete mockCache[key]; },
       })
     };
     
@@ -472,11 +479,15 @@ describe('VerificationCode - GAS Layer', () => {
     mockMailApp = {
       sendEmail: jest.fn()
     };
+    // @ts-expect-error - Partial mock for testing
     global.MailApp = mockMailApp;
     
     // Mock Logger
+    // @ts-ignore - Partial mock for testing
     global.Logger = {
-      log: jest.fn()
+      log: jest.fn(),
+      clear: jest.fn(),
+      getLog: jest.fn(() => ''),
     };
   });
 
@@ -492,6 +503,7 @@ describe('VerificationCode - GAS Layer', () => {
     beforeEach(() => {
       // Mock PropertiesService for config tests
       global.PropertiesService = {
+        // @ts-expect-error - Partial Properties mock
         getScriptProperties: () => ({
           getProperty: (key) => {
             // Return some test values
@@ -524,6 +536,7 @@ describe('VerificationCode - GAS Layer', () => {
 
     test('falls back to defaults when PropertiesService throws error', () => {
       const originalPropertiesService = global.PropertiesService;
+      // @ts-expect-error - Partial mock for testing
       global.PropertiesService = {
         getScriptProperties: () => {
           throw new Error('Properties error');
@@ -714,6 +727,7 @@ describe('VerificationCode - GAS Layer', () => {
       expect(result.success).toBe(true);
       expect(mockMailApp.sendEmail).toHaveBeenCalled();
       // Code should NOT be returned (security)
+      // @ts-expect-error
       expect(result.code).toBeUndefined();
     });
   });

@@ -57,6 +57,13 @@ function sendVerificationCode(email, service) {
  * @param {string} [service] - The service identifier (optional in SPA flow)
  * @returns {{success: boolean, redirectUrl?: string, error?: string}} Result with redirect URL on success
  */
+/**
+ * Verify a verification code and return a session token
+ * @param {string} email - User email
+ * @param {string} code - Verification code
+ * @param {string} service - Service name
+ * @returns {{success: boolean, token?: string, email?: string, service?: string, error?: string, errorCode?: string}}
+ */
 function verifyCode(email, code, service) {
   console.log('verifyCode(', email, code, ')');
   
@@ -96,7 +103,7 @@ function verifyCode(email, code, service) {
 function getServiceContent(email, service) {
   console.log('getServiceContent(', email, service, ')');
   
-  const webService = WebServices[service];
+  const webService = /** @type {any} */ (WebServices[service]);
   if (!webService) {
     console.error('Invalid service:', service);
     return { error: 'Invalid service specified' };
@@ -195,7 +202,7 @@ function getVerificationPageContent() {
  * Extends the expiration of an existing multi-use token.
  * 
  * @param {string} token - The current multi-use token
- * @returns {{success: boolean, token?: string, error?: string}} Result with new token on success
+ * @returns {{success: boolean, token?: string, error?: string, errorCode?: string}} Result with new token on success
  */
 function refreshSession(token) {
   console.log('refreshSession called');

@@ -37,7 +37,7 @@ MembershipManagement.Trigger = {
         MembershipManagement.Trigger._deleteTriggersByFunctionName(PAYMENT_STATUS_FUNCTION);
         MembershipManagement.Trigger._createMinuteTrigger(PAYMENT_STATUS_FUNCTION, 1); // Initial 1-minute trigger
         const startTime = new Date();
-        PropertiesService.getScriptProperties().setProperty('paymentCheckStartTime', startTime); // Reset start time
+        PropertiesService.getScriptProperties().setProperty('paymentCheckStartTime', startTime.toISOString()); // Reset start time
     },
 
     _checkPaymentStatus: function() {
@@ -45,7 +45,7 @@ MembershipManagement.Trigger = {
         const now = new Date();
         const startTime = MembershipManagement.Trigger._getTimeFromProperty('paymentCheckStartTime') || now;
 
-        const elapsedTime = now - startTime;
+        const elapsedTime = now.getTime() - startTime.getTime();
 
         if (MembershipManagement.Trigger._hasPendingPayments()) { // Still pending payments
             console.log(PAYMENTS_PENDING_LOG);
@@ -81,7 +81,7 @@ MembershipManagement.Trigger = {
             return true; // Spreadsheet not updated, assume pending payments
         }
 
-        PropertiesService.getScriptProperties().setProperty('lastProcessedTime', new Date());
+        PropertiesService.getScriptProperties().setProperty('lastProcessedTime', new Date().toISOString());
         const { hasPendingPayments, errors } = MembershipManagement.processTransactions()
         errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack
             }`));

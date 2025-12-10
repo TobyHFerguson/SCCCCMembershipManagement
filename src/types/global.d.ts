@@ -198,7 +198,7 @@ declare namespace Common {
              * Gets public groups configuration
              * @returns Array of public group objects
              */
-            function getPublicGroups(): any[];
+            function getPublicGroups(): Array<{Name: string, Email: string}>;
             
             /**
              * Gets a specific member by email address
@@ -242,6 +242,9 @@ declare namespace Common {
         clearLogs(): void;
         setContainerSpreadsheet(spreadsheetId: string): void;
     }
+    
+    // Logger instance (available globally as Common.Logger)
+    const Logger: Logger;
     
     // Configuration namespace
     namespace Config {
@@ -755,6 +758,11 @@ declare namespace EmailChangeService {
         static normalizeEmail(email: string): string;
         static buildVerificationEmailContent(code: string): {subject: string, body: string, htmlBody: string};
         static formatSendCodeResult(success: boolean, email: string, error?: string): {success: boolean, message: string, error?: string, errorCode?: string};
+        static calculateBackoff(attempt: number, initialBackoffMs?: number): number;
+        static getRetryAction(params: {attempt: number, maxRetries: number, error?: Error}): {action: 'retry'|'fail'|'initial', backoffMs?: number, errorMessage?: string};
+        static createGroupUpdateResult(group: {email: string, name?: string}, success: boolean, error?: string): GroupMembershipInfo;
+        static aggregateGroupResults(results: GroupMembershipInfo[]): {successCount: number, failedCount: number, overallSuccess: boolean};
+        static formatEmailChangeMessage(overallSuccess: boolean, oldEmail: string, newEmail: string, successCount: number, failedCount: number): string;
     }
 
     // Api namespace - GAS layer
@@ -800,8 +808,8 @@ declare namespace VotingService {
     // Data types for API
     interface ProcessedElection {
         title: string;
-        opens?: Date;
-        closes?: Date;
+        opens?: string;  // Formatted date string
+        closes?: string;  // Formatted date string
         status: string;
         url?: string;
     }

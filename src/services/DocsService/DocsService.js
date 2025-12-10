@@ -51,7 +51,9 @@ DocsService.Internal.processElement_ = function (element) {
       }
       html += "</table>";
       break;
+    // @ts-expect-error - LIST exists in GAS runtime but not in type definitions
     case DocumentApp.ElementType.LIST:
+      // @ts-expect-error - ListType exists in GAS runtime but not in type definitions
       var listType = element.getType() === DocumentApp.ListType.NUMBERED ? "<ol>" : "<ul>";
       html += listType;
       var items = element.getItems();
@@ -61,6 +63,7 @@ DocsService.Internal.processElement_ = function (element) {
       html += listType.replace("<", "</");
       break;
     case DocumentApp.ElementType.BODY_SECTION:
+    // @ts-expect-error - BODY exists in GAS runtime but not in type definitions
     case DocumentApp.ElementType.BODY:
       var numChildren = element.getNumChildren();
       for (var i = 0; i < numChildren; i++) {

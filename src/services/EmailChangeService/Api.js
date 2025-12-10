@@ -15,6 +15,7 @@
  */
 
 // Namespace declaration pattern (works in both GAS and Jest)
+// @ts-ignore
 if (typeof EmailChangeService === 'undefined') EmailChangeService = {};
 
 EmailChangeService.Api = EmailChangeService.Api || {};
@@ -31,8 +32,7 @@ EmailChangeService.Api.getData = function(email) {
   
   return {
     serviceName: 'Email Change',
-    currentEmail: email,
-    email: email
+    currentEmail: email
   };
 };
 
@@ -630,7 +630,7 @@ EmailChangeService.Api.changeEmailInSpreadsheets = function(oldEmail, newEmail) 
     for (const ref of EMAIL_CHANGE_SHEET_REFS) {
       try {
         const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler(ref);
-        fiddler.mapRows((row) => {
+        fiddler.mapRows(/** @param {any} row */ (row) => {
           if (row.Email && row.Email.toLowerCase() === oldEmail) {
             row.Email = newEmail;
           }

@@ -15,7 +15,7 @@
  */
 
 // Namespace declaration pattern (works in both GAS and Jest)
-if (typeof ProfileManagementService === 'undefined') ProfileManagementService = {};
+if (typeof ProfileManagementService === 'undefined') ProfileManagementService = /** @type {any} */ ({});
 
 /**
  * @typedef {Object} ValidationResult
@@ -139,6 +139,7 @@ ProfileManagementService.Manager = class {
    */
   static getProfileFieldSchema() {
     // Return a deep copy to prevent external modification
+    /** @type {Object.<string, ProfileField>} */
     const copy = {};
     for (const [key, value] of Object.entries(PROFILE_FIELD_SCHEMA)) {
       copy[key] = { ...value };

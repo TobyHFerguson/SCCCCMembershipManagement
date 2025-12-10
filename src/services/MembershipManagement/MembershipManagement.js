@@ -125,10 +125,11 @@ MembershipManagement.generateExpiringMembersList = function () {
     membershipFiddler.setData(membershipData).dumpValues();
     expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
     
-    // Persist audit log entries
-    if (result.auditEntries && result.auditEntries.length > 0) {
-      MembershipManagement.Internal.persistAuditEntries_(result.auditEntries);
-    }
+    // Note: generateExpiringMembersList doesn't currently return auditEntries
+    // This is left for future implementation if needed
+    // if (result.auditEntries && result.auditEntries.length > 0) {
+    //   MembershipManagement.Internal.persistAuditEntries_(result.auditEntries);
+    // }
 
     MembershipManagement.Utils.log(`Successfully appended ${expirationQueue.length} membership expiration plan(s) to FIFO`);
     

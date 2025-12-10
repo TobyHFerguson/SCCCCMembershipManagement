@@ -44,11 +44,12 @@ VotingService.WebApp._renderVotingOptions = function (userEmail, htmlTemplate) {
 /**
  * Process the elections so that no URL (ID) is published for an inactive election.
  * @param {string} userEmail - The email address of the user.
- * @returns {Array<ProcessedElection>} - Returns an array of ProcessedElection objects with prefilled URLs for voting.    
+ * @returns {Array<VotingService.ProcessedElection>} - Returns an array of ProcessedElection objects with prefilled URLs for voting.    
  */
 VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
     const elections = VotingService.Data.getElectionData();
     console.log(`Raw elections data retrieved for user ${userEmail}:`, elections);
+    /** @type {VotingService.ProcessedElection[]} */
     const processedElections = elections.map(election => {
         const result = {};
         try {
@@ -90,6 +91,7 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
         }
         return result
     });
+    /** @type {VotingService.ProcessedElection[]} */
     return processedElections;
 }
 

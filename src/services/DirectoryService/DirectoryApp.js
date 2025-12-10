@@ -5,6 +5,7 @@ const TOKEN_SHEET_NAME = 'MagicLinkTokens'; // Sheet to store tokens (create thi
 const ACCESS_LINK_BASE_URL = ScriptApp.getService().getUrl(); // Base URL of your web app
 
 // Namespace declaration pattern (works in both GAS and Jest)
+// @ts-ignore
 if (typeof DirectoryService === 'undefined') DirectoryService = {};
 
 /**

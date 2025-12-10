@@ -10,7 +10,7 @@ if (typeof require !== 'undefined') {
    * @param  {...any} args - The messages or objects to log.
    */
   MembershipManagement.Utils.log = function(...args)  {
-    Common.Logger.info('MembershipManagement', ...args);
+    Common.Logger.info('MembershipManagement', args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '));
   };
 
   MembershipManagement.Utils.addDaysToDate = function(date, days = 0) {
@@ -114,7 +114,7 @@ MembershipManagement.Utils.spreadsheetDateToIso = function(dateValue) {
  * Convert FIFO items from ISO string dates (internal format) to spreadsheet Date objects.
  * Converts lastAttemptAt and nextAttemptAt fields.
  * @param {MembershipManagement.FIFOItem[]} items - Array of FIFO items with ISO string dates
- * @returns {MembershipManagement.FIFOItem[]} Array of FIFO items with Date objects for spreadsheet
+ * @returns {Array<any>} Array of FIFO items with Date objects for spreadsheet
  */
 MembershipManagement.Utils.convertFIFOItemsToSpreadsheet = function(items) {
   return items.map(item => ({

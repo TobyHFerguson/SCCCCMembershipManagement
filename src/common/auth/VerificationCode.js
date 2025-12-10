@@ -19,7 +19,9 @@
  */
 
 // Namespace declaration pattern (works in both GAS and Jest)
+// @ts-ignore
 if (typeof Common === 'undefined') Common = {};
+// @ts-ignore
 if (typeof Common.Auth === 'undefined') Common.Auth = {};
 
 /**
@@ -322,7 +324,6 @@ Common.Auth.VerificationCodeManager = class {
    * Check rate limiting for code generation
    * @param {VerificationCodeEntry[]} existingEntries - Previous entries for this email
    * @param {Date} [now] - Current time (for testing)
-   * @param {typeof VERIFICATION_CONFIG} [config] - Configuration (defaults to VERIFICATION_CONFIG)
    * @returns {RateLimitResult}
    */
   static checkGenerationRateLimit(existingEntries, now = new Date()) {
@@ -424,14 +425,11 @@ Common.Auth.VerificationCode = {
     const now = new Date();
 
     try {
-      // GAS: Get dynamic config from Script Properties
-      const config = getVerificationConfig();
-      
       // GAS: Get rate limit history
       const history = this._getRateLimitHistory(normalizedEmail);
       
       // PURE: Check rate limit with dynamic config
-      const rateLimitCheck = Common.Auth.VerificationCodeManager.checkGenerationRateLimit(history, now, config);
+      const rateLimitCheck = Common.Auth.VerificationCodeManager.checkGenerationRateLimit(history, now);
       if (!rateLimitCheck.allowed) {
         return {
           success: false,

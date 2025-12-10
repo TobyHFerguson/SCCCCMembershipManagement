@@ -52,12 +52,16 @@ EmailChangeService.handleVerifyAndGetGroups = function (originalEmail, newEmail,
   // 3. Find all groups the originalEmail is a member of using listGroupsFor
   try {
     const groups = GroupSubscription.listGroupsFor(originalEmail);
-    const groupData = groups.map(group => ({
-      groupEmail: group.email,
-      oldEmail: originalEmail,
-      newEmail: newEmail,
-      status: "Pending"
-    }));
+    const groupData = groups.map(function(group) {
+      /** @type {'Pending' | 'Success' | 'Failed'} */
+      var status = "Pending";
+      return {
+        groupEmail: group.email,
+        oldEmail: originalEmail,
+        newEmail: newEmail,
+        status: status
+      };
+    });
 
     // 4. Invalidate the token
     EmailChangeService.Internal.deleteVerificationData(verificationCode);
@@ -159,6 +163,7 @@ EmailChangeService.Internal = {
     }
   },
   updateUserEmailInGroup: function (groupEmail, originalEmail, newEmail) {
+    /** @type {'Pending' | 'Success' | 'Failed'} */
     var status = "Pending";
     var error = null;
 

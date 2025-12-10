@@ -15,6 +15,7 @@
  */
 
 // Namespace declaration pattern (works in both GAS and Jest)
+// @ts-ignore
 if (typeof DirectoryService === 'undefined') DirectoryService = {};
 DirectoryService.Api = DirectoryService.Api || {};
 

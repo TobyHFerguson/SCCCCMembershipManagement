@@ -15,6 +15,7 @@
  */
 
 // Namespace declaration pattern (works in both GAS and Jest)
+// @ts-ignore
 if (typeof GroupManagementService === 'undefined') GroupManagementService = {};
 
 GroupManagementService.Api = GroupManagementService.Api || {};
@@ -35,8 +36,7 @@ GroupManagementService.Api.getData = function(email) {
   return {
     serviceName: 'Group Management',
     subscriptions: subscriptions,
-    deliveryOptions: GroupSubscription.deliveryOptions,
-    email: email
+    deliveryOptions: GroupSubscription.deliveryOptions
   };
 };
 
@@ -103,9 +103,11 @@ GroupManagementService.Api.handleGetSubscriptions = function(params) {
       const normalizedEmail = GroupManagementService.Manager.normalizeEmail(userEmail);
 
       // GAS: Get public groups
-      const groups = Common.Data.Access.getPublicGroups();
+      /** @type {Array<{Name: string, Email: string}>} */
+      const groups = /** @type {any} */ (Common.Data.Access.getPublicGroups());
       
       // GAS: Get member data for each group
+      /** @type {Record<string, any>} */
       const membersByGroup = {};
       for (const group of groups) {
         try {
@@ -122,14 +124,14 @@ GroupManagementService.Api.handleGetSubscriptions = function(params) {
       const subscriptions = GroupManagementService.Manager.buildUserSubscriptions(
         groups,
         membersByGroup,
-        GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions()
+        /** @type {Record<string, [string, string]>} */ (GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions())
       );
 
       // Return success response
       return Common.Api.ClientManager.successResponse({
         subscriptions: subscriptions,
         deliveryOptions: GroupManagementService.Manager.getDeliveryOptionsArray(
-          GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions()
+          /** @type {Record<string, [string, string]>} */ (GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions())
         )
       });
     } catch (error) {
@@ -164,7 +166,7 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
     // PURE: Validate updates
     const validation = GroupManagementService.Manager.validateSubscriptionUpdates(
       updates,
-      GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions()
+      /** @type {Record<string, [string, string]>} */ (GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions())
     );
 
     if (!validation.valid) {
@@ -179,6 +181,7 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
       const normalizedEmail = GroupManagementService.Manager.normalizeEmail(userEmail);
 
       // GAS: Get current member status for each group being updated
+      /** @type {Record<string, any>} */
       const currentMembersByGroup = {};
       for (const update of updates) {
         try {
@@ -247,7 +250,7 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
 GroupManagementService.Api.handleGetDeliveryOptions = function() {
     try {
       const options = GroupManagementService.Manager.getDeliveryOptionsArray(
-        GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions()
+        /** @type {Record<string, [string, string]>} */ (GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions())
       );
 
       return Common.Api.ClientManager.successResponse({
