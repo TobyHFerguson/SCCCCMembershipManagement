@@ -46,6 +46,20 @@ ProfileManagementService.Api.getData = function(email) {
   // PURE: Format profile for display (client-safe view)
   const displayProfile = ProfileManagementService.Manager.formatProfileForDisplay(profile);
   
+  // GAS: Format dates for local timezone display and remove Date objects (google.script.run can't serialize them)
+  if (displayProfile.Joined) {
+    displayProfile.JoinedFormatted = Utilities.formatDate(displayProfile.Joined, Session.getScriptTimeZone(), 'MMM d, yyyy');
+    delete displayProfile.Joined; // Remove Date object
+  }
+  if (displayProfile.Expires) {
+    displayProfile.ExpiresFormatted = Utilities.formatDate(displayProfile.Expires, Session.getScriptTimeZone(), 'MMM d, yyyy');
+    delete displayProfile.Expires; // Remove Date object
+  }
+  if (displayProfile['Renewed On']) {
+    displayProfile.RenewedOnFormatted = Utilities.formatDate(displayProfile['Renewed On'], Session.getScriptTimeZone(), 'MMM d, yyyy');
+    delete displayProfile['Renewed On']; // Remove Date object
+  }
+  
   return {
     serviceName: 'Profile Management',
     profile: displayProfile,
@@ -127,6 +141,17 @@ ProfileManagementService.Api.handleGetProfile = function(params) {
 
       // PURE: Format profile for display (client-safe view)
       const displayProfile = ProfileManagementService.Manager.formatProfileForDisplay(profile);
+
+      // GAS: Format dates for local timezone display
+      if (displayProfile.Joined) {
+        displayProfile.JoinedFormatted = Utilities.formatDate(displayProfile.Joined, Session.getScriptTimeZone(), 'MMM d, yyyy');
+      }
+      if (displayProfile.Expires) {
+        displayProfile.ExpiresFormatted = Utilities.formatDate(displayProfile.Expires, Session.getScriptTimeZone(), 'MMM d, yyyy');
+      }
+      if (displayProfile['Renewed On']) {
+        displayProfile.RenewedOnFormatted = Utilities.formatDate(displayProfile['Renewed On'], Session.getScriptTimeZone(), 'MMM d, yyyy');
+      }
 
       // Return success response
       return Common.Api.ClientManager.successResponse({

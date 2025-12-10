@@ -473,26 +473,27 @@ describe('ProfileManagementService.Manager', () => {
   // ==================== formatProfileForDisplay Tests ====================
   
   describe('formatProfileForDisplay', () => {
-    test('returns only display-safe fields', () => {
+    test('returns all profile fields including membership dates', () => {
       const profile = TestData.createProfile();
       
       const result = Manager.formatProfileForDisplay(profile);
       
       expect(Object.keys(result)).toEqual([
         'First', 'Last', 'Phone', 'Email',
+        'Status', 'Joined', 'Expires', 'Renewed On', 'Period',
         'Directory Share Name', 'Directory Share Phone', 'Directory Share Email'
       ]);
     });
 
-    test('excludes sensitive fields', () => {
+    test('includes membership fields as read-only data', () => {
       const profile = TestData.createProfile();
       
       const result = Manager.formatProfileForDisplay(profile);
       
-      expect(result.Status).toBeUndefined();
-      expect(result.Joined).toBeUndefined();
-      expect(result.Expires).toBeUndefined();
-      expect(result.Period).toBeUndefined();
+      expect(result.Status).toBe('Active');
+      expect(result.Joined).toEqual(expect.any(Date));
+      expect(result.Expires).toEqual(expect.any(Date));
+      expect(result.Period).toBe(12); // Updated to match test data
     });
 
     test('returns null for null profile', () => {

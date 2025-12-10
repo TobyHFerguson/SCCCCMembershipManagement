@@ -303,6 +303,7 @@ function renderService(serviceId, data, container) {
 - Include "Back to Services" navigation link
 - Log to console during development
 - Test on all responsive breakpoints
+- **Remove Date objects before returning data from `Service.Api.getData()`** - `google.script.run` cannot serialize Date objects and will return `null` to the client. Format dates to strings using `Utilities.formatDate()` and delete the original Date properties.
 
 ### Responsive CSS Framework (SPA Services)
 

@@ -386,7 +386,7 @@
           clearCodeInputs();
           codeInputs[0].focus();
         })
-        .verifyCode(userEmail, code, '<?= service ?>');
+        .verifyCode(userEmail, code);
     } else {
       enableForm(codeForm);
       displayMessage(codeMessageDiv, 'Error: google.script.run is not defined.', true);

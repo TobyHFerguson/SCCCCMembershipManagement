@@ -218,17 +218,46 @@
 </head>
 
 <body>
-  <h2>SCCCC Profile Change Form</h2>
-  <p>You can modify your profile below.</p>
-
-  <p>You can publish your full name (First and Last) in the club Directory, along with your phone and/or email.</p>
-  <p>Changing your email requires additional security steps and so is implemented as a separate service.</p>
+  <h2>SCCCC Member Profile</h2>
+  <p>View and update your membership profile below.</p>
 
   <form id="profileForm">
-    <div class="profile-row header-row">
+    <!-- Membership Information Section (Read-Only) -->
+    <h3>Membership Information</h3>
+    <div class="profile-row">
+      <label>Status:</label>
+      <input type="text" value="<?= profile.Status ?>" disabled>
       <div></div>
+    </div>
+
+    <div class="profile-row">
+      <label>Joined:</label>
+      <input type="text" value="<?= profile.JoinedFormatted || '' ?>" disabled>
       <div></div>
-      <label>In Directory</label>
+    </div>
+
+    <div class="profile-row">
+      <label>Expires:</label>
+      <input type="text" value="<?= profile.ExpiresFormatted || '' ?>" disabled>
+      <div></div>
+    </div>
+
+    <? if (profile.RenewedOnFormatted) { ?>
+    <div class="profile-row">
+      <label>Renewed On:</label>
+      <input type="text" value="<?= profile.RenewedOnFormatted ?>" disabled>
+      <div></div>
+    </div>
+    <? } ?>
+
+    <!-- Contact Information Section (Editable) -->
+    <h3 style="margin-top: 1.5rem;">Contact Information</h3>
+    <p style="margin-bottom: 1rem;"><em>Email changes require additional security steps - use the Email Change Service.</em></p>
+
+    <div class="profile-row">
+      <label for="email">Email:</label>
+      <input type="text" id="email" name="Email" value="<?= profile.Email ?>" disabled>
+      <div></div>
     </div>
 
     <div class="profile-row">
@@ -236,11 +265,7 @@
       <input type="text" id="first" name="First" value="<?= profile.First ?>" required
         pattern="^[A-Za-z0-9\s-'.]+$"
         title="First Name must be non-empty and can contain letters, numbers, spaces, hyphens, apostrophes, or periods.">
-      <div class="directory-checkbox-wrapper">
-        <span class="directory-label-mobile">In Directory</span>
-        <input type="checkbox" id="firstPublic" name="Directory Share Name" <?=profile['Directory Share Name']
-          ? 'checked' : '' ?>>
-      </div>
+      <div></div>
     </div>
 
     <div class="profile-row">
@@ -248,32 +273,45 @@
       <input type="text" id="last" name="Last" value="<?= profile.Last ?>" required
         pattern="^[A-Za-z0-9\s-'.]+$"
         title="Last Name must be non-empty and can contain letters, numbers, spaces, hyphens, apostrophes, or periods.">
-      <div class="directory-checkbox-wrapper">
-        <span class="directory-label-mobile">In Directory</span>
-        <input type="checkbox" id="lastPublic" name="Directory Share Name" <?=profile['Directory Share Name']
-          ? 'checked' : '' ?>>
-      </div>
+      <div></div>
     </div>
 
     <div class="profile-row">
       <label for="phone">Phone:</label>
       <input type="text" id="phone" name="Phone" value="<?= profile.Phone ?>" required
         pattern="^\(\d{3}\) \d{3}-\d{4}$" title="Phone must match (123) 123-1234 format">
-      <div class="directory-checkbox-wrapper">
-        <span class="directory-label-mobile">In Directory</span>
-        <input type="checkbox" id="phonePublic" name="Directory Share Phone" <?=profile['Directory Share Phone']
-          ? 'checked' : '' ?>>
+      <div></div>
+    </div>
+
+    <!-- Directory Sharing Section -->
+    <h3 style="margin-top: 1.5rem;">Directory Sharing Preferences</h3>
+    <p style="margin-bottom: 1rem;">Choose which information to share in the member directory:</p>
+
+    <div class="profile-row">
+      <label for="namePublic">Share Name:</label>
+      <div style="display: flex; align-items: center;">
+        <input type="checkbox" id="namePublic" name="Directory Share Name" <?= profile['Directory Share Name'] ? 'checked' : '' ?>>
+        <span style="margin-left: 0.5rem;">Show my name in the directory</span>
       </div>
+      <div></div>
     </div>
 
     <div class="profile-row">
-      <label>Email:</label>
-      <input type="text" id="email" name="Email" value="<?= profile.Email?>" disabled>
-      <div class="directory-checkbox-wrapper">
-        <span class="directory-label-mobile">In Directory</span>
-        <input type="checkbox" id="emailPublic" name="Directory Share Email" <?=profile['Directory Share Email']
-          ? 'checked' : '' ?>>
+      <label for="emailPublic">Share Email:</label>
+      <div style="display: flex; align-items: center;">
+        <input type="checkbox" id="emailPublic" name="Directory Share Email" <?= profile['Directory Share Email'] ? 'checked' : '' ?>>
+        <span style="margin-left: 0.5rem;">Show my email in the directory</span>
       </div>
+      <div></div>
+    </div>
+
+    <div class="profile-row">
+      <label for="phonePublic">Share Phone:</label>
+      <div style="display: flex; align-items: center;">
+        <input type="checkbox" id="phonePublic" name="Directory Share Phone" <?= profile['Directory Share Phone'] ? 'checked' : '' ?>>
+        <span style="margin-left: 0.5rem;">Show my phone in the directory</span>
+      </div>
+      <div></div>
     </div>
 
     <div class="button-container">
@@ -290,23 +328,11 @@
     const firstInput = document.getElementById('first');
     const lastInput = document.getElementById('last');
     const phoneInput = document.getElementById('phone');
-    const firstPublicCheckbox = document.getElementById('firstPublic');
-    const lastPublicCheckbox = document.getElementById('lastPublic');
+    const namePublicCheckbox = document.getElementById('namePublic');
     const phonePublicCheckbox = document.getElementById('phonePublic');
     const emailPublicCheckbox = document.getElementById('emailPublic');
-    const submissionMessage = document.getElementById('submissionMessage'); // Reference to message div
+    const submissionMessage = document.getElementById('submissionMessage');
 
-    // Assuming originalProfileData is passed from server-side (e.g., Apps Script)
-    // For local testing, you might define it here:
-    // const originalProfileData = {
-    //   First: "John",
-    //   Last: "Doe",
-    //   Phone: "(123) 456-7890",
-    //   'Directory Share Name': true,
-    //   'Directory Share Phone': false,
-    //   'Directory Share Email': true,
-    //   Email: "john.doe@example.com"
-    // };
     const originalProfileData = JSON.parse('<?= JSON.stringify(profile) ?>');
 
     const originalData = {
@@ -325,12 +351,13 @@
     function enableAllButEmail() {
       enableForm(profileForm, ['email']);
     }
+    
     function changesMade() {
       const currentUpdatedProfile = {
         First: firstInput.value,
         Last: lastInput.value,
         Phone: phoneInput.value,
-        'Directory Share Name': firstPublicCheckbox.checked || lastPublicCheckbox.checked,
+        'Directory Share Name': namePublicCheckbox.checked,
         'Directory Share Phone': phonePublicCheckbox.checked,
         'Directory Share Email': emailPublicCheckbox.checked
       };
@@ -364,20 +391,14 @@
     }
 
     function updateCheckboxState() {
-      // If either name checkbox is checked, enable contact checkboxes.
+      // If name checkbox is checked, enable contact checkboxes.
       // Otherwise, uncheck and disable them.
-      if (firstPublicCheckbox.checked || lastPublicCheckbox.checked) {
+      if (namePublicCheckbox.checked) {
         enableContactCheckboxes();
       } else {
         uncheckAndDisableContactCheckboxes();
       }
       updateApplyButtonState(); // Always update button state after checkbox logic
-    }
-
-    function synchronizeNameCheckedStateChange(current = true) {
-      // Ensures both First Name and Last Name 'In Directory' checkboxes are in sync
-      firstPublicCheckbox.checked = current;
-      lastPublicCheckbox.checked = current;
     }
 
     // Function to display messages using the .message classes
@@ -396,66 +417,46 @@
       submissionMessage.style.display = 'none'; // Hide
     }
 
-    // Event Listeners for Checkboxes to handle state changes and synchronization
+    // Event Listeners for Checkboxes to handle state changes
+    namePublicCheckbox.addEventListener('change', () => {
+      clearMessage();
+      updateCheckboxState(); // This will enable/disable contact checkboxes based on name status
+      updateApplyButtonState();
+    });
+    
     phonePublicCheckbox.addEventListener('change', () => {
-      clearMessage(); // Clear message on input change
-      if (phonePublicCheckbox.checked) synchronizeNameCheckedStateChange(true);
-      updateCheckboxState();
-      updateUpdatedProfile();
+      clearMessage();
+      // If checking phone, must also share name
+      if (phonePublicCheckbox.checked && !namePublicCheckbox.checked) {
+        namePublicCheckbox.checked = true;
+        updateCheckboxState();
+      }
       updateApplyButtonState();
     });
+    
     emailPublicCheckbox.addEventListener('change', () => {
-      clearMessage(); // Clear message on input change
-      if (emailPublicCheckbox.checked) synchronizeNameCheckedStateChange(true);
-      updateCheckboxState();
-      updateUpdatedProfile();
-      updateApplyButtonState();
-    });
-    firstPublicCheckbox.addEventListener('change', () => {
-      clearMessage(); // Clear message on input change
-      synchronizeNameCheckedStateChange(firstPublicCheckbox.checked);
-      updateCheckboxState(); // This will enable/disable contact checkboxes based on name status
-      updateUpdatedProfile();
-      updateApplyButtonState();
-    });
-    lastPublicCheckbox.addEventListener('change', () => {
-      clearMessage(); // Clear message on input change
-      synchronizeNameCheckedStateChange(lastPublicCheckbox.checked);
-      updateCheckboxState(); // This will enable/disable contact checkboxes based on name status
-      updateUpdatedProfile();
+      clearMessage();
+      // If checking email, must also share name
+      if (emailPublicCheckbox.checked && !namePublicCheckbox.checked) {
+        namePublicCheckbox.checked = true;
+        updateCheckboxState();
+      }
       updateApplyButtonState();
     });
 
     // Event Listeners for Text Inputs to detect changes, trigger validation, and clear message
     document.getElementById('first').addEventListener('input', () => {
-      clearMessage(); // Clear message on input change
-      updateUpdatedProfile();
+      clearMessage();
       updateApplyButtonState();
     });
     document.getElementById('last').addEventListener('input', () => {
-      clearMessage(); // Clear message on input change
-      updateUpdatedProfile();
+      clearMessage();
       updateApplyButtonState();
     });
     document.getElementById('phone').addEventListener('input', () => {
-      clearMessage(); // Clear message on input change
-      updateUpdatedProfile();
+      clearMessage();
       updateApplyButtonState();
     });
-
-    // Function to keep the `updatedProfile` object in sync with form inputs
-    // This is useful for debugging or if you need to access the current form state
-    // before an actual submission.
-    function updateUpdatedProfile() {
-      updatedProfile = {
-        First: firstInput.value,
-        Last: lastInput.value,
-        Phone: phoneInput.value,
-        'Directory Share Name': firstPublicCheckbox.checked || lastPublicCheckbox.checked,
-        'Directory Share Phone': phonePublicCheckbox.checked,
-        'Directory Share Email': emailPublicCheckbox.checked
-      };
-    }
 
     // Event Listener for Form Submission
     profileForm.addEventListener('submit', function (event) {
@@ -486,21 +487,38 @@
       // Call Google Apps Script server-side function to update profile
       google.script.run
         .withSuccessHandler(function (response) {
+      // Prepare the updated profile data from current form state
+      const currentUpdatedProfile = {
+        First: firstInput.value,
+        Last: lastInput.value,
+        Phone: phoneInput.value,
+        'Directory Share Name': namePublicCheckbox.checked,
+        'Directory Share Phone': phonePublicCheckbox.checked,
+        'Directory Share Email': emailPublicCheckbox.checked
+      };
+
+      // Disable the form to prevent multiple submissions or editing during the save
+      disableForm(profileForm);
+
+      // Call server-side updateProfile function using google.script.run
+      google.script.run
+        .withSuccessHandler(function (response) {
+          // Re-enable the form after server responds
           if (response && response.success) {
             // If the server update was successful, update our 'originalData'
             // so `changesMade()` correctly detects future changes.
             Object.assign(originalData, currentUpdatedProfile);
-            displayMessage("Profile updated successfully!", "success"); // Display success message
+            displayMessage("Profile updated successfully!", "success");
           } else {
-            displayMessage("Error updating profile: " + (response && response.error ? response.error : 'Unknown error.'), "error"); // Display error message
+            displayMessage("Error updating profile: " + (response && response.error ? response.error : 'Unknown error.'), "error");
           }
           enableAllButEmail(profileForm); // Re-enable the form after processing
           updateApplyButtonState(); // Re-enable or keep disabled based on new changes (if any)
         })
         .withFailureHandler(function (error) {
           // Handle server-side errors
-          displayMessage("Server error updating profile: " + error.message, "error"); // Display error message
-          enableAllButEmail
+          displayMessage("Server error updating profile: " + error.message, "error");
+          enableAllButEmail(profileForm);
           updateApplyButtonState(); // Re-enable button on failure to allow user to retry
         })
         .updateProfile("<?= token ?>", currentUpdatedProfile); // Pass token and updated profile data
@@ -508,13 +526,12 @@
 
     // Event Listener for Reset Button
     document.getElementById('resetBtn').addEventListener('click', function () {
-      clearMessage(); // Clear message on reset
+      clearMessage();
       // Revert all form inputs and checkboxes to their initial `originalData` values
       firstInput.value = originalData.First;
       lastInput.value = originalData.Last;
       phoneInput.value = originalData.Phone;
-      firstPublicCheckbox.checked = originalData['Directory Share Name'];
-      lastPublicCheckbox.checked = originalData['Directory Share Name'];
+      namePublicCheckbox.checked = originalData['Directory Share Name'];
       phonePublicCheckbox.checked = originalData['Directory Share Phone'];
       emailPublicCheckbox.checked = originalData['Directory Share Email'];
 

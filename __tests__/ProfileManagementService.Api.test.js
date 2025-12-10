@@ -19,6 +19,21 @@ beforeEach(() => {
     log: jest.fn()
   };
 
+  // Mock Utilities and Session for date formatting
+  global.Utilities = {
+    formatDate: jest.fn((date, timezone, format) => {
+      // Return a formatted string that matches the expected format
+      if (!date) return '';
+      const d = new Date(date);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+    })
+  };
+  
+  global.Session = {
+    getScriptTimeZone: jest.fn(() => 'America/Los_Angeles')
+  };
+
   // Mock Common.Data.Access
   global.Common = {
     Data: {
@@ -47,6 +62,8 @@ afterEach(() => {
   delete global.ProfileManagementService;
   delete global.Logger;
   delete global.Common;
+  delete global.Utilities;
+  delete global.Session;
 });
 
 // Test data factories
@@ -131,7 +148,7 @@ describe('ProfileManagementService.Api', () => {
       expect(result.data.profile.Email).toBe('test@example.com');
     });
 
-    test('returns only display-safe fields', () => {
+    test('includes membership fields and formatted dates', () => {
       const profile = TestData.createProfile();
       Common.Data.Access.getMember.mockReturnValue(profile);
 
@@ -140,11 +157,19 @@ describe('ProfileManagementService.Api', () => {
       });
 
       expect(result.success).toBe(true);
-      // Should not include sensitive fields
-      expect(result.data.profile.Status).toBeUndefined();
-      expect(result.data.profile.Joined).toBeUndefined();
-      expect(result.data.profile.Expires).toBeUndefined();
-      expect(result.data.profile.Period).toBeUndefined();
+      // Should include membership fields as read-only data
+      expect(result.data.profile.Status).toBe('Active');
+      expect(result.data.profile.Joined).toEqual(expect.any(Date));
+      expect(result.data.profile.Expires).toEqual(expect.any(Date));
+      expect(result.data.profile.Period).toBe(12); // Updated to match test data
+      
+      // Should include formatted date strings for display
+      expect(result.data.profile.JoinedFormatted).toMatch(/\w+ \d{1,2}, \d{4}/);
+      expect(result.data.profile.ExpiresFormatted).toMatch(/\w+ \d{1,2}, \d{4}/);
+      // Renewed On might be null for some members
+      if (result.data.profile['Renewed On']) {
+        expect(result.data.profile.RenewedOnFormatted).toMatch(/\w+ \d{1,2}, \d{4}/);
+      }
     });
 
     test('returns error when email not available', () => {

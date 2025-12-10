@@ -1056,7 +1056,18 @@
     function renderProfileManagementService(data, container) {
         console.log('renderProfileManagementService:', data);
         
-        const profile = data.profile || {};
+        if (!data.profile) {
+            container.innerHTML = `
+                <div style="padding: 1rem;">
+                    <h2>Error</h2>
+                    <p>Profile data not available</p>
+                    <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                </div>
+            `;
+            return;
+        }
+        
+        const profile = data.profile;
         
         container.innerHTML = `
             <style>
@@ -1065,9 +1076,23 @@
                     padding: 20px;
                     max-width: 600px;
                     display: grid;
-                    grid-template-columns: auto 1fr;
+                    grid-template-columns: auto 1fr auto;
                     gap: 15px;
                     align-items: center;
+                }
+                
+                .section-header {
+                    grid-column: 1 / 4;
+                    font-size: 1.2rem;
+                    font-weight: bold;
+                    margin-top: 20px;
+                    margin-bottom: 10px;
+                    padding-bottom: 5px;
+                    border-bottom: 2px solid #007bff;
+                }
+                
+                .section-header:first-child {
+                    margin-top: 0;
                 }
                 
                 #profileForm label {
@@ -1076,20 +1101,34 @@
                     font-weight: bold;
                 }
                 
-                #profileForm input {
+                #profileForm input[type="text"],
+                #profileForm input[type="email"],
+                #profileForm input[type="tel"] {
                     padding: 8px;
                     border: 1px solid #ccc;
                     border-radius: 4px;
                 }
                 
+                #profileForm input:disabled {
+                    background-color: #f5f5f5;
+                    color: #666;
+                    cursor: not-allowed;
+                }
+                
+                .checkbox-cell {
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                }
+                
                 .buttons-container {
-                    grid-column: 1 / 3;
+                    grid-column: 1 / 4;
                     margin-top: 20px;
                     text-align: center;
                 }
                 
                 .message {
-                    grid-column: 1 / 3;
+                    grid-column: 1 / 4;
                     margin-top: 10px;
                     padding: 10px;
                     border-radius: 4px;
@@ -1112,21 +1151,68 @@
                 <h2>Manage Your Profile</h2>
                 
                 <form id="profileForm">
-                    <label for="firstName">First Name:</label>
-                    <input type="text" id="firstName" name="firstName" value="${escapeHtml(profile.firstName || '')}" required>
+                    <div class="section-header">Membership Information</div>
                     
-                    <label for="lastName">Last Name:</label>
-                    <input type="text" id="lastName" name="lastName" value="${escapeHtml(profile.lastName || '')}" required>
+                    <label for="status">Status:</label>
+                    <input type="text" id="status" name="status" value="${escapeHtml(profile.Status || '')}" disabled>
+                    <div></div>
+                    
+                    <label for="joined">Joined:</label>
+                    <input type="text" id="joined" name="joined" value="${escapeHtml(profile.JoinedFormatted || '')}" disabled>
+                    <div></div>
+                    
+                    <label for="expires">Expires:</label>
+                    <input type="text" id="expires" name="expires" value="${escapeHtml(profile.ExpiresFormatted || '')}" disabled>
+                    <div></div>
+                    
+                    <label for="renewedOn">Renewed On:</label>
+                    <input type="text" id="renewedOn" name="renewedOn" value="${escapeHtml(profile.RenewedOnFormatted || '')}" disabled>
+                    <div></div>
+                    
+                    <div class="section-header">Contact Information</div>
                     
                     <label for="email">Email:</label>
-                    <input type="email" id="email" name="email" value="${escapeHtml(profile.email || data.email || '')}" readonly>
+                    <input type="email" id="email" name="email" value="${escapeHtml(profile.Email || data.email || '')}" disabled>
+                    <div></div>
+                    
+                    <label for="firstName">First Name:</label>
+                    <input type="text" id="firstName" name="firstName" value="${escapeHtml(profile.First || '')}" required>
+                    <div></div>
+                    
+                    <label for="lastName">Last Name:</label>
+                    <input type="text" id="lastName" name="lastName" value="${escapeHtml(profile.Last || '')}" required>
+                    <div></div>
                     
                     <label for="phone">Phone:</label>
-                    <input type="tel" id="phone" name="phone" value="${escapeHtml(profile.phone || '')}">
+                    <input type="tel" id="phone" name="phone" value="${escapeHtml(profile.Phone || '')}">
+                    <div></div>
+                    
+                    <div class="section-header">Directory Sharing Preferences</div>
+                    
+                    <label for="directoryShareName">Share Name:</label>
+                    <div></div>
+                    <div class="checkbox-cell">
+                        <input type="checkbox" id="directoryShareName" name="directoryShareName" ${profile['Directory Share Name'] ? 'checked' : ''}>
+                        <label for="directoryShareName" style="font-weight: normal;">Make my name visible in member directory</label>
+                    </div>
+                    
+                    <label for="directoryShareEmail">Share Email:</label>
+                    <div></div>
+                    <div class="checkbox-cell">
+                        <input type="checkbox" id="directoryShareEmail" name="directoryShareEmail" ${profile['Directory Share Email'] ? 'checked' : ''}>
+                        <label for="directoryShareEmail" style="font-weight: normal;">Make my email visible in member directory</label>
+                    </div>
+                    
+                    <label for="directorySharePhone">Share Phone:</label>
+                    <div></div>
+                    <div class="checkbox-cell">
+                        <input type="checkbox" id="directorySharePhone" name="directorySharePhone" ${profile['Directory Share Phone'] ? 'checked' : ''}>
+                        <label for="directorySharePhone" style="font-weight: normal;">Make my phone visible in member directory</label>
+                    </div>
                     
                     <div class="buttons-container">
                         <button type="button" id="resetButton">Reset</button>
-                        <button type="submit" id="saveButton" disabled>Save Changes</button>
+                        <button type="submit" id="applyButton" disabled>Apply</button>
                     </div>
                     
                     <div id="profileMessage" class="message"></div>
@@ -1145,18 +1231,37 @@
     function initializeProfileManagementForm(originalProfile) {
         const form = document.getElementById('profileForm');
         const resetButton = document.getElementById('resetButton');
-        const saveButton = document.getElementById('saveButton');
+        const applyButton = document.getElementById('applyButton');
         const message = document.getElementById('profileMessage');
-        const inputs = form.querySelectorAll('input:not([readonly])');
+        
+        // Get editable inputs
+        const firstNameInput = document.getElementById('firstName');
+        const lastNameInput = document.getElementById('lastName');
+        const phoneInput = document.getElementById('phone');
+        const nameCheckbox = document.getElementById('directoryShareName');
+        const emailCheckbox = document.getElementById('directoryShareEmail');
+        const phoneCheckbox = document.getElementById('directorySharePhone');
+        
+        // Store original values
+        const originalValues = {
+            First: originalProfile.First || '',
+            Last: originalProfile.Last || '',
+            Phone: originalProfile.Phone || '',
+            'Directory Share Name': !!originalProfile['Directory Share Name'],
+            'Directory Share Email': !!originalProfile['Directory Share Email'],
+            'Directory Share Phone': !!originalProfile['Directory Share Phone']
+        };
         
         function checkChanges() {
-            let changed = false;
-            inputs.forEach(input => {
-                if (input.value !== (originalProfile[input.name] || '')) {
-                    changed = true;
-                }
-            });
-            saveButton.disabled = !changed;
+            const changed = (
+                firstNameInput.value !== originalValues.First ||
+                lastNameInput.value !== originalValues.Last ||
+                phoneInput.value !== originalValues.Phone ||
+                nameCheckbox.checked !== originalValues['Directory Share Name'] ||
+                emailCheckbox.checked !== originalValues['Directory Share Email'] ||
+                phoneCheckbox.checked !== originalValues['Directory Share Phone']
+            );
+            applyButton.disabled = !changed;
         }
         
         function displayMessage(msg, type) {
@@ -1172,25 +1277,60 @@
             message.style.display = 'none';
         }
         
-        inputs.forEach(input => {
-            input.addEventListener('input', checkChanges);
+        // Enforce prerequisite: name must be checked for email/phone to be checked
+        function enforceNamePrerequisite(triggerCheckbox) {
+            if ((triggerCheckbox === emailCheckbox || triggerCheckbox === phoneCheckbox) && 
+                triggerCheckbox.checked && !nameCheckbox.checked) {
+                nameCheckbox.checked = true;
+            }
+        }
+        
+        // Add change listeners
+        firstNameInput.addEventListener('input', checkChanges);
+        lastNameInput.addEventListener('input', checkChanges);
+        phoneInput.addEventListener('input', checkChanges);
+        
+        nameCheckbox.addEventListener('change', function() {
+            // If unchecking name, also uncheck email and phone
+            if (!nameCheckbox.checked) {
+                emailCheckbox.checked = false;
+                phoneCheckbox.checked = false;
+            }
+            checkChanges();
+        });
+        
+        emailCheckbox.addEventListener('change', function() {
+            enforceNamePrerequisite(emailCheckbox);
+            checkChanges();
+        });
+        
+        phoneCheckbox.addEventListener('change', function() {
+            enforceNamePrerequisite(phoneCheckbox);
+            checkChanges();
         });
         
         resetButton.addEventListener('click', function() {
-            inputs.forEach(input => {
-                input.value = originalProfile[input.name] || '';
-            });
+            firstNameInput.value = originalValues.First;
+            lastNameInput.value = originalValues.Last;
+            phoneInput.value = originalValues.Phone;
+            nameCheckbox.checked = originalValues['Directory Share Name'];
+            emailCheckbox.checked = originalValues['Directory Share Email'];
+            phoneCheckbox.checked = originalValues['Directory Share Phone'];
             clearMessage();
-            saveButton.disabled = true;
+            applyButton.disabled = true;
         });
         
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const updatedProfile = {};
-            inputs.forEach(input => {
-                updatedProfile[input.name] = input.value;
-            });
+            const updatedProfile = {
+                First: firstNameInput.value,
+                Last: lastNameInput.value,
+                Phone: phoneInput.value,
+                'Directory Share Name': nameCheckbox.checked,
+                'Directory Share Email': emailCheckbox.checked,
+                'Directory Share Phone': phoneCheckbox.checked
+            };
             
             disableForm(form);
             displayMessage('Saving profile...', 'success');
@@ -1200,10 +1340,10 @@
                     enableForm(form);
                     const result = typeof response === 'string' ? JSON.parse(response) : response;
                     if (result.success) {
-                        displayMessage(result.message, 'success');
-                        // Update original profile
-                        Object.assign(originalProfile, updatedProfile);
-                        saveButton.disabled = true;
+                        displayMessage(result.message || 'Profile updated successfully', 'success');
+                        // Update original values
+                        Object.assign(originalValues, updatedProfile);
+                        applyButton.disabled = true;
                     } else {
                         displayMessage(result.message || 'Save failed', 'error');
                     }

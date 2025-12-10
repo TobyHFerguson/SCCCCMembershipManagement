@@ -394,12 +394,23 @@ ProfileManagementService.Manager = class {
       return null;
     }
     
-    // Return only fields that are safe to display
+    // Return all member information for display
+    // Dates will be formatted by the GAS layer for local timezone
     return {
+      // Identity (email is read-only)
       First: profile.First || '',
       Last: profile.Last || '',
       Phone: profile.Phone || '',
       Email: profile.Email || '',
+      
+      // Membership info (all read-only)
+      Status: profile.Status || '',
+      Joined: profile.Joined || null,
+      Expires: profile.Expires || null,
+      'Renewed On': profile['Renewed On'] || null,
+      Period: profile.Period || '',
+      
+      // Directory sharing (editable checkboxes)
       'Directory Share Name': !!profile['Directory Share Name'],
       'Directory Share Phone': !!profile['Directory Share Phone'],
       'Directory Share Email': !!profile['Directory Share Email']
