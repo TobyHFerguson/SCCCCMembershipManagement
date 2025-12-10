@@ -261,7 +261,7 @@
     </div>
 
     <div class="profile-row">
-      <label for="first">First Name:</label>
+      <label for="first">First Name: <span style="color: red;">*</span></label>
       <input type="text" id="first" name="First" value="<?= profile.First ?>" required
         pattern="^[A-Za-z0-9\s-'.]+$"
         title="First Name must be non-empty and can contain letters, numbers, spaces, hyphens, apostrophes, or periods.">
@@ -269,7 +269,7 @@
     </div>
 
     <div class="profile-row">
-      <label for="last">Last Name:</label>
+      <label for="last">Last Name: <span style="color: red;">*</span></label>
       <input type="text" id="last" name="Last" value="<?= profile.Last ?>" required
         pattern="^[A-Za-z0-9\s-'.]+$"
         title="Last Name must be non-empty and can contain letters, numbers, spaces, hyphens, apostrophes, or periods.">
@@ -277,7 +277,7 @@
     </div>
 
     <div class="profile-row">
-      <label for="phone">Phone:</label>
+      <label for="phone">Phone: <span style="color: red;">*</span></label>
       <input type="text" id="phone" name="Phone" value="<?= profile.Phone ?>" required
         pattern="^\(\d{3}\) \d{3}-\d{4}$" title="Phone must match (123) 123-1234 format">
       <div></div>
@@ -350,6 +350,8 @@
 
     function enableAllButEmail() {
       enableForm(profileForm, ['email']);
+      // Extra safeguard: explicitly ensure email stays disabled
+      document.getElementById('email').disabled = true;
     }
     
     function changesMade() {
@@ -366,15 +368,60 @@
     }
 
     function allInputsValid() {
-      // checkValidity() will use the 'required' and 'pattern' attributes in the HTML
-      return firstInput.checkValidity() &&
-             lastInput.checkValidity() &&
-             phoneInput.checkValidity();
+      // Check that all required fields have non-empty trimmed values
+      const firstValue = firstInput.value.trim();
+      const lastValue = lastInput.value.trim();
+      const phoneValue = phoneInput.value.trim();
+      
+      // All fields must have non-empty values
+      if (firstValue === '' || lastValue === '' || phoneValue === '') {
+        console.log('Validation failed: empty field detected', {
+          first: firstValue === '',
+          last: lastValue === '',
+          phone: phoneValue === ''
+        });
+        return false;
+      }
+      
+      // Additionally check HTML5 validation (pattern matching)
+      const firstValid = firstInput.checkValidity();
+      const lastValid = lastInput.checkValidity();
+      const phoneValid = phoneInput.checkValidity();
+      
+      console.log('Field validation:', { firstValid, lastValid, phoneValid });
+      
+      return firstValid && lastValid && phoneValid;
+    }
+    
+    // Format phone number to (NNN) NNN-NNNN
+    function formatPhoneNumber(value) {
+      console.log('formatPhoneNumber called with:', value);
+      // Remove all non-digit characters
+      const digits = value.replace(/\D/g, '');
+      
+      // Only format if we have digits
+      let formatted = '';
+      if (digits.length === 0) {
+        formatted = '';
+      } else if (digits.length <= 3) {
+        formatted = `(${digits}`;
+      } else if (digits.length <= 6) {
+        formatted = `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+      } else {
+        formatted = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+      }
+      
+      console.log('formatPhoneNumber returning:', formatted);
+      return formatted;
     }
 
     function updateApplyButtonState() {
+      const hasChanges = changesMade();
+      const isValid = allInputsValid();
+      console.log('updateApplyButtonState:', { hasChanges, isValid });
       // The "Apply" button is enabled ONLY if changes have been made AND all required inputs are valid
-      applyBtn.disabled = !(changesMade() && allInputsValid());
+      applyBtn.disabled = !(hasChanges && isValid);
+      console.log('Apply button disabled:', applyBtn.disabled);
     }
 
     function enableContactCheckboxes() {
@@ -453,7 +500,34 @@
       clearMessage();
       updateApplyButtonState();
     });
-    document.getElementById('phone').addEventListener('input', () => {
+    
+    // Phone input with auto-formatting
+    phoneInput.addEventListener('input', (e) => {
+      console.log('Phone input event fired');
+      clearMessage();
+      const cursorPos = e.target.selectionStart;
+      const oldValue = e.target.value;
+      const oldLength = oldValue.length;
+      console.log('Phone input - oldValue:', oldValue, 'cursor:', cursorPos);
+      
+      // Format the phone number
+      const formatted = formatPhoneNumber(oldValue);
+      e.target.value = formatted;
+      
+      // Adjust cursor position after formatting
+      const newLength = formatted.length;
+      const diff = newLength - oldLength;
+      e.target.setSelectionRange(cursorPos + diff, cursorPos + diff);
+      
+      updateApplyButtonState();
+    });
+    
+    // Handle paste events for phone number
+    phoneInput.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+      const formatted = formatPhoneNumber(pastedText);
+      phoneInput.value = formatted;
       clearMessage();
       updateApplyButtonState();
     });
@@ -473,20 +547,6 @@
           return;
       }
 
-      disableForm(profileForm); // Disable the form to prevent further changes during processing
-      displayMessage("Updating profile...", "success"); // Display processing message
-      const currentUpdatedProfile = {
-        First: firstInput.value,
-        Last: lastInput.value,
-        Phone: phoneInput.value,
-        'Directory Share Name': firstPublicCheckbox.checked || lastPublicCheckbox.checked,
-        'Directory Share Phone': phonePublicCheckbox.checked,
-        'Directory Share Email': emailPublicCheckbox.checked
-      };
-
-      // Call Google Apps Script server-side function to update profile
-      google.script.run
-        .withSuccessHandler(function (response) {
       // Prepare the updated profile data from current form state
       const currentUpdatedProfile = {
         First: firstInput.value,
@@ -527,17 +587,27 @@
     // Event Listener for Reset Button
     document.getElementById('resetBtn').addEventListener('click', function () {
       clearMessage();
-      // Revert all form inputs and checkboxes to their initial `originalData` values
+      
+      // Reset form fields to original cached data (loaded at page load)
       firstInput.value = originalData.First;
       lastInput.value = originalData.Last;
       phoneInput.value = originalData.Phone;
       namePublicCheckbox.checked = originalData['Directory Share Name'];
       phonePublicCheckbox.checked = originalData['Directory Share Phone'];
       emailPublicCheckbox.checked = originalData['Directory Share Email'];
-
+      
+      // Ensure email field stays disabled
+      document.getElementById('email').disabled = true;
+      
+      // Re-enable form fields (except email)
+      enableAllButEmail();
+      
       // Update button and checkbox states after resetting
-      updateApplyButtonState();
       updateCheckboxState();
+      updateApplyButtonState();
+      
+      displayMessage("Profile reset to original values", "success");
+      setTimeout(clearMessage, 3000);
     });
 
     /*

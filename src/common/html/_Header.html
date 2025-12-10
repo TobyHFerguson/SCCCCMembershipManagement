@@ -1536,6 +1536,28 @@
             'Directory Share Phone': !!originalProfile['Directory Share Phone']
         };
         
+        // Validate that all required fields have non-empty trimmed values
+        function allFieldsValid() {
+            const firstValid = firstNameInput.value.trim() !== '';
+            const lastValid = lastNameInput.value.trim() !== '';
+            const phoneValid = phoneInput.value.trim() !== '';
+            
+            if (!firstValid || !lastValid || !phoneValid) {
+                console.log('Validation failed: empty field', { firstValid, lastValid, phoneValid });
+                return false;
+            }
+            return true;
+        }
+        
+        // Format phone number to (NNN) NNN-NNNN
+        function formatPhoneNumber(value) {
+            const digits = value.replace(/\D/g, '');
+            if (digits.length === 0) return '';
+            if (digits.length <= 3) return `(${digits}`;
+            if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+            return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+        }
+        
         function checkChanges() {
             const changed = (
                 firstNameInput.value !== originalValues.First ||
@@ -1545,7 +1567,9 @@
                 emailCheckbox.checked !== originalValues['Directory Share Email'] ||
                 phoneCheckbox.checked !== originalValues['Directory Share Phone']
             );
-            applyButton.disabled = !changed;
+            const isValid = allFieldsValid();
+            console.log('checkChanges:', { changed, isValid });
+            applyButton.disabled = !(changed && isValid);
         }
         
         function displayMessage(msg, type) {
@@ -1572,7 +1596,34 @@
         // Add change listeners
         firstNameInput.addEventListener('input', checkChanges);
         lastNameInput.addEventListener('input', checkChanges);
-        phoneInput.addEventListener('input', checkChanges);
+        
+        // Phone input with auto-formatting
+        phoneInput.addEventListener('input', function(e) {
+            console.log('Phone input event');
+            const cursorPos = e.target.selectionStart;
+            const oldValue = e.target.value;
+            const oldLength = oldValue.length;
+            
+            const formatted = formatPhoneNumber(oldValue);
+            const newLength = formatted.length;
+            const diff = newLength - oldLength;
+            
+            e.target.value = formatted;
+            
+            // Adjust cursor position
+            e.target.setSelectionRange(cursorPos + diff, cursorPos + diff);
+            
+            checkChanges();
+        });
+        
+        // Handle paste events for phone number
+        phoneInput.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            const formatted = formatPhoneNumber(pastedText);
+            phoneInput.value = formatted;
+            checkChanges();
+        });
         
         nameCheckbox.addEventListener('change', function() {
             // If unchecking name, also uncheck email and phone

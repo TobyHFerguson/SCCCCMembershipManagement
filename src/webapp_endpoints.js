@@ -254,6 +254,19 @@ function updateUserSubscriptions(updatedSubscriptions, userToken) {
     return response;
 }
 
+function getProfile(userToken) {
+    const userEmail = Common.Auth.TokenManager.getEmailFromMUT(userToken);
+    if (!userEmail) {
+        console.warn(`Invalid or expired token: ${userToken}`);
+        return { success: false, message: "Invalid session. Please refresh the page." };
+    }
+    const profile = Common.Data.Access.getMember(userEmail);
+    if (!profile) {
+        return { success: false, message: `Profile not found for email: ${userEmail}` };
+    }
+    return { success: true, profile: profile };
+}
+
 function updateProfile(userToken, updatedProfile ) {
     return ProfileManagementService.updateProfile(userToken, updatedProfile);
 }
