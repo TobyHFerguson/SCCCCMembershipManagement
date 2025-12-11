@@ -406,6 +406,9 @@ MembershipManagement.Manager = class {
     
     // Need at least first/last name letters and phone to match
     if (!txnFirstLetter || !txnLastLetter || !txnPhone) {
+      if (!txnPhone) {
+        console.log(`Skipping renewal match for ${txn["Email Address"]} - missing phone number`);
+      }
       return undefined;
     }
 
@@ -422,6 +425,7 @@ MembershipManagement.Manager = class {
       if (memberFirstLetter === txnFirstLetter &&
           memberLastLetter === txnLastLetter &&
           memberPhone === txnPhone) {
+        console.log(`Detected possible renewal: transaction ${txn["Email Address"]} matches member ${member.Email} by name (${txn["First Name"][0]}/${txn["Last Name"][0]}) and phone`);
         return i;
       }
     }
@@ -436,7 +440,7 @@ MembershipManagement.Manager = class {
     return years;
   }
 
-  renewMember_(txn, member, expirySchedule,) {
+  renewMember_(txn, member, expirySchedule) {
     const oldEmail = member.Email;
     const newEmail = txn["Email Address"];
     
