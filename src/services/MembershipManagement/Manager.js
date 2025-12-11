@@ -316,7 +316,13 @@ MembershipManagement.Manager = class {
         return
       }
       // We get here with a transaction that is not processed but is marked as paid. Process it.
-      const matchIndex = emailToActiveMemberIndexMap[txn["Email Address"]];
+      let matchIndex = emailToActiveMemberIndexMap[txn["Email Address"]];
+      
+      // If no email match, check if this could be a renewal (same person with different email)
+      if (matchIndex === undefined) {
+        matchIndex = this.findPossibleRenewalForTransaction_(txn, membershipData);
+      }
+      
       try {
         let message;
         let actionType;
@@ -379,7 +385,49 @@ MembershipManagement.Manager = class {
     return { recordsChanged, hasPendingPayments, errors, auditEntries };
   }
 
+  /**
+   * Find index of active member that could be renewed by this transaction.
+   * Checks if transaction matches an existing active member by:
+   * - First letters of first/last names match (case insensitive)
+   * - Same phone number (normalized)
+   * 
+   * This allows detecting renewals when a member changes their email address.
+   * 
+   * @param {Object} txn - Transaction object with "Email Address", "First Name", "Last Name", Phone
+   * @param {Array<Object>} membershipData - Array of all members
+   * @returns {number|undefined} Index of matching member, or undefined if no match
+   */
+  findPossibleRenewalForTransaction_(txn, membershipData) {
+    const normalize = v => v ? String(v).trim().toLowerCase() : '';
+    
+    const txnFirstLetter = normalize(txn["First Name"]).charAt(0);
+    const txnLastLetter = normalize(txn["Last Name"]).charAt(0);
+    const txnPhone = normalize(txn.Phone || '');
+    
+    // Need at least first/last name letters and phone to match
+    if (!txnFirstLetter || !txnLastLetter || !txnPhone) {
+      return undefined;
+    }
 
+    // Search for an active member that matches by name letters and phone
+    for (let i = 0; i < membershipData.length; i++) {
+      const member = membershipData[i];
+      if (member.Status !== 'Active') continue;
+      
+      const memberFirstLetter = normalize(member.First).charAt(0);
+      const memberLastLetter = normalize(member.Last).charAt(0);
+      const memberPhone = normalize(member.Phone);
+      
+      // Check if first/last name letters and phone match
+      if (memberFirstLetter === txnFirstLetter &&
+          memberLastLetter === txnLastLetter &&
+          memberPhone === txnPhone) {
+        return i;
+      }
+    }
+    
+    return undefined;
+  }
 
   static getPeriod_(txn) {
     if (!txn.Payment) { return 1; }
@@ -389,10 +437,32 @@ MembershipManagement.Manager = class {
   }
 
   renewMember_(txn, member, expirySchedule,) {
+    const oldEmail = member.Email;
+    const newEmail = txn["Email Address"];
+    
+    // Check if email changed during renewal
+    const emailChanged = oldEmail !== newEmail;
+    
+    // Update member properties
     member.Period = MembershipManagement.Manager.getPeriod_(txn);
     member["Renewed On"] = this._today;
     member.Expires = MembershipManagement.Utils.calculateExpirationDate(this._today, member.Expires, member.Period);
     Object.assign(member, MembershipManagement.Manager.extractDirectorySharing_(txn));
+    
+    // If email changed, update it on the member record
+    if (emailChanged) {
+      member.Email = newEmail;
+      
+      // Update email in expiry schedule
+      this.removeMemberFromExpirySchedule_(oldEmail, expirySchedule);
+      
+      // Replace email in all groups
+      const result = this._groupEmailReplaceFun(oldEmail, newEmail);
+      if (result && !result.success) {
+        console.error(`Error changing email in groups from ${oldEmail} to ${newEmail}: ${result.message}`);
+      }
+    }
+    
     this.addRenewedMemberToActionSchedule_(member, expirySchedule);
   }
 

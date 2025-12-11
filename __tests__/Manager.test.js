@@ -236,6 +236,7 @@ describe('Manager tests', () => {
   beforeEach(() => {
     groupManager.groupRemoveFun = jest.fn();
     groupManager.groupAddFun = jest.fn();
+    groupManager.groupEmailReplaceFun = jest.fn().mockReturnValue({ success: true });
     sendEmailFun = jest.fn();
     groups = [{ Email: "a@b.com" }, { Email: "member_discussions@sc3.club" }];
     manager = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today);
@@ -1111,6 +1112,318 @@ describe('Manager tests', () => {
           Note: expect.stringContaining('Failed to process transaction for fail@example.com'),
           Error: expect.stringContaining('Email service down')
         });
+      });
+    });
+
+    describe('renewal detection with email change', () => {
+      it('should detect renewal when transaction has different email but matching name and phone', () => {
+        // Existing member with one email
+        const members = [
+          TestData.activeMember({
+            Email: "old-email@example.com",
+            First: "Membership",
+            Last: "Automation",
+            Phone: "(408) 386 9343",
+            Joined: "2024-01-01",
+            Expires: utils.addDaysToDate(today, 10)  // Not expired yet
+          })
+        ];
+        
+        // Transaction with different email but same name and phone
+        const txns = [
+          TestData.paidTransaction({
+            "Email Address": "new-email@example.com",
+            "First Name": "Membership",
+            "Last Name": "Automation",
+            Phone: "(408) 386 9343",
+            "Payment": "1 year"
+          })
+        ];
+
+        manager.processPaidTransactions(txns, members, expirySchedule);
+
+        // Should have exactly one member (renewal, not a new join)
+        expect(members.length).toBe(1);
+        
+        // Email should be updated to the new one
+        expect(members[0].Email).toBe("new-email@example.com");
+        
+        // Should be marked as renewed
+        expect(members[0]["Renewed On"]).toEqual(today);
+        
+        // Expires should be extended from old expiry
+        const expectedExpires = utils.addYearsToDate(utils.addDaysToDate(today, 10), 1);
+        expect(members[0].Expires).toEqual(expectedExpires);
+        
+        // Joined date should remain the original
+        expect(members[0].Joined).toBe("2024-01-01");
+        
+        // Should have called groupEmailReplaceFun to update groups
+        expect(groupManager.groupEmailReplaceFun).toHaveBeenCalledWith("old-email@example.com", "new-email@example.com");
+        
+        // Should send renewal email (not join email)
+        expect(sendEmailFun).toHaveBeenCalledTimes(1);
+        expect(sendEmailFun).toHaveBeenCalledWith({
+          to: "new-email@example.com",
+          subject: utils.expandTemplate(actionSpecs.Renew.Subject, members[0]),
+          htmlBody: utils.expandTemplate(actionSpecs.Renew.Body, members[0])
+        });
+        
+        // Should NOT add to groups (already a member)
+        expect(groupManager.groupAddFun).not.toHaveBeenCalled();
+      });
+
+      it('should create new member when transaction does not match any existing member', () => {
+        // Existing member with different name and phone
+        const members = [
+          TestData.activeMember({
+            Email: "toby.ferguson@sc3.club",
+            First: "Toby",
+            Last: "Ferguson",
+            Phone: "(408) 386 9343",
+            Joined: "2024-01-01",
+            Expires: utils.addDaysToDate(today, -1)  // Expired
+          })
+        ];
+        
+        // Transaction with completely different person
+        const txns = [
+          TestData.paidTransaction({
+            "Email Address": "membership-automation@sc3.club",
+            "First Name": "Membership",
+            "Last Name": "Automation",
+            Phone: "(408) 386 9343",
+            "Payment": "1 year"
+          })
+        ];
+
+        manager.processPaidTransactions(txns, members, expirySchedule);
+
+        // Should have two members now (one existing, one new)
+        expect(members.length).toBe(2);
+        
+        // First member should be unchanged
+        expect(members[0].Email).toBe("toby.ferguson@sc3.club");
+        
+        // Second member should be the new join
+        expect(members[1].Email).toBe("membership-automation@sc3.club");
+        expect(members[1].First).toBe("Membership");
+        expect(members[1].Last).toBe("Automation");
+        expect(members[1].Joined).toEqual(today);
+        expect(members[1]["Renewed On"]).toBe("");
+        
+        // Should send join email
+        expect(sendEmailFun).toHaveBeenCalledWith({
+          to: members[1].Email,
+          subject: utils.expandTemplate(actionSpecs.Join.Subject, members[1]),
+          htmlBody: utils.expandTemplate(actionSpecs.Join.Body, members[1])
+        });
+        
+        // Should add new member to groups
+        expect(groupManager.groupAddFun).toHaveBeenCalledTimes(2);
+        expect(groupManager.groupAddFun).toHaveBeenCalledWith("membership-automation@sc3.club", "a@b.com");
+        expect(groupManager.groupAddFun).toHaveBeenCalledWith("membership-automation@sc3.club", "member_discussions@sc3.club");
+      });
+
+      it('should still match by email when email has not changed', () => {
+        // Existing member
+        const members = [
+          TestData.activeMember({
+            Email: "member@example.com",
+            First: "Test",
+            Last: "User",
+            Phone: "(408) 555-1234",
+            Joined: "2024-01-01",
+            Expires: utils.addDaysToDate(today, 10)
+          })
+        ];
+        
+        // Transaction with same email (traditional renewal)
+        const txns = [
+          TestData.paidTransaction({
+            "Email Address": "member@example.com",
+            "First Name": "Test",
+            "Last Name": "User",
+            Phone: "(408) 555-1234",
+            "Payment": "1 year"
+          })
+        ];
+
+        manager.processPaidTransactions(txns, members, expirySchedule);
+
+        // Should have exactly one member (renewal)
+        expect(members.length).toBe(1);
+        expect(members[0].Email).toBe("member@example.com");
+        expect(members[0]["Renewed On"]).toEqual(today);
+        
+        // Should NOT call groupEmailReplaceFun (email didn't change)
+        expect(groupManager.groupEmailReplaceFun).not.toHaveBeenCalled();
+      });
+
+      it('should not match when phone is missing from transaction', () => {
+        const members = [
+          TestData.activeMember({
+            Email: "old@example.com",
+            First: "Test",
+            Last: "User",
+            Phone: "(408) 555-1234"
+          })
+        ];
+        
+        // Transaction without phone number
+        const txns = [
+          TestData.paidTransaction({
+            "Email Address": "new@example.com",
+            "First Name": "Test",
+            "Last Name": "User",
+            Phone: "",  // Missing phone
+            "Payment": "1 year"
+          })
+        ];
+
+        manager.processPaidTransactions(txns, members, expirySchedule);
+
+        // Should create a new member (can't match without phone)
+        expect(members.length).toBe(2);
+        expect(members[1].Email).toBe("new@example.com");
+      });
+
+      it('should not match when first name letter differs', () => {
+        const members = [
+          TestData.activeMember({
+            Email: "old@example.com",
+            First: "John",
+            Last: "Doe",
+            Phone: "(408) 555-1234"
+          })
+        ];
+        
+        const txns = [
+          TestData.paidTransaction({
+            "Email Address": "new@example.com",
+            "First Name": "Bob",  // Different first letter
+            "Last Name": "Doe",
+            Phone: "(408) 555-1234"
+          })
+        ];
+
+        manager.processPaidTransactions(txns, members, expirySchedule);
+
+        // Should create a new member (different person)
+        expect(members.length).toBe(2);
+      });
+
+      it('should not match when last name letter differs', () => {
+        const members = [
+          TestData.activeMember({
+            Email: "old@example.com",
+            First: "John",
+            Last: "Doe",
+            Phone: "(408) 555-1234"
+          })
+        ];
+        
+        const txns = [
+          TestData.paidTransaction({
+            "Email Address": "new@example.com",
+            "First Name": "John",
+            "Last Name": "Smith",  // Different last letter
+            Phone: "(408) 555-1234"
+          })
+        ];
+
+        manager.processPaidTransactions(txns, members, expirySchedule);
+
+        // Should create a new member (different person)
+        expect(members.length).toBe(2);
+      });
+
+      it('should handle group email replacement failure gracefully', () => {
+        // Create a new manager with mocked groupEmailReplaceFun that returns failure
+        const failingGroupManager = {
+          groupAddFun: jest.fn(),
+          groupRemoveFun: jest.fn(),
+          groupEmailReplaceFun: jest.fn().mockReturnValue({
+            success: false,
+            message: "Group update failed"
+          })
+        };
+        const managerWithFailingGroups = new MembershipManagement.Manager(
+          actionSpecs, groups, failingGroupManager, sendEmailFun, today
+        );
+        
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        
+        const members = [
+          TestData.activeMember({
+            Email: "old@example.com",
+            First: "Test",
+            Last: "User",
+            Phone: "(408) 555-1234"
+          })
+        ];
+        
+        const txns = [
+          TestData.paidTransaction({
+            "Email Address": "new@example.com",
+            "First Name": "Test",
+            "Last Name": "User",
+            Phone: "(408) 555-1234"
+          })
+        ];
+
+        // Should not throw, but should log error
+        expect(() => {
+          managerWithFailingGroups.processPaidTransactions(txns, members, expirySchedule);
+        }).not.toThrow();
+
+        // Should have logged the error
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining("Error changing email in groups from old@example.com to new@example.com")
+        );
+        
+        // Member email should still be updated
+        expect(members[0].Email).toBe("new@example.com");
+        
+        consoleErrorSpy.mockRestore();
+      });
+
+      it('should update expiry schedule with new email when email changes', () => {
+        const members = [
+          TestData.activeMember({
+            Email: "old@example.com",
+            First: "Test",
+            Last: "User",
+            Phone: "(408) 555-1234",
+            Expires: utils.addDaysToDate(today, 10)
+          })
+        ];
+        
+        // Pre-populate expiry schedule with old email
+        expirySchedule = [
+          TestData.expiryScheduleEntry({
+            Email: "old@example.com",
+            Type: utils.ActionType.Expiry1,
+            Date: utils.addDaysToDate(today, 10)
+          })
+        ];
+        
+        const txns = [
+          TestData.paidTransaction({
+            "Email Address": "new@example.com",
+            "First Name": "Test",
+            "Last Name": "User",
+            Phone: "(408) 555-1234"
+          })
+        ];
+
+        manager.processPaidTransactions(txns, members, expirySchedule);
+
+        // All expiry schedule entries should use new email
+        expect(expirySchedule.every(entry => entry.Email === "new@example.com")).toBe(true);
+        
+        // Should not have any entries with old email
+        expect(expirySchedule.filter(entry => entry.Email === "old@example.com").length).toBe(0);
       });
     });
   });
