@@ -316,13 +316,7 @@ MembershipManagement.Manager = class {
         return
       }
       // We get here with a transaction that is not processed but is marked as paid. Process it.
-      let matchIndex = emailToActiveMemberIndexMap[txn["Email Address"]];
-      
-      // If no email match, check if this could be a renewal (same person with different email)
-      if (matchIndex === undefined) {
-        matchIndex = this.findPossibleRenewalForTransaction_(txn, membershipData);
-      }
-      
+      const matchIndex = emailToActiveMemberIndexMap[txn["Email Address"]];
       try {
         let message;
         let actionType;
@@ -336,16 +330,55 @@ MembershipManagement.Manager = class {
             subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Subject, member),
             htmlBody: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Body, member)
           };
-        } else { // a joining member
+        } else { // a joining member - but check if it's actually a renewal
           console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a new member`);
           const newMember = this.addNewMember_(txn, expirySchedule, membershipData);
-          this._groups.forEach(g => this._groupAddFun(newMember.Email, g.Email));
-          actionType = 'Join';
-          message = {
-            to: newMember.Email,
-            subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Join.Subject, newMember),
-            htmlBody: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Join.Body, newMember)
-          };
+          const newMemberIndex = membershipData.length - 1; // Index of the newly added member
+          
+          // Check if this new member is actually a renewal (using isPossibleRenewal)
+          let possibleRenewalIndex = -1;
+          for (let j = 0; j < membershipData.length - 1; j++) { // Check against all members except the newly added one
+            if (MembershipManagement.Manager.isPossibleRenewal(membershipData[j], newMember)) {
+              possibleRenewalIndex = j;
+              break;
+            }
+          }
+          
+          if (possibleRenewalIndex !== -1) {
+            // This is actually a renewal - use convertJoinToRenew logic
+            console.log(`transaction on row ${i + 2} ${txn["Email Address"]} detected as renewal via isPossibleRenewal`);
+            const result = this.convertJoinToRenew(possibleRenewalIndex, newMemberIndex, membershipData, expirySchedule);
+            if (result.success) {
+              // Renewal was successful - the old member was removed and new member updated
+              actionType = 'Renew';
+              // Get the updated member (it's now at a potentially different index after removal)
+              const updatedMemberIndex = possibleRenewalIndex < newMemberIndex ? newMemberIndex - 1 : newMemberIndex;
+              const updatedMember = membershipData[updatedMemberIndex];
+              message = {
+                to: updatedMember.Email,
+                subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Subject, updatedMember),
+                htmlBody: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Body, updatedMember)
+              };
+            } else {
+              // Conversion failed - treat as new join
+              this._groups.forEach(g => this._groupAddFun(newMember.Email, g.Email));
+              actionType = 'Join';
+              message = {
+                to: newMember.Email,
+                subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Join.Subject, newMember),
+                htmlBody: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Join.Body, newMember)
+              };
+            }
+          } else {
+            // Not a renewal - regular new join
+            this._groups.forEach(g => this._groupAddFun(newMember.Email, g.Email));
+            actionType = 'Join';
+            message = {
+              to: newMember.Email,
+              subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Join.Subject, newMember),
+              htmlBody: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Join.Body, newMember)
+            };
+          }
         }
         this._sendEmailFun(message);
         txn.Timestamp = this._today;
@@ -385,54 +418,6 @@ MembershipManagement.Manager = class {
     return { recordsChanged, hasPendingPayments, errors, auditEntries };
   }
 
-  /**
-   * Find index of active member that could be renewed by this transaction.
-   * Checks if transaction matches an existing active member by:
-   * - First letters of first/last names match (case insensitive)
-   * - Same phone number (normalized)
-   * 
-   * This allows detecting renewals when a member changes their email address.
-   * 
-   * @param {Object} txn - Transaction object with "Email Address", "First Name", "Last Name", Phone
-   * @param {Array<Object>} membershipData - Array of all members
-   * @returns {number|undefined} Index of matching member, or undefined if no match
-   */
-  findPossibleRenewalForTransaction_(txn, membershipData) {
-    const normalize = v => v ? String(v).trim().toLowerCase() : '';
-    
-    const txnFirstLetter = normalize(txn["First Name"]).charAt(0);
-    const txnLastLetter = normalize(txn["Last Name"]).charAt(0);
-    const txnPhone = normalize(txn.Phone || '');
-    
-    // Need at least first/last name letters and phone to match
-    if (!txnFirstLetter || !txnLastLetter || !txnPhone) {
-      if (!txnPhone) {
-        console.log(`Skipping renewal match for ${txn["Email Address"]} - missing phone number`);
-      }
-      return undefined;
-    }
-
-    // Search for an active member that matches by name letters and phone
-    for (let i = 0; i < membershipData.length; i++) {
-      const member = membershipData[i];
-      if (member.Status !== 'Active') continue;
-      
-      const memberFirstLetter = normalize(member.First).charAt(0);
-      const memberLastLetter = normalize(member.Last).charAt(0);
-      const memberPhone = normalize(member.Phone);
-      
-      // Check if first/last name letters and phone match
-      if (memberFirstLetter === txnFirstLetter &&
-          memberLastLetter === txnLastLetter &&
-          memberPhone === txnPhone) {
-        console.log(`Detected possible renewal: transaction ${txn["Email Address"]} matches member ${member.Email} by name (${txn["First Name"][0]}/${txn["Last Name"][0]}) and phone`);
-        return i;
-      }
-    }
-    
-    return undefined;
-  }
-
   static getPeriod_(txn) {
     if (!txn.Payment) { return 1; }
     const yearsMatch = txn.Payment.match(/(\d+)\s*year/);
@@ -441,32 +426,10 @@ MembershipManagement.Manager = class {
   }
 
   renewMember_(txn, member, expirySchedule) {
-    const oldEmail = member.Email;
-    const newEmail = txn["Email Address"];
-    
-    // Check if email changed during renewal
-    const emailChanged = oldEmail !== newEmail;
-    
-    // Update member properties
     member.Period = MembershipManagement.Manager.getPeriod_(txn);
     member["Renewed On"] = this._today;
     member.Expires = MembershipManagement.Utils.calculateExpirationDate(this._today, member.Expires, member.Period);
     Object.assign(member, MembershipManagement.Manager.extractDirectorySharing_(txn));
-    
-    // If email changed, update it on the member record
-    if (emailChanged) {
-      member.Email = newEmail;
-      
-      // Update email in expiry schedule
-      this.removeMemberFromExpirySchedule_(oldEmail, expirySchedule);
-      
-      // Replace email in all groups
-      const result = this._groupEmailReplaceFun(oldEmail, newEmail);
-      if (result && !result.success) {
-        console.error(`Error changing email in groups from ${oldEmail} to ${newEmail}: ${result.message}`);
-      }
-    }
-    
     this.addRenewedMemberToActionSchedule_(member, expirySchedule);
   }
 
