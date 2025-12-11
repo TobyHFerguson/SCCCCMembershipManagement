@@ -487,16 +487,50 @@ Common.Auth.VerificationCode = {
 
       // PURE: Verify code
       const result = Common.Auth.VerificationCodeManager.verifyCode(code, entry, now);
-      
+
       if (result.success) {
         // GAS: Mark as used
         entry.used = true;
         this._storeEntry(normalizedEmail, entry);
         Logger.log('[VerificationCode.verify] Successful verification for ' + normalizedEmail);
-      } else {
-        Logger.log('[VerificationCode.verify] Failed verification for ' + normalizedEmail + ': ' + result.errorCode);
+        return result;
       }
-      
+
+      Logger.log('[VerificationCode.verify] Failed verification for ' + normalizedEmail + ': ' + result.errorCode);
+
+      // If there's no entry or the code expired, auto-generate and send a new code
+      if (result.errorCode === 'NO_CODE' || result.errorCode === 'EXPIRED') {
+        try {
+          // Try to generate and store a fresh code (may be rate-limited)
+          const gen = this.generateAndStore(normalizedEmail, entry && entry.service ? entry.service : undefined);
+          if (!gen.success) {
+            // Propagate rate-limit or generation error back to caller
+            Logger.log('[VerificationCode.verify] Auto-resent generation failed for ' + normalizedEmail + ': ' + (gen.error || gen.errorCode));
+            return { success: false, error: gen.error || 'Failed to resend verification code', errorCode: gen.errorCode || 'INTERNAL_ERROR' };
+          }
+
+          // Send the new code via email using a generic service name when unknown
+          const serviceName = (entry && entry.service) ? entry.service : 'SCCCC Services';
+          const emailResult = this.sendCodeEmail(normalizedEmail, gen.code, serviceName);
+          if (!emailResult.success) {
+            Logger.log('[VerificationCode.verify] Auto-resent email send failed for ' + normalizedEmail + ': ' + (emailResult.error || 'unknown'));
+            return { success: false, error: 'Failed to resend verification code', errorCode: 'EMAIL_FAILED' };
+          }
+
+          Logger.log('[VerificationCode.verify] Auto-resent verification code to ' + normalizedEmail);
+          // Return a friendly message and the canonical email so the client can restart its resend timer
+          return {
+            success: false,
+            error: 'Your verification session timed out. A new verification code has been sent to your email.',
+            errorCode: 'AUTO_RESENT',
+            email: normalizedEmail
+          };
+        } catch (e) {
+          Logger.log('[VerificationCode.verify] Auto-resent exception for ' + normalizedEmail + ': ' + e);
+          return { success: false, error: 'Verification failed', errorCode: 'INTERNAL_ERROR' };
+        }
+      }
+
       return result;
     } catch (error) {
       Logger.log('[VerificationCode.verify] Error: ' + error);

@@ -291,18 +291,43 @@ declare namespace Common {
             service?: string;
         }
         
-        interface VerificationResult {
+            /** Known verification error codes returned by verification APIs */
+            type VerificationErrorCode =
+                | 'NO_CODE'
+                | 'EXPIRED'
+                | 'AUTO_RESENT'
+                | 'INVALID_FORMAT'
+                | 'ALREADY_USED'
+                | 'INCORRECT_CODE'
+                | 'MAX_ATTEMPTS'
+                | 'RATE_LIMITED'
+                | 'EMAIL_FAILED';
+
+            interface VerificationResult {
+            /**
+             * Result of a verification attempt.
+             *
+             * Note: `errorCode` may include the following values used by the system:
+             *  - `NO_CODE` - No code entry was found for the email
+             *  - `EXPIRED` - The existing code had expired
+             *  - `AUTO_RESENT` - The server auto-generated and resent a new code; the `email` field contains the server-normalized canonical email
+             *  - `INVALID_FORMAT`, `ALREADY_USED`, `INCORRECT_CODE`, `MAX_ATTEMPTS`, etc.
+             */
             success: boolean;
+            /** Canonical server-normalized email (present when AUTO_RESENT or on success) */
             email?: string;
+            /** Human-friendly error message */
             error?: string;
-            errorCode?: string;
+            /** Machine-readable error code */
+            errorCode?: VerificationErrorCode | string;
         }
         
         interface CodeGenerationResult {
             success: boolean;
             code?: string;
             error?: string;
-            errorCode?: string;
+            /** Machine-readable error code for generation failures */
+            errorCode?: VerificationErrorCode | string;
         }
         
         interface RateLimitResult {

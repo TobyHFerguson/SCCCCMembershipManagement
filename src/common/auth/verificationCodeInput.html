@@ -375,10 +375,23 @@
               .getHomePageContent(response.email);
           } else {
             enableForm(codeForm);
-            const errorMessage = response && response.error ? response.error : 'Verification failed.';
-            displayMessage(codeMessageDiv, 'Error: ' + errorMessage, true);
-            clearCodeInputs();
-            codeInputs[0].focus();
+            // If the server auto-resent a new code, show a friendly message and restart resend timer
+            if (response && response.errorCode === 'AUTO_RESENT') {
+              if (response.email) {
+                userEmail = response.email;
+                displayEmailSpan.textContent = userEmail;
+              }
+              hideMessage(emailMessageDiv);
+              displayMessage(codeMessageDiv, response.error || 'Verification failed. A new verification code has been sent to your email.', false);
+              clearCodeInputs();
+              startResendCountdown();
+              codeInputs[0].focus();
+            } else {
+              const errorMessage = response && response.error ? response.error : 'Verification failed.';
+              displayMessage(codeMessageDiv, 'Error: ' + errorMessage, true);
+              clearCodeInputs();
+              codeInputs[0].focus();
+            }
           }
         })
         .withFailureHandler(function(error) {

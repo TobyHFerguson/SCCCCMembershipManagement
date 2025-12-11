@@ -689,6 +689,27 @@ describe('VerificationCode - GAS Layer', () => {
       expect(result2.success).toBe(false);
       expect(result2.errorCode).toBe('ALREADY_USED');
     });
+
+    test('auto-resent when no entry exists (friendly message + new code sent)', () => {
+      // Ensure no entry exists for this email
+      delete mockCache['vc_nocode@example.com'];
+
+      const result = VerificationCode.verify('NoCode@Example.COM', '123456');
+
+      // Should return AUTO_RESENT and provide canonical email
+      expect(result.success).toBe(false);
+      expect(result.errorCode).toBe('AUTO_RESENT');
+      expect(result.email).toBe('nocode@example.com');
+
+      // A new entry should have been created in cache
+      const entryRaw = mockCache['vc_nocode@example.com'];
+      expect(entryRaw).toBeDefined();
+      const entry = JSON.parse(entryRaw);
+      expect(entry.email).toBe('nocode@example.com');
+
+      // An email should have been sent
+      expect(mockMailApp.sendEmail).toHaveBeenCalled();
+    });
   });
 
   // ==================== sendCodeEmail Tests ====================

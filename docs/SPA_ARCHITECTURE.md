@@ -300,6 +300,26 @@ Service.Api.getData = function(token) {
   return { serviceName: 'Profile', profile };
 };
 
+### Verification Code Auto-Resend Behavior (UX & Safety)
+
+When a user submits a verification code that no longer exists (cache eviction) or has expired, the server will automatically generate and send a fresh verification code and return a friendly response. This prevents the UI from showing a technical "No verification code found" message and reduces user friction.
+
+Key points:
+- Server behavior: On `NO_CODE` or `EXPIRED` during verification, the server attempts to generate/store a fresh code and send it via email. If successful it returns:
+
+```json
+{ "success": false, "error": "Verification failed. A new verification code has been sent to your email.", "errorCode": "AUTO_RESENT", "email": "canonical@example.com" }
+```
+
+- Client behavior: The SPA client should detect `errorCode === 'AUTO_RESENT'`, update the displayed email with the server-provided canonical `email` (so the client uses the exact same cache key), show a friendly message, clear the code inputs, and restart the resend countdown timer.
+
+- Rationale: CacheService entries are volatile and may be evicted or expired. Auto-resend is a pragmatic UX mitigation that keeps the flow moving without exposing technical details to the user.
+
+- Tests: Add/maintain unit tests asserting that when verification fails with no code the server auto-resends (email sent, cache updated) and returns `AUTO_RESENT` plus canonical email.
+
+Add this to the service authoring checklist when implementing verification flows.
+
+
 // Client receives:
 // { serviceName: 'Profile', profile: { name: 'John Doe', joined: null, expires: null } }
 ```
