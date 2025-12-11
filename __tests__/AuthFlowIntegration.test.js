@@ -24,43 +24,43 @@ describe('Authentication Flow Integration', () => {
     mockCache = {};
     mockProperties = {};
     
-    // Mock CacheService
-    global.CacheService = {
+    // Mock CacheService - partial mock for testing
+    global.CacheService = /** @type {any} */ ({
       getScriptCache: () => ({
         get: (key) => mockCache[key] || null,
         put: (key, value, expiration) => { mockCache[key] = value; },
         remove: (key) => { delete mockCache[key]; }
       })
-    };
+    });
     
-    // Mock PropertiesService
-    global.PropertiesService = {
+    // Mock PropertiesService - partial mock for testing
+    global.PropertiesService = /** @type {any} */ ({
       getScriptProperties: () => ({
         getProperty: (key) => mockProperties[key] || null,
         setProperty: (key, value) => { mockProperties[key] = value; },
         deleteProperty: (key) => { delete mockProperties[key]; },
         getProperties: () => ({ ...mockProperties })
       })
-    };
+    });
     
-    // Mock MailApp
+    // Mock MailApp - partial mock for testing
     mockMailApp = {
       sendEmail: jest.fn()
     };
-    global.MailApp = mockMailApp;
+    global.MailApp = /** @type {any} */ (mockMailApp);
     
-    // Mock ScriptApp
+    // Mock ScriptApp - partial mock for testing
     mockScriptApp = {
       getService: () => ({
         getUrl: () => 'https://script.google.com/test'
       })
     };
-    global.ScriptApp = mockScriptApp;
+    global.ScriptApp = /** @type {any} */ (mockScriptApp);
     
-    // Mock Logger
-    global.Logger = {
+    // Mock Logger - partial mock for testing
+    global.Logger = /** @type {any} */ ({
       log: jest.fn()
-    };
+    });
   });
 
   afterEach(() => {
@@ -175,6 +175,7 @@ describe('Authentication Flow Integration', () => {
       // 6th request should be rate limited
       const result = VerificationCode.requestCode(email, 'Test Service');
       expect(result.success).toBe(false);
+      // @ts-expect-error - errorCode exists in actual return type but not in base interface
       expect(result.errorCode).toBe('RATE_LIMITED');
     });
   });
@@ -193,8 +194,8 @@ describe('Authentication Flow Integration', () => {
       );
       
       const emailArg = mockMailApp.sendEmail.mock.calls[0][0];
-      // Code should be formatted as XXX-XXX
-      expect(emailArg.body).toMatch(/\d{3}-\d{3}/);
+      // Code should be 6 contiguous digits (no hyphen)
+      expect(emailArg.body).toMatch(/\d{6}/);
     });
 
     test('email is normalized (lowercase, trimmed)', () => {
@@ -215,6 +216,7 @@ describe('Authentication Flow Integration', () => {
       const result = VerificationCode.requestCode('user@example.com', 'Test Service');
       
       expect(result.success).toBe(true);
+      // @ts-expect-error - code exists in actual return type but not in base interface
       expect(result.code).toBeUndefined();
     });
 
@@ -247,12 +249,14 @@ describe('Authentication Flow Integration', () => {
     test('handles empty email', () => {
       const result = VerificationCode.requestCode('', 'Test Service');
       expect(result.success).toBe(false);
+      // @ts-expect-error - errorCode exists in actual return type but not in base interface
       expect(result.errorCode).toBe('INVALID_EMAIL');
     });
 
     test('handles invalid email format', () => {
       const result = VerificationCode.requestCode('notanemail', 'Test Service');
       expect(result.success).toBe(false);
+      // @ts-expect-error - errorCode exists in actual return type but not in base interface
       expect(result.errorCode).toBe('INVALID_EMAIL');
     });
 
@@ -337,31 +341,31 @@ describe('Backward Compatibility', () => {
     mockCache = {};
     mockProperties = {};
     
-    global.CacheService = {
+    global.CacheService = /** @type {any} */ ({
       getScriptCache: () => ({
         get: (key) => mockCache[key] || null,
         put: (key, value) => { mockCache[key] = value; },
         remove: (key) => { delete mockCache[key]; }
       })
-    };
+    });
     
-    global.PropertiesService = {
+    global.PropertiesService = /** @type {any} */ ({
       getScriptProperties: () => ({
         getProperty: (key) => mockProperties[key] || null,
         setProperty: (key, value) => { mockProperties[key] = value; },
         deleteProperty: (key) => { delete mockProperties[key]; },
         getProperties: () => ({ ...mockProperties })
       })
-    };
+    });
     
     mockMailApp = {
       sendEmail: jest.fn()
     };
-    global.MailApp = mockMailApp;
+    global.MailApp = /** @type {any} */ (mockMailApp);
     
-    global.Logger = {
+    global.Logger = /** @type {any} */ ({
       log: jest.fn()
-    };
+    });
   });
 
   afterEach(() => {

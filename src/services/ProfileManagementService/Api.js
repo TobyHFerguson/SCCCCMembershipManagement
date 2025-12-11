@@ -15,6 +15,7 @@
  */
 
 // Namespace declaration pattern (works in both GAS and Jest)
+// @ts-expect-error - Namespace initialization for GAS/Jest compatibility
 if (typeof ProfileManagementService === 'undefined') ProfileManagementService = {};
 
 ProfileManagementService.Api = ProfileManagementService.Api || {};
@@ -42,6 +43,7 @@ ProfileManagementService.Api.getData = function(email) {
     if (!profile) {
       return {
         serviceName: 'Profile Management',
+        profile: null,
         error: 'Profile not found',
         email: email
       };
@@ -73,6 +75,7 @@ ProfileManagementService.Api.getData = function(email) {
     console.error('ProfileManagementService.Api.getData error:', error);
     return {
       serviceName: 'Profile Management',
+      profile: null,
       error: `Failed to load profile: ${error.message}`,
       email: email
     };

@@ -33,8 +33,8 @@ const TestData = {
   createVerificationData: (overrides = {}) => ({
     newEmail: 'new@example.com',
     code: '123456',
-    expiry: Date.now() + 15 * 60 * 1000, // 15 minutes from now
-    type: 'emailUpdate',
+    expiry: Date.now() + 15 * 60 * 1000,
+    type: /** @type {'emailUpdate'} */ ('emailUpdate'),
     oldEmail: 'old@example.com',
     ...overrides
   }),
@@ -43,7 +43,7 @@ const TestData = {
     groupEmail: 'group@example.com',
     oldEmail: 'old@example.com',
     newEmail: 'new@example.com',
-    status: 'Pending',
+    status: /** @type {'Pending' | 'Success' | 'Failed'} */ ('Pending'),
     ...overrides
   }),
 
@@ -405,6 +405,7 @@ describe('EmailChangeService.Manager', () => {
 
     test('handles missing email property', () => {
       const groups = [{ name: 'Group 1' }];
+      // @ts-expect-error - Testing defensive behavior with malformed group data
       const result = Manager.transformGroupsToMembershipInfo(groups, 'old@example.com', 'new@example.com');
       expect(result[0].groupEmail).toBe('');
     });
@@ -601,7 +602,7 @@ describe('EmailChangeService.Manager', () => {
   describe('buildVerificationEmailContent', () => {
     test('includes formatted code in body', () => {
       const content = Manager.buildVerificationEmailContent('123456');
-      expect(content.body).toContain('123-456'); // Code formatted with dash
+      expect(content.body).toContain('123456'); // Code without dash (6 contiguous digits)
     });
 
     test('includes expiry time', () => {

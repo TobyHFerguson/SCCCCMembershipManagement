@@ -15,6 +15,7 @@
  */
 
 // Namespace declaration pattern (works in both GAS and Jest)
+// @ts-expect-error - Namespace initialization for GAS/Jest compatibility
 if (typeof EmailChangeService === 'undefined') EmailChangeService = {};
 
 /**

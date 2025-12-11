@@ -718,6 +718,9 @@ declare namespace EmailChangeService {
         newEmail: string;
         status: 'Pending' | 'Success' | 'Failed';
         error?: string;
+        // Optional fields used in intermediate results and tests
+        groupName?: string;
+        success?: boolean;
     }
 
     interface VerificationData {
@@ -755,13 +758,13 @@ declare namespace EmailChangeService {
         static aggregateResults(results: GroupMembershipInfo[]): EmailUpdateResult;
         static createUpdatedMemberRecord(originalMember: Record<string, any>, newEmail: string): Record<string, any> | null;
         static createChangeLogEntry(oldEmail: string, newEmail: string, date?: Date): {date: Date, from: string, to: string};
-        static normalizeEmail(email: string): string;
+        static normalizeEmail(email: any): string;
         static buildVerificationEmailContent(code: string): {subject: string, body: string, htmlBody: string};
         static formatSendCodeResult(success: boolean, email: string, error?: string): {success: boolean, message: string, error?: string, errorCode?: string};
         static calculateBackoff(attempt: number, initialBackoffMs?: number): number;
         static getRetryAction(params: {attempt: number, maxRetries: number, error?: Error}): {action: 'retry'|'fail'|'initial', backoffMs?: number, errorMessage?: string};
-        static createGroupUpdateResult(group: {email: string, name?: string}, success: boolean, error?: string): GroupMembershipInfo;
-        static aggregateGroupResults(results: GroupMembershipInfo[]): {successCount: number, failedCount: number, overallSuccess: boolean};
+        static createGroupUpdateResult(group: any, success: boolean, error?: string): {groupEmail: string, groupName: string, success: boolean, error: string | null};
+        static aggregateGroupResults(results: Array<{success: boolean, error?: string}>): {successCount: number, failedCount: number, overallSuccess: boolean};
         static formatEmailChangeMessage(overallSuccess: boolean, oldEmail: string, newEmail: string, successCount: number, failedCount: number): string;
     }
 

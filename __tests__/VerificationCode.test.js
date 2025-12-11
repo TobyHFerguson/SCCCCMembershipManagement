@@ -703,7 +703,7 @@ describe('VerificationCode - GAS Layer', () => {
       const emailArg = mockMailApp.sendEmail.mock.calls[0][0];
       expect(emailArg.to).toBe('test@example.com');
       expect(emailArg.subject).toContain('Test Service');
-      expect(emailArg.body).toContain('123-456'); // Formatted code
+      expect(emailArg.body).toContain('123456'); // Contiguous 6-digit code (no hyphen)
     });
 
     test('handles email error gracefully', () => {
