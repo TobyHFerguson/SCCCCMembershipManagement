@@ -17,14 +17,16 @@
  *   return Common.Logging.ServiceExecutionLogger.wrapGetData(
  *     'GroupManagementService',
  *     email,
- *     () => { /* actual getData logic */ }
+ *     () => { actual getData logic  }
  *   );
  * 
  * Layer: Layer 1 Infrastructure (can use Common.Logger)
  */
 
 // Namespace declaration pattern
+// @ts-expect-error - Namespace initialization for GAS/Jest compatibility
 if (typeof Common === 'undefined') Common = {};
+// @ts-expect-error - Namespace initialization for GAS/Jest compatibility
 if (typeof Common.Logging === 'undefined') Common.Logging = {};
 
 Common.Logging.ServiceExecutionLogger = {
@@ -179,5 +181,6 @@ Common.Logging.ServiceExecutionLogger = {
 
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {
+    // @ts-expect-error - Export Common namespace for testing
     module.exports = { Common };
 }
