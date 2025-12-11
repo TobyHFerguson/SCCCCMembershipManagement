@@ -416,7 +416,8 @@ EmailChangeService.Manager = class {
    * @returns {{subject: string, body: string}}
    */
   static buildVerificationEmailContent(code) {
-    const formattedCode = code.slice(0, 3) + '-' + code.slice(3);
+    // Send the code as contiguous digits (no hyphen)
+    const formattedCode = code;
     const expiryMinutes = EmailChangeService.VERIFICATION_CONFIG.EXPIRY_MINUTES;
     
     const subject = 'SCCCC Email Change - Verification Code';

@@ -515,7 +515,8 @@ Common.Auth.VerificationCode = {
     try {
       // Normalize email address
       const normalizedEmail = email.trim().toLowerCase();
-      const formattedCode = code.slice(0, 3) + '-' + code.slice(3);
+      // Send the code as contiguous digits (no hyphen)
+      const formattedCode = code;
       const config = getVerificationConfig();
       const expiryMinutes = config.CODE_EXPIRY_MINUTES;
       

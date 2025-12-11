@@ -26,11 +26,7 @@
     box-shadow: 0 0 0 0.125rem rgba(0, 123, 255, 0.25);
   }
   
-  .code-separator {
-    font-size: 1.5rem;
-    line-height: 3rem;
-    color: #666;
-  }
+  /* separator removed: codes are displayed as contiguous digits */
   
   .verification-step {
     display: none;
@@ -97,7 +93,6 @@
       <input type="text" class="code-input" id="code1" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" autofocus>
       <input type="text" class="code-input" id="code2" maxlength="1" inputmode="numeric" pattern="[0-9]">
       <input type="text" class="code-input" id="code3" maxlength="1" inputmode="numeric" pattern="[0-9]">
-      <span class="code-separator">-</span>
       <input type="text" class="code-input" id="code4" maxlength="1" inputmode="numeric" pattern="[0-9]">
       <input type="text" class="code-input" id="code5" maxlength="1" inputmode="numeric" pattern="[0-9]">
       <input type="text" class="code-input" id="code6" maxlength="1" inputmode="numeric" pattern="[0-9]">
