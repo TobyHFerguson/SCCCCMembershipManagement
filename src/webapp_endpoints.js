@@ -21,9 +21,13 @@ function sendMagicLink(email, service) {
  * Send a verification code to the user's email address.
  * This is the new authentication flow for SPA services.
  * 
+ * CRITICAL: Returns the server-normalized email on success so client uses
+ * the exact same email as the cache key. This prevents "No verification code found"
+ * errors caused by normalization differences between client and server.
+ * 
  * @param {string} email - The user's email address
  * @param {string} service - The service identifier (e.g., 'GroupManagementService')
- * @returns {{success: boolean, error?: string}} Result of the operation
+ * @returns {{success: boolean, email?: string, error?: string}} Result with normalized email on success
  */
 function sendVerificationCode(email, service) {
   console.log('sendVerificationCode(', email, service, ')');
@@ -44,6 +48,11 @@ function sendVerificationCode(email, service) {
   
   // Request verification code (generates + sends email)
   const result = Common.Auth.VerificationCode.requestCode(email, serviceName, service);
+  
+  // Return success with normalized email so client uses same cache key
+  if (result.success) {
+    return { success: true, email: email };
+  }
   
   return result;
 }

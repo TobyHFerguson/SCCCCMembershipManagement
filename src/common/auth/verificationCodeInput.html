@@ -307,6 +307,11 @@
         .withSuccessHandler(function(response) {
           enableForm(emailForm);
           if (response && response.success) {
+            // CRITICAL: Use server-normalized email to ensure cache key matches
+            if (response.email) {
+              userEmail = response.email;
+              displayEmailSpan.textContent = userEmail;
+            }
             hideMessage(emailMessageDiv);
             showStep2();
             startResendCountdown();
@@ -400,6 +405,11 @@
         .withSuccessHandler(function(response) {
           enableForm(codeForm);
           if (response && response.success) {
+            // CRITICAL: Use server-normalized email to ensure cache key matches
+            if (response.email) {
+              userEmail = response.email;
+              displayEmailSpan.textContent = userEmail;
+            }
             displayMessage(codeMessageDiv, 'A new code has been sent to your email.', false);
             startResendCountdown();
             clearCodeInputs();
