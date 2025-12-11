@@ -1822,7 +1822,6 @@
                             <input type="text" class="code-input" id="code1" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" autofocus>
                             <input type="text" class="code-input" id="code2" maxlength="1" inputmode="numeric" pattern="[0-9]">
                             <input type="text" class="code-input" id="code3" maxlength="1" inputmode="numeric" pattern="[0-9]">
-                            <span class="code-separator">-</span>
                             <input type="text" class="code-input" id="code4" maxlength="1" inputmode="numeric" pattern="[0-9]">
                             <input type="text" class="code-input" id="code5" maxlength="1" inputmode="numeric" pattern="[0-9]">
                             <input type="text" class="code-input" id="code6" maxlength="1" inputmode="numeric" pattern="[0-9]">
@@ -2125,7 +2124,7 @@
             pendingVerificationCode = code;
             
             disableForm(verificationForm);
-            displayMessage(verificationMessage, 'Verifying code and changing email (this may take a moment)...', 'success');
+            displayMessage(verificationMessage, 'Verifying code and changing email (this may take a minute or two)...', 'success');
             
             // Get auth token from sessionStorage
             let authToken = '';

@@ -26,19 +26,24 @@ EmailChangeService.Api = EmailChangeService.Api || {};
  * 
  * CRITICAL: No Date objects in return value - google.script.run cannot serialize them
  * 
+ * LOGGING: Logs detailed execution flow to System Logs for debugging
+ * Note: Service access is logged by getServiceContent() wrapper in webapp_endpoints.js
+ * 
  * @param {string} email - Authenticated user email
  * @returns {{serviceName: string, currentEmail: string, error?: string}} Service data
  */
 EmailChangeService.Api.getData = function(email) {
-  console.log('EmailChangeService.Api.getData(', email, ')');
+  Common.Logger.info('EmailChangeService', `getData() started for user: ${email}`);
   
   try {
+    Common.Logger.info('EmailChangeService', `getData() completed successfully for user: ${email}`);
+    
     return {
       serviceName: 'Email Change',
       currentEmail: email
     };
   } catch (error) {
-    console.error('EmailChangeService.Api.getData error:', error);
+    Common.Logger.error('EmailChangeService', `getData() failed for user: ${email}`, error);
     return {
       serviceName: 'Email Change',
       error: `Failed to load email change service: ${error.message}`,
