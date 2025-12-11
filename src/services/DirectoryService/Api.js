@@ -25,13 +25,23 @@ DirectoryService.Api = DirectoryService.Api || {};
  * 
  * CRITICAL: No Date objects in return value - google.script.run cannot serialize them
  * 
+ * LOGGING: Logs detailed execution flow to System Logs for debugging
+ * Note: Service access is logged by getServiceContent() wrapper in webapp_endpoints.js
+ * 
  * @param {string} email - Authenticated user's email
  * @returns {{serviceName: string, directoryEntries: Array, email: string, error?: string}} Service data for client renderer
  */
 DirectoryService.Api.getData = function(email) {
+  Common.Logger.info('DirectoryService', `getData() started for user: ${email}`);
+  
   try {
     // GAS: Get directory entries (security boundary - only returns public data)
+    Common.Logger.debug('DirectoryService', 'Fetching directory entries');
     const directoryEntries = DirectoryService.getDirectoryEntries();
+    
+    Common.Logger.info('DirectoryService', `getData() completed successfully for user: ${email}`, {
+      entryCount: directoryEntries ? directoryEntries.length : 0
+    });
     
     return {
       serviceName: 'Directory',
@@ -39,7 +49,7 @@ DirectoryService.Api.getData = function(email) {
       email: email
     };
   } catch (error) {
-    console.error('DirectoryService.Api.getData error:', error);
+    Common.Logger.error('DirectoryService', `getData() failed for user: ${email}`, error);
     return {
       serviceName: 'Directory',
       error: `Failed to load directory: ${error.message}`,

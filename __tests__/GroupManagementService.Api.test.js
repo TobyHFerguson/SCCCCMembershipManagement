@@ -35,15 +35,45 @@ beforeEach(() => {
     removeMember: jest.fn()
   };
 
-  // Mock Common.Data.Access
+  // Mock Common namespace
   global.Common = {
     Data: {
       Access: {
         getPublicGroups: jest.fn()
+      },
+      Storage: {
+        SpreadsheetManager: {
+          getFiddler: jest.fn()
+        }
       }
     },
     Api: {
       ClientManager: require('../src/common/api/ApiClient').ClientManager
+    },
+    Logger: {
+      info: jest.fn(),
+      debug: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn()
+    },
+    Logging: {
+      ServiceLogger: jest.fn().mockImplementation(() => ({
+        logOperation: jest.fn().mockReturnValue({
+          Timestamp: new Date(),
+          Type: 'Test.Operation',
+          Outcome: 'success',
+          Note: 'Test note',
+          Error: '',
+          JSON: ''
+        })
+      }))
+    }
+  };
+  
+  // Mock Audit namespace
+  global.Audit = {
+    Persistence: {
+      persistAuditEntries: jest.fn()
     }
   };
 

@@ -27,23 +27,31 @@ VotingService.Api = VotingService.Api || {};
  * CRITICAL: Date objects converted to ISO strings via _getElectionsForTemplate
  * (opens/closes fields are ISO strings, safe for google.script.run serialization)
  * 
+ * LOGGING: Logs detailed execution flow to System Logs for debugging
+ * Note: Service access is logged by getServiceContent() wrapper in webapp_endpoints.js
+ * 
  * @param {string} email - Authenticated user email
  * @returns {{serviceName: string, elections: Array<VotingService.ProcessedElection>, error?: string}} Service data
  */
 VotingService.Api.getData = function(email) {
-  console.log('VotingService.Api.getData(', email, ')');
+  Common.Logger.info('VotingService', `getData() started for user: ${email}`);
   
   try {
     // Get processed elections (already filtered and formatted for display)
     // This reuses the existing WebApp logic which converts Date to ISO strings
+    Common.Logger.debug('VotingService', 'Fetching elections for template');
     const elections = VotingService.WebApp._getElectionsForTemplate(email);
+    
+    Common.Logger.info('VotingService', `getData() completed successfully for user: ${email}`, {
+      electionCount: elections ? elections.length : 0
+    });
     
     return {
       serviceName: 'Voting',
       elections: elections
     };
   } catch (error) {
-    console.error('VotingService.Api.getData error:', error);
+    Common.Logger.error('VotingService', `getData() failed for user: ${email}`, error);
     return {
       serviceName: 'Voting',
       error: `Failed to load elections: ${error.message}`,

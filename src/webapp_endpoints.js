@@ -105,6 +105,9 @@ function verifyCode(email, code, service) {
  * 
  * For SPA architecture, this returns pure data (not HTML). The client will render the HTML.
  * 
+ * LOGGING: This function logs both business audit (who accessed what) and system logs
+ * for all service executions to support debugging and compliance.
+ * 
  * @param {string} email - Authenticated user email
  * @param {string} service - Service name (e.g., 'DirectoryService')
  * @returns {object} Service-specific data for client-side rendering
@@ -112,9 +115,22 @@ function verifyCode(email, code, service) {
 function getServiceContent(email, service) {
   console.log('getServiceContent(', email, service, ')');
   
+  // Create logger for this service execution
+  const logger = new Common.Logging.ServiceLogger(service, email);
+  const auditEntries = [];
+  
+  // Log service access start
+  Common.Logger.info('WebApp', `getServiceContent() called for service=${service}, user=${email}`);
+  
   const webService = /** @type {any} */ (WebServices[service]);
   if (!webService) {
     console.error('Invalid service:', service);
+    
+    // Log error
+    const errorEntry = logger.logError('getServiceContent', 'Invalid service specified: ' + service);
+    auditEntries.push(errorEntry);
+    _persistAuditEntries(auditEntries);
+    
     return { error: 'Invalid service specified' };
   }
   
@@ -131,9 +147,23 @@ function getServiceContent(email, service) {
     try {
       const data = webService.Api.getData(email);
       console.log(`${service}.Api.getData returned:`, data);
+      
+      // Log successful access
+      const accessEntry = logger.logServiceAccess('getData');
+      auditEntries.push(accessEntry);
+      _persistAuditEntries(auditEntries);
+      
+      Common.Logger.info('WebApp', `getServiceContent() completed successfully for service=${service}, user=${email}`);
+      
       return data;
     } catch (error) {
       console.error(`Error in ${service}.Api.getData:`, error);
+      
+      // Log error
+      const errorEntry = logger.logError('getData', error);
+      auditEntries.push(errorEntry);
+      _persistAuditEntries(auditEntries);
+      
       return { 
         error: `Failed to load ${service}: ${error.message}`,
         serviceName: service 
@@ -147,21 +177,73 @@ function getServiceContent(email, service) {
   
   // For DirectoryService specifically (legacy)
   if (service === 'DirectoryService') {
-    const directoryEntries = DirectoryService.getDirectoryEntries();
-    console.log('getServiceContent: DirectoryService entries count:', directoryEntries ? directoryEntries.length : 0);
-    console.log('getServiceContent: First entry:', directoryEntries && directoryEntries.length > 0 ? directoryEntries[0] : 'none');
-    return {
-      serviceName: 'Directory',
-      directoryEntries: directoryEntries
-    };
+    try {
+      const directoryEntries = DirectoryService.getDirectoryEntries();
+      console.log('getServiceContent: DirectoryService entries count:', directoryEntries ? directoryEntries.length : 0);
+      console.log('getServiceContent: First entry:', directoryEntries && directoryEntries.length > 0 ? directoryEntries[0] : 'none');
+      
+      // Log successful access (legacy path)
+      const accessEntry = logger.logServiceAccess('getDirectoryEntries');
+      auditEntries.push(accessEntry);
+      _persistAuditEntries(auditEntries);
+      
+      Common.Logger.info('WebApp', `getServiceContent() completed (legacy path) for service=${service}, user=${email}`);
+      
+      return {
+        serviceName: 'Directory',
+        directoryEntries: directoryEntries
+      };
+    } catch (error) {
+      // Log error
+      const errorEntry = logger.logError('getDirectoryEntries', error);
+      auditEntries.push(errorEntry);
+      _persistAuditEntries(auditEntries);
+      
+      return {
+        serviceName: 'Directory',
+        error: error.message
+      };
+    }
   }
   
   // Generic fallback
   console.error(`Service ${service} has no Api.getData() method`);
+  
+  // Log error
+  const errorEntry = logger.logError('getServiceContent', 'Service has no Api.getData() method');
+  auditEntries.push(errorEntry);
+  _persistAuditEntries(auditEntries);
+  
   return {
     serviceName: webService.name || service,
     error: 'Service data not available'
   };
+}
+
+/**
+ * Helper function to persist audit entries
+ * Internal helper for getServiceContent logging
+ * 
+ * @param {Audit.LogEntry[]} auditEntries - Audit entries to persist
+ * @private
+ */
+function _persistAuditEntries(auditEntries) {
+  if (!auditEntries || auditEntries.length === 0) {
+    return;
+  }
+  
+  try {
+    // Get Audit fiddler
+    const auditFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Audit');
+    
+    // Persist entries
+    const numWritten = Audit.Persistence.persistAuditEntries(auditFiddler, auditEntries);
+    
+    Common.Logger.debug('WebApp', `Persisted ${numWritten} audit entries`);
+  } catch (error) {
+    // Log error but don't fail the operation
+    Common.Logger.error('WebApp', 'Failed to persist audit entries', error);
+  }
 }
 
 /**
