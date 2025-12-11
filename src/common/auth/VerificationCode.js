@@ -524,6 +524,7 @@ Common.Auth.VerificationCode = {
         subject: `${serviceName} - Verification Code`,
         body: `Your verification code for ${serviceName} is:\n\n` +
               `    ${formattedCode}\n\n` +
+              `Copy/Paste this code into the verification form.\n\n` +
               `This code will expire in ${expiryMinutes} minutes.\n\n` +
               `If you did not request this code, please ignore this email.\n\n` +
               `- SCCCC Membership System`

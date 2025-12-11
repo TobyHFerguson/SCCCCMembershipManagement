@@ -422,6 +422,7 @@ EmailChangeService.Manager = class {
     const subject = 'SCCCC Email Change - Verification Code';
     const body = `Your verification code for SCCCC Email Change is:\n\n` +
                  `    ${formattedCode}\n\n` +
+                 `Copy/Paste this code into the verification form.\n\n` +
                  `This code will expire in ${expiryMinutes} minutes.\n\n` +
                  `If you did not request this code, please ignore this email.\n\n` +
                  `- SCCCC Membership System`;
