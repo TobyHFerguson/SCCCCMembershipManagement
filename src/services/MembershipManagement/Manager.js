@@ -301,28 +301,33 @@ MembershipManagement.Manager = class {
   }
 
   processPaidTransactions(transactions, membershipData, expirySchedule) {
-    const activeMembers = membershipData.reduce((acc, m, i) => { if (m.Status === 'Active') { acc.push([m.Email, i]); } return acc }, [])
-    const emailToActiveMemberIndexMap = Object.fromEntries(activeMembers);
     const errors = [];
     const auditEntries = [];
     let recordsChanged = false;
     let hasPendingPayments = false;
+    
     transactions.forEach((txn, i) => {
       if (txn.Processed) { // skip it if it's already been processed
         return;
       }
       if (!txn["Payable Status"] || !txn["Payable Status"].toLowerCase().startsWith("paid")) {
         hasPendingPayments = true; // if any transaction is not marked as paid, we have pending payments
-        return
+        return;
       }
+      
       // We get here with a transaction that is not processed but is marked as paid. Process it.
-      const matchIndex = emailToActiveMemberIndexMap[txn["Email Address"]];
       try {
+        // Use helper to find existing member (checks Active email exact match, then isPossibleRenewal)
+        const match = MembershipManagement.Manager.findExistingMemberForTransaction(txn, membershipData);
+        
         let message;
         let actionType;
-        if (matchIndex !== undefined) { // a renewing member
-          console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a renewing member`);
-          const member = membershipData[matchIndex];
+        let skipStandardAuditLog = false; // Flag to prevent duplicate audit entries
+        
+        if (match.matchType === 'ACTIVE_EMAIL_EXACT') {
+          // Simple renewal - Active member with exact email match
+          console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a renewing Active member`);
+          const member = match.member;
           this.renewMember_(txn, member, expirySchedule);
           actionType = 'Renew';
           message = {
@@ -330,7 +335,50 @@ MembershipManagement.Manager = class {
             subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Subject, member),
             htmlBody: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Body, member)
           };
-        } else { // a joining member
+          
+        } else if (match.matchType === 'POSSIBLE_RENEWAL') {
+          // Detected renewal via name+phone match with different email (member is already Active)
+          const existingMember = match.member;
+          const oldEmail = existingMember.Email;
+          const emailChanged = oldEmail !== txn["Email Address"];
+          
+          console.log(`transaction on row ${i + 2} detected as renewal via isPossibleRenewal:`, {
+            oldEmail: oldEmail,
+            newEmail: txn["Email Address"],
+            emailChanged: emailChanged,
+            name: `${existingMember.First} ${existingMember.Last}`,
+            phone: existingMember.Phone
+          });
+          
+          // Renew member (email change handled inside renewMemberWithEmailChange_ if oldEmail differs)
+          this.renewMemberWithEmailChange_(txn, existingMember, expirySchedule, oldEmail);
+          
+          actionType = 'Renew';
+          message = {
+            to: existingMember.Email, // Send to NEW email (may have been updated)
+            subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Subject, existingMember),
+            htmlBody: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Body, existingMember)
+          };
+          
+          // Enhanced audit logging for email change detection
+          if (this._auditLogger && emailChanged) {
+            auditEntries.push(this._auditLogger.createLogEntry({
+              type: 'Renew',
+              outcome: 'success',
+              note: `Detected renewal with email change: ${oldEmail} → ${txn["Email Address"]} (name+phone match)`,
+              jsonData: {
+                txnRow: i + 2,
+                oldEmail: oldEmail,
+                newEmail: txn["Email Address"],
+                detectionMethod: 'isPossibleRenewal',
+                matchedOn: 'name+phone'
+              }
+            }));
+            skipStandardAuditLog = true; // We already logged this renewal with email change details
+          }
+          
+        } else {
+          // NEW_MEMBER - no match found, genuinely new join
           console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a new member`);
           const newMember = this.addNewMember_(txn, expirySchedule, membershipData);
           this._groups.forEach(g => this._groupAddFun(newMember.Email, g.Email));
@@ -341,13 +389,14 @@ MembershipManagement.Manager = class {
             htmlBody: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Join.Body, newMember)
           };
         }
+        
         this._sendEmailFun(message);
         txn.Timestamp = this._today;
         txn.Processed = this._today;
         recordsChanged = true;
         
-        // Generate audit log entry
-        if (this._auditLogger) {
+        // Generate audit log entry (skip if we already logged it above)
+        if (this._auditLogger && !skipStandardAuditLog) {
           auditEntries.push(this._auditLogger.createLogEntry({
             type: actionType,
             outcome: 'success',
@@ -362,7 +411,7 @@ MembershipManagement.Manager = class {
         // Generate audit log entry for failure
         if (this._auditLogger) {
           auditEntries.push(this._auditLogger.createLogEntry({
-            type: matchIndex !== undefined ? 'Renew' : 'Join',
+            type: 'ProcessTransaction',
             outcome: 'fail',
             note: `Failed to process transaction for ${txn["Email Address"]}`,
             error: error.message || String(error),
@@ -379,8 +428,6 @@ MembershipManagement.Manager = class {
     return { recordsChanged, hasPendingPayments, errors, auditEntries };
   }
 
-
-
   static getPeriod_(txn) {
     if (!txn.Payment) { return 1; }
     const yearsMatch = txn.Payment.match(/(\d+)\s*year/);
@@ -388,12 +435,64 @@ MembershipManagement.Manager = class {
     return years;
   }
 
-  renewMember_(txn, member, expirySchedule,) {
+  /**
+   * Change a member's email address consistently across all systems
+   * Handles: expiry schedule cleanup, group membership updates, member record update
+   * This is the single source of truth for email changes across all operations:
+   * - processPaidTransactions (renewal with email change)
+   * - convertJoinToRenew (merge members with different emails)
+   * - Aligns with EmailChangeService behavior
+   * 
+   * @param {string} oldEmail - The old email address
+   * @param {string} newEmail - The new email address
+   * @param {Object} member - The member object to update
+   * @param {Array} expirySchedule - The expiry schedule array
+   * @private
+   */
+  changeMemberEmail_(oldEmail, newEmail, member, expirySchedule) {
+    // CRITICAL ORDER:
+    // 1. Remove old expiry schedule entries (indexed by old email)
+    this.removeMemberFromExpirySchedule_(oldEmail, expirySchedule);
+    
+    // 2. Update email in groups (if different)
+    if (oldEmail !== newEmail) {
+      const result = this._groupEmailReplaceFun(oldEmail, newEmail);
+      if (result && !result.success) {
+        console.error(`Error changing email in groups: ${result.message}`);
+      }
+    }
+    
+    // 3. Update member record with new email
+    member.Email = newEmail;
+  }
+
+  /**
+   * Renew a member with optional email change handling
+   * If oldEmail is provided and different from member.Email, handles email change first
+   * @private
+   */
+  renewMemberWithEmailChange_(txn, member, expirySchedule, oldEmail = null) {
+    // Handle email change if needed (BEFORE updating expiry schedule)
+    if (oldEmail && oldEmail !== txn["Email Address"]) {
+      this.changeMemberEmail_(oldEmail, txn["Email Address"], member, expirySchedule);
+    }
+    
+    // Update membership data
     member.Period = MembershipManagement.Manager.getPeriod_(txn);
     member["Renewed On"] = this._today;
     member.Expires = MembershipManagement.Utils.calculateExpirationDate(this._today, member.Expires, member.Period);
     Object.assign(member, MembershipManagement.Manager.extractDirectorySharing_(txn));
+    
+    // Add new expiry schedule entries (with current member.Email which may have been updated)
     this.addRenewedMemberToActionSchedule_(member, expirySchedule);
+  }
+
+  /**
+   * @deprecated Use renewMemberWithEmailChange_ instead for new code
+   * Kept for backward compatibility - delegates to renewMemberWithEmailChange_
+   */
+  renewMember_(txn, member, expirySchedule) {
+    this.renewMemberWithEmailChange_(txn, member, expirySchedule, null);
   }
 
   addRenewedMemberToActionSchedule_(member, expirySchedule) {
@@ -508,13 +607,77 @@ MembershipManagement.Manager = class {
   }
 
   /**
+   * Find existing member who might be renewing based on transaction data.
+   * Only checks Active members.
+   * 
+   * Strategy:
+   * 1. First try exact email match with Active status (fastest, most common path)
+   * 2. Then try isPossibleRenewal match on Active members (handles email changes)
+   * 3. If no match, it's a genuinely new member
+   * 
+   * @param {Object} txn - Transaction data with "Email Address", "First Name", "Last Name", Phone
+   * @param {Array<Object>} membershipData - All member records
+   * @returns {{found: boolean, index: number, member: Object|null, matchType: string}}
+   *   matchType values: 'ACTIVE_EMAIL_EXACT' | 'POSSIBLE_RENEWAL' | 'NEW_MEMBER'
+   */
+  static findExistingMemberForTransaction(txn, membershipData) {
+    // STEP 1: Try exact email match with Active status (fastest path)
+    const activeIndex = membershipData.findIndex(
+      m => m.Status === 'Active' && m.Email === txn["Email Address"]
+    );
+    
+    if (activeIndex !== -1) {
+      return {
+        found: true,
+        index: activeIndex,
+        member: membershipData[activeIndex],
+        matchType: 'ACTIVE_EMAIL_EXACT'
+      };
+    }
+    
+    // STEP 2: Create temporary member object from transaction (set as Active for isPossibleRenewal check)
+    // Don't set Joined/Expires - we're doing identity lookup, not temporal validation
+    // (isPossibleRenewal will skip temporal check if dates are missing and match based on name+phone/email only)
+    const tempMember = {
+      Email: txn["Email Address"],
+      First: txn["First Name"],
+      Last: txn["Last Name"],
+      Phone: txn.Phone || '',
+      Status: 'Active'
+      // No Joined/Expires - this allows isPossibleRenewal to match based on identity only
+    };
+    
+    // STEP 3: Check for possible renewal (Active members only, name+phone/email matching)
+    const renewalIndex = membershipData.findIndex(
+      existingMember => MembershipManagement.Manager.isPossibleRenewal(tempMember, existingMember)
+    );
+    
+    if (renewalIndex !== -1) {
+      return {
+        found: true,
+        index: renewalIndex,
+        member: membershipData[renewalIndex],
+        matchType: 'POSSIBLE_RENEWAL'
+      };
+    }
+    
+    // STEP 4: No match found - genuinely new member
+    return {
+      found: false,
+      index: -1,
+      member: null,
+      matchType: 'NEW_MEMBER'
+    };
+  }
+
+  /**
    * Check if two members represent a possible renewal (same person with multiple membership records).
    * A possible renewal is identified by:
-   * - Both members are Active
+   * - BOTH members have Status='Active'
    * - First letters of first names match (case insensitive)
    * - First letters of last names match (case insensitive)
    * - Same phone OR same email
-   * - The later Joined date is before or equal to the earlier Expires date
+   * - The later Joined date is before or equal to the earlier Expires date (if both have joined/expires)
    * 
    * @param {Object} memberA - First member object
    * @param {Object} memberB - Second member object
@@ -526,7 +689,7 @@ MembershipManagement.Manager = class {
     
     const normalize = v => v ? String(v).trim().toLowerCase() : '';
     
-    // Both must be Active
+    // BOTH members must be Active
     if (normalize(memberA && memberA.Status) !== 'active') return false;
     if (normalize(memberB && memberB.Status) !== 'active') return false;
     
@@ -535,16 +698,16 @@ MembershipManagement.Manager = class {
       phone: normalize(memberA && memberA.Phone),
       firstLetter: normalize(memberA && memberA.First).charAt(0),
       lastLetter: normalize(memberA && memberA.Last).charAt(0),
-      joined: memberA ? new Date(memberA.Joined) : null,
-      expires: memberA ? new Date(memberA.Expires) : null
+      joined: memberA && memberA.Joined ? new Date(memberA.Joined) : null,
+      expires: memberA && memberA.Expires ? new Date(memberA.Expires) : null
     };
     const b = {
       email: normalize(memberB && memberB.Email),
       phone: normalize(memberB && memberB.Phone),
       firstLetter: normalize(memberB && memberB.First).charAt(0),
       lastLetter: normalize(memberB && memberB.Last).charAt(0),
-      joined: memberB ? new Date(memberB.Joined) : null,
-      expires: memberB ? new Date(memberB.Expires) : null
+      joined: memberB && memberB.Joined ? new Date(memberB.Joined) : null,
+      expires: memberB && memberB.Expires ? new Date(memberB.Expires) : null
     };
 
     // First letters of first name must match (case insensitive)
@@ -558,17 +721,18 @@ MembershipManagement.Manager = class {
     const samePhone = a.phone && b.phone && a.phone === b.phone;
     if (!sameEmail && !samePhone) return false;
     
-    // Joined dates must be valid
-    if (!a.joined || !b.joined || isNaN(a.joined.getTime()) || isNaN(b.joined.getTime())) return false;
-    
-    // If joined dates are different, the later Joined must be before or equal to the earlier Expires
-    if (a.joined.getTime() !== b.joined.getTime()) {
-      const [earlier, later] = a.joined < b.joined ? [a, b] : [b, a];
-      if (!earlier.expires || isNaN(earlier.expires.getTime())) return false;
-      if (later.joined > earlier.expires) return false;
+    // If both have valid joined dates, check temporal relationship
+    if (a.joined && b.joined && !isNaN(a.joined.getTime()) && !isNaN(b.joined.getTime())) {
+      // If joined dates are different, the later Joined must be before or equal to the earlier Expires
+      if (a.joined.getTime() !== b.joined.getTime()) {
+        const [earlier, later] = a.joined < b.joined ? [a, b] : [b, a];
+        if (earlier.expires && !isNaN(earlier.expires.getTime())) {
+          if (later.joined > earlier.expires) return false;
+        }
+        // If no valid expires on earlier, still allow match (based on name+phone/email)
+      }
     }
-    // If joined dates are equal (duplicate records), they can still be a possible renewal
-    // as long as they're different objects (checked by === at the start)
+    // If one or both don't have valid dates, match is still possible based on name+phone/email
     
     return true;
   }
@@ -586,9 +750,11 @@ MembershipManagement.Manager = class {
    * selectedA and selectedB may be indices into membershipData, email strings, or member objects.
    * The earlier-joined row is treated as INITIAL and the later as LATEST.
    * Rules:
-   *  - If LATEST.Joined <= INITIAL.Expires then
+   *  - If LATEST.Joined <= INITIAL.Expires (renewal before expiration):
    *      LATEST.Expires = INITIAL.Expires + (LATEST.Period) years
-   *  - LATEST.Joined = INITIAL.Joined
+   *  - If LATEST.Joined > INITIAL.Expires (renewal after expiration):
+   *      LATEST.Expires = LATEST.Joined + (LATEST.Period) years
+   *  - LATEST.Joined = INITIAL.Joined (preserve original join date)
    *  - Remove the INITIAL entry from membershipData
    *
    * @param {number} idxA - index for first selected row
@@ -644,35 +810,32 @@ MembershipManagement.Manager = class {
     const initialExpires = MembershipManagement.Utils.dateOnly(INITIAL.Expires || INITIAL['Expires']);
     const latestJoined = MembershipManagement.Utils.dateOnly(LATEST.Joined || LATEST['Joined']);
 
-    // If LATEST.Joined <= INITIAL.Expires then extend latest expires by LATEST.Period years from INITIAL.Expires
+    // If LATEST.Joined <= INITIAL.Expires then this is a valid renewal
     try {
       if (latestJoined <= initialExpires) {
         const periodYears = Number(LATEST.Period || LATEST['Period']) || 0;
-        const newExpires = MembershipManagement.Utils.addYearsToDate(initialExpires, periodYears);
         const before = { ...membershipData[latestIdx] };
-        LATEST.Expires = newExpires;
-        LATEST.Migrated = MembershipManagement.Utils.dateOnly(INITIAL.Migrated || INITIAL['Migrated'] || '');
+        
+        // Calculate new expiration using the renewal specification
+        LATEST.Expires = MembershipManagement.Utils.calculateExpirationDate(latestJoined, initialExpires, periodYears);
         LATEST['Renewed On'] = MembershipManagement.Utils.dateOnly(LATEST.Joined);
-
-        // set LATEST.Joined to INITIAL.Joined (only when join falls within initial expires)
-        LATEST.Joined = MembershipManagement.Utils.dateOnly(INITIAL.Joined);
+        LATEST.Joined = MembershipManagement.Utils.dateOnly(INITIAL.Joined); // Preserve original join date
 
         // Write LATEST back into membershipData at latestIdx
         membershipData[latestIdx] = { ...membershipData[latestIdx], ...LATEST };
 
-        // Now we need to update expirySchedule entries for LATEST
-        this.addRenewedMemberToActionSchedule_(LATEST, expirySchedule);
-
-        // Now we need to delete the INITIAL entry from expirySchedule
-        this.removeMemberFromExpirySchedule_(INITIAL.Email, expirySchedule);
-
-        // change email in all groups if different
+        // Handle email change if emails differ (expiry schedule, groups, member record)
+        // Note: We need to handle BOTH emails since we're merging two records
         if (INITIAL.Email !== LATEST.Email) {
-          let result = this._groupEmailReplaceFun(INITIAL.Email, LATEST.Email);
-          if (result && !result.success) {
-            console.error(`Error changing email in groups: ${result.message}`);
-          }
+          // Use unified email change handler for consistency
+          this.changeMemberEmail_(INITIAL.Email, LATEST.Email, LATEST, expirySchedule);
+        } else {
+          // Same email - just update expiry schedule for that email
+          this.removeMemberFromExpirySchedule_(LATEST.Email, expirySchedule);
         }
+        
+        // Add new expiry schedule entries
+        this.addRenewedMemberToActionSchedule_(LATEST, expirySchedule);
 
 
         // Remove INITIAL entry
