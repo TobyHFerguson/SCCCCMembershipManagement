@@ -3,7 +3,7 @@
  * Provides multiple logging destinations for debugging deployed applications
  * 
  * FOUNDATIONAL FILE: This is a low-level foundational module (like Properties and SpreadsheetManager).
- * It MUST NOT create circular dependencies. Use Logger.log() for internal tracing, never Common.Logger.
+ * It MUST NOT create circular dependencies. Use console.log() for internal tracing, never Common.Logger.
  * 
  * ARCHITECTURE: This module uses static configuration loaded once at initialization.
  * Call Common.Logger.configure() AFTER Properties and SpreadsheetManager are ready
@@ -29,7 +29,7 @@
    */
   let CONFIG = {
     CONSOLE_LOGGING: true,
-    SHEET_LOGGING: false,  // Disabled by default to avoid dependencies during init
+    SHEET_LOGGING: true,  // Enabled by default for production logging
     SCRIPT_PROPERTIES: false,
     EMAIL_ERRORS: false,
     EMAIL_RECIPIENT: 'membership@sc3.club',
@@ -50,7 +50,7 @@
   function loadConfiguration() {
     // Only load if Properties module is available and ready
     if (typeof Common === 'undefined' || !Common.Config || !Common.Config.Properties) {
-      Logger.log('[Common.Logger] Properties not available, using default configuration');
+      console.log('[Common.Logger] Properties not available, using default configuration');
       return;
     }
     
@@ -65,10 +65,10 @@
       const levelName = Common.Config.Properties.getProperty('loggerLevel', 'INFO').toUpperCase();
       currentLogLevel = LOG_LEVELS[levelName] !== undefined ? LOG_LEVELS[levelName] : LOG_LEVELS.INFO;
       
-      Logger.log('[Common.Logger] Configuration loaded from Properties sheet');
+      console.log('[Common.Logger] Configuration loaded from Properties sheet');
     } catch (error) {
       // If Properties fails to load, keep using defaults
-      Logger.log('[Common.Logger] Failed to load configuration from Properties, using defaults: ' + error);
+      console.log('[Common.Logger] Failed to load configuration from Properties, using defaults: ' + error);
     }
   }
   
@@ -119,7 +119,7 @@
           !Common.Data || 
           !Common.Data.Storage || 
           !Common.Data.Storage.SpreadsheetManager) {
-        Logger.log('[Common.Logger.getLogFiddler] SpreadsheetManager not available yet, using fallback');
+        console.log('[Common.Logger.getLogFiddler] SpreadsheetManager not available yet, using fallback');
         return null;
       }
       
@@ -128,7 +128,7 @@
       return fiddler;
     } catch (error) {
       // If SystemLogs is not configured in Bootstrap or any other error, log and return null
-      Logger.log('[Common.Logger.getLogFiddler] Failed to get SystemLogs fiddler: ' + (error && error.message ? error.message : String(error)));
+      console.log('[Common.Logger.getLogFiddler] Failed to get SystemLogs fiddler: ' + (error && error.message ? error.message : String(error)));
       return null;
     }
   }
@@ -160,7 +160,7 @@
       
       return containerId;
     } catch (error) {
-      Logger.log('[Common.Logger.getContainerSpreadsheetId] Failed: ' + error);
+      console.log('[Common.Logger.getContainerSpreadsheetId] Failed: ' + error);
       return null;
     }
   }
@@ -203,7 +203,7 @@
       
       return logSheet;
     } catch (error) {
-      Logger.log('[Common.Logger.getLogSheetFallback] Failed: ' + error);
+      console.log('[Common.Logger.getLogSheetFallback] Failed: ' + error);
       return null;
     }
   }
@@ -305,7 +305,7 @@
         }
       }
     } catch (error) {
-      Logger.log('[Common.Logger.logToSheet] Failed: ' + (error && error.message ? error.message : String(error)));
+      console.log('[Common.Logger.logToSheet] Failed: ' + (error && error.message ? error.message : String(error)));
     }
   }
   
@@ -373,28 +373,15 @@
     }
   }
   
-  function getCallerFunctionName() {
-  const err = new Error();
-  const stack = err.stack.split('\n');
-  // stack[4] is usually the caller of the logger (may vary by environment)
-  if (stack[4]) {
-    // Example stack line: "    at MyNamespace.MyFunction (file.js:123:45)"
-    const match = stack[4].match(/at\s+([^\s]+)\s/);
-    return match ? match[1] : 'unknown';
-  }
-  return 'unknown';
-}
   /**
    * Core logging function
    * @param {string} level - Log level
-   * @param {string} service - Service name
+   * @param {string} service - Service name (e.g., 'MembershipManagement', 'VotingService')
    * @param {string} message - Message
    * @param {any} data - Optional additional data
    */
   function log(level, service, message, data) {
     const levelValue = LOG_LEVELS[level] || LOG_LEVELS.INFO;
-    const callerName = getCallerFunctionName();
-    service = `${service}.${callerName}`;
     
     // Check if we should log this level
     if (levelValue < currentLogLevel) return;
@@ -426,22 +413,18 @@
   }
   
   // Populate Common.Logger with the implementation
-  // @ts-ignore - Common.Logger is defined in namespace declaration
   Common.Logger.debug = function(service, message, data) {
     log('DEBUG', service, message, data);
   };
   
-  // @ts-ignore
   Common.Logger.info = function(service, message, data) {
     log('INFO', service, message, data);
   };
   
-  // @ts-ignore
   Common.Logger.warn = function(service, message, data) {
     log('WARN', service, message, data);
   };
   
-  // @ts-ignore
   Common.Logger.error = function(service, message, data) {
     // if (data instanceof Error) {
     //   data = {
@@ -462,7 +445,6 @@
    * // In your initialization code (e.g., onOpen trigger):
    * Common.Logger.configure();
    */
-  // @ts-ignore
   Common.Logger.configure = function() {
     loadConfiguration();
   };
@@ -472,18 +454,16 @@
    * @param {string} level - 'DEBUG', 'INFO', 'WARN', or 'ERROR'
    * @deprecated Prefer setting loggerLevel in Properties sheet and calling configure()
    */
-  // @ts-ignore
   Common.Logger.setLevel = function(level) {
     const levelUpper = level.toUpperCase();
     if (LOG_LEVELS[levelUpper] !== undefined) {
       currentLogLevel = LOG_LEVELS[levelUpper];
-      Logger.log('[Common.Logger] Log level set to: ' + levelUpper);
+      console.log('[Common.Logger] Log level set to: ' + levelUpper);
     } else {
-      Logger.log('[Common.Logger] Invalid log level: ' + level);
+      console.log('[Common.Logger] Invalid log level: ' + level);
     }
   };
   
-  // @ts-ignore
   Common.Logger.getLogs = function() {
     try {
       const fiddler = getLogFiddler();
@@ -509,12 +489,12 @@
         return logSheet.getRange(2, 1, lastRow - 1, 5).getValues();
       }
     } catch (error) {
-      Logger.log('[Common.Logger.getLogs] Failed: ' + (error && error.message ? error.message : String(error)));
+      console.log('[Common.Logger.getLogs] Failed: ' + (error && error.message ? error.message : String(error)));
       return [];
     }
   };
   
-  // @ts-ignore
+ 
   Common.Logger.clearLogs = function() {
     try {
       const fiddler = getLogFiddler();
@@ -529,11 +509,11 @@
         }
       }
     } catch (error) {
-      Logger.log('[Common.Logger.clearLogs] Failed: ' + (error && error.message ? error.message : String(error)));
+      console.log('[Common.Logger.clearLogs] Failed: ' + (error && error.message ? error.message : String(error)));
     }
   };
   
-  // @ts-ignore
+ 
   Common.Logger.setContainerSpreadsheet = function(spreadsheetId) {
     try {
       const properties = PropertiesService.getScriptProperties();

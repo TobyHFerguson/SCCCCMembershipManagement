@@ -1,5 +1,5 @@
 // @ts-check
-/// <reference path="../Common.d.ts" />
+/// <reference path="../../types/global.d.ts" />
 
 /**
  * Common.Utils - Utility functions for the application

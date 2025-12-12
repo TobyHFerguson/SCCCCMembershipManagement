@@ -3,7 +3,7 @@
  * 
  * CRITICAL: This module MUST NOT use Common.Logger!
  * Reason: Creates infinite loop via Properties -> getFiddler -> _initializeSheets -> getContainerSpreadsheetId -> Common.Logger -> Properties
- * Use Logger.log() only for tracing.
+ * Use console.log() only for tracing.
  */
 Common.Data.Storage = {}
 Common.Data.Storage.SpreadsheetManager = (function () {
@@ -23,30 +23,30 @@ Common.Data.Storage.SpreadsheetManager = (function () {
       if (!containerId) {
         // Fallback: try to get from current active spreadsheet if we're in normal context
         try {
-          Logger.log('[SpreadsheetManager.getContainerSpreadsheetId] Trying getActiveSpreadsheet fallback');
+          console.log('[SpreadsheetManager.getContainerSpreadsheetId] Trying getActiveSpreadsheet fallback');
           const activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
           if (activeSpreadsheet) {
             containerId = activeSpreadsheet.getId();
             // Cache it for future use
             properties.setProperty('CONTAINER_SPREADSHEET_ID', containerId);
-            Logger.log('[SpreadsheetManager.getContainerSpreadsheetId] Set from active spreadsheet: ' + containerId);
+            console.log('[SpreadsheetManager.getContainerSpreadsheetId] Set from active spreadsheet: ' + containerId);
           }
         } catch (e) {
           // We might be in a trigger context where getActiveSpreadsheet() doesn't work reliably
-          Logger.log('[SpreadsheetManager.getContainerSpreadsheetId] Could not get active spreadsheet: ' + e);
+          console.log('[SpreadsheetManager.getContainerSpreadsheetId] Could not get active spreadsheet: ' + e);
           // NOTE: Don't use Common.Logger here - it creates circular dependency via Properties -> getFiddler -> _initializeSheets -> getContainerSpreadsheetId
         }
       }
 
       if (!containerId) {
         const errorMsg = 'CONTAINER_SPREADSHEET_ID not found in Script Properties and could not determine from context';
-        Logger.log('[SpreadsheetManager.getContainerSpreadsheetId] CRITICAL: ' + errorMsg);
+        console.log('[SpreadsheetManager.getContainerSpreadsheetId] CRITICAL: ' + errorMsg);
         throw new Error(errorMsg);
       }
 
       return containerId;
     } catch (error) {
-      Logger.log('[SpreadsheetManager.getContainerSpreadsheetId] Failed: ' + error);
+      console.log('[SpreadsheetManager.getContainerSpreadsheetId] Failed: ' + error);
       // NOTE: Don't use Common.Logger here - creates circular dependency
       throw error;
     }
@@ -90,7 +90,7 @@ Common.Data.Storage.SpreadsheetManager = (function () {
         return [row.Reference, processedRow];
       }));
     } catch (error) {
-      Logger.log('[SpreadsheetManager._initializeSheets] Error: ' + error);
+      console.log('[SpreadsheetManager._initializeSheets] Error: ' + error);
       // NOTE: Don't use Common.Logger here - creates circular dependency
       throw error;
     }
@@ -152,7 +152,7 @@ Common.Data.Storage.SpreadsheetManager = (function () {
             errorMsg += '\n\nDID YOU MEAN: "Propertes" is misspelled in Bootstrap - should be "Properties"';
           }
 
-          Logger.log('[SpreadsheetManager.getFiddler] ERROR: ' + errorMsg);
+          console.log('[SpreadsheetManager.getFiddler] ERROR: ' + errorMsg);
           throw new Error(errorMsg);
         }
 
@@ -178,7 +178,7 @@ Common.Data.Storage.SpreadsheetManager = (function () {
 
         return fiddler;
       } catch (error) {
-        Logger.log('[SpreadsheetManager.getFiddler] Error getting fiddler for ' + sheetName + ': ' + error);
+        console.log('[SpreadsheetManager.getFiddler] Error getting fiddler for ' + sheetName + ': ' + error);
         error.message = `SpreadsheetManager.getFiddler(${sheetName}) failed: ${error.message}`;
         throw error;
       }

@@ -21,7 +21,7 @@ function processTransactions() {
         function() {
             Common.Logger.info('MembershipManagement', '[processTransactions] Starting processTransactions');
             const result = MembershipManagement.processTransactions();
-            Common.Logger.info('MembershipManagement', '[processTransactions] Result: ' + result);
+            Common.Logger.info('MembershipManagement', '[processTransactions] Completed', result || {});
             return result;
         },
         'Process Transactions'
@@ -51,7 +51,7 @@ function processMigrations() {
 function findPossibleRenewalsFromMenu() {
     const activeMembers = Common.Data.Access.getMembers();
     const similarMemberPairs = MembershipManagement.Manager.findPossibleRenewals(activeMembers);
-    console.log(similarMemberPairs);
+    Common.Logger.info('MembershipManagement', 'Found possible renewal pairs', { pairCount: (similarMemberPairs || []).length });
     
     if (similarMemberPairs.length === 0) {
         SpreadsheetApp.getUi().alert(
@@ -112,7 +112,7 @@ function mergeSelectedMembers() {
         }
         ui.alert('Merge successful', `Rows merged successfully. ${result.message}`, ui.ButtonSet.OK);
     } catch (error) {
-        console.error('mergeSelectedMembers failed:', error);
+        Common.Logger.error('MembershipManagement', 'mergeSelectedMembers failed', { error: error.message, stack: error.stack });
         SpreadsheetApp.getUi().alert('Error', `Failed to merge selected members: ${error && error.message ? error.message : error}`, SpreadsheetApp.getUi().ButtonSet.OK);
         throw error;
     }

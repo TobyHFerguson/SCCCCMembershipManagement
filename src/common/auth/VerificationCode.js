@@ -1,5 +1,5 @@
 // @ts-check
-/// <reference path="../Common.d.ts" />
+/// <reference path="../../types/global.d.ts" />
 
 /**
  * Common.Auth.VerificationCode - 6-digit verification code authentication

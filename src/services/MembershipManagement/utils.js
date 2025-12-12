@@ -4,15 +4,6 @@ if (typeof require !== 'undefined') {
    MembershipManagement = { Utils: {} };
 }
 
-
-  /**
-   * Logs messages to the console if the script property 'logging' is true.
-   * @param  {...any} args - The messages or objects to log.
-   */
-  MembershipManagement.Utils.log = function(...args)  {
-    Common.Logger.info('MembershipManagement', args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '));
-  };
-
   MembershipManagement.Utils.addDaysToDate = function(date, days = 0) {
     const result = MembershipManagement.Utils.dateOnly(date);
     result.setDate(result.getDate() + days);

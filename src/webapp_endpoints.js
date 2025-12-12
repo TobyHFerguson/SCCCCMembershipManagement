@@ -31,15 +31,33 @@ function sendMagicLink(email, service) {
  */
 function sendVerificationCode(email, service) {
   console.log('sendVerificationCode(', email, service, ')');
+  Common.Logger.configure();
+  Common.Logger.info('WebApp', 'sendVerificationCode() called', { email, service });
   
   // Normalize the email address
   email = email.toLowerCase().trim();
+  
+  // Create audit logger for verification attempts
+  const logger = new Common.Logging.ServiceLogger('Authentication', email);
+  const auditEntries = [];
   
   // Check if the email is a valid active member
   const validEmails = Common.Data.Access.getEmailAddresses();
   if (!validEmails.includes(email)) {
     // Act as if we sent the code (security: don't reveal if email exists)
     console.log('sendVerificationCode: email not found in active members, returning success (security)');
+    
+    // Audit log: verification code request for non-member (security event)
+    const auditEntry = logger.logOperation(
+      'VerificationCodeRequest',
+      'fail',
+      `Email ${email} requested verification code but is not an active member`,
+      'Email not found in active members',
+      { service: service, requestedEmail: email }
+    );
+    auditEntries.push(auditEntry);
+    _persistAuditEntries(auditEntries);
+    
     return { success: true };
   }
   
@@ -48,6 +66,17 @@ function sendVerificationCode(email, service) {
   
   // Request verification code (generates + sends email)
   const result = Common.Auth.VerificationCode.requestCode(email, serviceName, service);
+  
+  // Audit log: verification code request
+  const auditEntry = logger.logOperation(
+    'VerificationCodeRequest',
+    result.success ? 'success' : 'fail',
+    result.success ? `Email ${email} requested verification code for ${serviceName}` : `Email ${email} failed to receive verification code`,
+    result.error,
+    { service: service, serviceName: serviceName, requestedEmail: email }
+  );
+  auditEntries.push(auditEntry);
+  _persistAuditEntries(auditEntries);
   
   // Return success with normalized email so client uses same cache key
   if (result.success) {
@@ -75,12 +104,29 @@ function sendVerificationCode(email, service) {
  */
 function verifyCode(email, code, service) {
   console.log('verifyCode(', email, code, ')');
+  Common.Logger.configure();
+  Common.Logger.info('WebApp', 'verifyCode() called', { email, service });
   
   // Normalize the email address
   email = email.toLowerCase().trim();
   
+  // Create audit logger for verification attempts
+  const logger = new Common.Logging.ServiceLogger('Authentication', email);
+  const auditEntries = [];
+  
   // Verify the code
   const result = Common.Auth.VerificationCode.verify(email, code);
+  
+  // Audit log: verification attempt
+  const auditEntry = logger.logOperation(
+    'VerificationCodeVerify',
+    result.success ? 'success' : 'fail',
+    result.success ? `Email ${email} successfully verified code for ${service || 'service'}` : `Email ${email} failed verification: ${result.error || 'Invalid or expired code'}`,
+    result.error,
+    { service: service, errorCode: result.errorCode, verifiedEmail: email }
+  );
+  auditEntries.push(auditEntry);
+  _persistAuditEntries(auditEntries);
   
   if (!result.success) {
     return result;
@@ -114,6 +160,9 @@ function verifyCode(email, code, service) {
  */
 function getServiceContent(email, service) {
   console.log('getServiceContent(', email, service, ')');
+  
+  // Configure logger for this execution
+  Common.Logger.configure();
   
   // Create logger for this service execution
   const logger = new Common.Logging.ServiceLogger(service, email);
