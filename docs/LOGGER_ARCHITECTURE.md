@@ -14,7 +14,7 @@ To prevent circular dependencies, the codebase follows a strict layering:
 - MUST NOT use `Common.Logger.*`
 - Reason: Common.Logger depends on Properties, creating circular dependency
 
-**Note:** Logger.js is a foundational file that loads early and uses SpreadsheetManager, but its internal functions must avoid Common.Logger to prevent circular dependencies.
+**Note:** Logger.js is a foundational file that loads early and uses SpreadsheetManager, but its internal functions must avoid Common.Logger to prevent circular dependencies. Uses `console.log()` for cloud-compatible logging.
 
 ### Layer 1: Infrastructure (Common.Logger safe)
 - `Data.Access.js` - High-level data access helpers
@@ -139,39 +139,57 @@ This validates that:
 
 ## Migration from Old Logger
 
-The old Logger called `Common.Config.Properties` on every log statement, creating circular dependencies. The new Logger:
+The old Logger had several issues that have been fixed:
 
-1. **Loads once** - Configuration loaded when `Common.Logger.configure()` called
-2. **Safe defaults** - Works even before configure() with hardcoded defaults
-3. **Explicit refresh** - Call configure() again to reload from Properties sheet
-4. **Namespace filtering** - Filter logs by service name
+1. **Circular Dependencies** - Old logger called `Common.Config.Properties` on every log statement
+   - **Fixed**: Configuration loaded once via `Common.Logger.configure()`, cached for execution
+2. **Custom Logging Wrappers** - Services had custom log functions (e.g., `MembershipManagement.Utils.log`)
+   - **Fixed**: All services use `Common.Logger.*` directly with explicit service names
+3. **Fragile Caller Detection** - Stack parsing to auto-detect function names was unreliable
+   - **Fixed**: Removed auto-detection, use explicit service parameter only
+4. **Mixed Logging Mechanisms** - `Logger.log()`, `console.*`, custom wrappers all used
+   - **Fixed**: Layer 0 uses `console.log()`, Layer 1+ uses `Common.Logger.*`
 
-### Before (Dangerous)
+### Before (Problematic)
 ```javascript
+// Service code with custom wrapper
+MembershipManagement.Utils.log('Processing member');  // ❌ Creates namespace confusion
+
+// Logger with dynamic property lookups
 function log(level, service, message) {
-  // Called on EVERY log statement - creates circular dependency!
-  const config = getLoggerConfig();  // Reads from Properties
-  const currentLevel = getCurrentLogLevel();  // Reads from Properties
+  const config = getLoggerConfig();  // ❌ Reads Properties on EVERY call
+  const callerName = getCallerFunctionName();  // ❌ Fragile stack parsing
+  service = `${service}.${callerName}`;  // ❌ Inconsistent namespaces
 }
+
+// Layer 0 with circular dependency risk
+Logger.log('[Properties] Loading...');  // ❌ Should use console.log()
 ```
 
-### After (Safe)
+### After (Clean)
 ```javascript
+// Service code with explicit service name
+Common.Logger.info('MembershipManagement', 'Processing member');  // ✅ Clear, explicit
+
+// Logger with static configuration
 let CONFIG = { /* safe defaults */ };
 let currentLogLevel = LOG_LEVELS.INFO;
 
 function loadConfiguration() {
-  // Called ONCE after Properties is ready
+  // ✅ Called ONCE after Properties is ready
   CONFIG.CONSOLE_LOGGING = Common.Config.Properties.getBooleanProperty('loggerConsoleLogging', true);
-  // ...
 }
 
-function log(level, service, message) {
-  // Uses static CONFIG - no dependency on Properties
+function log(level, service, message, data) {
+  // ✅ Uses static CONFIG - no dynamic dependencies
+  // ✅ Uses explicit service parameter - no fragile detection
   if (CONFIG.CONSOLE_LOGGING) {
-    console.log(message);
+    console.log(formatMessage(level, service, message, data));
   }
 }
+
+// Layer 0 with cloud-compatible logging
+console.log('[Properties] Loading...');  // ✅ No circular dependencies
 ```
 
 ## Troubleshooting
@@ -180,7 +198,7 @@ function log(level, service, message) {
 
 **Cause:** Common.Logger is being used in Properties.js or SpreadsheetManager.js
 
-**Fix:** Replace `Common.Logger.*()` calls with `Logger.log()` in those files
+**Fix:** Replace `Common.Logger.*()` calls with `console.log()` in those files
 
 ### Logs Not Appearing
 
@@ -202,3 +220,67 @@ function log(level, service, message) {
 **Error:** `Sheet name Properties not found in Bootstrap. Available: ..., Propertes`
 
 **Fix:** Edit Bootstrap sheet, change "Propertes" to "Properties" (add the "i")
+
+## Recent Changes (Issue #320)
+
+### Logging Refactor - December 2025
+
+**Problem Statement:**
+- Multiple inconsistent logging mechanisms (custom wrappers, console.*, Logger.log)
+- Misidentified calling functions in logs
+- Objects logged as `[object Object]` instead of JSON
+- Circular dependency risks
+
+**Changes Made:**
+
+1. **Removed Custom Logging Wrappers**
+   - Eliminated `MembershipManagement.Utils.log()` and similar custom functions
+   - All services now use `Common.Logger.*` directly
+
+2. **Standardized Layer 0 to console.log()**
+   - Replaced all `Logger.log()` with `console.log()` in Layer 0 files
+   - Ensures cloud-compatible logging in GAS runtime
+   - Prevents circular dependencies
+
+3. **Simplified Caller Detection**
+   - Removed fragile `getCallerFunctionName()` stack parsing
+   - Use explicit service names only (e.g., `'MembershipManagement'`)
+   - Eliminates namespace confusion like `MembershipManagement.MembershipManagement.Utils.log`
+
+4. **Consistent JSON Serialization**
+   - All structured data passed via `data` parameter
+   - Logger handles JSON.stringify() internally
+   - Objects no longer appear as `[object Object]`
+
+**Migration Guide for Services:**
+
+```javascript
+// ❌ OLD: Custom logging wrapper
+MembershipManagement.Utils.log('Processing', member);
+
+// ✅ NEW: Direct Common.Logger with structured data
+Common.Logger.info('MembershipManagement', 'Processing member', { email: member.Email });
+
+// ❌ OLD: console.error with string concatenation
+console.error(`Error: ${error.message}\nStack: ${error.stack}`);
+
+// ✅ NEW: Common.Logger with structured error data
+Common.Logger.error('MembershipManagement', 'Operation failed', { 
+  message: error.message, 
+  stack: error.stack 
+});
+
+// ❌ OLD: Layer 0 using Logger.log()
+Logger.log('[Properties] Loading configuration');
+
+// ✅ NEW: Layer 0 using console.log()
+console.log('[Properties] Loading configuration');
+```
+
+**Benefits:**
+- ✅ Consistent logging format across all services
+- ✅ Proper JSON serialization of objects
+- ✅ Clear, explicit service names
+- ✅ No circular dependencies
+- ✅ Cloud-compatible Layer 0 logging
+- ✅ 100% test coverage maintained
