@@ -413,22 +413,18 @@
   }
   
   // Populate Common.Logger with the implementation
-  // @ts-ignore - Common.Logger is defined in namespace declaration
   Common.Logger.debug = function(service, message, data) {
     log('DEBUG', service, message, data);
   };
   
-  // @ts-ignore
   Common.Logger.info = function(service, message, data) {
     log('INFO', service, message, data);
   };
   
-  // @ts-ignore
   Common.Logger.warn = function(service, message, data) {
     log('WARN', service, message, data);
   };
   
-  // @ts-ignore
   Common.Logger.error = function(service, message, data) {
     // if (data instanceof Error) {
     //   data = {
@@ -449,7 +445,6 @@
    * // In your initialization code (e.g., onOpen trigger):
    * Common.Logger.configure();
    */
-  // @ts-ignore
   Common.Logger.configure = function() {
     loadConfiguration();
   };
@@ -459,7 +454,6 @@
    * @param {string} level - 'DEBUG', 'INFO', 'WARN', or 'ERROR'
    * @deprecated Prefer setting loggerLevel in Properties sheet and calling configure()
    */
-  // @ts-ignore
   Common.Logger.setLevel = function(level) {
     const levelUpper = level.toUpperCase();
     if (LOG_LEVELS[levelUpper] !== undefined) {
@@ -470,7 +464,6 @@
     }
   };
   
-  // @ts-ignore
   Common.Logger.getLogs = function() {
     try {
       const fiddler = getLogFiddler();
@@ -501,7 +494,7 @@
     }
   };
   
-  // @ts-ignore
+ 
   Common.Logger.clearLogs = function() {
     try {
       const fiddler = getLogFiddler();
@@ -520,7 +513,7 @@
     }
   };
   
-  // @ts-ignore
+ 
   Common.Logger.setContainerSpreadsheet = function(spreadsheetId) {
     try {
       const properties = PropertiesService.getScriptProperties();
