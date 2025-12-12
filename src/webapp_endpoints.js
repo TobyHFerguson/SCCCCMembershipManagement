@@ -31,6 +31,8 @@ function sendMagicLink(email, service) {
  */
 function sendVerificationCode(email, service) {
   console.log('sendVerificationCode(', email, service, ')');
+  Common.Logger.configure();
+  Common.Logger.info('WebApp', 'sendVerificationCode() called', { email, service });
   
   // Normalize the email address
   email = email.toLowerCase().trim();
@@ -75,6 +77,8 @@ function sendVerificationCode(email, service) {
  */
 function verifyCode(email, code, service) {
   console.log('verifyCode(', email, code, ')');
+  Common.Logger.configure();
+  Common.Logger.info('WebApp', 'verifyCode() called', { email, service });
   
   // Normalize the email address
   email = email.toLowerCase().trim();
@@ -114,6 +118,9 @@ function verifyCode(email, code, service) {
  */
 function getServiceContent(email, service) {
   console.log('getServiceContent(', email, service, ')');
+  
+  // Configure logger for this execution
+  Common.Logger.configure();
   
   // Create logger for this service execution
   const logger = new Common.Logging.ServiceLogger(service, email);

@@ -29,7 +29,7 @@
    */
   let CONFIG = {
     CONSOLE_LOGGING: true,
-    SHEET_LOGGING: false,  // Disabled by default to avoid dependencies during init
+    SHEET_LOGGING: true,  // Enabled by default for production logging
     SCRIPT_PROPERTIES: false,
     EMAIL_ERRORS: false,
     EMAIL_RECIPIENT: 'membership@sc3.club',

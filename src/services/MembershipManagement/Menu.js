@@ -21,7 +21,7 @@ function processTransactions() {
         function() {
             Common.Logger.info('MembershipManagement', '[processTransactions] Starting processTransactions');
             const result = MembershipManagement.processTransactions();
-            Common.Logger.info('MembershipManagement', '[processTransactions] Result: ' + result);
+            Common.Logger.info('MembershipManagement', '[processTransactions] Completed', { result: result });
             return result;
         },
         'Process Transactions'
