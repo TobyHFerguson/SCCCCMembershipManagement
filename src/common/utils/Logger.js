@@ -3,7 +3,7 @@
  * Provides multiple logging destinations for debugging deployed applications
  * 
  * FOUNDATIONAL FILE: This is a low-level foundational module (like Properties and SpreadsheetManager).
- * It MUST NOT create circular dependencies. Use Logger.log() for internal tracing, never Common.Logger.
+ * It MUST NOT create circular dependencies. Use console.log() for internal tracing, never Common.Logger.
  * 
  * ARCHITECTURE: This module uses static configuration loaded once at initialization.
  * Call Common.Logger.configure() AFTER Properties and SpreadsheetManager are ready
@@ -50,7 +50,7 @@
   function loadConfiguration() {
     // Only load if Properties module is available and ready
     if (typeof Common === 'undefined' || !Common.Config || !Common.Config.Properties) {
-      Logger.log('[Common.Logger] Properties not available, using default configuration');
+      console.log('[Common.Logger] Properties not available, using default configuration');
       return;
     }
     
@@ -65,10 +65,10 @@
       const levelName = Common.Config.Properties.getProperty('loggerLevel', 'INFO').toUpperCase();
       currentLogLevel = LOG_LEVELS[levelName] !== undefined ? LOG_LEVELS[levelName] : LOG_LEVELS.INFO;
       
-      Logger.log('[Common.Logger] Configuration loaded from Properties sheet');
+      console.log('[Common.Logger] Configuration loaded from Properties sheet');
     } catch (error) {
       // If Properties fails to load, keep using defaults
-      Logger.log('[Common.Logger] Failed to load configuration from Properties, using defaults: ' + error);
+      console.log('[Common.Logger] Failed to load configuration from Properties, using defaults: ' + error);
     }
   }
   
@@ -119,7 +119,7 @@
           !Common.Data || 
           !Common.Data.Storage || 
           !Common.Data.Storage.SpreadsheetManager) {
-        Logger.log('[Common.Logger.getLogFiddler] SpreadsheetManager not available yet, using fallback');
+        console.log('[Common.Logger.getLogFiddler] SpreadsheetManager not available yet, using fallback');
         return null;
       }
       
@@ -128,7 +128,7 @@
       return fiddler;
     } catch (error) {
       // If SystemLogs is not configured in Bootstrap or any other error, log and return null
-      Logger.log('[Common.Logger.getLogFiddler] Failed to get SystemLogs fiddler: ' + (error && error.message ? error.message : String(error)));
+      console.log('[Common.Logger.getLogFiddler] Failed to get SystemLogs fiddler: ' + (error && error.message ? error.message : String(error)));
       return null;
     }
   }
@@ -160,7 +160,7 @@
       
       return containerId;
     } catch (error) {
-      Logger.log('[Common.Logger.getContainerSpreadsheetId] Failed: ' + error);
+      console.log('[Common.Logger.getContainerSpreadsheetId] Failed: ' + error);
       return null;
     }
   }
@@ -203,7 +203,7 @@
       
       return logSheet;
     } catch (error) {
-      Logger.log('[Common.Logger.getLogSheetFallback] Failed: ' + error);
+      console.log('[Common.Logger.getLogSheetFallback] Failed: ' + error);
       return null;
     }
   }
@@ -305,7 +305,7 @@
         }
       }
     } catch (error) {
-      Logger.log('[Common.Logger.logToSheet] Failed: ' + (error && error.message ? error.message : String(error)));
+      console.log('[Common.Logger.logToSheet] Failed: ' + (error && error.message ? error.message : String(error)));
     }
   }
   
@@ -477,9 +477,9 @@
     const levelUpper = level.toUpperCase();
     if (LOG_LEVELS[levelUpper] !== undefined) {
       currentLogLevel = LOG_LEVELS[levelUpper];
-      Logger.log('[Common.Logger] Log level set to: ' + levelUpper);
+      console.log('[Common.Logger] Log level set to: ' + levelUpper);
     } else {
-      Logger.log('[Common.Logger] Invalid log level: ' + level);
+      console.log('[Common.Logger] Invalid log level: ' + level);
     }
   };
   
@@ -509,7 +509,7 @@
         return logSheet.getRange(2, 1, lastRow - 1, 5).getValues();
       }
     } catch (error) {
-      Logger.log('[Common.Logger.getLogs] Failed: ' + (error && error.message ? error.message : String(error)));
+      console.log('[Common.Logger.getLogs] Failed: ' + (error && error.message ? error.message : String(error)));
       return [];
     }
   };
@@ -529,7 +529,7 @@
         }
       }
     } catch (error) {
-      Logger.log('[Common.Logger.clearLogs] Failed: ' + (error && error.message ? error.message : String(error)));
+      console.log('[Common.Logger.clearLogs] Failed: ' + (error && error.message ? error.message : String(error)));
     }
   };
   

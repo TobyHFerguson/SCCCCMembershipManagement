@@ -10,7 +10,7 @@
  * 
  * CRITICAL: This module MUST NOT use Common.Logger!
  * Reason: Creates infinite loop - Common.Logger reads config from Properties -> Properties fails -> Common.Logger.error -> infinite recursion
- * Use Logger.log() only for tracing.
+ * Use console.log() only for tracing.
  */
 
 if (typeof Common === 'undefined') Common = {};
@@ -54,7 +54,7 @@ Common.Config.Properties = (function () {
     // Detect circular dependency
     if (_isLoadingProperties) {
       const error = new Error('CIRCULAR DEPENDENCY DETECTED: _loadPropertiesSheet called recursively! This usually means Common.Logger is being used in Properties or SpreadsheetManager.');
-      Logger.log('[Properties._loadPropertiesSheet] CRITICAL: ' + error.message);
+      console.log('[Properties._loadPropertiesSheet] CRITICAL: ' + error.message);
       throw error;
     }
     
@@ -80,7 +80,7 @@ Common.Config.Properties = (function () {
                 
         if (CODE_INTERNAL_PROPERTIES.has(propertyName)) {
           // NOTE: Don't use Common.Logger here - creates infinite loop
-          Logger.log('[Properties._loadPropertiesSheet] WARNING: Property ' + propertyName + ' is code-internal and should not be in Properties sheet');
+          console.log('[Properties._loadPropertiesSheet] WARNING: Property ' + propertyName + ' is code-internal and should not be in Properties sheet');
           continue;
         }
         
@@ -88,7 +88,7 @@ Common.Config.Properties = (function () {
       }
             // NOTE: Don't use Common.Logger here - creates infinite loop
     } catch (error) {
-      Logger.log('[Properties._loadPropertiesSheet] CRITICAL ERROR: ' + error);
+      console.log('[Properties._loadPropertiesSheet] CRITICAL ERROR: ' + error);
       // NOTE: NEVER use Common.Logger here - it creates infinite loop!
       // Common.Logger tries to read config from Properties, which calls this function again
       throw new Error(`Properties sheet not configured in Bootstrap. Add a row with Reference='Properties' pointing to your Properties sheet. Original error: ${error && error.message ? error.message : String(error)}`);
