@@ -21,7 +21,7 @@ function processTransactions() {
         function() {
             Common.Logger.info('MembershipManagement', '[processTransactions] Starting processTransactions');
             const result = MembershipManagement.processTransactions();
-            Common.Logger.info('MembershipManagement', '[processTransactions] Completed', { result: result });
+            Common.Logger.info('MembershipManagement', '[processTransactions] Completed', result || {});
             return result;
         },
         'Process Transactions'
@@ -51,7 +51,7 @@ function processMigrations() {
 function findPossibleRenewalsFromMenu() {
     const activeMembers = Common.Data.Access.getMembers();
     const similarMemberPairs = MembershipManagement.Manager.findPossibleRenewals(activeMembers);
-    Common.Logger.info('MembershipManagement', 'Found possible renewal pairs', { pairCount: similarMemberPairs.length });
+    Common.Logger.info('MembershipManagement', 'Found possible renewal pairs', { pairCount: (similarMemberPairs || []).length });
     
     if (similarMemberPairs.length === 0) {
         SpreadsheetApp.getUi().alert(

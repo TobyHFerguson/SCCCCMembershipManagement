@@ -51,9 +51,9 @@ function sendVerificationCode(email, service) {
     const auditEntry = logger.logOperation(
       'VerificationCodeRequest',
       'fail',
-      `Verification code requested for non-member email`,
+      `Email ${email} requested verification code but is not an active member`,
       'Email not found in active members',
-      { service: service }
+      { service: service, requestedEmail: email }
     );
     auditEntries.push(auditEntry);
     _persistAuditEntries(auditEntries);
@@ -71,9 +71,9 @@ function sendVerificationCode(email, service) {
   const auditEntry = logger.logOperation(
     'VerificationCodeRequest',
     result.success ? 'success' : 'fail',
-    result.success ? `Verification code sent for ${serviceName}` : `Failed to send verification code`,
+    result.success ? `Email ${email} requested verification code for ${serviceName}` : `Email ${email} failed to receive verification code`,
     result.error,
-    { service: service, serviceName: serviceName }
+    { service: service, serviceName: serviceName, requestedEmail: email }
   );
   auditEntries.push(auditEntry);
   _persistAuditEntries(auditEntries);
@@ -121,9 +121,9 @@ function verifyCode(email, code, service) {
   const auditEntry = logger.logOperation(
     'VerificationCodeVerify',
     result.success ? 'success' : 'fail',
-    result.success ? `Successfully verified code for ${service || 'service'}` : `Failed to verify code: ${result.error || 'Invalid or expired code'}`,
+    result.success ? `Email ${email} successfully verified code for ${service || 'service'}` : `Email ${email} failed verification: ${result.error || 'Invalid or expired code'}`,
     result.error,
-    { service: service, errorCode: result.errorCode }
+    { service: service, errorCode: result.errorCode, verifiedEmail: email }
   );
   auditEntries.push(auditEntry);
   _persistAuditEntries(auditEntries);
