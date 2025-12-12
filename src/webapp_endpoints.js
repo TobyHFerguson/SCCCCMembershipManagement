@@ -37,11 +37,27 @@ function sendVerificationCode(email, service) {
   // Normalize the email address
   email = email.toLowerCase().trim();
   
+  // Create audit logger for verification attempts
+  const logger = new Common.Logging.ServiceLogger('Authentication', email);
+  const auditEntries = [];
+  
   // Check if the email is a valid active member
   const validEmails = Common.Data.Access.getEmailAddresses();
   if (!validEmails.includes(email)) {
     // Act as if we sent the code (security: don't reveal if email exists)
     console.log('sendVerificationCode: email not found in active members, returning success (security)');
+    
+    // Audit log: verification code request for non-member (security event)
+    const auditEntry = logger.logOperation(
+      'VerificationCodeRequest',
+      'fail',
+      `Verification code requested for non-member email`,
+      'Email not found in active members',
+      { service: service }
+    );
+    auditEntries.push(auditEntry);
+    _persistAuditEntries(auditEntries);
+    
     return { success: true };
   }
   
@@ -50,6 +66,17 @@ function sendVerificationCode(email, service) {
   
   // Request verification code (generates + sends email)
   const result = Common.Auth.VerificationCode.requestCode(email, serviceName, service);
+  
+  // Audit log: verification code request
+  const auditEntry = logger.logOperation(
+    'VerificationCodeRequest',
+    result.success ? 'success' : 'fail',
+    result.success ? `Verification code sent for ${serviceName}` : `Failed to send verification code`,
+    result.error,
+    { service: service, serviceName: serviceName }
+  );
+  auditEntries.push(auditEntry);
+  _persistAuditEntries(auditEntries);
   
   // Return success with normalized email so client uses same cache key
   if (result.success) {
@@ -83,8 +110,23 @@ function verifyCode(email, code, service) {
   // Normalize the email address
   email = email.toLowerCase().trim();
   
+  // Create audit logger for verification attempts
+  const logger = new Common.Logging.ServiceLogger('Authentication', email);
+  const auditEntries = [];
+  
   // Verify the code
   const result = Common.Auth.VerificationCode.verify(email, code);
+  
+  // Audit log: verification attempt
+  const auditEntry = logger.logOperation(
+    'VerificationCodeVerify',
+    result.success ? 'success' : 'fail',
+    result.success ? `Successfully verified code for ${service || 'service'}` : `Failed to verify code: ${result.error || 'Invalid or expired code'}`,
+    result.error,
+    { service: service, errorCode: result.errorCode }
+  );
+  auditEntries.push(auditEntry);
+  _persistAuditEntries(auditEntries);
   
   if (!result.success) {
     return result;
