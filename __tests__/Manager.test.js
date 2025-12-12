@@ -926,7 +926,7 @@ describe('Manager tests', () => {
         activeMembers = [{ Email: "test2@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "", Status: 'Active' }];
 
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
-        expect(consoleSpy).toHaveBeenCalledWith('transaction on row 3 test2@example.com is a renewing member');
+        expect(consoleSpy).toHaveBeenCalledWith('transaction on row 3 test2@example.com is a renewing Active member');
         expect(consoleSpy).toHaveBeenCalledWith('transaction on row 2 test1@example.com is a new member');
       });
     });
@@ -1107,11 +1107,83 @@ describe('Manager tests', () => {
         expect(result.auditEntries).toBeDefined();
         expect(result.auditEntries.length).toBe(1);
         expect(result.auditEntries[0]).toMatchObject({
-          Type: 'Join',
+          Type: 'ProcessTransaction',
           Outcome: 'fail',
           Note: expect.stringContaining('Failed to process transaction for fail@example.com'),
           Error: expect.stringContaining('Email service down')
         });
+      });
+
+      it('should generate enhanced audit entry for renewal with email change', () => {
+        const auditLogger = new Audit.Logger(today);
+        const managerWithAudit = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger);
+        
+        // Existing member with old email
+        const members = [TestData.activeMember({ 
+          Status: 'Active',
+          Email: "john@oldcompany.com", 
+          First: "John", 
+          Last: "Doe",
+          Phone: "555-1234",
+          Joined: utils.dateOnly("2024-01-01"),
+          Expires: utils.addDaysToDate(today, 10)
+        })];
+        
+        // Transaction with new email but same name+phone (renewal)
+        const txns = [TestData.paidTransaction({ 
+          "Email Address": "john@newcompany.com", 
+          "First Name": "John", 
+          "Last Name": "Doe",
+          Phone: "555-1234",
+          Payment: "1 year"
+        })];
+        
+        const result = managerWithAudit.processPaidTransactions(txns, members, expirySchedule);
+        
+        // Should have exactly ONE audit entry (not two)
+        expect(result.auditEntries).toBeDefined();
+        expect(result.auditEntries.length).toBe(1);
+        
+        // Should be enhanced entry with email change details
+        expect(result.auditEntries[0]).toMatchObject({
+          Type: 'Renew',
+          Outcome: 'success',
+          Note: expect.stringContaining('Detected renewal with email change: john@oldcompany.com → john@newcompany.com (name+phone match)')
+        });
+        
+        // Member should have updated email
+        expect(members[0].Email).toBe("john@newcompany.com");
+      });
+
+      it('should generate standard audit entry for renewal without email change', () => {
+        const auditLogger = new Audit.Logger(today);
+        const managerWithAudit = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger);
+        
+        const members = [TestData.activeMember({ 
+          Email: "same@example.com", 
+          First: "Same", 
+          Last: "Person"
+        })];
+        
+        const txns = [TestData.paidTransaction({ 
+          "Email Address": "same@example.com", 
+          "First Name": "Same", 
+          "Last Name": "Person"
+        })];
+        
+        const result = managerWithAudit.processPaidTransactions(txns, members, expirySchedule);
+        
+        // Should have exactly ONE standard audit entry
+        expect(result.auditEntries).toBeDefined();
+        expect(result.auditEntries.length).toBe(1);
+        expect(result.auditEntries[0]).toMatchObject({
+          Type: 'Renew',
+          Outcome: 'success',
+          Note: expect.stringContaining('Member renewed: same@example.com')
+        });
+        
+        // Should NOT mention email change
+        expect(result.auditEntries[0].Note).not.toContain('email change');
       });
     });
 
@@ -1174,6 +1246,9 @@ describe('Manager tests', () => {
         // Joined date should remain the original
         expect(members[0].Joined).toEqual(utils.dateOnly("2025-01-01"));
         
+        // Migrated should be unchanged
+        expect(members[0].Migrated).toBe(""); 
+
         // Should send renewal email
         expect(sendEmailFun).toHaveBeenCalledTimes(1);
         expect(sendEmailFun).toHaveBeenCalledWith({
@@ -1244,51 +1319,90 @@ describe('Manager tests', () => {
         expect(groupManager.groupAddFun).toHaveBeenCalledWith("membership-automation@sc3.club", "member_discussions@sc3.club");
       });
 
-      it('should detect renewal via isPossibleRenewal when transaction has different email but same name and phone', () => {
-        // Existing member with different email but same name/phone
+      it('should NOT match when names differ (no false positives)', () => {
         const members = [
           TestData.activeMember({
             Status: "Active",
-            Email: "old-email@example.com",
-            First: "Membership",
-            Last: "Automation",
-            Phone: "(408) 386-9343",
-            Joined: utils.dateOnly("2024-01-01"),
-            Expires: utils.addDaysToDate(today, 10), // not expired
+            Email: "alice@example.com",
+            First: "Alice",
+            Last: "Johnson",
+            Phone: "555-0000",
+            Joined: utils.dateOnly("2023-01-01"),
+            Expires: utils.addDaysToDate(today, 5),
             Period: 1
           })
         ];
         
-        // Transaction with different email but same name/phone (should trigger isPossibleRenewal)
         const txns = [
           TestData.paidTransaction({
-            "Email Address": "new-email@example.com",
-            "First Name": "Membership",
-            "Last Name": "Automation",
-            Phone: "(408) 386-9343",
+            "Email Address": "bob@example.com",
+            "First Name": "Bob",
+            "Last Name": "Smith",
+            Phone: "555-0000", // Same phone but different names
             Payment: "1 year"
           })
         ];
 
         manager.processPaidTransactions(txns, members, expirySchedule);
 
-        // Should have exactly one member (detected as renewal via isPossibleRenewal)
-        expect(members.length).toBe(1);
+        // Should create new member - names don't match
+        expect(members.length).toBe(2);
+        expect(members[0].Email).toBe("alice@example.com");
+        expect(members[1].Email).toBe("bob@example.com");
+      });
+
+      it('should remove old expiry schedule entries using OLD email before updating member email', () => {
+        // Setup: Member with existing expiry schedule entries
+        const oldEmail = "john@oldcompany.com";
+        const newEmail = "john@newcompany.com";
         
-        // Email should be updated to new email (via convertJoinToRenew)
-        expect(members[0].Email).toBe("new-email@example.com");
+        const members = [TestData.activeMember({ 
+          Status: 'Active',
+          Email: oldEmail, 
+          First: "John", 
+          Last: "Doe",
+          Phone: "555-1234",
+          Joined: utils.dateOnly("2024-01-01"),
+          Expires: utils.addDaysToDate(today, 10),
+          Period: 1
+        })];
         
-        // Should be marked as renewed
-        expect(members[0]["Renewed On"]).toEqual(today);
+        // Create existing expiry schedule for old email
+        const existingSchedule = [
+          TestData.expiryScheduleEntry({ Email: oldEmail, Type: utils.ActionType.Expiry1, Date: utils.addDaysToDate(today, 10 + O1) }),
+          TestData.expiryScheduleEntry({ Email: oldEmail, Type: utils.ActionType.Expiry2, Date: utils.addDaysToDate(today, 10 + O2) }),
+          TestData.expiryScheduleEntry({ Email: oldEmail, Type: utils.ActionType.Expiry3, Date: utils.addDaysToDate(today, 10 + O3) }),
+          TestData.expiryScheduleEntry({ Email: oldEmail, Type: utils.ActionType.Expiry4, Date: utils.addDaysToDate(today, 10 + O4) })
+        ];
         
-        // Joined should be preserved from original member
-        expect(members[0].Joined).toEqual(utils.dateOnly("2024-01-01"));
+        // Transaction with new email but same name+phone
+        const txns = [TestData.paidTransaction({ 
+          "Email Address": newEmail, 
+          "First Name": "John", 
+          "Last Name": "Doe",
+          Phone: "555-1234",
+          Payment: "1 year"
+        })];
         
-        // Should send renewal email to new address
-        expect(sendEmailFun).toHaveBeenCalledWith({
-          to: "new-email@example.com",
-          subject: utils.expandTemplate(actionSpecs.Renew.Subject, members[0]),
-          htmlBody: utils.expandTemplate(actionSpecs.Renew.Body, members[0])
+        manager.processPaidTransactions(txns, members, existingSchedule);
+        
+        // Member should have new email
+        expect(members[0].Email).toBe(newEmail);
+        
+        // Old email's schedule entries should be GONE
+        const oldEmailEntries = existingSchedule.filter(e => e.Email === oldEmail);
+        expect(oldEmailEntries.length).toBe(0);
+        
+        // New email should have new schedule entries
+        const newEmailEntries = existingSchedule.filter(e => e.Email === newEmail);
+        expect(newEmailEntries.length).toBe(4); // 4 expiry notifications
+        
+        // Verify new schedule has correct dates
+        const newExpires = utils.addYearsToDate(utils.addDaysToDate(today, 10), 1);
+        expect(newEmailEntries[0]).toMatchObject({
+          Email: newEmail,
+          Type: utils.ActionType.Expiry1,
+          Date: utils.addDaysToDate(newExpires, O1)
         });
       });
     });
@@ -1346,8 +1460,8 @@ describe('Manager tests', () => {
   describe('convertJoinToRenew utility (additional tests)', () => {
     it('merges INITIAL into LATEST when LATEST.Joined <= INITIAL.Expires', () => {
       const membershipData = [
-        { Status: 'Active', Email: 'captenphil@aol.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '8/8/2017', Expires: '12/15/2026', Period: 3, 'Directory Share Name': false, 'Directory Share Email': false, 'Directory Share Phone': false, Migrated: '3/17/2025', 'Renewed On': '' },
-        { Status: 'Active', Email: 'phil.stotts@gmail.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '10/23/2025', Expires: '10/23/2027', Period: 2, 'Directory Share Name': true, 'Directory Share Email': true, 'Directory Share Phone': true, Migrated: '', 'Renewed On': '' }
+        { Status: 'Active', Email: 'captenphil@aol.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '8/8/2017', Expires: '12/15/2026', Period: 3, 'Directory Share Name': false, 'Directory Share Email': false, 'Directory Share Phone': false, 'Renewed On': '' },
+        { Status: 'Active', Email: 'phil.stotts@gmail.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '10/23/2025', Expires: '10/23/2027', Period: 2, 'Directory Share Name': true, 'Directory Share Email': true, 'Directory Share Phone': true, 'Renewed On': '' }
       ];
 
       const expirySchedule = [
@@ -1376,7 +1490,6 @@ describe('Manager tests', () => {
         'Directory Share Name': true,
         'Directory Share Email': true,
         'Directory Share Phone': true,
-        Migrated: new Date('3/17/2025'),
         'Renewed On': new Date('10/23/2025')
       };
 
@@ -1515,6 +1628,64 @@ describe('Manager tests', () => {
         // Different objects with equal data fields should match (this is a change from previous logic)
         expect(MembershipManagement.Manager.isPossibleRenewal(member1, member2)).toBe(true);
       });
+    });
+
+    describe('Status handling (Active members only)', () => {
+      it('should NOT match Expired member with Active member', () => {
+        const member1 = { Email: "toby@mail.com", Phone: "(408) 386-9343", First: "Toby", Last: "Ferguson", Joined: "1/1/2024", Expires: "1/1/2025", Status: "Expired" };
+        const member2 = { Email: "toby@mail.com", Phone: "(408) 386-9343", First: "Toby", Last: "Ferguson", Joined: "12/15/2024", Expires: "12/15/2025", Status: "Active" };
+        expect(MembershipManagement.Manager.isPossibleRenewal(member1, member2)).toBe(false);
+      });
+
+      it('should NOT match Lapsed member with Active member', () => {
+        const member1 = { Email: "toby@mail.com", Phone: "(408) 386-9343", First: "Toby", Last: "Ferguson", Joined: "1/1/2024", Expires: "1/1/2025", Status: "Lapsed" };
+        const member2 = { Email: "toby@mail.com", Phone: "(408) 386-9343", First: "Toby", Last: "Ferguson", Joined: "12/20/2024", Expires: "12/20/2025", Status: "Active" };
+        expect(MembershipManagement.Manager.isPossibleRenewal(member1, member2)).toBe(false);
+      });
+
+      it('should NOT match two Expired members', () => {
+        const member1 = { Email: "toby@mail.com", Phone: "(408) 386-9343", First: "Toby", Last: "Ferguson", Joined: "1/1/2023", Expires: "1/1/2024", Status: "Expired" };
+        const member2 = { Email: "toby@mail.com", Phone: "(408) 386-9343", First: "Toby", Last: "Ferguson", Joined: "12/15/2023", Expires: "12/15/2024", Status: "Expired" };
+        expect(MembershipManagement.Manager.isPossibleRenewal(member1, member2)).toBe(false);
+      });
+    });
+  });
+
+  describe('findExistingMemberForTransaction', () => {
+    it('should return ACTIVE_EMAIL_EXACT match for Active member with exact email', () => {
+      const txn = { "Email Address": "john@example.com", "First Name": "John", "Last Name": "Doe", Phone: "555-1234" };
+      const members = [
+        { Email: "john@example.com", First: "John", Last: "Doe", Phone: "555-1234", Status: "Active", Joined: "2023-01-01", Expires: "2024-01-01" }
+      ];
+      const result = MembershipManagement.Manager.findExistingMemberForTransaction(txn, members);
+      expect(result.found).toBe(true);
+      expect(result.matchType).toBe('ACTIVE_EMAIL_EXACT');
+      expect(result.index).toBe(0);
+      expect(result.member.Email).toBe("john@example.com");
+    });
+
+    it('should return NEW_MEMBER when no match found', () => {
+      const txn = { "Email Address": "jane@example.com", "First Name": "Jane", "Last Name": "Smith", Phone: "555-5678" };
+      const members = [
+        { Email: "john@example.com", First: "John", Last: "Doe", Phone: "555-1234", Status: "Active", Joined: "2023-01-01", Expires: "2024-01-01" }
+      ];
+      const result = MembershipManagement.Manager.findExistingMemberForTransaction(txn, members);
+      expect(result.found).toBe(false);
+      expect(result.matchType).toBe('NEW_MEMBER');
+      expect(result.index).toBe(-1);
+      expect(result.member).toBeNull();
+    });
+
+    it('should prefer ACTIVE_EMAIL_EXACT over POSSIBLE_RENEWAL', () => {
+      const txn = { "Email Address": "john@example.com", "First Name": "John", "Last Name": "Doe", Phone: "555-1234" };
+      const members = [
+        { Email: "john@oldcompany.com", First: "John", Last: "Doe", Phone: "555-1234", Status: "Expired", Joined: "2022-01-01", Expires: "2023-01-01" },
+        { Email: "john@example.com", First: "John", Last: "Doe", Phone: "555-1234", Status: "Active", Joined: "2023-01-01", Expires: "2024-01-01" }
+      ];
+      const result = MembershipManagement.Manager.findExistingMemberForTransaction(txn, members);
+      expect(result.found).toBe(true);
+      expect(result.matchType).toBe('ACTIVE_EMAIL_EXACT');
+      expect(result.index).toBe(1); // Second member
     });
 
     describe('isSimilarMember (deprecated alias)', () => {

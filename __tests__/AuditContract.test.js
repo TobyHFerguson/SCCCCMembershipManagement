@@ -277,7 +277,7 @@ describe('Audit Contract Tests', () => {
       
       expect(successEntry).toBeDefined();
       expect(failEntry).toBeDefined();
-      expect(failEntry.Type).toBe('Join');
+      expect(failEntry.Type).toBe('ProcessTransaction');
       expect(failEntry.Note).toContain('Failed to process transaction for bad@test.com');
       expect(failEntry.Error).toContain('Email delivery failed');
     });

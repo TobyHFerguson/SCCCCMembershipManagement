@@ -146,7 +146,7 @@ describe('Manager Audit Integration', () => {
             
             expect(result.auditEntries).toHaveLength(1);
             expect(result.auditEntries[0]).toMatchObject({
-                Type: 'Join',
+                Type: 'ProcessTransaction',
                 Outcome: 'fail',
                 Note: expect.stringContaining('bad@example.com'),
                 Error: 'Email send failed'
