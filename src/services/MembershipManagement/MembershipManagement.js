@@ -247,7 +247,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
           deadFiddler.setData(existing.concat(deadItemsForSheet)).dumpValues();
           Common.Logger.info('MembershipManagement', `Moved ${deadItems.length} items to ExpirationDeadLetter`);
         } catch (e) {
-          Common.Logger.error('MembershipManagement', 'Failed to persist dead-letter items', { error: e && e.toString ? e.toString() : e });
+          Common.Logger.error('MembershipManagement', 'Failed to persist dead-letter items', { error: String(e) });
         }
       }
 
@@ -282,7 +282,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
           MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger');
           MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', minutesUntilNext);
         } catch (e) {
-          Common.Logger.error('MembershipManagement', 'Error scheduling expiration FIFO trigger', { error: e && e.toString ? e.toString() : String(e) });
+          Common.Logger.error('MembershipManagement', 'Error scheduling expiration FIFO trigger', { error: String(e) });
         }
       } else {
         // No more work - remove any existing minute trigger
@@ -296,7 +296,11 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
   } catch (error) {
     const errorMessage = `Expiration FIFO consumer failed: ${error.message}`;
     Common.Logger.error('MembershipManagement', errorMessage, { stack: error.stack });
-    try { MembershipManagement.Internal.sendExpirationErrorNotification_(error); } catch (e) { Common.Logger.error('MembershipManagement', 'Failed to send error notification', { error: e }); }
+    try { 
+      MembershipManagement.Internal.sendExpirationErrorNotification_(error); 
+    } catch (e) { 
+      Common.Logger.error('MembershipManagement', 'Failed to send error notification', { error: String(e) }); 
+    }
     return { processed: 0, failed: 0, remaining: -1, error: errorMessage };
   }
 }
@@ -376,12 +380,12 @@ MembershipManagement.Internal.changeSubscribersEmailInAllGroups_ = function (ori
       GroupSubscription.changeMembersEmail(groupEmail, originalEmail, newEmail);
     } catch (e) {
       errors.push(`group ${groupEmail}: ${e && e.toString ? e.toString() : e}`);
-      Common.Logger.error('MembershipManagement', `changeSubscribersEmailInAllGroups: error changing email in group ${groupEmail}`, { error: e && e.toString ? e.toString() : e });
+      Common.Logger.error('MembershipManagement', `Error changing email in group ${groupEmail}`, { error: String(e) });
     }
   }
   if (errors.length > 0) {
     let errMsg = `Errors while updating ${originalEmail} to ${newEmail} in groups: ${errors.join('; ')}`;
-    Common.Logger.error('MembershipManagement', `changeSubscribersEmailInAllGroups: ${errMsg}`);
+    Common.Logger.error('MembershipManagement', errMsg);
     return { success: false, message: errMsg };
   }
   return { success: true, message: `Successfully updated email from ${originalEmail} to ${newEmail} in all groups.` };
