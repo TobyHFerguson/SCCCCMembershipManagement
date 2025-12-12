@@ -373,28 +373,15 @@
     }
   }
   
-  function getCallerFunctionName() {
-  const err = new Error();
-  const stack = err.stack.split('\n');
-  // stack[4] is usually the caller of the logger (may vary by environment)
-  if (stack[4]) {
-    // Example stack line: "    at MyNamespace.MyFunction (file.js:123:45)"
-    const match = stack[4].match(/at\s+([^\s]+)\s/);
-    return match ? match[1] : 'unknown';
-  }
-  return 'unknown';
-}
   /**
    * Core logging function
    * @param {string} level - Log level
-   * @param {string} service - Service name
+   * @param {string} service - Service name (e.g., 'MembershipManagement', 'VotingService')
    * @param {string} message - Message
    * @param {any} data - Optional additional data
    */
   function log(level, service, message, data) {
     const levelValue = LOG_LEVELS[level] || LOG_LEVELS.INFO;
-    const callerName = getCallerFunctionName();
-    service = `${service}.${callerName}`;
     
     // Check if we should log this level
     if (levelValue < currentLogLevel) return;
