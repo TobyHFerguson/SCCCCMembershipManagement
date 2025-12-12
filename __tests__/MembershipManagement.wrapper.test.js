@@ -213,8 +213,8 @@ describe('MembershipManagement audit persistence integration', () => {
         // Should not throw
         const numWritten = global.MembershipManagement.Internal.persistAuditEntries_(mockAuditEntries);
 
-        // Should log error
-        expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to persist audit entries'));
+        // Should log error via Common.Logger
+        expect(Common.Logger.error).toHaveBeenCalledWith('MembershipManagement', expect.stringContaining('Failed to persist audit entries'));
 
         // Should return 0
         expect(numWritten).toBe(0);

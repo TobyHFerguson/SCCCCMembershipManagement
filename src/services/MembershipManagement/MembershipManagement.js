@@ -37,7 +37,7 @@ MembershipManagement.processTransactions = function () {
     MembershipManagement.Internal.persistAuditEntries_(auditEntries);
   }
   
-  errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack}`));
+  errors.forEach(e => Common.Logger.error('MembershipManagement', `Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}`, { stack: e.stack }));
   return { hasPendingPayments, errors };
 }
 
@@ -59,11 +59,11 @@ MembershipManagement.processMigrations = function () {
   
   // Log any errors that occurred during migration
   if (result.errors && result.errors.length > 0) {
-    result.errors.forEach(e => console.error(`Migration error on row ${e.rowNum} ${e.email}: ${e.message}\nStack trace: ${e.stack}`));
+    result.errors.forEach(e => Common.Logger.error('MembershipManagement', `Migration error on row ${e.rowNum} ${e.email}: ${e.message}`, { stack: e.stack }));
   }
   
   if (PropertiesService.getScriptProperties().getProperty('MIGRATION_LOG_ONLY').toLowerCase() === 'true') {
-    console.log(`logOnly - # newMembers added: ${membershipData.length - mdLength} - #expirySchedule entries added: ${expiryScheduleData.length - esdLength}`);
+    Common.Logger.info('MembershipManagement', `logOnly - # newMembers added: ${membershipData.length - mdLength} - #expirySchedule entries added: ${expiryScheduleData.length - esdLength}`);
     return;
   }
   
@@ -143,7 +143,6 @@ MembershipManagement.generateExpiringMembersList = function () {
   } catch (error) {
     const errorMessage = `Membership expiration processing failed: ${error.message}`;
     Common.Logger.error('MembershipManagement', errorMessage, { stack: error.stack });
-    console.error(`${errorMessage}\nStack trace: ${error.stack}`);
 
     // Send email notification to membership automation
     MembershipManagement.Internal.sendExpirationErrorNotification_(error);
@@ -248,7 +247,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
           deadFiddler.setData(existing.concat(deadItemsForSheet)).dumpValues();
           Common.Logger.info('MembershipManagement', `Moved ${deadItems.length} items to ExpirationDeadLetter`);
         } catch (e) {
-          console.error('Failed to persist dead-letter items', e && e.toString ? e.toString() : e);
+          Common.Logger.error('MembershipManagement', 'Failed to persist dead-letter items', { error: e && e.toString ? e.toString() : e });
         }
       }
 
@@ -283,7 +282,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
           MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger');
           MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', minutesUntilNext);
         } catch (e) {
-          console.error('Error scheduling expiration FIFO trigger', e && e.toString ? e.toString() : String(e));
+          Common.Logger.error('MembershipManagement', 'Error scheduling expiration FIFO trigger', { error: e && e.toString ? e.toString() : String(e) });
         }
       } else {
         // No more work - remove any existing minute trigger
@@ -297,8 +296,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
   } catch (error) {
     const errorMessage = `Expiration FIFO consumer failed: ${error.message}`;
     Common.Logger.error('MembershipManagement', errorMessage, { stack: error.stack });
-    console.error(`${errorMessage}\nStack trace: ${error.stack}`);
-    try { MembershipManagement.Internal.sendExpirationErrorNotification_(error); } catch (e) { console.error('Failed to send error notification', e); }
+    try { MembershipManagement.Internal.sendExpirationErrorNotification_(error); } catch (e) { Common.Logger.error('MembershipManagement', 'Failed to send error notification', { error: e }); }
     return { processed: 0, failed: 0, remaining: -1, error: errorMessage };
   }
 }
@@ -378,12 +376,12 @@ MembershipManagement.Internal.changeSubscribersEmailInAllGroups_ = function (ori
       GroupSubscription.changeMembersEmail(groupEmail, originalEmail, newEmail);
     } catch (e) {
       errors.push(`group ${groupEmail}: ${e && e.toString ? e.toString() : e}`);
-      console.error(`changeSubscribersEmailInAllGroups: error changing email in group ${groupEmail}`, e && e.toString ? e.toString() : e);
+      Common.Logger.error('MembershipManagement', `changeSubscribersEmailInAllGroups: error changing email in group ${groupEmail}`, { error: e && e.toString ? e.toString() : e });
     }
   }
   if (errors.length > 0) {
     let errMsg = `Errors while updating ${originalEmail} to ${newEmail} in groups: ${errors.join('; ')}`;
-    console.error(`changeSubscribersEmailInAllGroups: ${errMsg}`);
+    Common.Logger.error('MembershipManagement', `changeSubscribersEmailInAllGroups: ${errMsg}`);
     return { success: false, message: errMsg };
   }
   return { success: true, message: `Successfully updated email from ${originalEmail} to ${newEmail} in all groups.` };
@@ -457,7 +455,7 @@ MembershipManagement.Internal.sendSingleEmail_ = function (email) {
     MailApp.sendEmail(email);
     return { Timestamp: new Date(), ...email };
   } catch (error) {
-    console.error(`Failed to send email to ${email.to}: ${error.message}`);
+    Common.Logger.error('MembershipManagement', `Failed to send email to ${email.to}: ${error.message}`);
   }
 }
 
@@ -498,7 +496,7 @@ MembershipManagement.Internal.sendExpirationErrorNotification_ = function (error
   } catch (emailError) {
     // If we can't even send the error email, log it but don't throw
     Common.Logger.error('MembershipManagement', `CRITICAL: Failed to send expiration error notification: ${emailError.message}`);
-    console.error(`Failed to send error notification: ${emailError.message}\nOriginal error: ${error.message}`);
+    Common.Logger.error('MembershipManagement', `Failed to send error notification: ${emailError.message}`, { originalError: error.message });
   }
 }
 
@@ -521,7 +519,7 @@ MembershipManagement.Internal.persistAuditEntries_ = function (auditEntries) {
     return numWritten;
   } catch (error) {
     // Log but don't throw - audit logging should not break main functionality
-    console.error(`Failed to persist audit entries: ${error.message}`);
+    Common.Logger.error('MembershipManagement', `Failed to persist audit entries: ${error.message}`);
     return 0;
   }
 }
