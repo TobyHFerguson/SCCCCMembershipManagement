@@ -271,21 +271,28 @@ function getHomePageContent(email) {
  * @returns {string} HTML content for the verification page
  */
 function getVerificationPageContent() {
-  console.log('getVerificationPageContent()');
-  
-  // Check feature flag to determine which auth flow to use
-  const useNewAuth = Common.Config.FeatureFlags.isNewAuthEnabled();
-  const VERIFICATION_CODE_INPUT = 'common/auth/verificationCodeInput';
-  const MAGIC_LINK_INPUT = 'common/auth/magicLinkInput';
-  const contentFileName = useNewAuth ? VERIFICATION_CODE_INPUT : MAGIC_LINK_INPUT;
-  
-  // Create template for just the content (no layout wrapper)
-  // This is used for container replacement when signing out
-  const template = HtmlService.createTemplateFromFile(contentFileName);
-  template.service = ''; // No specific service for verification page
-  
-  // Evaluate and return just the inner HTML content
-  return template.evaluate().getContent();
+  try {
+    // Check feature flag to determine which auth flow to use
+    const useNewAuth = Common.Config.FeatureFlags.isNewAuthEnabled();
+    
+    const VERIFICATION_CODE_INPUT = 'common/auth/verificationCodeInput';
+    const MAGIC_LINK_INPUT = 'common/auth/magicLinkInput';
+    const contentFileName = useNewAuth ? VERIFICATION_CODE_INPUT : MAGIC_LINK_INPUT;
+    
+    // Create template for just the content (no layout wrapper)
+    // This is used for container replacement when signing out
+    const template = HtmlService.createTemplateFromFile(contentFileName);
+    template.service = ''; // No specific service for verification page
+    
+    // Evaluate and return just the inner HTML content
+    const content = template.evaluate().getContent();
+    return content;
+  } catch (error) {
+    console.error('getVerificationPageContent() ERROR:', error.message);
+    console.error('Error stack:', error.stack);
+    // Return a fallback error message that will at least show something to the user
+    return '<div style="padding: 2rem; text-align: center; color: red;">Error loading verification page: ' + error.message + '<br><br>Please refresh the page.</div>';
+  }
 }
 
 /**

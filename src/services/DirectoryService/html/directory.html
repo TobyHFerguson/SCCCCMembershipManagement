@@ -3,23 +3,54 @@
   href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
 
 <style>
+  /* Desktop: Maximum width container to use all available screen space */
+  /* IMPORTANT: Override base CSS .container {width: 25rem} */
   .container {
-    width: 50rem;
+    width: 98% !important;
+    max-width: none !important; /* Remove max-width limit - use all available space */
+    min-width: 50rem !important; /* Minimum 800px to maintain readability */
   }
 
-  /* Ensure these overrides are correctly applied and not cancelled out */
+  /* Tablet: Moderately wide, still shows all columns */
   html.is-tablet .container {
-    /* If you still need this for tablet, fine, but consider the base CSS's max-width for tablets */
-    /* max-width: none; */
-    /* Consider removing this to re-enable base CSS max-width logic */
+    width: 95% !important;
+    max-width: 60rem !important; /* 960px */
   }
 
+  /* Mobile Landscape: Enable horizontal scroll if needed */
   html.is-mobile-landscape .container {
-    /* This is the key rule for the screenshot's issue */
-    /* REMOVE this if it's present: max-width: none; */
-    overflow-x: auto;
-    /* THIS IS THE MOST IMPORTANT ADDITION FOR VISUAL CONTAINMENT */
-    /* Ensure other container properties from base CSS (width, padding, etc.) are active */
+    width: 95% !important;
+    max-width: none !important;
+    overflow-x: auto; /* Allow horizontal scroll for table */
+  }
+
+  /* Mobile Portrait: Stack columns using DataTables Responsive */
+  html.is-mobile-portrait .container {
+    width: 100% !important;
+    padding: 0.5rem; /* Tighter padding on small screens */
+  }
+
+  /* Ensure table uses full container width */
+  #data-table {
+    width: 100% !important;
+    table-layout: auto; /* Let DataTables calculate optimal column widths */
+  }
+
+  /* DataTables wrapper - ensure no width constraints */
+  .dataTables_wrapper {
+    width: 100%;
+  }
+
+  /* DataTables responsive styling */
+  table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before,
+  table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control:before {
+    background-color: #007bff; /* Blue expand button */
+  }
+
+  /* Improve table readability */
+  #data-table td, #data-table th {
+    white-space: nowrap; /* Prevent text wrapping in cells */
+    padding: 0.5rem 0.75rem;
   }
 </style>
 
@@ -48,7 +79,49 @@ console.log('rawTableData:', rawTableData); // Check this in browser console
 console.log('--- Client-side Script Start ---');
   console.log('Type of rawTableData before parsing:', typeof rawTableData);
   console.log('Content of rawTableData (as string before parse):', rawTableData);
+  
   $(document).ready(function () {
+    // DIAGNOSTIC: Inspect the DOM structure and CSS
+    console.log('=== DOM STRUCTURE DIAGNOSTIC ===');
+    
+    // Find the table element
+    var $table = $('#data-table');
+    console.log('Table element:', $table[0]);
+    
+    // Walk up the DOM tree to find all parent elements
+    var $current = $table;
+    var depth = 0;
+    while ($current.length > 0 && depth < 10) {
+      var elem = $current[0];
+      var computedStyle = window.getComputedStyle(elem);
+      console.log('Level ' + depth + ':', {
+        tagName: elem.tagName,
+        className: elem.className,
+        id: elem.id,
+        width: computedStyle.width,
+        maxWidth: computedStyle.maxWidth,
+        minWidth: computedStyle.minWidth,
+        display: computedStyle.display,
+        position: computedStyle.position
+      });
+      $current = $current.parent();
+      depth++;
+    }
+    
+    console.log('=== END DIAGNOSTIC ===');
+    
+    // Also check if our custom CSS is being applied
+    var $containers = $('.container');
+    console.log('Found .container elements:', $containers.length);
+    $containers.each(function(idx) {
+      var computedStyle = window.getComputedStyle(this);
+      console.log('Container ' + idx + ' computed styles:', {
+        width: computedStyle.width,
+        maxWidth: computedStyle.maxWidth,
+        minWidth: computedStyle.minWidth,
+        className: this.className
+      });
+    });
     if (typeof jQuery === 'undefined') {
       console.error('jQuery is not loaded!');
       // Provide a user-friendly message if jQuery is missing
@@ -87,8 +160,10 @@ console.log('--- Client-side Script Start ---');
           { "title": "Phone" }
         ],
         "order": [[1, 'asc']], // Order by Last name (index 1) initially
-        "responsive": true, // Enable DataTables Responsive extension
-        "autoWidth": false // Let DataTables handle width
+        "responsive": false, // Disable responsive - we want all columns visible
+        "autoWidth": true, // Let DataTables calculate optimal widths
+        "pageLength": 25, // Show 25 entries by default (good for directory)
+        "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]]
       });
     } else {
       console.error('DataTables library not loaded!');

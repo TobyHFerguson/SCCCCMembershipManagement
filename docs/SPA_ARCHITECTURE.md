@@ -118,6 +118,124 @@ Router calls: renderDirectoryService(data, container)
 3. Initialize with data
 ```
 
+## Container Width Management
+
+### The `.container` Class System
+
+**Background**: The base CSS framework in `_Header.html` defines a constrained `.container` class:
+```css
+.container {
+    width: 25rem;  /* 400px - suitable for forms */
+    padding: 1.25rem;
+    background-color: white;
+    /* ... other styles ... */
+}
+```
+
+This narrow width works well for authentication forms, profile editors, and simple UIs. However, **data-heavy services like DirectoryService need much wider containers** to display tables effectively.
+
+### Problem: Base CSS Applies to All Services
+
+When a service renders, its content is placed inside the existing `.container` div. The base CSS `width: 25rem` applies automatically, constraining all content to 400px regardless of what the service needs.
+
+### Solution: Service-Specific Container Classes
+
+Services that need wider containers should add a specific class to the container element and provide overriding CSS:
+
+**Pattern**:
+```javascript
+function renderWideService(data, container) {
+    console.log('renderWideService called with data:', data);
+    
+    // 1. Add service-specific class to container
+    container.classList.add('wide-service-container');
+    
+    // 2. Provide overriding CSS in innerHTML
+    container.innerHTML = `
+        <style>
+            /* Override base .container width with higher specificity */
+            .container.wide-service-container {
+                width: 95% !important;
+                max-width: none !important;
+                min-width: 50rem !important;  /* 800px minimum */
+            }
+            
+            /* Responsive overrides */
+            html.is-tablet .container.wide-service-container {
+                width: 90% !important;
+                max-width: 60rem !important;
+            }
+            
+            html.is-mobile-landscape .container.wide-service-container {
+                width: 95% !important;
+                overflow-x: auto;
+            }
+            
+            html.is-mobile-portrait .container.wide-service-container {
+                width: 100% !important;
+                min-width: auto !important;
+                padding: 0.5rem !important;
+            }
+        </style>
+        <div class="service-content">
+            <!-- Service content here -->
+        </div>
+    `;
+    
+    // 3. Continue with normal rendering...
+}
+```
+
+**Why this works**:
+- **Specificity**: `.container.wide-service-container` (two classes) beats `.container` (one class)
+- **`!important`**: Ensures override even if base CSS has high specificity
+- **Responsive**: Maintains framework's responsive behavior with class-based breakpoints
+- **Cleanup**: When user navigates away, the service-specific class remains but content is replaced, so no conflicts
+
+**When to use**:
+- Services with wide tables (DirectoryService, reports)
+- Services with side-by-side layouts requiring more horizontal space
+- Services with wide forms or multi-column layouts
+
+**When NOT to use**:
+- Simple forms (profile editing, authentication)
+- Vertical lists with narrow content
+- Services that work fine at 400px width
+
+### Real Example: DirectoryService
+
+```javascript
+function renderDirectoryService(data, container) {
+    // Add service-specific class
+    container.classList.add('directory-service-container');
+    
+    container.innerHTML = `
+        <style>
+            /* CRITICAL: Override base .container width for DirectoryService */
+            .container.directory-service-container {
+                width: 95% !important;
+                max-width: none !important;
+                min-width: 50rem !important;
+            }
+            
+            html.is-tablet .container.directory-service-container {
+                width: 90% !important;
+                max-width: 60rem !important;
+            }
+            
+            /* Mobile overrides... */
+        </style>
+        <div class="directory-container">
+            <!-- DataTables table rendering here -->
+        </div>
+    `;
+    
+    // Load DataTables and render...
+}
+```
+
+This gives DirectoryService a wide container (95% of viewport, minimum 800px) while other services remain at the standard 400px width.
+
 ## Implementation Guide
 
 ### Adding a New Service

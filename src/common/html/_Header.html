@@ -664,7 +664,8 @@
     
     // Render Directory Service
     function renderDirectoryService(data, container) {
-        console.log('renderDirectoryService called with data:', data);
+        // Add a special class to the container for DirectoryService styling
+        container.classList.add('directory-service-container');
         
         // Load required stylesheets
         loadStylesheet('https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css');
@@ -673,6 +674,29 @@
         // Set the HTML structure
         container.innerHTML = `
             <style>
+                /* CRITICAL: Override base .container width for DirectoryService */
+                .container.directory-service-container {
+                    width: 95% !important;
+                    max-width: none !important;
+                    min-width: 50rem !important;
+                }
+                
+                html.is-tablet .container.directory-service-container {
+                    width: 90% !important;
+                    max-width: 60rem !important;
+                }
+                
+                html.is-mobile-landscape .container.directory-service-container {
+                    width: 95% !important;
+                    overflow-x: auto;
+                }
+                
+                html.is-mobile-portrait .container.directory-service-container {
+                    width: 100% !important;
+                    min-width: auto !important;
+                    padding: 0.5rem !important;
+                }
+                
                 .directory-container { 
                     padding: 1rem;
                     max-width: 100%;
@@ -772,21 +796,15 @@
         // Load scripts sequentially (DataTables requires jQuery to be loaded first)
         loadScript('https://code.jquery.com/jquery-3.6.0.min.js')
             .then(() => {
-                console.log('Directory: jQuery loaded');
                 return Promise.all([
                     loadScript('https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js'),
                     loadScript('https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js')
                 ]);
             })
             .then(() => {
-                console.log('Directory: All scripts loaded, initializing DataTable');
-                
                 const rawTableData = data.directoryEntries || [];
-                console.log('Directory: rawTableData:', rawTableData);
-                console.log('Directory: Number of entries:', rawTableData.length);
                 
                 const tableData = rawTableData.map(function(entry) {
-                    console.log('Processing entry:', entry);
                     return [
                         entry.First || '',
                         entry.Last || '',
@@ -795,11 +813,8 @@
                     ];
                 });
                 
-                console.log('Directory: tableData for DataTable:', tableData);
-                
                 // DataTable initialization - document is already ready when scripts load
                 try {
-                    console.log('Directory: Initializing DataTable');
                     window.jQuery('#data-table').DataTable({
                         data: tableData,
                         columns: [
@@ -825,7 +840,6 @@
                         order: [[1, 'asc'], [0, 'asc']],
                         autoWidth: false
                     });
-                    console.log('Directory: DataTable initialized successfully');
                 } catch (error) {
                     console.error('Directory: Error initializing DataTable:', error);
                     container.innerHTML += '<p style="color: red;">Error initializing directory table: ' + error.message + '</p>';

@@ -531,6 +531,73 @@ html.is-mobile-portrait button {
 
 CRITICAL: always reference `_Header.html` for breakpoint behavior and UX helpers; test on desktop, tablet, mobile-portrait and mobile-landscape.
 
+### Container Width Management for Wide Services
+
+**Background**: The base CSS framework defines `.container { width: 25rem; }` (400px), suitable for forms and simple UIs. However, **data-heavy services like DirectoryService need wider containers** for tables and multi-column layouts.
+
+**Problem**: When a service renders in the SPA, its content is placed inside the existing `.container` div. The base CSS `width: 25rem` applies automatically, constraining all content to 400px.
+
+**Solution Pattern**: Services needing wider containers should add a service-specific class and provide overriding CSS:
+
+```javascript
+function renderWideService(data, container) {
+    // 1. Add service-specific class to container element
+    container.classList.add('wide-service-container');
+    
+    // 2. Provide overriding CSS in innerHTML with high specificity
+    container.innerHTML = `
+        <style>
+            /* Override base .container width with combined selector + !important */
+            .container.wide-service-container {
+                width: 95% !important;
+                max-width: none !important;
+                min-width: 50rem !important;  /* 800px minimum */
+            }
+            
+            /* Responsive overrides */
+            html.is-tablet .container.wide-service-container {
+                width: 90% !important;
+                max-width: 60rem !important;
+            }
+            
+            html.is-mobile-landscape .container.wide-service-container {
+                width: 95% !important;
+                overflow-x: auto;
+            }
+            
+            html.is-mobile-portrait .container.wide-service-container {
+                width: 100% !important;
+                min-width: auto !important;
+                padding: 0.5rem !important;
+            }
+        </style>
+        <div class="service-content">
+            <!-- Service content here -->
+        </div>
+    `;
+    
+    // 3. Continue with normal rendering...
+}
+```
+
+**Why this works**:
+- **Specificity**: `.container.wide-service-container` (two classes) beats `.container` (one class)
+- **`!important`**: Ensures override even if base CSS has complex selectors
+- **Responsive**: Maintains framework's class-based responsive behavior
+- **Cleanup**: Service-specific class persists on container but doesn't conflict when content replaced
+
+**When to use**:
+- ✅ Services with wide tables (DirectoryService, reports)
+- ✅ Services with side-by-side layouts requiring horizontal space
+- ✅ Services with wide forms or multi-column layouts
+
+**When NOT to use**:
+- ❌ Simple forms (profile editing, authentication) - 400px is fine
+- ❌ Vertical lists with narrow content
+- ❌ Services that work fine at default width
+
+**See**: `docs/SPA_ARCHITECTURE.md` § "Container Width Management" for complete documentation and real examples.
+
 ### Magic Link Authentication
 Users access web services via tokenized URLs. Flow:
 1. User requests access at `?page=request&service=ServiceName`
