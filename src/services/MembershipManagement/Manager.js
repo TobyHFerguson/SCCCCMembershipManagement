@@ -317,38 +317,20 @@ MembershipManagement.Manager = class {
       
       // We get here with a transaction that is not processed but is marked as paid. Process it.
       try {
-        // Use helper to find existing member (checks Active email exact match, then isPossibleRenewal)
-        const match = MembershipManagement.Manager.findExistingMemberForTransaction(txn, membershipData);
+        // Find existing member using isPossibleRenewal (name+phone/email matching)
+        const match = MembershipManagement.Manager.findExistingMemberForTransaction(txn, membershipData, this._today);
         
         let message;
         let actionType;
         let skipStandardAuditLog = false; // Flag to prevent duplicate audit entries
         
-        if (match.matchType === 'ACTIVE_EMAIL_EXACT') {
-          // Simple renewal - Active member with exact email match
-          console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a renewing Active member`);
-          const member = match.member;
-          this.renewMember_(txn, member, expirySchedule);
-          actionType = 'Renew';
-          message = {
-            to: member.Email,
-            subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Subject, member),
-            htmlBody: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Body, member)
-          };
-          
-        } else if (match.matchType === 'POSSIBLE_RENEWAL') {
+        if (match.matchType === 'POSSIBLE_RENEWAL') {
           // Detected renewal via name+phone match with different email (member is already Active)
           const existingMember = match.member;
           const oldEmail = existingMember.Email;
           const emailChanged = oldEmail !== txn["Email Address"];
           
-          console.log(`transaction on row ${i + 2} detected as renewal via isPossibleRenewal:`, {
-            oldEmail: oldEmail,
-            newEmail: txn["Email Address"],
-            emailChanged: emailChanged,
-            name: `${existingMember.First} ${existingMember.Last}`,
-            phone: existingMember.Phone
-          });
+           console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a renewing Active member`);
           
           // Renew member (email change handled inside renewMemberWithEmailChange_ if oldEmail differs)
           this.renewMemberWithEmailChange_(txn, existingMember, expirySchedule, oldEmail);
@@ -480,6 +462,7 @@ MembershipManagement.Manager = class {
     // Update membership data
     member.Period = MembershipManagement.Manager.getPeriod_(txn);
     member["Renewed On"] = this._today;
+    member.Phone = txn.Phone || member.Phone;
     member.Expires = MembershipManagement.Utils.calculateExpirationDate(this._today, member.Expires, member.Period);
     Object.assign(member, MembershipManagement.Manager.extractDirectorySharing_(txn));
     
@@ -608,46 +591,28 @@ MembershipManagement.Manager = class {
 
   /**
    * Find existing member who might be renewing based on transaction data.
-   * Only checks Active members.
-   * 
-   * Strategy:
-   * 1. First try exact email match with Active status (fastest, most common path)
-   * 2. Then try isPossibleRenewal match on Active members (handles email changes)
-   * 3. If no match, it's a genuinely new member
+   * Uses isPossibleRenewal to match on name (first letter) + phone/email + temporal relationship.
+   * Only matches Active members.
    * 
    * @param {Object} txn - Transaction data with "Email Address", "First Name", "Last Name", Phone
    * @param {Array<Object>} membershipData - All member records
+   * @param {Date|string} today - Current date for temporal validation
    * @returns {{found: boolean, index: number, member: Object|null, matchType: string}}
-   *   matchType values: 'ACTIVE_EMAIL_EXACT' | 'POSSIBLE_RENEWAL' | 'NEW_MEMBER'
+   *   matchType values: 'POSSIBLE_RENEWAL' | 'NEW_MEMBER'
    */
-  static findExistingMemberForTransaction(txn, membershipData) {
-    // STEP 1: Try exact email match with Active status (fastest path)
-    const activeIndex = membershipData.findIndex(
-      m => m.Status === 'Active' && m.Email === txn["Email Address"]
-    );
-    
-    if (activeIndex !== -1) {
-      return {
-        found: true,
-        index: activeIndex,
-        member: membershipData[activeIndex],
-        matchType: 'ACTIVE_EMAIL_EXACT'
-      };
-    }
-    
-    // STEP 2: Create temporary member object from transaction (set as Active for isPossibleRenewal check)
-    // Don't set Joined/Expires - we're doing identity lookup, not temporal validation
-    // (isPossibleRenewal will skip temporal check if dates are missing and match based on name+phone/email only)
+  static findExistingMemberForTransaction(txn, membershipData, today) {
+    // Create temporary member object from transaction for isPossibleRenewal matching
+    // Include Joined date to enable temporal validation (renewal must occur before/around expiry)
     const tempMember = {
       Email: txn["Email Address"],
       First: txn["First Name"],
       Last: txn["Last Name"],
       Phone: txn.Phone || '',
-      Status: 'Active'
-      // No Joined/Expires - this allows isPossibleRenewal to match based on identity only
+      Status: 'Active',
+      Joined: today
     };
     
-    // STEP 3: Check for possible renewal (Active members only, name+phone/email matching)
+    // Find Active member matching name (first letter) + phone/email
     const renewalIndex = membershipData.findIndex(
       existingMember => MembershipManagement.Manager.isPossibleRenewal(tempMember, existingMember)
     );
@@ -661,7 +626,7 @@ MembershipManagement.Manager = class {
       };
     }
     
-    // STEP 4: No match found - genuinely new member
+    // No match found - genuinely new member
     return {
       found: false,
       index: -1,

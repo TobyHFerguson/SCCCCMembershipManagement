@@ -96,7 +96,7 @@ describe('Manager Audit Integration', () => {
                 Last: 'User',
                 Phone: '',
                 Joined: new Date('2023-01-15'),
-                Expires: new Date('2024-01-15'),
+                Expires: new Date('2025-04-01'),  // Future date for valid temporal match
                 Period: 1,
                 'Directory Share Name': false,
                 'Directory Share Email': false,

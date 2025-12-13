@@ -80,8 +80,8 @@ const TestData = {
       "First Name": "Test",
       "Last Name": "User",
       "Payment": "1 year",
-      Phone: '',
-      Directory: '',
+      Phone: '(123) 456-7890',
+      Directory: 'share name',
       ...overrides
     };
   },
@@ -170,9 +170,9 @@ const transactionsFixture = {
   ],
   get paid() { 
     return [
-      TestData.paidTransaction({ "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", Phone: "(408) 386-9343", Directory: "" }),
-      TestData.paidTransaction({ "Email Address": "test2@example.com", "First Name": "Jane", "Last Name": "Smith", "Payment": "2 years", Directory: "Share Name, Share Phone" }),
-      TestData.paidTransaction({ "Email Address": "test3@example.com", "First Name": "Not", "Last Name": "Member", "Payment": "3 year", Directory: "Share Email" })
+      TestData.paidTransaction({ "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", Phone: "(408) 386-9343", Payment: '1 year', Directory: "" }),
+      TestData.paidTransaction({ "Email Address": "test2@example.com", "First Name": "Jane", "Last Name": "Smith", Phone: "(123) 456-7890", Payment: "2 years", Directory: "Share Name, Share Phone" }),
+      TestData.paidTransaction({ "Email Address": "test3@example.com", "First Name": "Not", "Last Name": "Member", Phone: "(098) 765-4321", Payment: "3 year", Directory: "Share Email" })
     ];
   },
   get caseInsensitive() {
@@ -823,8 +823,8 @@ describe('Manager tests', () => {
         const txns = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
         const expectedMembers = [
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": "", Status: "Active", "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false },
-          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '', Joined: today, Expires: utils.addYearsToDate(today, 2), "Renewed On": "", Status: "Active", "Directory Share Name": true, "Directory Share Email": false, "Directory Share Phone": true },
-          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '', Joined: today, Expires: utils.addYearsToDate(today, 3), "Renewed On": "", Status: "Active", "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false }]
+          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '(123) 456-7890', Joined: today, Expires: utils.addYearsToDate(today, 2), "Renewed On": "", Status: "Active", "Directory Share Name": true, "Directory Share Email": false, "Directory Share Phone": true },
+          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '(098) 765-4321', Joined: today, Expires: utils.addYearsToDate(today, 3), "Renewed On": "", Status: "Active", "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false }]
 
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(activeMembers.length).toEqual(3)
@@ -860,10 +860,10 @@ describe('Manager tests', () => {
         expect(result.hasPendingPayments).toBe(false);
       });
       it('should handle membership renewals for active members', () => {
-        const txns = [TestData.paidTransaction({ "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Directory": "Share Email" })]
+        const txns = [TestData.paidTransaction({ "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Directory": "Share Email", Phone: '(123) 456-7890' })]
         const members = [TestData.activeMember({ Email: "test1@example.com", First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10" })]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: '', Joined: "2024-03-10", Expires: utils.addYearsToDate("2025-03-10", 1), "Renewed On": today, Status: "Active", "Directory Share Email": true, "Directory Share Name": false, "Directory Share Phone": false },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: '(123) 456-7890', Joined: "2024-03-10", Expires: utils.addYearsToDate("2025-03-10", 1), "Renewed On": today, Status: "Active", "Directory Share Email": true, "Directory Share Name": false, "Directory Share Phone": false },
         ]
         manager.processPaidTransactions(txns, members, expirySchedule,);
         expect(members.length).toEqual(1)
@@ -871,10 +871,10 @@ describe('Manager tests', () => {
       });
       it('should treat a renewal for a member with an expired membership as a new member', () => {
         const txns = [TestData.paidTransaction({ "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Directory": "Share Email" })]
-        const members = [TestData.activeMember({ Email: "test1@example.com", First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", Status: "Expired" })]
+        const members = [TestData.activeMember({ Email: "test1@example.com", First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", Status: "Expired", Phone: '(123) 456-7890' })]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired", Phone: '', "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false },
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": "", Status: "Active", Phone: '', "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired", Phone: '(123) 456-7890', "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": "", Status: "Active", Phone: '(123) 456-7890', "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false },
         ]
         manager.processPaidTransactions(txns, members, expirySchedule,);
         expect(members).toEqual(expectedMembers);
@@ -918,16 +918,121 @@ describe('Manager tests', () => {
       });
     })
 
+    describe('member information updates during renewals', () => {
+      it('should update phone number when member renews with different phone', () => {
+        const oldPhone = '(408) 111-1111';
+        const newPhone = '(408) 222-2222';
+        const txns = [TestData.paidTransaction({ 
+          "Email Address": "test1@example.com", 
+          "First Name": "John", 
+          "Last Name": "Doe",
+          Phone: newPhone
+        })];
+        activeMembers = [TestData.activeMember({ 
+          Email: "test1@example.com", 
+          First: "John", 
+          Last: "Doe", 
+          Phone: oldPhone,
+          Joined: "2024-03-10", 
+          Expires: "2025-03-10" 
+        })];
+        
+        manager.processPaidTransactions(txns, activeMembers, expirySchedule);
+        
+        expect(activeMembers[0].Phone).toBe(newPhone);
+        expect(activeMembers[0].Email).toBe("test1@example.com"); // Email unchanged
+      });
+
+      it('should update email when member renews with different email (same name+phone)', () => {
+        const oldEmail = 'john.old@example.com';
+        const newEmail = 'john.new@example.com';
+        const phone = '(408) 386-9343';
+        
+        const txns = [TestData.paidTransaction({ 
+          "Email Address": newEmail, 
+          "First Name": "John", 
+          "Last Name": "Doe",
+          Phone: phone
+        })];
+        activeMembers = [TestData.activeMember({ 
+          Email: oldEmail, 
+          First: "John", 
+          Last: "Doe", 
+          Phone: phone,
+          Joined: "2024-03-10", 
+          Expires: "2025-03-10" 
+        })];
+        
+        manager.processPaidTransactions(txns, activeMembers, expirySchedule);
+        
+        expect(activeMembers[0].Email).toBe(newEmail);
+        expect(activeMembers[0].Phone).toBe(phone); // Phone unchanged
+        
+        // Should call groupEmailReplaceFun to update email in groups
+        expect(groupManager.groupEmailReplaceFun).toHaveBeenCalledWith(oldEmail, newEmail);
+      });
+
+      it('should not match as renewal if both email AND phone are different', () => {
+        const txns = [TestData.paidTransaction({ 
+          "Email Address": "john.new@example.com", 
+          "First Name": "John", 
+          "Last Name": "Doe",
+          Phone: '(408) 999-9999'  // Different phone
+        })];
+        activeMembers = [TestData.activeMember({ 
+          Email: "john.old@example.com",  // Different email
+          First: "John", 
+          Last: "Doe", 
+          Phone: '(408) 111-1111',  // Different phone
+          Joined: "2024-03-10", 
+          Expires: "2025-03-10" 
+        })];
+        
+        const initialMemberCount = activeMembers.length;
+        manager.processPaidTransactions(txns, activeMembers, expirySchedule);
+        
+        // Should be treated as new member (not renewal)
+        expect(activeMembers.length).toBe(initialMemberCount + 1);
+        expect(activeMembers[0].Email).toBe("john.old@example.com"); // Original unchanged
+        expect(activeMembers[1].Email).toBe("john.new@example.com"); // New member added
+        
+        // Should add new member to groups
+        expect(groupManager.groupAddFun).toHaveBeenCalled();
+      });
+
+      it('should preserve phone if transaction has no phone during renewal', () => {
+        const existingPhone = '(408) 386-9343';
+        const txns = [TestData.paidTransaction({ 
+          "Email Address": "test1@example.com", 
+          "First Name": "John", 
+          "Last Name": "Doe",
+          Phone: ''  // Empty phone in transaction
+        })];
+        activeMembers = [TestData.activeMember({ 
+          Email: "test1@example.com", 
+          First: "John", 
+          Last: "Doe", 
+          Phone: existingPhone,
+          Joined: "2024-03-10", 
+          Expires: "2025-03-10" 
+        })];
+        
+        manager.processPaidTransactions(txns, activeMembers, expirySchedule);
+        
+        expect(activeMembers[0].Phone).toBe(existingPhone); // Phone preserved
+      });
+    })
+
     describe('logging tests', () => {
 
 
       it('should produce interesting logs when processing transactions', () => {
-        const txns = [{ ...transactionsFixture.paid[0] }, { ...transactionsFixture.paid[1] }];
-        activeMembers = [{ Email: "test2@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2021-01-10", "Renewed On": "", Status: 'Active' }];
+        const txns = [{ ...transactionsFixture.paid[0]}, { ...transactionsFixture.paid[1]}];
+        activeMembers = [{ Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2020-03-10", Expires: "2025-03-10", "Renewed On": "", Status: 'Active' }];
 
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
-        expect(consoleSpy).toHaveBeenCalledWith('transaction on row 3 test2@example.com is a renewing Active member');
-        expect(consoleSpy).toHaveBeenCalledWith('transaction on row 2 test1@example.com is a new member');
+        expect(consoleSpy).toHaveBeenCalledWith('transaction on row 2 test1@example.com is a renewing Active member');
+        expect(consoleSpy).toHaveBeenCalledWith('transaction on row 3 test2@example.com is a new member');
       });
     });
     describe('membership expiry period tests', () => {
@@ -944,7 +1049,7 @@ describe('Manager tests', () => {
             Email: "test1@example.com",
             Period: 1, First: "John",
             Last: "Doe",
-            Phone: '',
+            Phone: '(408) 386-9343',  // Phone from transaction
             Joined: joinDate,
             Expires: utils.addYearsToDate(activeMembers[0].Expires, 1),
             "Renewed On": manager.today(),
@@ -958,18 +1063,35 @@ describe('Manager tests', () => {
         expect(activeMembers).toEqual(expectedMembers);
       });
 
-      it('if renewal is after expiry then new expiry is today + period', () => {
-        activeMembers = [TestData.activeMember({ Email: "test1@example.com", First: "John", Last: "Doe", Joined: joinDate, Expires: utils.addDaysToDate(joinDate, -10) })]
+      it('if transaction comes after member expiry, creates new membership (not renewal)', () => {
+        // Member expired in the past - temporal validation prevents renewal match
+        activeMembers = [TestData.activeMember({ Email: "test1@example.com", First: "John", Last: "Doe", Joined: joinDate, Expires: utils.addDaysToDate(joinDate, -10), Phone: '(555) 111-1111' })]
         const expectedMembers = [
+          // Original expired member unchanged
           {
             Email: "test1@example.com",
             Period: 1,
             First: "John",
             Last: "Doe",
-            Phone: '',
+            Phone: '(555) 111-1111',
             Joined: joinDate,
+            Expires: utils.addDaysToDate(joinDate, -10),
+            "Renewed On": '',
+            Status: "Active",
+            "Directory Share Name": false,
+            "Directory Share Email": false,
+            "Directory Share Phone": false
+          },
+          // New membership created
+          {
+            Email: "test1@example.com",
+            Period: 1,
+            First: "John",
+            Last: "Doe",
+            Phone: '(408) 386-9343',
+            Joined: manager.today(),
             Expires: utils.addYearsToDate(manager.today(), 1),
-            "Renewed On": manager.today(),
+            "Renewed On": '',
             Status: "Active",
             "Directory Share Name": false,
             "Directory Share Email": false,
@@ -978,6 +1100,8 @@ describe('Manager tests', () => {
         ]
         manager.processPaidTransactions(txns, activeMembers, expirySchedule);
         expect(activeMembers).toEqual(expectedMembers);
+        // Should add new member to groups
+        expect(groupManager.groupAddFun).toHaveBeenCalled();
       });
     })
 
@@ -1080,8 +1204,8 @@ describe('Manager tests', () => {
         const auditLogger = new Audit.Logger(today);
         const managerWithAudit = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger);
         
-        const members = [TestData.activeMember({ Email: "renewing@example.com" })];
-        const txns = [TestData.paidTransaction({ "Email Address": "renewing@example.com", "First Name": "Renewing", "Last Name": "Member" })];
+        const members = [TestData.activeMember({ Email: "renewing@example.com", First: "Test", Last: "User", Expires: utils.addDaysToDate(today, 10) })];
+        const txns = [TestData.paidTransaction({ "Email Address": "renewing@example.com", "First Name": "Test", "Last Name": "User" })];
         
         const result = managerWithAudit.processPaidTransactions(txns, members, expirySchedule);
         
@@ -1162,7 +1286,8 @@ describe('Manager tests', () => {
         const members = [TestData.activeMember({ 
           Email: "same@example.com", 
           First: "Same", 
-          Last: "Person"
+          Last: "Person",
+          Expires: utils.addDaysToDate(today, 10)
         })];
         
         const txns = [TestData.paidTransaction({ 
@@ -1652,14 +1777,15 @@ describe('Manager tests', () => {
   });
 
   describe('findExistingMemberForTransaction', () => {
-    it('should return ACTIVE_EMAIL_EXACT match for Active member with exact email', () => {
+    it('should return POSSIBLE_RENEWAL for Active member matching name+email/phone with valid temporal relationship', () => {
       const txn = { "Email Address": "john@example.com", "First Name": "John", "Last Name": "Doe", Phone: "555-1234" };
       const members = [
-        { Email: "john@example.com", First: "John", Last: "Doe", Phone: "555-1234", Status: "Active", Joined: "2023-01-01", Expires: "2024-01-01" }
+        { Email: "john@example.com", First: "John", Last: "Doe", Phone: "555-1234", Status: "Active", Joined: "2023-01-01", Expires: "2025-01-01" }
       ];
-      const result = MembershipManagement.Manager.findExistingMemberForTransaction(txn, members);
+      const today = "2024-12-15"; // Before expiry
+      const result = MembershipManagement.Manager.findExistingMemberForTransaction(txn, members, today);
       expect(result.found).toBe(true);
-      expect(result.matchType).toBe('ACTIVE_EMAIL_EXACT');
+      expect(result.matchType).toBe('POSSIBLE_RENEWAL');
       expect(result.index).toBe(0);
       expect(result.member.Email).toBe("john@example.com");
     });
@@ -1667,25 +1793,40 @@ describe('Manager tests', () => {
     it('should return NEW_MEMBER when no match found', () => {
       const txn = { "Email Address": "jane@example.com", "First Name": "Jane", "Last Name": "Smith", Phone: "555-5678" };
       const members = [
-        { Email: "john@example.com", First: "John", Last: "Doe", Phone: "555-1234", Status: "Active", Joined: "2023-01-01", Expires: "2024-01-01" }
+        { Email: "john@example.com", First: "John", Last: "Doe", Phone: "555-1234", Status: "Active", Joined: "2023-01-01", Expires: "2025-01-01" }
       ];
-      const result = MembershipManagement.Manager.findExistingMemberForTransaction(txn, members);
+      const today = "2024-12-15";
+      const result = MembershipManagement.Manager.findExistingMemberForTransaction(txn, members, today);
       expect(result.found).toBe(false);
       expect(result.matchType).toBe('NEW_MEMBER');
       expect(result.index).toBe(-1);
       expect(result.member).toBeNull();
     });
 
-    it('should prefer ACTIVE_EMAIL_EXACT over POSSIBLE_RENEWAL', () => {
+    it('should match POSSIBLE_RENEWAL even with different email if name+phone match and temporal valid', () => {
+      const txn = { "Email Address": "john@newcompany.com", "First Name": "John", "Last Name": "Doe", Phone: "555-1234" };
+      const members = [
+        { Email: "john@oldcompany.com", First: "John", Last: "Doe", Phone: "555-1234", Status: "Active", Joined: "2023-01-01", Expires: "2025-01-01" }
+      ];
+      const today = "2024-12-15"; // Before expiry
+      const result = MembershipManagement.Manager.findExistingMemberForTransaction(txn, members, today);
+      expect(result.found).toBe(true);
+      expect(result.matchType).toBe('POSSIBLE_RENEWAL');
+      expect(result.index).toBe(0);
+      expect(result.member.Email).toBe("john@oldcompany.com");
+    });
+
+    it('should return NEW_MEMBER when transaction comes after existing membership expires', () => {
       const txn = { "Email Address": "john@example.com", "First Name": "John", "Last Name": "Doe", Phone: "555-1234" };
       const members = [
-        { Email: "john@oldcompany.com", First: "John", Last: "Doe", Phone: "555-1234", Status: "Expired", Joined: "2022-01-01", Expires: "2023-01-01" },
         { Email: "john@example.com", First: "John", Last: "Doe", Phone: "555-1234", Status: "Active", Joined: "2023-01-01", Expires: "2024-01-01" }
       ];
-      const result = MembershipManagement.Manager.findExistingMemberForTransaction(txn, members);
-      expect(result.found).toBe(true);
-      expect(result.matchType).toBe('ACTIVE_EMAIL_EXACT');
-      expect(result.index).toBe(1); // Second member
+      const today = "2024-12-15"; // Well after expiry - not a valid renewal
+      const result = MembershipManagement.Manager.findExistingMemberForTransaction(txn, members, today);
+      expect(result.found).toBe(false);
+      expect(result.matchType).toBe('NEW_MEMBER');
+      expect(result.index).toBe(-1);
+      expect(result.member).toBeNull();
     });
 
     describe('isSimilarMember (deprecated alias)', () => {

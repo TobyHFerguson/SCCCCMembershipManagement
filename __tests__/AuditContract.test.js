@@ -221,7 +221,7 @@ describe('Audit Contract Tests', () => {
       ];
       
       const membershipData = [
-        { Email: 'existing@test.com', First: 'John', Last: 'Doe', Status: 'Active', Joined: '2023-01-01', Expires: '2024-01-01', Period: 1, 'Renewed On': '' }
+        { Email: 'existing@test.com', First: 'John', Last: 'Doe', Status: 'Active', Joined: '2023-01-01', Expires: '2025-04-01', Period: 1, 'Renewed On': '' }  // Future date for valid temporal match
       ];
       const expirySchedule = [];
       
