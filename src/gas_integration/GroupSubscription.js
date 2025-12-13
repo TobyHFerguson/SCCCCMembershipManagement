@@ -10,12 +10,12 @@ function testGetMember() {
 // deliveryOptions links the value that GAS expects (as a key) to the human readable text that is displayed in the UI
 // and the description that is displayed in the tooltip.
 GroupSubscription.deliveryOptions = {
-            "UNSUBSCRIBE": ["Unsubscribed", "Not subscribed to the group"],
-            "ALL_MAIL": ["Each message", "Receive an email for every message"],
-            "DAILY" : ["Abridged", "Receive abridged, bundled emails (max 150 messages, at least once a day)"],
-            "DIGEST": ["Digest", "Receive bundled emails (max 25 messages)"],
-            "NONE": ["None", "Do not receive emails; read via the web app"]
-        };
+  "UNSUBSCRIBE": ["Unsubscribed", "Not subscribed to the group"],
+  "ALL_MAIL": ["Each message", "Receive an email for every message"],
+  "DAILY": ["Abridged", "Receive abridged, bundled emails (max 150 messages, at least once a day)"],
+  "DIGEST": ["Digest", "Receive bundled emails (max 25 messages)"],
+  "NONE": ["None", "Do not receive emails; read via the web app"]
+};
 
 GroupSubscription.hasMember = function (groupEmail, memberEmail) {
   const groups = GroupSubscription.listGroupsFor(memberEmail)
@@ -61,13 +61,17 @@ GroupSubscription.getMember = function (groupEmail, memberEmail) {
 }
 
 GroupSubscription.subscribeMember = function (member, groupEmail) {
-    try {
-  const newMember = AdminDirectory.Members.insert(member, groupEmail);
-  console.log(`Subscribed ${member.email} to group ${groupEmail}`)
-} catch (e){
+  try {
+    const newMember = AdminDirectory.Members.insert(member, groupEmail);
+    console.log(`Subscribed ${member.email} to group ${groupEmail}`)
+  } catch (e) {
+    // Skip if member already exists
+    if (e.message.includes('Member already exists')) {
+      return;
+    }
     e.message += ` when subscribing user ${member.email} to group ${groupEmail}`;
     throw e;
-}
+  }
 
 }
 
@@ -84,7 +88,7 @@ GroupSubscription.removeMember = function (groupEmail, userEmail) {
       return;
     } else {
       e.message += ` when removing user ${userEmail} from group ${groupEmail}`;
-    throw e;
+      throw e;
     }
   }
   console.log(`Unsubscribed ${userEmail} from ${groupEmail}`);
