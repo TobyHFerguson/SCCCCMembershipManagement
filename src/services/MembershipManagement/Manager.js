@@ -807,17 +807,31 @@ MembershipManagement.Manager = class {
         const removeIdx = initialIdx;
         membershipData.splice(removeIdx, 1);
 
+        const mergedMember = membershipData[latestIdx > removeIdx ? latestIdx - 1 : latestIdx];
+        
         try {
           console.log('convertJoinToRenew: merged rows', {
             mergedIntoIndex: latestIdx > removeIdx ? latestIdx - 1 : latestIdx,
             before,
-            after: membershipData[latestIdx > removeIdx ? latestIdx - 1 : latestIdx]
+            after: mergedMember
           });
         } catch (logErr) {
           console.log('convertJoinToRenew: logging error after merge', logErr && logErr.toString ? logErr.toString() : logErr);
         }
 
-        return { success: true, message: 'Rows merged successfully', initialEmail: INITIAL.Email, latestEmail: LATEST.Email };
+        return { 
+          success: true, 
+          message: 'Rows merged successfully', 
+          initialEmail: INITIAL.Email, 
+          latestEmail: LATEST.Email,
+          mergeDetails: {
+            initialMember: INITIAL,
+            latestMember: before,
+            mergedMember: mergedMember,
+            removedRow: initialIdx + 2,
+            resultRow: (latestIdx > removeIdx ? latestIdx - 1 : latestIdx) + 2
+          }
+        };
       }
 
       // Condition not met: do not modify membershipData

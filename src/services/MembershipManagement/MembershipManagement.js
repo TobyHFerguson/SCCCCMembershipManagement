@@ -18,7 +18,10 @@ MembershipManagement.processTransactions = function () {
   Common.Data.Storage.SpreadsheetManager.convertLinks('Transactions');
   const transactionsFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Transactions').needFormulas();
   const transactions = Common.Data.Storage.SpreadsheetManager.getDataWithFormulas(transactionsFiddler);
-  if (transactions.length === 0) { return; }
+  if (transactions.length === 0) { 
+    Common.Logger.info('MembershipManagement', 'No transactions to process');
+    return { processed: 0, joins: 0, renewals: 0, hasPendingPayments: false, errors: [] }; 
+  }
 
   const membershipFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
   const expiryScheduleFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
@@ -32,13 +35,27 @@ MembershipManagement.processTransactions = function () {
     expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
   }
   
+  // Count operation types from audit entries
+  const joins = auditEntries ? auditEntries.filter(e => e.Type === 'Join' && e.Outcome === 'success').length : 0;
+  const renewals = auditEntries ? auditEntries.filter(e => e.Type === 'Renew' && e.Outcome === 'success').length : 0;
+  const processed = joins + renewals;
+  
   // Persist audit log entries
   if (auditEntries && auditEntries.length > 0) {
     MembershipManagement.Internal.persistAuditEntries_(auditEntries);
   }
   
+  // Log comprehensive summary
+  Common.Logger.info('MembershipManagement', 'Transaction processing completed', {
+    processed,
+    joins,
+    renewals,
+    errors: errors.length,
+    hasPendingPayments
+  });
+  
   errors.forEach(e => Common.Logger.error('MembershipManagement', `Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}`, { stack: e.stack }));
-  return { hasPendingPayments, errors };
+  return { processed, joins, renewals, hasPendingPayments, errors };
 }
 
 MembershipManagement.processMigrations = function () {
@@ -95,12 +112,17 @@ MembershipManagement.generateExpiringMembersList = function () {
 
     if (result.messages.length === 0) {
       Common.Logger.info('MembershipManagement', 'No memberships required expiration processing');
-      return;
+      return { addedToQueue: 0, scheduleEntriesProcessed: 0 };
     }
+    
     // Map generator messages into FIFOItem objects and append to ExpirationFIFO
     const expirationQueue = expirationFIFO.getData() || [];
+    const initialQueueLength = expirationQueue.length;
 
     const makeId = () => `${new Date().toISOString().replace(/[:.]/g, '')}-${Math.random().toString(16).slice(2, 8)}`;
+    
+    // Count by expiry type for detailed logging
+    const expiryTypeCounts = {};
 
     for (const msg of result.messages) {
       /** @type {MembershipManagement.FIFOItem} */
@@ -119,19 +141,41 @@ MembershipManagement.generateExpiringMembersList = function () {
       };
 
       expirationQueue.push(item);
+      
+      // Count expiry types (extract from subject like "Expiry1", "Expiry2", etc.)
+      const expiryTypeMatch = msg.subject.match(/Expiry(\d)/);
+      if (expiryTypeMatch) {
+        const expiryType = expiryTypeMatch[0];
+        expiryTypeCounts[expiryType] = (expiryTypeCounts[expiryType] || 0) + 1;
+      }
     }
 
     expirationFIFO.setData(expirationQueue).dumpValues();
     membershipFiddler.setData(membershipData).dumpValues();
     expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
     
-    // Note: generateExpiringMembersList doesn't currently return auditEntries
-    // This is left for future implementation if needed
-    // if (result.auditEntries && result.auditEntries.length > 0) {
-    //   MembershipManagement.Internal.persistAuditEntries_(result.auditEntries);
-    // }
+    const addedToQueue = result.messages.length;
+    const scheduleEntriesProcessed = result.scheduleEntriesProcessed || result.messages.length;
+    
+    // Create audit entry for this operation
+    const auditLogger = new Audit.Logger();
+    const auditEntry = auditLogger.createLogEntry({
+      type: 'ProcessExpirations',
+      outcome: 'success',
+      note: `Generated ${addedToQueue} expiration queue items from schedule`,
+      error: '',
+      jsonData: { addedToQueue, scheduleEntriesProcessed, expiryTypeCounts }
+    });
+    MembershipManagement.Internal.persistAuditEntries_([auditEntry]);
 
-    Common.Logger.info('MembershipManagement', `Successfully appended ${expirationQueue.length} membership expiration plan(s) to FIFO`);
+    // Log comprehensive summary
+    Common.Logger.info('MembershipManagement', 'Expiration processing completed', {
+      addedToQueue,
+      scheduleEntriesProcessed,
+      queueLengthBefore: initialQueueLength,
+      queueLengthAfter: expirationQueue.length,
+      expiryTypeCounts
+    });
     
     // If we added items to the queue, kick off the consumer to start processing
     // Pass through already-fetched fiddlers to avoid redundant getFiddler calls
@@ -140,6 +184,8 @@ MembershipManagement.generateExpiringMembersList = function () {
         fiddlers: { expirationFIFO, membershipFiddler, expiryScheduleFiddler } 
       });
     }
+    
+    return { addedToQueue, scheduleEntriesProcessed, expiryTypeCounts };
   } catch (error) {
     const errorMessage = `Membership expiration processing failed: ${error.message}`;
     Common.Logger.error('MembershipManagement', errorMessage, { stack: error.stack });
