@@ -99,8 +99,8 @@ VotingService.Trigger = {
                         userMessage = `⚠️ TEMPORARY SERVER ERROR\n\nGoogle's servers are temporarily unavailable. This is not a problem with your form URL.\n\n🔄 ACTION REQUIRED:\n1. Wait 30-60 seconds\n2. Re-enter the Form URL in this cell\n3. The system will automatically retry\n\nIf the problem persists after several attempts, try again later.`;
                         toastMessage = `⚠️ Temporary server error in row ${editedRow} - please wait 30-60 seconds and re-enter the Form URL to retry`;
                     } else {
-                        userMessage = `❌ FORM ACCESS ERROR\n\nError: ${error.message}\n\n🔍 TROUBLESHOOTING:\n1. Check that the Form URL is correct and complete\n2. Ensure you have access to the source form\n3. Verify the form is not deleted or restricted\n\nSee System_Logs sheet in main spreadsheet for technical details.`;
-                        toastMessage = `❌ Form access error in row ${editedRow} - please check the Form URL and your permissions`;
+                        userMessage = `❌ FORM ACCESS ERROR\n\nError: ${error.message}\n\n🔍 TROUBLESHOOTING:\n1. Check that the Form URL is correct and complete\n2. Ensure seed ballot  was shared with election.admins@sc3.club\n3. Ensure membership-automation@sc3.club is a member of election.admins@sc3.club\n4. Verify the form is not deleted or restricted\n\nSee System_Logs sheet in main spreadsheet for technical details.`;
+                        toastMessage = `❌ Form access error in row ${editedRow} - please check the Form was shared with election.admins@sc3.club as Editor and membership-automation@sc3.club is a member of that group`;
                     }
                     
                     sheet.getRange(editedRow, formEditUrlColumnIndex).setNote(userMessage);
