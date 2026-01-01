@@ -22,6 +22,7 @@
   },
   "scripts": {
     "test": "jest",
+    "typecheck": "tsc --noEmit",
     "postinstall": "echo '.clasp.json' >> .gitignore",
     "set-dev-env": "npx clasp-env --scriptId \"${npm_package_config_CLASP_DEV_SCRIPT_ID}\" --folder .",
     "set-prod-env": "npx clasp-env --scriptId \"${npm_package_config_CLASP_PROD_SCRIPT_ID}\" --folder .",
