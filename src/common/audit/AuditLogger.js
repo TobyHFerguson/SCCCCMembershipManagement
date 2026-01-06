@@ -1,5 +1,10 @@
 /// <reference path="./Audit.d.ts" />
 
+// Load AuditLogEntry class for Node.js/Jest environment
+if (typeof module !== 'undefined') {
+    require('./AuditLogEntry.js');
+}
+
 // Audit namespace declared in src/1namespaces.js
 // For Node.js/Jest: globalThis ensures we don't redeclare
 if (typeof globalThis.Audit === 'undefined') {
@@ -9,6 +14,7 @@ if (typeof globalThis.Audit === 'undefined') {
 /**
  * Pure JavaScript audit logger
  * Follows generator pattern - creates audit log entries without side effects
+ * Now uses Audit.LogEntry class for type safety and validation
  */
 Audit.Logger = class {
     constructor(today) {
@@ -16,9 +22,9 @@ Audit.Logger = class {
     }
 
     /**
-     * Creates an audit log entry
+     * Creates an audit log entry using the safe Audit.LogEntry class
      * @param {Audit.LogParams} params - Audit log parameters
-     * @returns {Audit.LogEntry} Audit log entry ready for persistence
+     * @returns {Audit.LogEntry} Validated audit log entry ready for persistence
      */
     createLogEntry(params) {
         if (!params || typeof params !== 'object') {
@@ -31,22 +37,21 @@ Audit.Logger = class {
             throw new Error('outcome must be "success" or "fail"');
         }
 
-        const entry = {
-            Timestamp: new Date(this._today),
-            Type: params.type,
-            Outcome: params.outcome,
-            Note: params.note || '',
-            Error: params.error || '',
-            JSON: params.jsonData ? JSON.stringify(params.jsonData, null, 2) : ''
-        };
-
-        return entry;
+        // Use Audit.LogEntry.create for safe construction
+        return Audit.LogEntry.create(
+            params.type,
+            params.outcome,
+            params.note || '',
+            params.error || '',
+            params.jsonData ? JSON.stringify(params.jsonData, null, 2) : '',
+            this._today  // Pass the logger's timestamp
+        );
     }
 
     /**
      * Creates multiple audit log entries at once
      * @param {Audit.LogParams[]} paramsArray - Array of audit log parameters
-     * @returns {Audit.LogEntry[]} Array of audit log entries
+     * @returns {Audit.LogEntry[]} Array of validated audit log entries
      */
     createLogEntries(paramsArray) {
         if (!Array.isArray(paramsArray)) {

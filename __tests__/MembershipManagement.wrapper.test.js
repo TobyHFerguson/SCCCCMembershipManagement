@@ -142,16 +142,23 @@ describe('MembershipManagement audit persistence integration', () => {
         global.Common.Logger = global.Common.Logger || {};
         global.Common.Logger.info = jest.fn();
         global.Common.Logger.error = jest.fn();
+        global.Common.Logger.warn = jest.fn();  // Added for deduplication warnings
         
-        // Ensure Audit namespace exists globally and load Audit.Persistence helper
-        const auditModule = require('../src/common/audit/AuditPersistence.js');
-        global.Audit = auditModule.Audit;
+        // Ensure Audit namespace exists globally and load both modules
+        const auditLogEntryModule = require('../src/common/audit/AuditLogEntry.js');
+        const auditPersistenceModule = require('../src/common/audit/AuditPersistence.js');
+        
+        // The AuditLogEntry exports the base Audit namespace with LogEntry
+        global.Audit = auditLogEntryModule;
+        // The AuditPersistence module adds the Persistence namespace
+        global.Audit.Persistence = auditPersistenceModule.Audit.Persistence;
     });
 
     it('persistAuditEntries_ uses Audit.Persistence.persistAuditEntries helper', () => {
+        // Use factory method to create proper Audit.LogEntry instances
         const mockAuditEntries = [
-            { Type: 'ProcessExpiredMember', Outcome: 'success', Note: 'Test entry 1', Timestamp: '2024-01-01T00:00:00.000Z' },
-            { Type: 'DeadLetter', Outcome: 'fail', Note: 'Test entry 2', Error: 'Test error', Timestamp: '2024-01-01T00:00:01.000Z' }
+            global.Audit.LogEntry.create('ProcessExpiredMember', 'success', 'Test entry 1', '', '', new Date('2024-01-01T00:00:00.000Z')),
+            global.Audit.LogEntry.create('DeadLetter', 'fail', 'Test entry 2', 'Test error', '', new Date('2024-01-01T00:00:01.000Z'))
         ];
 
         const mockAuditFiddler = {

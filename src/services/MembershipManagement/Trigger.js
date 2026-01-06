@@ -16,7 +16,7 @@ const TRIGGER_DELETED_LOG = 'Payment check trigger deleted.';
 const TRIGGER_NOT_FOUND_LOG = 'Trigger not found, nothing to delete.';
 
 const SHORTER_PERIOD = 3 * 60 * 1000; // 3 minutes - Back off to 5-min checks
-const LONGER_PERIOD =  5 * 60 * 1000 // 6 minutes - Back off to hourly
+const LONGER_PERIOD = 5 * 60 * 1000 // 6 minutes - Back off to hourly
 
 function checkPaymentStatus() {
     console.log('checkPaymentStatus');
@@ -40,7 +40,7 @@ MembershipManagement.Trigger = {
         PropertiesService.getScriptProperties().setProperty('paymentCheckStartTime', startTime.toISOString()); // Reset start time
     },
 
-    _checkPaymentStatus: function() {
+    _checkPaymentStatus: function () {
         console.log(CHECK_PAYMENT_STATUS_LOG);
         const now = new Date();
         const startTime = MembershipManagement.Trigger._getTimeFromProperty('paymentCheckStartTime') || now;
@@ -66,12 +66,12 @@ MembershipManagement.Trigger = {
         }
     },
 
-    _getTimeFromProperty: function(propertyName) {
+    _getTimeFromProperty: function (propertyName) {
         const time = PropertiesService.getScriptProperties().getProperty(propertyName);
         return time ? new Date(time) : null;
     },
 
-    _hasPendingPayments: function() {
+    _hasPendingPayments: function () {
         const spreadsheetId = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_ID_PROPERTY);
         const lastUpdateTime = MembershipManagement.Trigger._getLastSpreadsheetUpdateTime(spreadsheetId); // Use current time as last update time
         const lastProcessedTime = MembershipManagement.Trigger._getTimeFromProperty('lastProcessedTime');
@@ -82,15 +82,38 @@ MembershipManagement.Trigger = {
         }
 
         PropertiesService.getScriptProperties().setProperty('lastProcessedTime', new Date().toISOString());
-        const { hasPendingPayments, errors } = MembershipManagement.processTransactions()
-        errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack
-            }`));
-        return hasPendingPayments
+        try {
+            const result = MembershipManagement.processTransactions();
+            const { hasPendingPayments, errors } = result;
+            errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack
+                }`));
+            return hasPendingPayments
+
+        } catch (error) {
+            Common.Logger.error('MembershipManagement.Trigger', `Exception in processTransactions: ${error.message}`);
+            
+            try {
+                MailApp.sendEmail({
+                    to: 'membership-automation@sc3.club',
+                    subject: 'CRITICAL: processTransactions Exception',
+                    body: `processTransactions threw exception at ${new Date().toISOString()}
+
+Error: ${error.message}
+Stack: ${error.stack || 'No stack trace'}
+
+Processing continues with assumption of pending payments.`
+                });
+            } catch (emailError) {
+                Common.Logger.error('MembershipManagement.Trigger', `Failed to send exception alert: ${emailError.message}`);
+            }
+            
+            return true;
+        }
     },
 
 
 
-    _createMinuteTrigger: function(functionName, minutes) {
+    _createMinuteTrigger: function (functionName, minutes) {
         console.log('_createMinuteTrigger', functionName, minutes);
         MembershipManagement.Trigger._deleteTriggersByFunctionName(functionName);
         const trigger = ScriptApp.newTrigger(functionName)
@@ -100,7 +123,7 @@ MembershipManagement.Trigger = {
         return trigger.getUniqueId();
     },
 
-    _createHourlyTrigger: function(functionName, hours) {
+    _createHourlyTrigger: function (functionName, hours) {
         console.log('_createHourlyTrigger', functionName, hours);
         MembershipManagement.Trigger._deleteTriggersByFunctionName(functionName);
         const trigger = ScriptApp.newTrigger(functionName)
@@ -110,7 +133,7 @@ MembershipManagement.Trigger = {
         return trigger.getUniqueId();
     },
 
-    _deleteTriggersByFunctionName: function(functionName) {
+    _deleteTriggersByFunctionName: function (functionName) {
         const triggers = ScriptApp.getProjectTriggers();
         for (const trigger of triggers) {
             if (trigger.getHandlerFunction() === functionName) {
@@ -120,7 +143,7 @@ MembershipManagement.Trigger = {
         }
     },
 
-    _getLastSpreadsheetUpdateTime: function(spreadsheetId) {
+    _getLastSpreadsheetUpdateTime: function (spreadsheetId) {
         spreadsheetId = spreadsheetId || SpreadsheetApp.getActiveSpreadsheet().getId()
         try {
             var file = DriveApp.getFileById(spreadsheetId);

@@ -29,76 +29,112 @@ Audit.Persistence = Audit.Persistence || {};
  * @param {Array<Audit.LogEntry>} auditEntries - Array of audit log entries from Manager
  * @returns {number} Number of rows written
  */
-Audit.Persistence.persistAuditEntries = function(auditFiddler, auditEntries) {
-    if (!auditFiddler) {
-      throw new Error('Audit.Persistence.persistAuditEntries: auditFiddler is required');
+Audit.Persistence.persistAuditEntries = function (auditFiddler, auditEntries) {
+  if (!auditFiddler) {
+    throw new Error('Audit.Persistence.persistAuditEntries: auditFiddler is required');
+  }
+
+  if (!Array.isArray(auditEntries)) {
+    throw new Error('Audit.Persistence.persistAuditEntries: auditEntries must be an array');
+  }
+
+  if (auditEntries.length === 0) {
+    return 0; // nothing to persist
+  }
+
+  // Use class-based validation to ensure all entries are proper Audit.LogEntry instances
+  const classValidatedEntries = Audit.LogEntry.validateArray(auditEntries, 'AuditPersistence.persistAuditEntries');
+  
+  // Deduplicate by unique ID if present
+  const seen = new Set();
+  const dedupedEntries = classValidatedEntries.filter(entry => {
+    if (entry.Id) {
+      if (seen.has(entry.Id)) {
+        Common.Logger.warn('AuditPersistence', `Skipping duplicate entry with Id=${entry.Id}`);
+        return false;
+      }
+      seen.add(entry.Id);
     }
-    
-    if (!Array.isArray(auditEntries)) {
-      throw new Error('Audit.Persistence.persistAuditEntries: auditEntries must be an array');
-    }
-    
-    if (auditEntries.length === 0) {
-      return 0; // nothing to persist
-    }
-    
-    // Validate schema for each entry
-    const validatedEntries = auditEntries.map((entry, idx) => {
-      if (!entry || typeof entry !== 'object') {
-        throw new Error(`Audit.Persistence.persistAuditEntries: entry at index ${idx} is not an object`);
-      }
-      
-      // Required fields
-      if (!entry.Type) {
-        throw new Error(`Audit.Persistence.persistAuditEntries: entry at index ${idx} missing required field: Type`);
-      }
-      if (!entry.Outcome) {
-        throw new Error(`Audit.Persistence.persistAuditEntries: entry at index ${idx} missing required field: Outcome`);
-      }
-      if (!entry.Outcome.match(/^(success|fail)$/)) {
-        throw new Error(`Audit.Persistence.persistAuditEntries: entry at index ${idx} has invalid Outcome: ${entry.Outcome} (must be 'success' or 'fail')`);
-      }
-      if (!entry.Note && !entry.Error) {
-        throw new Error(`Audit.Persistence.persistAuditEntries: entry at index ${idx} must have Note or Error`);
-      }
-      
-      return entry;
-    });
-    
-    // Deduplicate by unique ID if present
-    const seen = new Set();
-    const dedupedEntries = validatedEntries.filter(entry => {
-      if (entry.Id) {
-        if (seen.has(entry.Id)) {
-          Common.Logger.warn('AuditPersistence', `Skipping duplicate entry with Id=${entry.Id}`);
-          return false;
+    return true;
+  });
+
+  if (dedupedEntries.length === 0) {
+    return 0; // all duplicates
+  }
+  // Convert validated entries to array format for sheet persistence  
+  const rows = dedupedEntries.map(entry => entry.toArray());
+
+  // Append rows to Audit sheet via fiddler with structure validation
+  try {
+    const currentData = auditFiddler.getData();
+
+    // Validate sheet structure before proceeding
+    if (currentData.length > 0) {
+      const firstRow = currentData[0];
+      if (!Array.isArray(firstRow) || firstRow.length !== 6) {
+        const errorMsg = `AUDIT SHEET CORRUPTION: Expected 6 columns, got ${Array.isArray(firstRow) ? firstRow.length : typeof firstRow}`;
+        Common.Logger.error('AuditPersistence', errorMsg);
+        
+        // Send alert and attempt recovery
+        try {
+          MailApp.sendEmail({
+            to: 'membership-automation@sc3.club',
+            subject: 'CRITICAL: Audit Sheet Structure Corruption',
+            body: `Audit sheet structure corruption detected at ${new Date().toISOString()}
+
+${errorMsg}
+First row: ${JSON.stringify(firstRow)}
+
+Attempting recovery by clearing fiddler cache.
+If this email repeats, manual intervention required.`
+          });
+        } catch (emailError) {
+          Common.Logger.error('AuditPersistence', `Failed to send corruption alert: ${emailError.message}`);
         }
-        seen.add(entry.Id);
+
+        // Attempt recovery
+        Common.Data.Storage.SpreadsheetManager.clearFiddlerCache('Audit');
+        const freshFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Audit');
+        const freshData = freshFiddler.getData();
+
+        if (freshData.length > 0 && (!Array.isArray(freshData[0]) || freshData[0].length !== 6)) {
+          Common.Logger.error('AuditPersistence', 'Recovery failed - audit entries lost');
+          return 0;
+        }
+
+        auditFiddler = freshFiddler;
+        currentData = freshData;
       }
-      return true;
-    });
-    
-    if (dedupedEntries.length === 0) {
-      return 0; // all duplicates
     }
+
+    // Proceed with normal persistence
+    const updatedData = [...currentData, ...rows];
+    auditFiddler.setData(updatedData).dumpValues();
+
+    Common.Logger.info('AuditPersistence', `Wrote ${rows.length} audit entries`);
+    return rows.length;
+
+  } catch (err) {
+    const errMsg = `Failed to persist ${rows.length} audit entries: ${err.toString()}`;
+    Common.Logger.error('AuditPersistence', errMsg);
     
-    // Convert entries to rows for sheet persistence
-    // Expected Audit sheet columns: Timestamp, Type, Outcome, Note, Error, JsonData
-    const rows = dedupedEntries;
-    
-    // Append rows to Audit sheet via fiddler
+    // Send alert about persistence failure
     try {
-      const currentData = auditFiddler.getData();
-      const updatedData = [...currentData, ...rows];
-      auditFiddler.setData(updatedData).dumpValues();
-      
-      Common.Logger.info('AuditPersistence', `Wrote ${rows.length} audit entries`);
-      return rows.length;
-    } catch (err) {
-      const errMsg = `Failed to persist ${rows.length} entries: ${err && err.toString ? err.toString() : String(err)}`;
-      Common.Logger.error('AuditPersistence', errMsg);
-      throw new Error(errMsg);
+      MailApp.sendEmail({
+        to: 'membership-automation@sc3.club',
+        subject: 'CRITICAL: Audit Persistence Exception',
+        body: `Audit persistence failed at ${new Date().toISOString()}
+
+Error: ${errMsg}
+
+Processing continues without audit logging.`
+      });
+    } catch (emailError) {
+      Common.Logger.error('AuditPersistence', `Failed to send persistence alert: ${emailError.message}`);
     }
+    
+    return 0;
+  }
 };
 
 // Node.js export for testing
