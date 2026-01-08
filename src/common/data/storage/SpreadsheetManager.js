@@ -255,8 +255,21 @@ Common.Data.Storage.SpreadsheetManager = (function () {
         throw new Error(`Sheet name ${sheetName} not found in Bootstrap. Available: ${availableSheets.join(', ')}`);
       }
 
+      // Determine the spreadsheet ID - either from sheet config or container
+      let spreadsheetId;
+      if (sheet.id) {
+        // External spreadsheet
+        spreadsheetId = sheet.id;
+      } else {
+        // Local sheet in container spreadsheet
+        spreadsheetId = getContainerSpreadsheetId();
+        if (!spreadsheetId) {
+          throw new Error(`No container spreadsheet ID available for local sheet: ${sheetName}`);
+        }
+      }
+
       // Return the actual sheet object from the spreadsheet
-      const ss = SpreadsheetApp.openById(sheet.iD);
+      const ss = SpreadsheetApp.openById(spreadsheetId);
       return ss.getSheetByName(sheet.sheetName);
     }
   }
