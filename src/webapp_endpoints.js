@@ -282,11 +282,8 @@ function _persistAuditEntries(auditEntries) {
   }
   
   try {
-    // Get Audit fiddler
-    const auditFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Audit');
-    
-    // Persist entries
-    const numWritten = Audit.Persistence.persistAuditEntries(auditFiddler, auditEntries);
+    // Persist entries using direct SpreadsheetApp access
+    const numWritten = Audit.Persistence.persistAuditEntries(auditEntries);
     
     Common.Logger.debug('WebApp', `Persisted ${numWritten} audit entries`);
   } catch (error) {

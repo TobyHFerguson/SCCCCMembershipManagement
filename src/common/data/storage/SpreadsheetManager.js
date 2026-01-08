@@ -237,6 +237,27 @@ Common.Data.Storage.SpreadsheetManager = (function () {
       });
       range.setValues(newValues);
       SpreadsheetApp.flush();
+    },
+
+    /**
+     * Get a sheet directly by name (replaces fiddler for simpler access)
+     * @param {string} sheetName - Name of the sheet from Bootstrap
+     * @returns {GoogleAppsScript.Spreadsheet.Sheet} The sheet instance
+     */
+    getSheet: (sheetName) => {
+      if (!sheets) {
+        _initializeSheets();
+      }
+
+      const sheet = sheets[sheetName];
+      if (!sheet) {
+        const availableSheets = Object.keys(sheets);
+        throw new Error(`Sheet name ${sheetName} not found in Bootstrap. Available: ${availableSheets.join(', ')}`);
+      }
+
+      // Return the actual sheet object from the spreadsheet
+      const ss = SpreadsheetApp.openById(sheet.iD);
+      return ss.getSheetByName(sheet.sheetName);
     }
   }
 })()

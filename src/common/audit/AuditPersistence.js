@@ -13,8 +13,7 @@
  * Layer: Layer 1 Infrastructure (can use Common.Logger)
  * 
  * Usage:
- *   const auditFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Audit');
- *   const numWritten = Audit.Persistence.persistAuditEntries(auditFiddler, result.auditEntries);
+ *   const numWritten = Audit.Persistence.persistAuditEntries(result.auditEntries);
  */
 
 // Extend Audit namespace (declared in 1namespaces.js in GAS)
@@ -23,16 +22,12 @@ if (typeof Audit === 'undefined') Audit = {};
 Audit.Persistence = Audit.Persistence || {};
 
 /**
- * Persist audit entries to the Audit sheet via fiddler
+ * Persist audit entries to the Audit sheet via direct SpreadsheetApp
  * 
- * @param {object} auditFiddler - Fiddler instance for Audit sheet
  * @param {Array<Audit.LogEntry>} auditEntries - Array of audit log entries from Manager
  * @returns {number} Number of rows written
  */
-Audit.Persistence.persistAuditEntries = function (auditFiddler, auditEntries) {
-  if (!auditFiddler) {
-    throw new Error('Audit.Persistence.persistAuditEntries: auditFiddler is required');
-  }
+Audit.Persistence.persistAuditEntries = function (auditEntries) {
 
   if (!Array.isArray(auditEntries)) {
     throw new Error('Audit.Persistence.persistAuditEntries: auditEntries must be an array');
@@ -64,54 +59,51 @@ Audit.Persistence.persistAuditEntries = function (auditFiddler, auditEntries) {
   // Convert validated entries to array format for sheet persistence  
   const rows = dedupedEntries.map(entry => entry.toArray());
 
-  // Append rows to Audit sheet via fiddler with structure validation
+  // Append rows to Audit sheet via direct SpreadsheetApp
   try {
-    const currentData = auditFiddler.getData();
-
-    // Validate sheet structure before proceeding
-    if (currentData.length > 0) {
-      const firstRow = currentData[0];
-      if (!Array.isArray(firstRow) || firstRow.length !== 6) {
-        const errorMsg = `AUDIT SHEET CORRUPTION: Expected 6 columns, got ${Array.isArray(firstRow) ? firstRow.length : typeof firstRow}`;
-        Common.Logger.error('AuditPersistence', errorMsg);
-        
-        // Send alert and attempt recovery
-        try {
-          MailApp.sendEmail({
-            to: 'membership-automation@sc3.club',
-            subject: 'CRITICAL: Audit Sheet Structure Corruption',
-            body: `Audit sheet structure corruption detected at ${new Date().toISOString()}
-
-${errorMsg}
-First row: ${JSON.stringify(firstRow)}
-
-Attempting recovery by clearing fiddler cache.
-If this email repeats, manual intervention required.`
-          });
-        } catch (emailError) {
-          Common.Logger.error('AuditPersistence', `Failed to send corruption alert: ${emailError.message}`);
-        }
-
-        // Attempt recovery
-        Common.Data.Storage.SpreadsheetManager.clearFiddlerCache('Audit');
-        const freshFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Audit');
-        const freshData = freshFiddler.getData();
-
-        if (freshData.length > 0 && (!Array.isArray(freshData[0]) || freshData[0].length !== 6)) {
-          Common.Logger.error('AuditPersistence', 'Recovery failed - audit entries lost');
-          return 0;
-        }
-
-        auditFiddler = freshFiddler;
-        currentData = freshData;
-      }
+    // Get the Audit sheet directly
+    const auditSheet = Common.Data.Storage.SpreadsheetManager.getSheet('Audit');
+    if (!auditSheet) {
+      throw new Error('Audit sheet not found');
     }
 
-    // Proceed with normal persistence
-    const updatedData = [...currentData, ...rows];
-    auditFiddler.setData(updatedData).dumpValues();
+    // Get current data to validate structure
+    const existingData = auditSheet.getDataRange().getValues();
+    
+    // Validate sheet has expected 6-column structure (if not empty)
+    if (existingData.length > 0 && existingData[0].length !== 6) {
+      const errorMsg = `AUDIT SHEET CORRUPTION: Expected 6 columns, found ${existingData[0].length}`;
+      Common.Logger.error('AuditPersistence', errorMsg);
+      
+      // Send critical alert
+      try {
+        MailApp.sendEmail({
+          to: 'membership-automation@sc3.club',
+          subject: 'CRITICAL: Audit Sheet Column Mismatch',
+          body: `Audit sheet column corruption detected at ${new Date().toISOString()}
 
-    Common.Logger.info('AuditPersistence', `Wrote ${rows.length} audit entries`);
+${errorMsg}
+Expected: Timestamp, Type, Outcome, Note, Error, JSON (6 columns)
+Found: ${existingData[0].length} columns
+
+Manual intervention required to fix sheet structure.
+Audit entries cannot be written until sheet is corrected.`
+        });
+      } catch (emailError) {
+        Common.Logger.error('AuditPersistence', `Failed to send corruption alert: ${emailError.message}`);
+      }
+      
+      return 0; // Cannot proceed with corrupted sheet
+    }
+
+    // Append new rows directly to the sheet
+    if (rows.length > 0) {
+      const startRow = auditSheet.getLastRow() + 1;
+      const range = auditSheet.getRange(startRow, 1, rows.length, 6);
+      range.setValues(rows);
+    }
+
+    Common.Logger.info('AuditPersistence', `Wrote ${rows.length} audit entries directly to sheet`);
     return rows.length;
 
   } catch (err) {

@@ -560,10 +560,8 @@ MembershipManagement.Internal.persistAuditEntries_ = function (auditEntries) {
   }
   
   try {
-    const auditFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Audit');
-    
     // Use the canonical persistence helper (enforces schema validation and deduplication)
-    const numWritten = Audit.Persistence.persistAuditEntries(auditFiddler, auditEntries);
+    const numWritten = Audit.Persistence.persistAuditEntries(auditEntries);
     
     Common.Logger.info('MembershipManagement', `Persisted ${numWritten} audit log entries`);
     return numWritten;
