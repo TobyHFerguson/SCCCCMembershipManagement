@@ -161,31 +161,36 @@ describe('MembershipManagement audit persistence integration', () => {
             global.Audit.LogEntry.create('DeadLetter', 'fail', 'Test entry 2', 'Test error', '', new Date('2024-01-01T00:00:01.000Z'))
         ];
 
-        const mockAuditFiddler = {
-            getData: jest.fn(() => []),
-            setData: jest.fn().mockReturnThis(),
-            dumpValues: jest.fn()
+        // Mock SpreadsheetManager.getSheet to return a mock sheet
+        const mockSheet = {
+            getDataRange: jest.fn().mockReturnValue({
+                getValues: jest.fn().mockReturnValue([
+                    ['Timestamp', 'Type', 'Outcome', 'Note', 'Error', 'JSON'] // Header row with 6 columns
+                ])
+            }),
+            getLastRow: jest.fn().mockReturnValue(1),
+            getRange: jest.fn().mockReturnValue({
+                setValues: jest.fn()
+            })
         };
 
         global.Common = global.Common || {};
         global.Common.Data = global.Common.Data || {};
         global.Common.Data.Storage = global.Common.Data.Storage || {};
         global.Common.Data.Storage.SpreadsheetManager = {
-            getFiddler: jest.fn((name) => {
-                if (name === 'Audit') return mockAuditFiddler;
-                throw new Error(`Unexpected fiddler: ${name}`);
-            })
+            getSheet: jest.fn(() => mockSheet)
         };
 
         // Call the wrapper function
         const numWritten = global.MembershipManagement.Internal.persistAuditEntries_(mockAuditEntries);
 
-        // Verify helper was called with correct fiddler
-        expect(global.Common.Data.Storage.SpreadsheetManager.getFiddler).toHaveBeenCalledWith('Audit');
+        // Verify getSheet was called with correct sheet name
+        expect(global.Common.Data.Storage.SpreadsheetManager.getSheet).toHaveBeenCalledWith('Audit');
 
-        // Verify audit entries were persisted
-        expect(mockAuditFiddler.setData).toHaveBeenCalled();
-        expect(mockAuditFiddler.dumpValues).toHaveBeenCalled();
+        // Verify sheet operations were called
+        expect(mockSheet.getDataRange).toHaveBeenCalled();
+        expect(mockSheet.getLastRow).toHaveBeenCalled();
+        expect(mockSheet.getRange).toHaveBeenCalledWith(2, 1, 2, 6); // Start at row 2, 2 entries, 6 columns
 
         // Verify return value
         expect(numWritten).toBe(2);
@@ -212,16 +217,19 @@ describe('MembershipManagement audit persistence integration', () => {
         global.Common.Data = global.Common.Data || {};
         global.Common.Data.Storage = global.Common.Data.Storage || {};
         global.Common.Data.Storage.SpreadsheetManager = {
-            getFiddler: jest.fn(() => {
-                throw new Error('Fiddler error');
+            getSheet: jest.fn(() => {
+                throw new Error('Sheet error');
             })
         };
 
         // Should not throw
         const numWritten = global.MembershipManagement.Internal.persistAuditEntries_(mockAuditEntries);
 
-        // Should log error via Common.Logger
-        expect(Common.Logger.error).toHaveBeenCalledWith('MembershipManagement', expect.stringContaining('Failed to persist audit entries'));
+        // Should log error via AuditPersistence (not MembershipManagement since error is caught internally)
+        const loggerCalls = Common.Logger.error.mock.calls;
+        const auditPersistenceCalls = loggerCalls.filter(call => call[0] === 'AuditPersistence');
+        expect(auditPersistenceCalls.length).toBeGreaterThan(0);
+        expect(auditPersistenceCalls[0][1]).toEqual(expect.stringContaining('Failed to persist'));
 
         // Should return 0
         expect(numWritten).toBe(0);
