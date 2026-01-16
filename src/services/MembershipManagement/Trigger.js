@@ -115,7 +115,8 @@ Processing continues with assumption of pending payments.`
 
     _createMinuteTrigger: function (functionName, minutes) {
         console.log('_createMinuteTrigger', functionName, minutes);
-        MembershipManagement.Trigger._deleteTriggersByFunctionName(functionName);
+        // NOTE: Caller is responsible for deleting existing triggers before calling this
+        // We don't delete here to avoid duplicate deletes and provide clearer error handling
         const trigger = ScriptApp.newTrigger(functionName)
             .timeBased()
             .everyMinutes(minutes)
@@ -125,7 +126,8 @@ Processing continues with assumption of pending payments.`
 
     _createHourlyTrigger: function (functionName, hours) {
         console.log('_createHourlyTrigger', functionName, hours);
-        MembershipManagement.Trigger._deleteTriggersByFunctionName(functionName);
+        // NOTE: Caller is responsible for deleting existing triggers before calling this
+        // We don't delete here to avoid duplicate deletes and provide clearer error handling
         const trigger = ScriptApp.newTrigger(functionName)
             .timeBased()
             .everyHours(hours)
