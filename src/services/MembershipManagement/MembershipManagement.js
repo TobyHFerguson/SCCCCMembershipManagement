@@ -177,12 +177,31 @@ MembershipManagement.generateExpiringMembersList = function () {
       expiryTypeCounts
     });
     
-    // If we added items to the queue, kick off the consumer to start processing
-    // Pass through already-fetched fiddlers to avoid redundant getFiddler calls
+    // If we added items to the queue, schedule a trigger to start processing
+    // CRITICAL: Do NOT call processExpirationFIFO synchronously here!
+    // That would cause race conditions with existing triggers processing the same items.
+    // Instead, delete any existing trigger and schedule a fresh one.
     if (result.messages.length > 0) {
-      MembershipManagement.processExpirationFIFO({ 
-        fiddlers: { expirationFIFO, membershipFiddler, expiryScheduleFiddler } 
-      });
+      try {
+        Common.Logger.info('MembershipManagement', 'Scheduling immediate processing trigger for queue items');
+        MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger');
+        MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', 1);
+      } catch (e) {
+        Common.Logger.error('MembershipManagement', 'Failed to schedule expiration processing trigger', { error: String(e) });
+        // CRITICAL: Try to create trigger even if delete failed - orphaned queue is worse than duplicate trigger
+        try {
+          MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', 1);
+          Common.Logger.info('MembershipManagement', 'Trigger created on retry after delete failure');
+        } catch (retryError) {
+          Common.Logger.error('MembershipManagement', 'CRITICAL: Failed to create trigger on retry - queue may be orphaned!', { error: String(retryError) });
+          // Send notification about orphaned queue
+          try {
+            MembershipManagement.Internal.sendOrphanedQueueNotification_(retryError, result.messages.length);
+          } catch (notifyError) {
+            Common.Logger.error('MembershipManagement', 'Failed to send orphaned queue notification', { error: String(notifyError) });
+          }
+        }
+      }
     }
     
     return { addedToQueue, scheduleEntriesProcessed, expiryTypeCounts };
@@ -329,6 +348,20 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
           MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', minutesUntilNext);
         } catch (e) {
           Common.Logger.error('MembershipManagement', 'Error scheduling expiration FIFO trigger', { error: String(e) });
+          // DEFENSIVE: If scheduling failed but queue has work, try to create a basic 1-minute trigger
+          // Better to process slowly than leave queue orphaned
+          try {
+            MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', 1);
+            Common.Logger.info('MembershipManagement', 'Created fallback 1-minute trigger after scheduling error');
+          } catch (retryError) {
+            Common.Logger.error('MembershipManagement', 'CRITICAL: Failed to create fallback trigger - queue orphaned!', { error: String(retryError) });
+            // Send notification about orphaned queue
+            try {
+              MembershipManagement.Internal.sendOrphanedQueueNotification_(retryError, finalQueue.length);
+            } catch (notifyError) {
+              Common.Logger.error('MembershipManagement', 'Failed to send orphaned queue notification', { error: String(notifyError) });
+            }
+          }
         }
       } else {
         // No more work - remove any existing minute trigger
@@ -342,8 +375,20 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
   } catch (error) {
     const errorMessage = `Expiration FIFO consumer failed: ${error.message}`;
     Common.Logger.error('MembershipManagement', errorMessage, { stack: error.stack });
+    
+    // DEFENSIVE: On catastrophic failure, delete trigger to prevent infinite retry loop
+    // Queue will need manual intervention, but at least we won't spam errors every minute
+    if (!opts.dryRun) {
+      try {
+        Common.Logger.info('MembershipManagement', 'Deleting trigger due to catastrophic failure');
+        MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger');
+      } catch (triggerError) {
+        Common.Logger.error('MembershipManagement', 'Failed to delete trigger after catastrophic failure', { error: String(triggerError) });
+      }
+    }
+    
     try { 
-      MembershipManagement.Internal.sendExpirationErrorNotification_(error); 
+      MembershipManagement.Internal.sendCatastrophicFailureNotification_(error, opts.batchSize || 50); 
     } catch (e) { 
       Common.Logger.error('MembershipManagement', 'Failed to send error notification', { error: String(e) }); 
     }
@@ -509,6 +554,134 @@ MembershipManagement.Internal.sendSingleEmail_ = function (email) {
   }
 }
 
+/**
+ * Send notification when queue is orphaned (no trigger created)
+ * @param {Error} error - The error that caused trigger creation to fail
+ * @param {number} queueSize - Number of items in orphaned queue
+ */
+MembershipManagement.Internal.sendOrphanedQueueNotification_ = function (error, queueSize) {
+  try {
+    const domain = Common.Config.Properties.getProperty('domain', 'sc3.club');
+    const testEmails = Common.Config.Properties.getBooleanProperty('testEmails', false);
+
+    const email = {
+      to: `membership-automation@${domain}`,
+      subject: `🚨 CRITICAL: Expiration Queue Orphaned - ${queueSize} Items Need Processing`,
+      htmlBody: `
+        <h2 style="color: #d32f2f;">🚨 CRITICAL: Queue Orphaned</h2>
+        <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+        <p><strong>Queue Size:</strong> ${queueSize} items waiting to be processed</p>
+        <p><strong>Error:</strong> Failed to create processing trigger</p>
+        <p><strong>Details:</strong> ${error.message}</p>
+        
+        <h3 style="color: #d32f2f;">IMMEDIATE ACTION REQUIRED</h3>
+        <p>The expiration queue has items but NO TRIGGER exists to process them. Members will NOT receive expiration notifications until this is fixed.</p>
+        
+        <h4>Recovery Steps:</h4>
+        <ol>
+          <li>Open Apps Script editor for SCCCC Membership Management</li>
+          <li>Check current trigger count: <code>ScriptApp.getProjectTriggers().length</code> (max is 20)</li>
+          <li>If at quota limit, delete unused triggers</li>
+          <li>Manually create trigger:
+            <pre style="background: #f5f5f5; padding: 10px;">
+MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger');
+MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', 1);</pre>
+          </li>
+          <li>Verify processing resumes by checking System Logs for "ProcessExpiredMember" entries</li>
+        </ol>
+        
+        <h4>Root Cause Investigation:</h4>
+        <ul>
+          <li>Check trigger quota (max 20 per script)</li>
+          <li>Verify script permissions are intact</li>
+          <li>Check for GAS service disruptions: <a href="https://www.google.com/appsstatus">Apps Status Dashboard</a></li>
+          <li>Review System Logs for additional error context</li>
+        </ul>
+        
+        <p><strong>Stack Trace:</strong></p>
+        <pre style="background: #f5f5f5; padding: 10px; font-size: 11px;">${error.stack}</pre>
+        
+        <p><em>This is an automated CRITICAL alert from the SCCCC Membership Management System.</em></p>
+      `,
+      noReply: true
+    };
+
+    if (testEmails) {
+      Common.Logger.info('MembershipManagement', 'testEmails: true - Orphaned queue notification (test mode)', { email });
+    } else {
+      MailApp.sendEmail(email);
+    }
+  } catch (e) {
+    Common.Logger.error('MembershipManagement', `Failed to send orphaned queue notification: ${e.message}`);
+  }
+}
+
+/**
+ * Send notification for catastrophic processing failures
+ * @param {Error} error - The catastrophic error
+ * @param {number} batchSize - Batch size being processed when failure occurred
+ */
+MembershipManagement.Internal.sendCatastrophicFailureNotification_ = function (error, batchSize) {
+  try {
+    const domain = Common.Config.Properties.getProperty('domain', 'sc3.club');
+    const testEmails = Common.Config.Properties.getBooleanProperty('testEmails', false);
+
+    const email = {
+      to: `membership-automation@${domain}`,
+      subject: `🚨 Expiration Processing Catastrophic Failure - Trigger Auto-Deleted`,
+      htmlBody: `
+        <h2 style="color: #d32f2f;">🚨 Catastrophic Processing Failure</h2>
+        <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+        <p><strong>Error:</strong> ${error.message}</p>
+        <p><strong>Action Taken:</strong> Processing trigger has been automatically deleted to prevent error loops</p>
+        
+        <h3 style="color: #ff6f00;">What Happened</h3>
+        <p>The expiration queue processor encountered a fatal error and threw an exception. To prevent infinite retry loops and error spam, the processing trigger has been automatically deleted. The queue will NOT be processed until you manually restart it after fixing the root cause.</p>
+        
+        <h4>Recovery Steps:</h4>
+        <ol>
+          <li>Investigate the root cause:
+            <ul>
+              <li><strong>Spreadsheet corruption:</strong> Check ExpirationFIFO sheet for data integrity</li>
+              <li><strong>Permission loss:</strong> Verify script has necessary permissions (Mail, Groups, Drive)</li>
+              <li><strong>Data format error:</strong> Check for malformed data in queue items</li>
+              <li><strong>Quota exceeded:</strong> Check GAS quotas (email, API calls)</li>
+            </ul>
+          </li>
+          <li>Fix the identified issue</li>
+          <li>Check ExpirationFIFO sheet - may need manual cleanup</li>
+          <li>Restart processing:
+            <pre style="background: #f5f5f5; padding: 10px;">
+MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', 1);</pre>
+          </li>
+          <li>Monitor System Logs to confirm processing resumes successfully</li>
+        </ol>
+        
+        <h4>Context:</h4>
+        <ul>
+          <li><strong>Batch Size:</strong> ${batchSize} items per run</li>
+          <li><strong>Time:</strong> ${new Date().toISOString()}</li>
+          <li><strong>Environment:</strong> ${Session.getActiveUser().getEmail() || 'Unknown'}</li>
+        </ul>
+        
+        <p><strong>Stack Trace:</strong></p>
+        <pre style="background: #f5f5f5; padding: 10px; font-size: 11px;">${error.stack}</pre>
+        
+        <p><em>This is an automated CRITICAL alert from the SCCCC Membership Management System.</em></p>
+      `,
+      noReply: true
+    };
+
+    if (testEmails) {
+      Common.Logger.info('MembershipManagement', 'testEmails: true - Catastrophic failure notification (test mode)', { email });
+    } else {
+      MailApp.sendEmail(email);
+    }
+  } catch (e) {
+    Common.Logger.error('MembershipManagement', `Failed to send catastrophic failure notification: ${e.message}`);
+  }
+}
+
 MembershipManagement.Internal.sendExpirationErrorNotification_ = function (error) {
   try {
     const domain = Common.Config.Properties.getProperty('domain', 'sc3.club');
@@ -534,7 +707,7 @@ MembershipManagement.Internal.sendExpirationErrorNotification_ = function (error
         
         <p><em>This is an automated notification from the SCCCC Membership Management System.</em></p>
       `,
-      replyTo: `membership@${domain}`
+      noReply: true
     };
 
     if (testEmails) {
