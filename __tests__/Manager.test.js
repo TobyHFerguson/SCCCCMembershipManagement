@@ -1962,4 +1962,187 @@ describe('Manager tests', () => {
       const pairs = MembershipManagement.Manager.findPossibleRenewals(members);
       expect(pairs).toEqual([[0, 1], [2, 3]]);
     });
-  });});
+  });
+
+  // ============================================================================
+  // EMAIL NORMALIZATION TESTS
+  // ============================================================================
+  
+  describe('normalizeEmail', () => {
+    it('lowercases uppercase email', () => {
+      expect(MembershipManagement.Manager.normalizeEmail('USER@EXAMPLE.COM')).toBe('user@example.com');
+    });
+
+    it('lowercases mixed case email', () => {
+      expect(MembershipManagement.Manager.normalizeEmail('User@Example.COM')).toBe('user@example.com');
+    });
+
+    it('trims whitespace from email', () => {
+      expect(MembershipManagement.Manager.normalizeEmail('  user@example.com  ')).toBe('user@example.com');
+    });
+
+    it('trims and lowercases together', () => {
+      expect(MembershipManagement.Manager.normalizeEmail('  USER@EXAMPLE.COM  ')).toBe('user@example.com');
+    });
+
+    it('handles already normalized email', () => {
+      expect(MembershipManagement.Manager.normalizeEmail('user@example.com')).toBe('user@example.com');
+    });
+
+    it('returns empty string for null', () => {
+      expect(MembershipManagement.Manager.normalizeEmail(null)).toBe('');
+    });
+
+    it('returns empty string for undefined', () => {
+      expect(MembershipManagement.Manager.normalizeEmail(undefined)).toBe('');
+    });
+
+    it('returns empty string for non-string', () => {
+      expect(MembershipManagement.Manager.normalizeEmail(123)).toBe('');
+    });
+
+    it('handles email with plus addressing', () => {
+      expect(MembershipManagement.Manager.normalizeEmail('User+Tag@Example.COM')).toBe('user+tag@example.com');
+    });
+  });
+
+  describe('email normalization in member operations', () => {
+    const testActionSpecs = Object.fromEntries(actionSpecsArray.map(spec => [spec.Type, spec]));
+    
+    describe('addNewMember_', () => {
+      it('normalizes email when creating new member', () => {
+        const groups = [{ Email: 'test@sc3.club' }];
+        const groupManager = { groupAddFun: jest.fn(), groupRemoveFun: jest.fn(), groupEmailReplaceFun: jest.fn() };
+        const manager = new MembershipManagement.Manager(testActionSpecs, groups, groupManager);
+
+        const txn = {
+          "Email Address": "USER@EXAMPLE.COM",
+          "First Name": "John",
+          "Last Name": "Doe",
+          Phone: "555-1234",
+          Period: 1
+        };
+        const membershipData = [];
+        const expirySchedule = [];
+
+        const newMember = manager.addNewMember_(txn, expirySchedule, membershipData);
+
+        expect(newMember.Email).toBe('user@example.com');
+        expect(membershipData[0].Email).toBe('user@example.com');
+      });
+    });
+
+    describe('changeMemberEmail_', () => {
+      it('normalizes new email when changing', () => {
+        const groups = [{ Email: 'test@sc3.club' }];
+        const groupManager = { 
+          groupAddFun: jest.fn(), 
+          groupRemoveFun: jest.fn(), 
+          groupEmailReplaceFun: jest.fn().mockReturnValue({ success: true })
+        };
+        const manager = new MembershipManagement.Manager(testActionSpecs, groups, groupManager);
+
+        const member = { Email: 'old@example.com', First: 'John', Last: 'Doe' };
+        const expirySchedule = [];
+
+        manager.changeMemberEmail_('old@example.com', 'NEW@EXAMPLE.COM', member, expirySchedule);
+
+        expect(member.Email).toBe('new@example.com');
+      });
+
+      it('does not call groupEmailReplaceFun when normalized emails are the same', () => {
+        const groups = [{ Email: 'test@sc3.club' }];
+        const groupManager = { 
+          groupAddFun: jest.fn(), 
+          groupRemoveFun: jest.fn(), 
+          groupEmailReplaceFun: jest.fn().mockReturnValue({ success: true })
+        };
+        const manager = new MembershipManagement.Manager(testActionSpecs, groups, groupManager);
+
+        const member = { Email: 'user@example.com', First: 'John', Last: 'Doe' };
+        const expirySchedule = [];
+
+        manager.changeMemberEmail_('USER@example.com', 'user@EXAMPLE.COM', member, expirySchedule);
+
+        expect(groupManager.groupEmailReplaceFun).not.toHaveBeenCalled();
+        expect(member.Email).toBe('user@example.com');
+      });
+    });
+
+    describe('isPossibleRenewal with case variations', () => {
+      it('matches members with different case emails', () => {
+        const member1 = { 
+          Email: "toby@mail.com", 
+          Phone: "(408) 386-9343", 
+          First: "Toby", 
+          Last: "Ferguson", 
+          Joined: "1/1/2025", 
+          Expires: "1/1/2026", 
+          Status: "Active" 
+        };
+        const member2 = { 
+          Email: "TOBY@MAIL.COM", 
+          Phone: "(408) 386-9343", 
+          First: "Toby", 
+          Last: "Ferguson", 
+          Joined: "1/12/2025", 
+          Expires: "1/12/2028", 
+          Status: "Active" 
+        };
+        expect(MembershipManagement.Manager.isPossibleRenewal(member1, member2)).toBe(true);
+      });
+
+      it('matches members with mixed case emails', () => {
+        const member1 = { 
+          Email: "Toby@Mail.Com", 
+          Phone: "(408) 386-9343", 
+          First: "Toby", 
+          Last: "Ferguson", 
+          Joined: "1/1/2025", 
+          Expires: "1/1/2026", 
+          Status: "Active" 
+        };
+        const member2 = { 
+          Email: "toby@mail.com", 
+          Phone: "(408) 386-9343", 
+          First: "Toby", 
+          Last: "Ferguson", 
+          Joined: "1/12/2025", 
+          Expires: "1/12/2028", 
+          Status: "Active" 
+        };
+        expect(MembershipManagement.Manager.isPossibleRenewal(member1, member2)).toBe(true);
+      });
+    });
+
+    describe('schedule operations with normalized emails', () => {
+      it('createScheduleEntries_ normalizes email', () => {
+        const groups = [{ Email: 'test@sc3.club' }];
+        const groupManager = { groupAddFun: jest.fn(), groupRemoveFun: jest.fn(), groupEmailReplaceFun: jest.fn() };
+        const manager = new MembershipManagement.Manager(testActionSpecs, groups, groupManager, undefined, '2024-01-01');
+
+        const entries = manager.createScheduleEntries_('USER@EXAMPLE.COM', '2024-12-31');
+
+        entries.forEach(entry => {
+          expect(entry.Email).toBe('user@example.com');
+        });
+      });
+
+      it('removeMemberFromExpirySchedule_ matches case-insensitively', () => {
+        const groups = [{ Email: 'test@sc3.club' }];
+        const groupManager = { groupAddFun: jest.fn(), groupRemoveFun: jest.fn(), groupEmailReplaceFun: jest.fn() };
+        const manager = new MembershipManagement.Manager(testActionSpecs, groups, groupManager);
+
+        const schedule = [
+          { Email: 'user@example.com', Date: new Date('2024-12-31'), Type: 'Expiry1' },
+          { Email: 'other@example.com', Date: new Date('2024-12-31'), Type: 'Expiry1' }
+        ];
+
+        manager.removeMemberFromExpirySchedule_('USER@EXAMPLE.COM', schedule);
+
+        expect(schedule.length).toBe(1);
+        expect(schedule[0].Email).toBe('other@example.com');
+      });
+    });
+  });
+});

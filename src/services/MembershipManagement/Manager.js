@@ -237,7 +237,7 @@ MembershipManagement.Manager = class {
         console.log(`Skipping row ${rowNum}, no email address`);
         return;
       }
-      if (members.some(member => member.Status === 'Active' && member.Email === mi.Email)) {
+      if (members.some(member => member.Status === 'Active' && MembershipManagement.Manager.normalizeEmail(member.Email) === MembershipManagement.Manager.normalizeEmail(mi.Email))) {
         console.log(`Skipping ${mi.Email} on row ${rowNum}, already an active member`);
         return;
       }
@@ -328,7 +328,7 @@ MembershipManagement.Manager = class {
           // Detected renewal via name+phone match with different email (member is already Active)
           const existingMember = match.member;
           const oldEmail = existingMember.Email;
-          const emailChanged = oldEmail !== txn["Email Address"];
+          const emailChanged = MembershipManagement.Manager.normalizeEmail(oldEmail) !== MembershipManagement.Manager.normalizeEmail(txn["Email Address"]);
           
            console.log(`transaction on row ${i + 2} ${txn["Email Address"]} is a renewing Active member`);
           
@@ -437,7 +437,9 @@ MembershipManagement.Manager = class {
     this.removeMemberFromExpirySchedule_(oldEmail, expirySchedule);
     
     // 2. Update email in groups (if different)
-    if (oldEmail !== newEmail) {
+    const normalizedOld = MembershipManagement.Manager.normalizeEmail(oldEmail);
+    const normalizedNew = MembershipManagement.Manager.normalizeEmail(newEmail);
+    if (normalizedOld !== normalizedNew) {
       const result = this._groupEmailReplaceFun(oldEmail, newEmail);
       if (result && !result.success) {
         console.error(`Error changing email in groups: ${result.message}`);
@@ -445,7 +447,7 @@ MembershipManagement.Manager = class {
     }
     
     // 3. Update member record with new email
-    member.Email = newEmail;
+    member.Email = MembershipManagement.Manager.normalizeEmail(newEmail);
   }
 
   /**
@@ -455,7 +457,7 @@ MembershipManagement.Manager = class {
    */
   renewMemberWithEmailChange_(txn, member, expirySchedule, oldEmail = null) {
     // Handle email change if needed (BEFORE updating expiry schedule)
-    if (oldEmail && oldEmail !== txn["Email Address"]) {
+    if (oldEmail && MembershipManagement.Manager.normalizeEmail(oldEmail) !== MembershipManagement.Manager.normalizeEmail(txn["Email Address"])) {
       this.changeMemberEmail_(oldEmail, txn["Email Address"], member, expirySchedule);
     }
     
@@ -486,20 +488,22 @@ MembershipManagement.Manager = class {
   }
 
   createScheduleEntries_(email, expiryDate) {
+    const normalizedEmail = MembershipManagement.Manager.normalizeEmail(email);
     const scheduleEntries = [];
     Object.keys(this._actionSpecs).filter(type => type.startsWith('Expiry')).forEach((type) => {
       const spec = this._actionSpecs[type];
       const scheduleDate = MembershipManagement.Utils.addDaysToDate(expiryDate, spec.Offset);
       const tdy = new Date(this._today);
       if (tdy >= scheduleDate) { return; }
-      scheduleEntries.push({ Date: scheduleDate, Type: spec.Type, Email: email });
+      scheduleEntries.push({ Date: scheduleDate, Type: spec.Type, Email: normalizedEmail });
     });
     return scheduleEntries;
   }
 
   removeMemberFromExpirySchedule_(email, expirySchedule) {
+    const normalizedEmail = MembershipManagement.Manager.normalizeEmail(email);
     for (let i = expirySchedule.length - 1; i >= 0; i--) {
-      if (expirySchedule[i].Email === email) {
+      if (MembershipManagement.Manager.normalizeEmail(expirySchedule[i].Email) === normalizedEmail) {
         expirySchedule.splice(i, 1);
       }
     }
@@ -568,7 +572,7 @@ MembershipManagement.Manager = class {
   }
   addNewMember_(txn, expirySchedule, membershipData) {
     const newMember = {
-      Email: txn["Email Address"],
+      Email: MembershipManagement.Manager.normalizeEmail(txn["Email Address"]),
       First: txn["First Name"],
       Last: txn["Last Name"],
       Phone: txn.Phone || '',
@@ -648,6 +652,18 @@ MembershipManagement.Manager = class {
    * @param {Object} memberB - Second member object
    * @returns {boolean} True if the pair is a possible renewal
    */
+  /**
+   * Normalize an email address (lowercase, trimmed)
+   * @param {string|any} email - Email address to normalize
+   * @returns {string} Normalized email (lowercase, trimmed)
+   */
+  static normalizeEmail(email) {
+    if (!email || typeof email !== 'string') {
+      return '';
+    }
+    return email.trim().toLowerCase();
+  }
+
   static isPossibleRenewal(memberA, memberB) {
     // Must be different members
     if (memberA === memberB) return false;
