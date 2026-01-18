@@ -350,6 +350,34 @@ describe('Manager tests', () => {
         expect(activeMembers).toEqual(expectedActiveMembers);
       })
     });
+    describe('invalid date handling', () => {
+      let consoleErrorSpy;
+      beforeEach(() => {
+        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
+      });
+      afterEach(() => {
+        consoleErrorSpy.mockRestore();
+      });
+      it('should skip entries with invalid dates and log them', () => {
+        activeMembers = [TestData.activeMember({ Email: "valid@example.com", First: "Valid", Last: "User", Joined: "2020-03-10", Expires: "2021-01-10" })];
+        expirySchedule = [
+          TestData.expiryScheduleEntry({ Date: today, Type: utils.ActionType.Expiry4, Email: "valid@example.com" }),
+          { Email: "invalid@example.com", Type: utils.ActionType.Expiry2, Date: "not-a-date" },
+          { Email: "invalid2@example.com", Type: utils.ActionType.Expiry1, Date: undefined },
+          { Email: "invalid3@example.com", Type: utils.ActionType.Expiry3, Date: "" }
+        ];
+        const result = manager.generateExpiringMembersList(activeMembers, expirySchedule, PREFILL_FORM_TEMPLATE);
+        // Should process the valid entry
+        expect(result.messages.length).toBe(1);
+        expect(result.messages[0].email).toBe("valid@example.com");
+        // Invalid entries should be removed from schedule
+        expect(expirySchedule.length).toBe(0); // valid one was processed, invalids were removed
+        // Should log the invalid entries
+        expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Skipping 3 ExpirySchedule entries with invalid dates'));
+        expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('invalid@example.com'));
+        expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('not-a-date'));
+      });
+    });
     describe('Expiry4 processing', () => {
       let expectedActiveMembers;
       beforeEach(() => {

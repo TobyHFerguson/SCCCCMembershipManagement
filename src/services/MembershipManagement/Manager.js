@@ -31,6 +31,18 @@ MembershipManagement.Manager = class {
    * @returns {{messages: MembershipManagement.ExpiredMembersQueue}} array of messages to be sent
    */
   generateExpiringMembersList(activeMembers, expirySchedule, prefillFormTemplate) {
+    // Remove entries with invalid dates before processing (mutate in place, iterate backwards)
+    const invalidEntries = [];
+    for (let i = expirySchedule.length - 1; i >= 0; i--) {
+      const parsedDate = new Date(expirySchedule[i].Date);
+      if (isNaN(parsedDate.getTime())) {
+        invalidEntries.push({ Email: expirySchedule[i].Email, Type: expirySchedule[i].Type, Date: expirySchedule[i].Date });
+        expirySchedule.splice(i, 1);
+      }
+    }
+    if (invalidEntries.length > 0) {
+      console.error(`Skipping ${invalidEntries.length} ExpirySchedule entries with invalid dates: ${JSON.stringify(invalidEntries)}`);
+    }
     expirySchedule.forEach(sched => { sched.Date = MembershipManagement.Utils.dateOnly(new Date(sched.Date) )});
     expirySchedule.sort((a, b) => {
       const ta = a.Date.getTime();
