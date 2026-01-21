@@ -1,0 +1,1 @@
+../../_shared/gas-best-practices.md
