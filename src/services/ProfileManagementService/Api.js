@@ -95,7 +95,7 @@ ProfileManagementService.Api.getData = function(email) {
  */
 ProfileManagementService.initApi = function() {
   // Register getProfile handler
-  Common.Api.Client.registerHandler(
+  ApiClient.registerHandler(
     'profileManagement.getProfile',
     ProfileManagementService.Api.handleGetProfile,
     {
@@ -105,7 +105,7 @@ ProfileManagementService.initApi = function() {
   );
 
   // Register updateProfile handler
-  Common.Api.Client.registerHandler(
+  ApiClient.registerHandler(
     'profileManagement.updateProfile',
     ProfileManagementService.Api.handleUpdateProfile,
     {
@@ -115,7 +115,7 @@ ProfileManagementService.initApi = function() {
   );
 
   // Register getEditableFields handler (returns only fields user can edit)
-  Common.Api.Client.registerHandler(
+  ApiClient.registerHandler(
     'profileManagement.getEditableFields',
     ProfileManagementService.Api.handleGetEditableFields,
     {
@@ -141,7 +141,7 @@ ProfileManagementService.Api.handleGetProfile = function(params) {
     const userEmail = params._authenticatedEmail;
     
     if (!userEmail) {
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'User email not available',
         'NO_EMAIL'
       );
@@ -155,7 +155,7 @@ ProfileManagementService.Api.handleGetProfile = function(params) {
       const profile = Common.Data.Access.getMember(normalizedEmail);
       
       if (!profile) {
-        return Common.Api.ClientManager.errorResponse(
+        return ApiClientManager.errorResponse(
           'Profile not found',
           'PROFILE_NOT_FOUND'
         );
@@ -176,12 +176,12 @@ ProfileManagementService.Api.handleGetProfile = function(params) {
       }
 
       // Return success response
-      return Common.Api.ClientManager.successResponse({
+      return ApiClientManager.successResponse({
         profile: displayProfile
       });
     } catch (error) {
       Logger.log('[ProfileManagementService.Api] handleGetProfile error: ' + error);
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Failed to get profile',
         'GET_PROFILE_ERROR'
       );
@@ -200,7 +200,7 @@ ProfileManagementService.Api.handleGetEditableFields = function(params) {
     const userEmail = params._authenticatedEmail;
     
     if (!userEmail) {
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'User email not available',
         'NO_EMAIL'
       );
@@ -214,7 +214,7 @@ ProfileManagementService.Api.handleGetEditableFields = function(params) {
       const profile = Common.Data.Access.getMember(normalizedEmail);
       
       if (!profile) {
-        return Common.Api.ClientManager.errorResponse(
+        return ApiClientManager.errorResponse(
           'Profile not found',
           'PROFILE_NOT_FOUND'
         );
@@ -224,13 +224,13 @@ ProfileManagementService.Api.handleGetEditableFields = function(params) {
       const editableFields = ProfileManagementService.Manager.getEditableFields(profile);
 
       // Return success response
-      return Common.Api.ClientManager.successResponse({
+      return ApiClientManager.successResponse({
         profile: editableFields,
         fieldSchema: ProfileManagementService.Manager.getProfileFieldSchema()
       });
     } catch (error) {
       Logger.log('[ProfileManagementService.Api] handleGetEditableFields error: ' + error);
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Failed to get profile fields',
         'GET_FIELDS_ERROR'
       );
@@ -259,7 +259,7 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
 
     if (!userEmail) {
       AppLogger.error('ProfileManagementService', 'handleUpdateProfile() failed: No user email');
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'User email not available',
         'NO_EMAIL'
       );
@@ -267,7 +267,7 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
 
     if (!updates || typeof updates !== 'object') {
       AppLogger.error('ProfileManagementService', 'handleUpdateProfile() failed: Invalid updates', { updates: updates });
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Profile updates must be provided',
         'INVALID_UPDATES'
       );
@@ -283,7 +283,7 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
       
       if (!originalProfile) {
         AppLogger.warn('ProfileManagementService', `Profile not found for user: ${normalizedEmail}`);
-        return Common.Api.ClientManager.errorResponse(
+        return ApiClientManager.errorResponse(
           'Profile not found',
           'PROFILE_NOT_FOUND'
         );
@@ -301,7 +301,7 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
         AppLogger.warn('ProfileManagementService', `Profile update validation failed for user: ${normalizedEmail}`, {
           error: result.message
         });
-        return Common.Api.ClientManager.errorResponse(
+        return ApiClientManager.errorResponse(
           result.message,
           'UPDATE_VALIDATION_FAILED'
         );
@@ -336,14 +336,14 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
       });
 
       // Return success response
-      return Common.Api.ClientManager.successResponse({
+      return ApiClientManager.successResponse({
         success: true,
         message: result.message,
         profile: ProfileManagementService.Manager.formatProfileForDisplay(result.mergedProfile)
       });
     } catch (error) {
       AppLogger.error('ProfileManagementService', `handleUpdateProfile() failed for user: ${userEmail}`, error);
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Failed to update profile',
         'UPDATE_PROFILE_ERROR'
       );

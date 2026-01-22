@@ -46,16 +46,24 @@ global.VotingService = {
 const { Manager } = require('../src/services/VotingService/Manager');
 global.VotingService.Manager = Manager;
 
+// Mock ApiClient (flat class pattern)
+global.ApiClient = {
+  registerHandler: jest.fn(),
+  handleRequest: jest.fn(),
+  clearHandlers: jest.fn()
+};
+
+// Mock ApiClientManager (flat class pattern)
+global.ApiClientManager = {
+  successResponse: jest.fn((data) => ({ success: true, data })),
+  errorResponse: jest.fn((error, errorCode) => ({ success: false, error, errorCode }))
+};
+
 // Set up Common namespace for API handling
 global.Common = {
   Api: {
-    Client: {
-      registerHandler: jest.fn()
-    },
-    ClientManager: {
-      successResponse: jest.fn((data) => ({ success: true, data })),
-      errorResponse: jest.fn((error, errorCode) => ({ success: false, error, errorCode }))
-    }
+    Client: global.ApiClient,
+    ClientManager: global.ApiClientManager
   }
 };
 
@@ -105,22 +113,22 @@ describe('VotingService.Api', () => {
     test('registers all API handlers', () => {
       initApi();
 
-      expect(Common.Api.Client.registerHandler).toHaveBeenCalledTimes(3);
+      expect(ApiClient.registerHandler).toHaveBeenCalledTimes(3);
 
       // Check that each handler is registered
-      expect(Common.Api.Client.registerHandler).toHaveBeenCalledWith(
+      expect(ApiClient.registerHandler).toHaveBeenCalledWith(
         'voting.getActiveElections',
         expect.any(Function),
         expect.objectContaining({ requiresAuth: true })
       );
 
-      expect(Common.Api.Client.registerHandler).toHaveBeenCalledWith(
+      expect(ApiClient.registerHandler).toHaveBeenCalledWith(
         'voting.getElectionStats',
         expect.any(Function),
         expect.objectContaining({ requiresAuth: true })
       );
 
-      expect(Common.Api.Client.registerHandler).toHaveBeenCalledWith(
+      expect(ApiClient.registerHandler).toHaveBeenCalledWith(
         'voting.generateBallotToken',
         expect.any(Function),
         expect.objectContaining({ requiresAuth: true })
@@ -134,7 +142,7 @@ describe('VotingService.Api', () => {
     test('returns error when user email not available', () => {
       const result = Api.handleGetActiveElections({});
 
-      expect(Common.Api.ClientManager.errorResponse).toHaveBeenCalledWith(
+      expect(ApiClientManager.errorResponse).toHaveBeenCalledWith(
         'User email not available',
         'NO_EMAIL'
       );
@@ -151,8 +159,8 @@ describe('VotingService.Api', () => {
 
       const result = Api.handleGetActiveElections({ _authenticatedEmail: 'user@example.com' });
 
-      expect(Common.Api.ClientManager.successResponse).toHaveBeenCalled();
-      const successCall = Common.Api.ClientManager.successResponse.mock.calls[0][0];
+      expect(ApiClientManager.successResponse).toHaveBeenCalled();
+      const successCall = ApiClientManager.successResponse.mock.calls[0][0];
       expect(successCall.userEmail).toBe('user@example.com');
       expect(successCall.elections).toBeDefined();
       expect(successCall.count).toBeGreaterThanOrEqual(0);
@@ -165,8 +173,8 @@ describe('VotingService.Api', () => {
 
       const result = Api.handleGetActiveElections({ _authenticatedEmail: 'user@example.com' });
 
-      expect(Common.Api.ClientManager.successResponse).toHaveBeenCalled();
-      const successCall = Common.Api.ClientManager.successResponse.mock.calls[0][0];
+      expect(ApiClientManager.successResponse).toHaveBeenCalled();
+      const successCall = ApiClientManager.successResponse.mock.calls[0][0];
       expect(successCall.elections).toHaveLength(0);
     });
 
@@ -183,7 +191,7 @@ describe('VotingService.Api', () => {
       const result = Api.handleGetActiveElections({ _authenticatedEmail: 'user@example.com' });
 
       // Should still succeed but with empty voters
-      expect(Common.Api.ClientManager.successResponse).toHaveBeenCalled();
+      expect(ApiClientManager.successResponse).toHaveBeenCalled();
     });
 
     test('handles error when getting ballot status fails', () => {
@@ -199,7 +207,7 @@ describe('VotingService.Api', () => {
       const result = Api.handleGetActiveElections({ _authenticatedEmail: 'user@example.com' });
 
       // Should still succeed but treat ballot as not accepting
-      expect(Common.Api.ClientManager.successResponse).toHaveBeenCalled();
+      expect(ApiClientManager.successResponse).toHaveBeenCalled();
     });
 
     test('handles general error', () => {
@@ -209,7 +217,7 @@ describe('VotingService.Api', () => {
 
       const result = Api.handleGetActiveElections({ _authenticatedEmail: 'user@example.com' });
 
-      expect(Common.Api.ClientManager.errorResponse).toHaveBeenCalledWith(
+      expect(ApiClientManager.errorResponse).toHaveBeenCalledWith(
         'Failed to get elections',
         'GET_ELECTIONS_ERROR'
       );
@@ -222,7 +230,7 @@ describe('VotingService.Api', () => {
     test('returns error when user email not available', () => {
       const result = Api.handleGetElectionStats({});
 
-      expect(Common.Api.ClientManager.errorResponse).toHaveBeenCalledWith(
+      expect(ApiClientManager.errorResponse).toHaveBeenCalledWith(
         'User email not available',
         'NO_EMAIL'
       );
@@ -237,8 +245,8 @@ describe('VotingService.Api', () => {
 
       const result = Api.handleGetElectionStats({ _authenticatedEmail: 'user@example.com' });
 
-      expect(Common.Api.ClientManager.successResponse).toHaveBeenCalled();
-      const successCall = Common.Api.ClientManager.successResponse.mock.calls[0][0];
+      expect(ApiClientManager.successResponse).toHaveBeenCalled();
+      const successCall = ApiClientManager.successResponse.mock.calls[0][0];
       expect(successCall.stats).toBeDefined();
       expect(successCall.stats.total).toBe(1);
     });
@@ -250,7 +258,7 @@ describe('VotingService.Api', () => {
 
       const result = Api.handleGetElectionStats({ _authenticatedEmail: 'user@example.com' });
 
-      expect(Common.Api.ClientManager.errorResponse).toHaveBeenCalledWith(
+      expect(ApiClientManager.errorResponse).toHaveBeenCalledWith(
         'Failed to get election statistics',
         'GET_STATS_ERROR'
       );
@@ -263,7 +271,7 @@ describe('VotingService.Api', () => {
     test('returns error when user email not available', () => {
       const result = Api.handleGenerateBallotToken({});
 
-      expect(Common.Api.ClientManager.errorResponse).toHaveBeenCalledWith(
+      expect(ApiClientManager.errorResponse).toHaveBeenCalledWith(
         'User email not available',
         'NO_EMAIL'
       );
@@ -272,7 +280,7 @@ describe('VotingService.Api', () => {
     test('returns error when election title not provided', () => {
       const result = Api.handleGenerateBallotToken({ _authenticatedEmail: 'user@example.com' });
 
-      expect(Common.Api.ClientManager.errorResponse).toHaveBeenCalledWith(
+      expect(ApiClientManager.errorResponse).toHaveBeenCalledWith(
         'Election title is required',
         'MISSING_TITLE'
       );
@@ -286,7 +294,7 @@ describe('VotingService.Api', () => {
         electionTitle: 'Nonexistent Election'
       });
 
-      expect(Common.Api.ClientManager.errorResponse).toHaveBeenCalledWith(
+      expect(ApiClientManager.errorResponse).toHaveBeenCalledWith(
         'Election not found',
         'ELECTION_NOT_FOUND'
       );
@@ -301,7 +309,7 @@ describe('VotingService.Api', () => {
         electionTitle: 'Test Election 2024'
       });
 
-      expect(Common.Api.ClientManager.errorResponse).toHaveBeenCalledWith(
+      expect(ApiClientManager.errorResponse).toHaveBeenCalledWith(
         'Election has no ballot form',
         'NO_BALLOT_FORM'
       );
@@ -321,7 +329,7 @@ describe('VotingService.Api', () => {
         electionTitle: 'Test Election 2024'
       });
 
-      expect(Common.Api.ClientManager.errorResponse).toHaveBeenCalledWith(
+      expect(ApiClientManager.errorResponse).toHaveBeenCalledWith(
         'Election is not currently active',
         'ELECTION_NOT_ACTIVE'
       );
@@ -348,7 +356,7 @@ describe('VotingService.Api', () => {
         electionTitle: 'Test Election 2024'
       });
 
-      expect(Common.Api.ClientManager.errorResponse).toHaveBeenCalledWith(
+      expect(ApiClientManager.errorResponse).toHaveBeenCalledWith(
         'You have already voted in this election',
         'ALREADY_VOTED'
       );
@@ -380,7 +388,7 @@ describe('VotingService.Api', () => {
         electionTitle: 'Test Election 2024'
       });
 
-      expect(Common.Api.ClientManager.errorResponse).toHaveBeenCalledWith(
+      expect(ApiClientManager.errorResponse).toHaveBeenCalledWith(
         'Ballot is not accepting responses',
         'BALLOT_NOT_ACCEPTING'
       );
@@ -412,8 +420,8 @@ describe('VotingService.Api', () => {
         electionTitle: 'Test Election 2024'
       });
 
-      expect(Common.Api.ClientManager.successResponse).toHaveBeenCalled();
-      const successCall = Common.Api.ClientManager.successResponse.mock.calls[0][0];
+      expect(ApiClientManager.successResponse).toHaveBeenCalled();
+      const successCall = ApiClientManager.successResponse.mock.calls[0][0];
       expect(successCall.ballotUrl).toBe('https://example.com/ballot?token=xxx');
       expect(successCall.electionTitle).toBe('Test Election 2024');
     });
@@ -428,7 +436,7 @@ describe('VotingService.Api', () => {
         electionTitle: 'Test Election 2024'
       });
 
-      expect(Common.Api.ClientManager.errorResponse).toHaveBeenCalledWith(
+      expect(ApiClientManager.errorResponse).toHaveBeenCalledWith(
         'Failed to generate ballot token',
         'GENERATE_TOKEN_ERROR'
       );

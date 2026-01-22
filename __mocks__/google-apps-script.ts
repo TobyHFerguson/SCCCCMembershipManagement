@@ -58,6 +58,14 @@ global.Utilities = {
     getLog: jest.fn(() => ''),
 } as any;
 
+// Mock ApiClient and ApiClientManager (flat class pattern)
+const { ApiClient, ClientManager } = require('../src/common/api/ApiClient');
+(global as any).ApiClient = ApiClient;
+(global as any).ApiClientManager = ClientManager;
+
 // Mock Common namespace (backward compatibility for Common.Logger)
 (global as any).Common = (global as any).Common || {};
 (global as any).Common.Logger = (global as any).AppLogger;
+(global as any).Common.Api = (global as any).Common.Api || {};
+(global as any).Common.Api.Client = (global as any).ApiClient;
+(global as any).Common.Api.ClientManager = (global as any).ApiClientManager;

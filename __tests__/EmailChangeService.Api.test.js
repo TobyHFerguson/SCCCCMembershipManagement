@@ -53,6 +53,16 @@ beforeEach(() => {
     getFiddler: jest.fn()
   };
 
+  // Mock ApiClient (flat class pattern)
+  global.ApiClient = {
+    registerHandler: jest.fn(),
+    handleRequest: jest.fn(),
+    clearHandlers: jest.fn()
+  };
+
+  // Mock ApiClientManager (flat class pattern)
+  global.ApiClientManager = require('../src/common/api/ApiClient').ClientManager;
+
   // Mock SpreadsheetManager - backward compat via Common namespace
   global.Common = {
     Data: {
@@ -61,10 +71,8 @@ beforeEach(() => {
       }
     },
     Api: {
-      Client: {
-        registerHandler: jest.fn()
-      },
-      ClientManager: require('../src/common/api/ApiClient').ClientManager
+      Client: global.ApiClient,
+      ClientManager: global.ApiClientManager
     }
   };
 
@@ -124,7 +132,7 @@ describe('EmailChangeService.Api', () => {
     test('registers sendVerificationCode handler', () => {
       EmailChangeService.initApi();
       
-      expect(Common.Api.Client.registerHandler).toHaveBeenCalledWith(
+      expect(ApiClient.registerHandler).toHaveBeenCalledWith(
         'emailChange.sendVerificationCode',
         expect.any(Function),
         expect.objectContaining({ requiresAuth: true })
@@ -134,7 +142,7 @@ describe('EmailChangeService.Api', () => {
     test('registers verifyAndGetGroups handler', () => {
       EmailChangeService.initApi();
       
-      expect(Common.Api.Client.registerHandler).toHaveBeenCalledWith(
+      expect(ApiClient.registerHandler).toHaveBeenCalledWith(
         'emailChange.verifyAndGetGroups',
         expect.any(Function),
         expect.objectContaining({ requiresAuth: true })
@@ -144,7 +152,7 @@ describe('EmailChangeService.Api', () => {
     test('registers changeEmail handler', () => {
       EmailChangeService.initApi();
       
-      expect(Common.Api.Client.registerHandler).toHaveBeenCalledWith(
+      expect(ApiClient.registerHandler).toHaveBeenCalledWith(
         'emailChange.changeEmail',
         expect.any(Function),
         expect.objectContaining({ requiresAuth: true })

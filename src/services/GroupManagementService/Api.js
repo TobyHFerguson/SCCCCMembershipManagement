@@ -66,7 +66,7 @@ GroupManagementService.Api.getData = function(email) {
  */
 GroupManagementService.initApi = function() {
   // Register getSubscriptions handler
-  Common.Api.Client.registerHandler(
+  ApiClient.registerHandler(
     'groupManagement.getSubscriptions',
     GroupManagementService.Api.handleGetSubscriptions,
     {
@@ -76,7 +76,7 @@ GroupManagementService.initApi = function() {
   );
 
   // Register updateSubscriptions handler
-  Common.Api.Client.registerHandler(
+  ApiClient.registerHandler(
     'groupManagement.updateSubscriptions',
     GroupManagementService.Api.handleUpdateSubscriptions,
     {
@@ -86,7 +86,7 @@ GroupManagementService.initApi = function() {
   );
 
   // Register getDeliveryOptions handler (public - for loading form options)
-  Common.Api.Client.registerHandler(
+  ApiClient.registerHandler(
     'groupManagement.getDeliveryOptions',
     GroupManagementService.Api.handleGetDeliveryOptions,
     {
@@ -112,7 +112,7 @@ GroupManagementService.Api.handleGetSubscriptions = function(params) {
     const userEmail = params._authenticatedEmail;
     
     if (!userEmail) {
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'User email not available',
         'NO_EMAIL'
       );
@@ -148,7 +148,7 @@ GroupManagementService.Api.handleGetSubscriptions = function(params) {
       );
 
       // Return success response
-      return Common.Api.ClientManager.successResponse({
+      return ApiClientManager.successResponse({
         subscriptions: subscriptions,
         deliveryOptions: GroupManagementService.Manager.getDeliveryOptionsArray(
           /** @type {Record<string, [string, string]>} */ (GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions())
@@ -156,7 +156,7 @@ GroupManagementService.Api.handleGetSubscriptions = function(params) {
       });
     } catch (error) {
       Logger.log('[GroupManagementService.Api] handleGetSubscriptions error: ' + error);
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Failed to get subscriptions',
         'GET_SUBSCRIPTIONS_ERROR'
       );
@@ -185,7 +185,7 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
 
     if (!userEmail) {
       AppLogger.error('GroupManagementService', 'handleUpdateSubscriptions() failed: No user email');
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'User email not available',
         'NO_EMAIL'
       );
@@ -203,7 +203,7 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
         error: validation.error,
         errorCode: validation.errorCode
       });
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         validation.error,
         validation.errorCode
       );
@@ -295,9 +295,9 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
       });
 
       if (result.success) {
-        return Common.Api.ClientManager.successResponse(result);
+        return ApiClientManager.successResponse(result);
       } else {
-        return Common.Api.ClientManager.errorResponse(
+        return ApiClientManager.errorResponse(
           result.message,
           'UPDATE_FAILED',
           { details: result.details }
@@ -305,7 +305,7 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
       }
     } catch (error) {
       Logger.log('[GroupManagementService.Api] handleUpdateSubscriptions error: ' + error);
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Failed to update subscriptions',
         'UPDATE_SUBSCRIPTIONS_ERROR'
       );
@@ -324,12 +324,12 @@ GroupManagementService.Api.handleGetDeliveryOptions = function() {
         /** @type {Record<string, [string, string]>} */ (GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions())
       );
 
-      return Common.Api.ClientManager.successResponse({
+      return ApiClientManager.successResponse({
         deliveryOptions: options
       });
     } catch (error) {
       Logger.log('[GroupManagementService.Api] handleGetDeliveryOptions error: ' + error);
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Failed to get delivery options',
         'GET_OPTIONS_ERROR'
       );

@@ -68,7 +68,7 @@ const EMAIL_CHANGE_SHEET_REFS = ['ActiveMembers', 'ExpirySchedule'];
  */
 EmailChangeService.initApi = function() {
   // Register sendVerificationCode handler
-  Common.Api.Client.registerHandler(
+  ApiClient.registerHandler(
     'emailChange.sendVerificationCode',
     EmailChangeService.Api.handleSendVerificationCode,
     {
@@ -78,7 +78,7 @@ EmailChangeService.initApi = function() {
   );
 
   // Register verifyAndChangeEmail handler (combined verify + change)
-  Common.Api.Client.registerHandler(
+  ApiClient.registerHandler(
     'emailChange.verifyAndChangeEmail',
     EmailChangeService.Api.handleVerifyAndChangeEmail,
     {
@@ -88,7 +88,7 @@ EmailChangeService.initApi = function() {
   );
 
   // Register verifyAndGetGroups handler
-  Common.Api.Client.registerHandler(
+  ApiClient.registerHandler(
     'emailChange.verifyAndGetGroups',
     EmailChangeService.Api.handleVerifyAndGetGroups,
     {
@@ -98,7 +98,7 @@ EmailChangeService.initApi = function() {
   );
 
   // Register changeEmail handler
-  Common.Api.Client.registerHandler(
+  ApiClient.registerHandler(
     'emailChange.changeEmail',
     EmailChangeService.Api.handleChangeEmail,
     {
@@ -132,7 +132,7 @@ EmailChangeService.Api.handleSendVerificationCode = function(params) {
     // Validate original email is available
     if (!originalEmail) {
       Logger.log('[EmailChangeService.Api] ERROR: No original email provided');
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'User email not available',
         'NO_EMAIL'
       );
@@ -141,7 +141,7 @@ EmailChangeService.Api.handleSendVerificationCode = function(params) {
     // Validate new email is provided
     if (!newEmail) {
       Logger.log('[EmailChangeService.Api] ERROR: No new email provided');
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'New email address is required',
         'MISSING_NEW_EMAIL'
       );
@@ -152,7 +152,7 @@ EmailChangeService.Api.handleSendVerificationCode = function(params) {
     const validation = EmailChangeService.Manager.validateEmailChange(originalEmail, newEmail);
     if (!validation.valid) {
       Logger.log('[EmailChangeService.Api] Validation failed: ' + validation.error);
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         validation.error,
         validation.errorCode
       );
@@ -187,7 +187,7 @@ EmailChangeService.Api.handleSendVerificationCode = function(params) {
         
         // PURE: Format error result
         const errorResult = EmailChangeService.Manager.formatSendCodeResult(false, normalizedNewEmail, 'Failed to send email');
-        return Common.Api.ClientManager.errorResponse(
+        return ApiClientManager.errorResponse(
           errorResult.message,
           errorResult.errorCode
         );
@@ -197,13 +197,13 @@ EmailChangeService.Api.handleSendVerificationCode = function(params) {
 
       // PURE: Format success result
       const result = EmailChangeService.Manager.formatSendCodeResult(true, normalizedNewEmail);
-      return Common.Api.ClientManager.successResponse({
+      return ApiClientManager.successResponse({
         message: result.message
       });
     } catch (error) {
       Logger.log('[EmailChangeService.Api] handleSendVerificationCode error: ' + error);
       Logger.log('[EmailChangeService.Api] Error stack: ' + error.stack);
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Failed to send verification code',
         'SEND_CODE_ERROR'
       );
@@ -232,7 +232,7 @@ EmailChangeService.Api.handleVerifyAndChangeEmail = function(params, token) {
     // Validate inputs
     if (!originalEmail) {
       Logger.log('[EmailChangeService.Api] ERROR: No original email');
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'User email not available',
         'NO_EMAIL'
       );
@@ -240,7 +240,7 @@ EmailChangeService.Api.handleVerifyAndChangeEmail = function(params, token) {
 
     if (!newEmail) {
       Logger.log('[EmailChangeService.Api] ERROR: No new email');
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'New email address is required',
         'MISSING_NEW_EMAIL'
       );
@@ -248,7 +248,7 @@ EmailChangeService.Api.handleVerifyAndChangeEmail = function(params, token) {
 
     if (!verificationCode) {
       Logger.log('[EmailChangeService.Api] ERROR: No verification code');
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Verification code is required',
         'MISSING_CODE'
       );
@@ -270,7 +270,7 @@ EmailChangeService.Api.handleVerifyAndChangeEmail = function(params, token) {
 
       if (!verifyResult.valid) {
         Logger.log('[EmailChangeService.Api] Verification failed: ' + verifyResult.error);
-        return Common.Api.ClientManager.errorResponse(
+        return ApiClientManager.errorResponse(
           verifyResult.error,
           verifyResult.errorCode
         );
@@ -368,7 +368,7 @@ EmailChangeService.Api.handleVerifyAndChangeEmail = function(params, token) {
 
       Logger.log('[EmailChangeService.Api] Email change complete: ' + aggregated.successCount + ' successes, ' + aggregated.failedCount + ' failures');
 
-      return Common.Api.ClientManager.successResponse({
+      return ApiClientManager.successResponse({
         success: aggregated.overallSuccess,
         message: message,
         oldEmail: normalizedOld,
@@ -380,7 +380,7 @@ EmailChangeService.Api.handleVerifyAndChangeEmail = function(params, token) {
     } catch (error) {
       Logger.log('[EmailChangeService.Api] handleVerifyAndChangeEmail error: ' + error);
       Logger.log('[EmailChangeService.Api] Error stack: ' + error.stack);
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Failed to verify and change email: ' + error.message,
         'VERIFY_CHANGE_ERROR'
       );
@@ -404,21 +404,21 @@ EmailChangeService.Api.handleVerifyAndGetGroups = function(params) {
 
     // Validate inputs
     if (!originalEmail) {
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'User email not available',
         'NO_EMAIL'
       );
     }
 
     if (!newEmail) {
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'New email address is required',
         'MISSING_NEW_EMAIL'
       );
     }
 
     if (!verificationCode) {
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Verification code is required',
         'MISSING_CODE'
       );
@@ -437,7 +437,7 @@ EmailChangeService.Api.handleVerifyAndGetGroups = function(params) {
       );
 
       if (!verifyResult.valid) {
-        return Common.Api.ClientManager.errorResponse(
+        return ApiClientManager.errorResponse(
           verifyResult.error,
           verifyResult.errorCode
         );
@@ -460,13 +460,13 @@ EmailChangeService.Api.handleVerifyAndGetGroups = function(params) {
 
       Logger.log('[EmailChangeService.Api] Verification successful for: ' + originalEmail + ', found ' + groupData.length + ' groups');
 
-      return Common.Api.ClientManager.successResponse({
+      return ApiClientManager.successResponse({
         groups: groupData,
         count: groupData.length
       });
     } catch (error) {
       Logger.log('[EmailChangeService.Api] handleVerifyAndGetGroups error: ' + error);
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Failed to verify and get groups',
         'VERIFY_ERROR'
       );
@@ -490,14 +490,14 @@ EmailChangeService.Api.handleChangeEmail = function(params) {
 
     // Validate inputs
     if (!originalEmail) {
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'User email not available',
         'NO_EMAIL'
       );
     }
 
     if (!newEmail) {
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'New email address is required',
         'MISSING_NEW_EMAIL'
       );
@@ -506,7 +506,7 @@ EmailChangeService.Api.handleChangeEmail = function(params) {
     // PURE: Validate email change again for safety
     const validation = EmailChangeService.Manager.validateEmailChange(originalEmail, newEmail);
     if (!validation.valid) {
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         validation.error,
         validation.errorCode
       );
@@ -551,7 +551,7 @@ EmailChangeService.Api.handleChangeEmail = function(params) {
       Logger.log('[EmailChangeService.Api] Email changed from ' + normalizedOld + ' to ' + normalizedNew + 
         ': ' + aggregated.successCount + ' successes, ' + aggregated.failedCount + ' failures');
 
-      return Common.Api.ClientManager.successResponse({
+      return ApiClientManager.successResponse({
         success: aggregated.success,
         message: aggregated.message,
         results: aggregated.results,
@@ -560,7 +560,7 @@ EmailChangeService.Api.handleChangeEmail = function(params) {
       });
     } catch (error) {
       Logger.log('[EmailChangeService.Api] handleChangeEmail error: ' + error);
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Failed to change email',
         'CHANGE_EMAIL_ERROR'
       );

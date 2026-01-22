@@ -56,6 +56,26 @@ const mockMembers = [
   }
 ];
 
+// Mock ApiClient (flat class pattern)
+global.ApiClient = {
+  registerHandler: jest.fn(),
+  handleRequest: jest.fn(),
+  clearHandlers: jest.fn()
+};
+
+// Mock ApiClientManager (flat class pattern)
+global.ApiClientManager = {
+  successResponse: jest.fn((data) => ({ 
+    success: true, 
+    data: data 
+  })),
+  errorResponse: jest.fn((error, errorCode) => ({ 
+    success: false, 
+    error: error, 
+    errorCode: errorCode 
+  }))
+};
+
 // Mock Common namespace
 global.Common = {
   Data: {
@@ -64,20 +84,8 @@ global.Common = {
     }
   },
   Api: {
-    Client: {
-      registerHandler: jest.fn()
-    },
-    ClientManager: {
-      successResponse: jest.fn((data) => ({ 
-        success: true, 
-        data: data 
-      })),
-      errorResponse: jest.fn((error, errorCode) => ({ 
-        success: false, 
-        error: error, 
-        errorCode: errorCode 
-      }))
-    }
+    Client: global.ApiClient,
+    ClientManager: global.ApiClientManager
   }
 };
 
@@ -103,7 +111,7 @@ describe('DirectoryService.Api', () => {
       
       const result = Api.handleGetEntries(params);
       
-      expect(Common.Api.ClientManager.successResponse).toHaveBeenCalled();
+      expect(ApiClientManager.successResponse).toHaveBeenCalled();
       expect(result.success).toBe(true);
       expect(result.data.entries).toBeDefined();
       expect(result.data.count).toBeDefined();
@@ -165,7 +173,7 @@ describe('DirectoryService.Api', () => {
       
       const result = Api.handleGetEntries(params);
       
-      expect(Common.Api.ClientManager.errorResponse).toHaveBeenCalledWith(
+      expect(ApiClientManager.errorResponse).toHaveBeenCalledWith(
         'User email not available',
         'NO_EMAIL'
       );
@@ -265,7 +273,7 @@ describe('DirectoryService.Api', () => {
       
       const result = Api.handleGetStats(params);
       
-      expect(Common.Api.ClientManager.successResponse).toHaveBeenCalled();
+      expect(ApiClientManager.successResponse).toHaveBeenCalled();
       expect(result.success).toBe(true);
       expect(result.data.stats).toBeDefined();
     });
@@ -285,7 +293,7 @@ describe('DirectoryService.Api', () => {
       
       const result = Api.handleGetStats(params);
       
-      expect(Common.Api.ClientManager.errorResponse).toHaveBeenCalledWith(
+      expect(ApiClientManager.errorResponse).toHaveBeenCalledWith(
         'User email not available',
         'NO_EMAIL'
       );
@@ -324,7 +332,7 @@ describe('DirectoryService.Api', () => {
     test('registers directory.getEntries handler', () => {
       initApi();
       
-      expect(Common.Api.Client.registerHandler).toHaveBeenCalledWith(
+      expect(ApiClient.registerHandler).toHaveBeenCalledWith(
         'directory.getEntries',
         expect.any(Function),
         expect.objectContaining({
@@ -337,7 +345,7 @@ describe('DirectoryService.Api', () => {
     test('registers directory.getStats handler', () => {
       initApi();
       
-      expect(Common.Api.Client.registerHandler).toHaveBeenCalledWith(
+      expect(ApiClient.registerHandler).toHaveBeenCalledWith(
         'directory.getStats',
         expect.any(Function),
         expect.objectContaining({
@@ -350,7 +358,7 @@ describe('DirectoryService.Api', () => {
     test('registers two handlers', () => {
       initApi();
       
-      expect(Common.Api.Client.registerHandler).toHaveBeenCalledTimes(2);
+      expect(ApiClient.registerHandler).toHaveBeenCalledTimes(2);
     });
   });
 });

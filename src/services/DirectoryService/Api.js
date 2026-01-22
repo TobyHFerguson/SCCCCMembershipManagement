@@ -65,7 +65,7 @@ DirectoryService.Api.getData = function(email) {
  */
 DirectoryService.initApi = function() {
   // Register getDirectoryEntries handler
-  Common.Api.Client.registerHandler(
+  ApiClient.registerHandler(
     'directory.getEntries',
     DirectoryService.Api.handleGetEntries,
     {
@@ -75,7 +75,7 @@ DirectoryService.initApi = function() {
   );
 
   // Register getDirectoryStats handler
-  Common.Api.Client.registerHandler(
+  ApiClient.registerHandler(
     'directory.getStats',
     DirectoryService.Api.handleGetStats,
     {
@@ -103,7 +103,7 @@ DirectoryService.Api.handleGetEntries = function(params) {
     const searchTerm = params.searchTerm;
     
     if (!userEmail) {
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'User email not available',
         'NO_EMAIL'
       );
@@ -113,7 +113,7 @@ DirectoryService.Api.handleGetEntries = function(params) {
     if (searchTerm !== undefined && searchTerm !== null) {
       const validation = DirectoryService.Manager.validateSearchTerm(searchTerm);
       if (!validation.valid) {
-        return Common.Api.ClientManager.errorResponse(
+        return ApiClientManager.errorResponse(
           validation.error,
           validation.errorCode
         );
@@ -130,13 +130,13 @@ DirectoryService.Api.handleGetEntries = function(params) {
       });
 
       // Return success response
-      return Common.Api.ClientManager.successResponse({
+      return ApiClientManager.successResponse({
         entries: entries,
         count: entries.length
       });
     } catch (error) {
       Logger.log('[DirectoryService.Api] handleGetEntries error: ' + error);
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Failed to get directory entries',
         'GET_ENTRIES_ERROR'
       );
@@ -155,7 +155,7 @@ DirectoryService.Api.handleGetStats = function(params) {
     const userEmail = params._authenticatedEmail;
     
     if (!userEmail) {
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'User email not available',
         'NO_EMAIL'
       );
@@ -169,12 +169,12 @@ DirectoryService.Api.handleGetStats = function(params) {
       const stats = DirectoryService.Manager.getDirectoryStats(members);
 
       // Return success response
-      return Common.Api.ClientManager.successResponse({
+      return ApiClientManager.successResponse({
         stats: stats
       });
     } catch (error) {
       Logger.log('[DirectoryService.Api] handleGetStats error: ' + error);
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Failed to get directory statistics',
         'GET_STATS_ERROR'
       );

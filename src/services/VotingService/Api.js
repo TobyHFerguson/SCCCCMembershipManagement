@@ -66,7 +66,7 @@ VotingService.Api.getData = function(email) {
  */
 VotingService.initApi = function () {
   // Register getActiveElections handler
-  Common.Api.Client.registerHandler(
+  ApiClient.registerHandler(
     'voting.getActiveElections',
     VotingService.Api.handleGetActiveElections,
     {
@@ -76,7 +76,7 @@ VotingService.initApi = function () {
   );
 
   // Register getElectionStats handler
-  Common.Api.Client.registerHandler(
+  ApiClient.registerHandler(
     'voting.getElectionStats',
     VotingService.Api.handleGetElectionStats,
     {
@@ -86,7 +86,7 @@ VotingService.initApi = function () {
   );
 
   // Register generateBallotToken handler
-  Common.Api.Client.registerHandler(
+  ApiClient.registerHandler(
     'voting.generateBallotToken',
     VotingService.Api.handleGenerateBallotToken,
     {
@@ -113,7 +113,7 @@ VotingService.Api.handleGetActiveElections = function (params) {
 
     // Validate user email is available
     if (!userEmail) {
-      return Common.Api.ClientManager.errorResponse('User email not available', 'NO_EMAIL');
+      return ApiClientManager.errorResponse('User email not available', 'NO_EMAIL');
     }
 
     try {
@@ -183,10 +183,10 @@ VotingService.Api.handleGetActiveElections = function (params) {
         processedElections,
         userEmail
       );
-      return Common.Api.ClientManager.successResponse(response);
+      return ApiClientManager.successResponse(response);
     } catch (error) {
       Logger.log('[VotingService.Api] handleGetActiveElections error: ' + error);
-      return Common.Api.ClientManager.errorResponse('Failed to get elections', 'GET_ELECTIONS_ERROR');
+      return ApiClientManager.errorResponse('Failed to get elections', 'GET_ELECTIONS_ERROR');
     }
   };
 
@@ -203,7 +203,7 @@ VotingService.Api.handleGetElectionStats = function (params) {
 
     // Validate user email is available
     if (!userEmail) {
-      return Common.Api.ClientManager.errorResponse('User email not available', 'NO_EMAIL');
+      return ApiClientManager.errorResponse('User email not available', 'NO_EMAIL');
     }
 
     try {
@@ -215,12 +215,12 @@ VotingService.Api.handleGetElectionStats = function (params) {
 
       Logger.log('[VotingService.Api] Retrieved election stats for: ' + userEmail);
 
-      return Common.Api.ClientManager.successResponse({
+      return ApiClientManager.successResponse({
         stats: stats
       });
     } catch (error) {
       Logger.log('[VotingService.Api] handleGetElectionStats error: ' + error);
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Failed to get election statistics',
         'GET_STATS_ERROR'
       );
@@ -242,11 +242,11 @@ VotingService.Api.handleGenerateBallotToken = function (params) {
 
     // Validate inputs
     if (!userEmail) {
-      return Common.Api.ClientManager.errorResponse('User email not available', 'NO_EMAIL');
+      return ApiClientManager.errorResponse('User email not available', 'NO_EMAIL');
     }
 
     if (!electionTitle) {
-      return Common.Api.ClientManager.errorResponse('Election title is required', 'MISSING_TITLE');
+      return ApiClientManager.errorResponse('Election title is required', 'MISSING_TITLE');
     }
 
     try {
@@ -257,12 +257,12 @@ VotingService.Api.handleGenerateBallotToken = function (params) {
       const election = elections.find(e => e.Title === electionTitle);
 
       if (!election) {
-        return Common.Api.ClientManager.errorResponse('Election not found', 'ELECTION_NOT_FOUND');
+        return ApiClientManager.errorResponse('Election not found', 'ELECTION_NOT_FOUND');
       }
 
       const formEditUrl = election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME];
       if (!formEditUrl) {
-        return Common.Api.ClientManager.errorResponse(
+        return ApiClientManager.errorResponse(
           'Election has no ballot form',
           'NO_BALLOT_FORM'
         );
@@ -273,7 +273,7 @@ VotingService.Api.handleGenerateBallotToken = function (params) {
       const states = VotingService.Manager.getElectionStates();
 
       if (state !== states.ACTIVE) {
-        return Common.Api.ClientManager.errorResponse(
+        return ApiClientManager.errorResponse(
           'Election is not currently active',
           'ELECTION_NOT_ACTIVE'
         );
@@ -284,7 +284,7 @@ VotingService.Api.handleGenerateBallotToken = function (params) {
       const hasVoted = VotingService.Data.hasVotedAlreadyInThisElection(userEmail, election);
 
       if (hasVoted) {
-        return Common.Api.ClientManager.errorResponse(
+        return ApiClientManager.errorResponse(
           'You have already voted in this election',
           'ALREADY_VOTED'
         );
@@ -293,7 +293,7 @@ VotingService.Api.handleGenerateBallotToken = function (params) {
       // GAS: Check ballot is accepting responses
       const ballot = VotingService.getBallot(formEditUrl);
       if (!ballot.isPublished() || !ballot.isAcceptingResponses()) {
-        return Common.Api.ClientManager.errorResponse(
+        return ApiClientManager.errorResponse(
           'Ballot is not accepting responses',
           'BALLOT_NOT_ACCEPTING'
         );
@@ -314,13 +314,13 @@ VotingService.Api.handleGenerateBallotToken = function (params) {
           electionTitle
       );
 
-      return Common.Api.ClientManager.successResponse({
+      return ApiClientManager.successResponse({
         ballotUrl: preFilledUrl,
         electionTitle: electionTitle
       });
     } catch (error) {
       Logger.log('[VotingService.Api] handleGenerateBallotToken error: ' + error);
-      return Common.Api.ClientManager.errorResponse(
+      return ApiClientManager.errorResponse(
         'Failed to generate ballot token',
         'GENERATE_TOKEN_ERROR'
       );

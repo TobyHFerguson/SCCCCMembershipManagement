@@ -43,6 +43,16 @@ beforeEach(() => {
     getScriptTimeZone: jest.fn(() => 'America/Los_Angeles')
   };
 
+  // Mock ApiClient (flat class pattern)
+  global.ApiClient = {
+    registerHandler: jest.fn(),
+    handleRequest: jest.fn(),
+    clearHandlers: jest.fn()
+  };
+
+  // Mock ApiClientManager (flat class pattern)
+  global.ApiClientManager = require('../src/common/api/ApiClient').ClientManager;
+
   // Mock Common namespace (backward compat for Logger)
   global.Common = {
     Data: {
@@ -57,10 +67,8 @@ beforeEach(() => {
       }
     },
     Api: {
-      Client: {
-        registerHandler: jest.fn()
-      },
-      ClientManager: require('../src/common/api/ApiClient').ClientManager
+      Client: global.ApiClient,
+      ClientManager: global.ApiClientManager
     },
     Logger: global.AppLogger,
     Logging: {
@@ -136,7 +144,7 @@ describe('ProfileManagementService.Api', () => {
     test('registers getProfile handler', () => {
       ProfileManagementService.initApi();
       
-      expect(Common.Api.Client.registerHandler).toHaveBeenCalledWith(
+      expect(ApiClient.registerHandler).toHaveBeenCalledWith(
         'profileManagement.getProfile',
         expect.any(Function),
         expect.objectContaining({ requiresAuth: true })
@@ -146,7 +154,7 @@ describe('ProfileManagementService.Api', () => {
     test('registers updateProfile handler', () => {
       ProfileManagementService.initApi();
       
-      expect(Common.Api.Client.registerHandler).toHaveBeenCalledWith(
+      expect(ApiClient.registerHandler).toHaveBeenCalledWith(
         'profileManagement.updateProfile',
         expect.any(Function),
         expect.objectContaining({ requiresAuth: true })
@@ -156,7 +164,7 @@ describe('ProfileManagementService.Api', () => {
     test('registers getEditableFields handler', () => {
       ProfileManagementService.initApi();
       
-      expect(Common.Api.Client.registerHandler).toHaveBeenCalledWith(
+      expect(ApiClient.registerHandler).toHaveBeenCalledWith(
         'profileManagement.getEditableFields',
         expect.any(Function),
         expect.objectContaining({ requiresAuth: true })

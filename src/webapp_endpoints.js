@@ -446,5 +446,5 @@ function handleApiRequest(request) {
   }
   
   // Handle the request
-  return Common.Api.Client.handleRequest(request);
+  return ApiClient.handleRequest(request);
 }
