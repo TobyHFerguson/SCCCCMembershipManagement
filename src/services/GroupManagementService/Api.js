@@ -33,14 +33,14 @@ GroupManagementService.Api = GroupManagementService.Api || {};
  * @returns {{serviceName: string, subscriptions: Array, deliveryOptions: Object, error?: string}} Service data
  */
 GroupManagementService.Api.getData = function(email) {
-  Common.Logger.info('GroupManagementService', `getData() started for user: ${email}`);
+  AppLogger.info('GroupManagementService', `getData() started for user: ${email}`);
   
   try {
     // Get user's current subscriptions
-    Common.Logger.debug('GroupManagementService', `Fetching subscriptions for user: ${email}`);
+    AppLogger.debug('GroupManagementService', `Fetching subscriptions for user: ${email}`);
     const subscriptions = GroupManagementService.getUserGroupSubscription(email);
     
-    Common.Logger.info('GroupManagementService', `getData() completed successfully for user: ${email}`, {
+    AppLogger.info('GroupManagementService', `getData() completed successfully for user: ${email}`, {
       subscriptionCount: subscriptions ? subscriptions.length : 0
     });
     
@@ -50,7 +50,7 @@ GroupManagementService.Api.getData = function(email) {
       deliveryOptions: GroupSubscription.deliveryOptions
     };
   } catch (error) {
-    Common.Logger.error('GroupManagementService', `getData() failed for user: ${email}`, error);
+    AppLogger.error('GroupManagementService', `getData() failed for user: ${email}`, error);
     return {
       serviceName: 'Group Management',
       error: `Failed to load subscriptions: ${error.message}`,
@@ -179,12 +179,12 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
     const userEmail = params._authenticatedEmail;
     const updates = params.updates;
     
-    Common.Logger.info('GroupManagementService', `handleUpdateSubscriptions() started for user: ${userEmail}`, {
+    AppLogger.info('GroupManagementService', `handleUpdateSubscriptions() started for user: ${userEmail}`, {
       updateCount: updates ? updates.length : 0
     });
 
     if (!userEmail) {
-      Common.Logger.error('GroupManagementService', 'handleUpdateSubscriptions() failed: No user email');
+      AppLogger.error('GroupManagementService', 'handleUpdateSubscriptions() failed: No user email');
       return Common.Api.ClientManager.errorResponse(
         'User email not available',
         'NO_EMAIL'
@@ -192,14 +192,14 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
     }
 
     // PURE: Validate updates
-    Common.Logger.debug('GroupManagementService', `Validating ${updates.length} subscription updates`);
+    AppLogger.debug('GroupManagementService', `Validating ${updates.length} subscription updates`);
     const validation = GroupManagementService.Manager.validateSubscriptionUpdates(
       updates,
       /** @type {Record<string, [string, string]>} */ (GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions())
     );
 
     if (!validation.valid) {
-      Common.Logger.warn('GroupManagementService', `Validation failed for user: ${userEmail}`, {
+      AppLogger.warn('GroupManagementService', `Validation failed for user: ${userEmail}`, {
         error: validation.error,
         errorCode: validation.errorCode
       });
@@ -214,7 +214,7 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
       const normalizedEmail = GroupManagementService.Manager.normalizeEmail(userEmail);
 
       // GAS: Get current member status for each group being updated
-      Common.Logger.debug('GroupManagementService', `Fetching current member status for ${updates.length} groups`);
+      AppLogger.debug('GroupManagementService', `Fetching current member status for ${updates.length} groups`);
       /** @type {Record<string, any>} */
       const currentMembersByGroup = {};
       for (const update of updates) {
@@ -222,20 +222,20 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
           const member = GroupSubscription.getMember(update.groupEmail, normalizedEmail);
           currentMembersByGroup[update.groupEmail] = member;
         } catch (error) {
-          Common.Logger.warn('GroupManagementService', `Error getting member for ${update.groupEmail}`, error);
+          AppLogger.warn('GroupManagementService', `Error getting member for ${update.groupEmail}`, error);
           currentMembersByGroup[update.groupEmail] = null;
         }
       }
 
       // PURE: Calculate actions
-      Common.Logger.debug('GroupManagementService', 'Calculating required actions');
+      AppLogger.debug('GroupManagementService', 'Calculating required actions');
       const { actions, skipped } = GroupManagementService.Manager.calculateActions(
         updates,
         currentMembersByGroup,
         normalizedEmail
       );
       
-      Common.Logger.info('GroupManagementService', `Actions calculated: ${actions.length} to execute, ${skipped.length} skipped`);
+      AppLogger.info('GroupManagementService', `Actions calculated: ${actions.length} to execute, ${skipped.length} skipped`);
 
       // GAS: Execute actions
       let successCount = 0;
@@ -244,13 +244,13 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
 
       for (const action of actions) {
         try {
-          Common.Logger.debug('GroupManagementService', `Executing action: ${action.action} for ${action.groupEmail}`);
+          AppLogger.debug('GroupManagementService', `Executing action: ${action.action} for ${action.groupEmail}`);
           GroupManagementService.Api._executeAction(action);
           successCount++;
         } catch (error) {
           failedCount++;
           errors.push(`${action.groupEmail}: ${error.message || error}`);
-          Common.Logger.error('GroupManagementService', `Action failed for ${action.groupEmail}`, {
+          AppLogger.error('GroupManagementService', `Action failed for ${action.groupEmail}`, {
             action: action,
             error: error.message
           });
@@ -285,10 +285,10 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
         const auditFiddler = SpreadsheetManager.getFiddler('Audit');
         AuditPersistence.persistAuditEntries(auditFiddler, [auditEntry]);
       } catch (auditError) {
-        Common.Logger.error('GroupManagementService', 'Failed to persist audit entry', auditError);
+        AppLogger.error('GroupManagementService', 'Failed to persist audit entry', auditError);
       }
 
-      Common.Logger.info('GroupManagementService', `handleUpdateSubscriptions() completed for user: ${userEmail}`, {
+      AppLogger.info('GroupManagementService', `handleUpdateSubscriptions() completed for user: ${userEmail}`, {
         success: result.success,
         successCount: successCount,
         failedCount: failedCount

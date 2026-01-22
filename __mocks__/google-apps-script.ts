@@ -36,3 +36,28 @@ global.Utilities = {
     getUuid: () => 'mocked-uuid-123',
     // Add other utility methods if needed
 } as any;
+
+// Mock AppLogger (flat class pattern - replaces Common.Logger)
+// Named AppLogger to avoid conflict with GAS built-in Logger
+(global as any).AppLogger = {
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    configure: jest.fn(),
+    setLevel: jest.fn(),
+    getLogs: jest.fn(() => []),
+    clearLogs: jest.fn(),
+    setContainerSpreadsheet: jest.fn(),
+} as any;
+
+// Mock GAS built-in Logger (different from our AppLogger)
+(global as any).Logger = {
+    log: jest.fn(),
+    clear: jest.fn(),
+    getLog: jest.fn(() => ''),
+} as any;
+
+// Mock Common namespace (backward compatibility for Common.Logger)
+(global as any).Common = (global as any).Common || {};
+(global as any).Common.Logger = (global as any).AppLogger;

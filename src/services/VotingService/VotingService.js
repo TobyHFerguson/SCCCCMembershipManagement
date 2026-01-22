@@ -413,25 +413,25 @@ VotingService.getBallot = function (id) {
 VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFolderId) {
     try {
         // @ts-ignore - Logger is implemented in separate file
-        Common.Logger.info('VotingService', `Starting ballot copy creation from form: ${formId} to folder: ${destinationFolderId}`);
+        AppLogger.info('VotingService', `Starting ballot copy creation from form: ${formId} to folder: ${destinationFolderId}`);
         
         // 1. Get the source form file from Drive.
         const sourceFormId = VotingService.getBallot(formId).getId();
         // @ts-ignore - Logger is implemented in separate file
-        Common.Logger.info('VotingService', `Retrieved source form ID: ${sourceFormId}`);
+        AppLogger.info('VotingService', `Retrieved source form ID: ${sourceFormId}`);
 
         const sourceFile = DriveApp.getFileById(sourceFormId);
         // @ts-ignore - Logger is implemented in separate file
-        Common.Logger.info('VotingService', `Accessed source file: ${sourceFile.getName()}`);
+        AppLogger.info('VotingService', `Accessed source file: ${sourceFile.getName()}`);
 
         // 2. Create the form copy in the destination folder.
         const destination = DriveApp.getFolderById(destinationFolderId);
         // @ts-ignore - Logger is implemented in separate file
-        Common.Logger.info('VotingService', `Accessed destination folder: ${destination.getName()}`);
+        AppLogger.info('VotingService', `Accessed destination folder: ${destination.getName()}`);
         
         const copiedFileId = sourceFile.makeCopy(sourceFile.getName(), destination).getId();
         // @ts-ignore - Logger is implemented in separate file
-        Common.Logger.info('VotingService', `Created copy with ID: ${copiedFileId}`);
+        AppLogger.info('VotingService', `Created copy with ID: ${copiedFileId}`);
     
     // 3. Set sharing settings with automatic Shared Drive detection
     let isSharedDrive = false;
@@ -456,7 +456,7 @@ VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFo
         const newForm = VotingService.getBallot(copiedFileId);
         
         // @ts-ignore - Logger is implemented in separate file
-        Common.Logger.info('VotingService', `Ballot copy creation completed successfully`, {
+        AppLogger.info('VotingService', `Ballot copy creation completed successfully`, {
             copiedFileId: copiedFileId,
             editUrl: newForm.getEditUrl(),
             isSharedDrive: isSharedDrive
@@ -469,7 +469,7 @@ VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFo
         const err = error instanceof Error ? error : new Error(String(error));
         
         // @ts-ignore - Logger is implemented in separate file
-        Common.Logger.error('VotingService', 'Error in makePublishedCopyOfFormInFolder_', {
+        AppLogger.error('VotingService', 'Error in makePublishedCopyOfFormInFolder_', {
             formId: formId,
             destinationFolderId: destinationFolderId,
             error: err.message,

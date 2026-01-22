@@ -13,6 +13,23 @@ type ActionSpec = MembershipManagement.ActionSpec;
 type ExpiredMember = MembershipManagement.ExpiredMember;
 type ExpiredMembersQueue = MembershipManagement.ExpiredMembersQueue;
 
+/**
+ * AppLogger - Production-friendly logging utility for Google Apps Script
+ * Named AppLogger (not Logger) to avoid conflict with GAS built-in Logger.
+ * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ */
+declare class AppLogger {
+    static debug(service: string, message: string, data?: any): void;
+    static info(service: string, message: string, data?: any): void;
+    static warn(service: string, message: string, data?: any): void;
+    static error(service: string, message: string, data?: any): void;
+    static configure(): void;
+    static setLevel(level: string): void;
+    static getLogs(): Array<[Date | string, string, string, string, string]>;
+    static clearLogs(): void;
+    static setContainerSpreadsheet(spreadsheetId: string): void;
+}
+
 // Core authentication types (used across services)
 interface TokenDataType {
     Email: string;
@@ -441,21 +458,8 @@ declare namespace Common {
         }
     }
     
-    // Production logging utility
-    interface Logger {
-        info(service: string, message: string, data?: any): void;
-        warn(service: string, message: string, data?: any): void;
-        error(service: string, message: string, error?: any): void;
-        debug(service: string, message: string, data?: any): void;
-        setLevel(level: string): void;
-        configure(config: any): void;
-        getLogs(): any[][];
-        clearLogs(): void;
-        setContainerSpreadsheet(spreadsheetId: string): void;
-    }
-    
-    // Logger instance (available globally as Common.Logger)
-    const Logger: Logger;
+    // Logger instance (backward compat - points to AppLogger)
+    const Logger: typeof AppLogger;
     
     // Configuration namespace
     namespace Config {

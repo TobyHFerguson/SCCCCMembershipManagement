@@ -46,7 +46,7 @@ Common.Data.MemberPersistence = (function() {
       
       // Sanity check: ensure we have matching row counts
       if (originalRows.length !== modifiedMembers.length) {
-        Common.Logger.error(
+        AppLogger.error(
           'MemberPersistence',
           `Row count mismatch: ${originalRows.length} original rows vs ${modifiedMembers.length} modified members`
         );

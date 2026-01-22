@@ -14,7 +14,16 @@ beforeEach(() => {
   // Reset ProfileManagementService namespace
   global.ProfileManagementService = {};
   
-  // Mock Logger
+  // Mock AppLogger (flat class pattern - our custom logger)
+  global.AppLogger = {
+    info: jest.fn(),
+    debug: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    configure: jest.fn()
+  };
+  
+  // Mock GAS built-in Logger
   global.Logger = {
     log: jest.fn()
   };
@@ -34,7 +43,7 @@ beforeEach(() => {
     getScriptTimeZone: jest.fn(() => 'America/Los_Angeles')
   };
 
-  // Mock Common namespace
+  // Mock Common namespace (backward compat for Logger)
   global.Common = {
     Data: {
       Access: {
@@ -53,12 +62,7 @@ beforeEach(() => {
       },
       ClientManager: require('../src/common/api/ApiClient').ClientManager
     },
-    Logger: {
-      info: jest.fn(),
-      debug: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn()
-    },
+    Logger: global.AppLogger,
     Logging: {
       ServiceLogger: jest.fn().mockImplementation(() => ({
         logOperation: jest.fn().mockReturnValue({
@@ -429,8 +433,8 @@ describe('ProfileManagementService.Api', () => {
         updates: { First: 'Jane' }
       });
 
-      // Verify Common.Logger.info was called with successful completion message
-      expect(Common.Logger.info).toHaveBeenCalledWith(
+      // Verify AppLogger.info was called with successful completion message
+      expect(AppLogger.info).toHaveBeenCalledWith(
         'ProfileManagementService',
         expect.stringContaining('handleUpdateProfile() completed successfully'),
         expect.any(Object)

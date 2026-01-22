@@ -78,11 +78,24 @@ describe('AuditLogEntry Class', () => {
       // Reset mocks
       jest.clearAllMocks();
       
-      // Mock Common.Logger
+      // Mock Logger (flat class pattern)
+      global.AppLogger = {
+        error: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn()
+      };
+
+    // Mock GAS built-in Logger
+    global.Logger = {
+      log: jest.fn(),
+      clear: jest.fn(),
+      getLog: jest.fn(() => '')
+    };
+      
+      // Mock Common.Logger (backward compat)
       global.Common = {
-        Logger: {
-          error: jest.fn()
-        }
+        Logger: global.AppLogger
       };
       
       // Mock MailApp
@@ -178,11 +191,24 @@ describe('AuditLogEntry Class', () => {
       // Reset mocks
       jest.clearAllMocks();
       
-      // Mock Common.Logger
+      // Mock Logger (flat class pattern)
+      global.AppLogger = {
+        error: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn()
+      };
+
+    // Mock GAS built-in Logger
+    global.Logger = {
+      log: jest.fn(),
+      clear: jest.fn(),
+      getLog: jest.fn(() => '')
+    };
+      
+      // Mock Common.Logger (backward compat)
       global.Common = {
-        Logger: {
-          error: jest.fn()
-        }
+        Logger: global.AppLogger
       };
       
       // Mock MailApp

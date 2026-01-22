@@ -372,13 +372,24 @@ describe('Common.Data.ValidatedMember Class', () => {
     ];
     
     beforeEach(() => {
-      // Mock Common.Logger
-      global.Common = global.Common || {};
-      global.Common.Logger = {
+      // Mock AppLogger (flat class pattern)
+      global.AppLogger = {
         error: jest.fn(),
         warn: jest.fn(),
-        info: jest.fn()
+        info: jest.fn(),
+        debug: jest.fn()
       };
+
+    // Mock GAS built-in Logger
+    global.Logger = {
+      log: jest.fn(),
+      clear: jest.fn(),
+      getLog: jest.fn(() => '')
+    };
+      
+      // Mock Common.Logger (backward compat)
+      global.Common = global.Common || {};
+      global.Common.Logger = global.AppLogger;
     });
     
     test('should create ValidatedMember from valid row', () => {
@@ -493,13 +504,24 @@ describe('Common.Data.ValidatedMember Class', () => {
     ];
     
     beforeEach(() => {
-      // Mock Common.Logger
-      global.Common = global.Common || {};
-      global.Common.Logger = {
+      // Mock Logger (flat class pattern)
+      global.AppLogger = {
         error: jest.fn(),
         warn: jest.fn(),
-        info: jest.fn()
+        info: jest.fn(),
+        debug: jest.fn()
       };
+
+    // Mock GAS built-in Logger
+    global.Logger = {
+      log: jest.fn(),
+      clear: jest.fn(),
+      getLog: jest.fn(() => '')
+    };
+      
+      // Mock Common.Logger (backward compat)
+      global.Common = global.Common || {};
+      global.Common.Logger = global.AppLogger;
       
       // Mock MailApp
       global.MailApp = {

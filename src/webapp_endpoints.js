@@ -31,8 +31,8 @@ function sendMagicLink(email, service) {
  */
 function sendVerificationCode(email, service) {
   console.log('sendVerificationCode(', email, service, ')');
-  Common.Logger.configure();
-  Common.Logger.info('WebApp', 'sendVerificationCode() called', { email, service });
+  AppLogger.configure();
+  AppLogger.info('WebApp', 'sendVerificationCode() called', { email, service });
   
   // Normalize the email address
   email = email.toLowerCase().trim();
@@ -104,8 +104,8 @@ function sendVerificationCode(email, service) {
  */
 function verifyCode(email, code, service) {
   console.log('verifyCode(', email, code, ')');
-  Common.Logger.configure();
-  Common.Logger.info('WebApp', 'verifyCode() called', { email, service });
+  AppLogger.configure();
+  AppLogger.info('WebApp', 'verifyCode() called', { email, service });
   
   // Normalize the email address
   email = email.toLowerCase().trim();
@@ -162,14 +162,14 @@ function getServiceContent(email, service) {
   console.log('getServiceContent(', email, service, ')');
   
   // Configure logger for this execution
-  Common.Logger.configure();
+  AppLogger.configure();
   
   // Create logger for this service execution
   const logger = new Common.Logging.ServiceLogger(service, email);
   const auditEntries = [];
   
   // Log service access start
-  Common.Logger.info('WebApp', `getServiceContent() called for service=${service}, user=${email}`);
+  AppLogger.info('WebApp', `getServiceContent() called for service=${service}, user=${email}`);
   
   const webService = /** @type {any} */ (WebServices[service]);
   if (!webService) {
@@ -202,7 +202,7 @@ function getServiceContent(email, service) {
       auditEntries.push(accessEntry);
       _persistAuditEntries(auditEntries);
       
-      Common.Logger.info('WebApp', `getServiceContent() completed successfully for service=${service}, user=${email}`);
+      AppLogger.info('WebApp', `getServiceContent() completed successfully for service=${service}, user=${email}`);
       
       return data;
     } catch (error) {
@@ -236,7 +236,7 @@ function getServiceContent(email, service) {
       auditEntries.push(accessEntry);
       _persistAuditEntries(auditEntries);
       
-      Common.Logger.info('WebApp', `getServiceContent() completed (legacy path) for service=${service}, user=${email}`);
+      AppLogger.info('WebApp', `getServiceContent() completed (legacy path) for service=${service}, user=${email}`);
       
       return {
         serviceName: 'Directory',
@@ -285,10 +285,10 @@ function _persistAuditEntries(auditEntries) {
     // Persist entries using direct SpreadsheetApp access
     const numWritten = AuditPersistence.persistAuditEntries(auditEntries);
     
-    Common.Logger.debug('WebApp', `Persisted ${numWritten} audit entries`);
+    AppLogger.debug('WebApp', `Persisted ${numWritten} audit entries`);
   } catch (error) {
     // Log error but don't fail the operation
-    Common.Logger.error('WebApp', 'Failed to persist audit entries', error);
+    AppLogger.error('WebApp', 'Failed to persist audit entries', error);
   }
 }
 

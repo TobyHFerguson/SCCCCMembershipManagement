@@ -51,7 +51,7 @@ Common.Logging.ServiceLogger = class {
      */
     logServiceAccess(operation) {
         // System log: INFO level for normal access
-        Common.Logger.info(
+        AppLogger.info(
             this.serviceName,
             `User ${this.userEmail} accessed service via ${operation}()`
         );
@@ -78,13 +78,13 @@ Common.Logging.ServiceLogger = class {
     logOperation(operationType, outcome, note, error, jsonData) {
         // System log: INFO for success, ERROR for failure
         if (outcome === 'success') {
-            Common.Logger.info(
+            AppLogger.info(
                 this.serviceName,
                 `${operationType}: ${note}`,
                 jsonData
             );
         } else {
-            Common.Logger.error(
+            AppLogger.error(
                 this.serviceName,
                 `${operationType} FAILED: ${error || note}`,
                 jsonData || { error: error }
@@ -122,7 +122,7 @@ Common.Logging.ServiceLogger = class {
         const fullData = additionalData ? { ...errorData, ...additionalData } : errorData;
 
         // System log: ERROR level
-        Common.Logger.error(
+        AppLogger.error(
             this.serviceName,
             `Error in ${operation}: ${errorMessage}`,
             fullData

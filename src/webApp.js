@@ -13,8 +13,8 @@ const _LAYOUT_FILE = 'common/html/_Layout.html'; // Name of the layout file
  */
 function doGet(e) {
     // Configure logger for web app execution
-    Common.Logger.configure();
-    Common.Logger.info('WebApp', 'doGet() called');
+    AppLogger.configure();
+    AppLogger.info('WebApp', 'doGet() called');
     
     const scriptProperties = PropertiesService.getScriptProperties();
     const mobileBreakpoint = scriptProperties.getProperty('MOBILE_BREAKPOINT') || '767';
@@ -42,7 +42,7 @@ function doGet(e) {
     const output = template.evaluate()
         .setTitle('SCCCC Services - Request Verification Code')
     
-    Common.Logger.info('WebApp', 'doGet() completed successfully');
+    AppLogger.info('WebApp', 'doGet() completed successfully');
     return output;
 }
 function doPost(e) {

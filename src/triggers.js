@@ -4,7 +4,7 @@
     try {
         const containerSpreadsheetId = SpreadsheetApp.getActiveSpreadsheet().getId();
         // @ts-ignore - Logger is implemented in separate file
-        Common.Logger.setContainerSpreadsheet(containerSpreadsheetId);
+        AppLogger.setContainerSpreadsheet(containerSpreadsheetId);
     } catch (error) {
         console.error('Failed to initialize Logger container:', error);
     }
@@ -22,25 +22,25 @@
  * Initialize All triggers for the system
  */
 function initializeTriggers() {
-    Common.Logger.configure()
+    AppLogger.configure()
       try {
         const properties = PropertiesService.getScriptProperties();
         const electionsTriggerId = properties.getProperty('ELECTIONS_TRIGGER_ID');
         const formSubmitTriggerId = properties.getProperty('FORM_SUBMIT_TRIGGER_ID');
         if (!electionsTriggerId || !formSubmitTriggerId) {
-            Common.Logger.info('', 'System triggers not found - setting up automatically...');
+            AppLogger.info('', 'System triggers not found - setting up automatically...');
             const result = setupAllTriggers();
             
             // Store trigger IDs for future reference
             properties.setProperty('ELECTIONS_TRIGGER_ID', result.editTriggerId);
             properties.setProperty('FORM_SUBMIT_TRIGGER_ID', result.formSubmitTriggerId);
 
-            Common.Logger.info('', 'System triggers auto-configured on deployment');
+            AppLogger.info('', 'System triggers auto-configured on deployment');
         } else {
-            Common.Logger.info('', 'System triggers already configured');
+            AppLogger.info('', 'System triggers already configured');
         }
     } catch (error) {
-        Common.Logger.warn('', 'Could not auto-setup system triggers:', error);
+        AppLogger.warn('', 'Could not auto-setup system triggers:', error);
         // Continue without failing - triggers can be set up manually later
     }
 }
@@ -77,7 +77,7 @@ function ballotSubmitHandler(e) {
 
 function manageElectionLifecycles() {
     withLock_(() => {
-        Common.Logger.info('Triggers', 'Managing election lifecycles');
+        AppLogger.info('Triggers', 'Managing election lifecycles');
         VotingService.manageElectionLifecycles();
     })();
 }
@@ -92,20 +92,20 @@ function processMembershipExpirations() {
             // Initialize Logger with container spreadsheet for cross-spreadsheet logging
             const containerSpreadsheetId = SpreadsheetApp.getActiveSpreadsheet().getId();
             // @ts-ignore - Logger is implemented in separate file
-            Common.Logger.setContainerSpreadsheet(containerSpreadsheetId);
+            AppLogger.setContainerSpreadsheet(containerSpreadsheetId);
             
             // @ts-ignore - Logger is implemented in separate file
-            Common.Logger.info('Triggers', 'Starting daily membership expiration processing');
+            AppLogger.info('Triggers', 'Starting daily membership expiration processing');
             
             // Call the main expiration processing function
             MembershipManagement.generateExpiringMembersList();
             
             // @ts-ignore - Logger is implemented in separate file
-            Common.Logger.info('Triggers', 'Daily membership expiration processing completed successfully');
+            AppLogger.info('Triggers', 'Daily membership expiration processing completed successfully');
             
         } catch (error) {
             // @ts-ignore - Logger is implemented in separate file
-            Common.Logger.error('Triggers', 'Daily membership expiration processing failed', error);
+            AppLogger.error('Triggers', 'Daily membership expiration processing failed', error);
             console.error(`Daily membership expiration processing failed: ${error.message}\nStack trace: ${error.stack}`);
             throw error; // Re-throw to ensure trigger system records the failure
         }
@@ -117,29 +117,29 @@ function processMembershipExpirations() {
  * @returns {string} The external Elections spreadsheet ID
  */
 function getElectionsSpreadsheetId() {
-    Common.Logger.configure();
+    AppLogger.configure();
     try {
         // @ts-ignore - Logger is implemented in separate file
-        Common.Logger.info('Triggers', 'Starting getElectionsSpreadsheetId - attempting to get Bootstrap data');
+        AppLogger.info('Triggers', 'Starting getElectionsSpreadsheetId - attempting to get Bootstrap data');
         
         // Get Bootstrap configuration to find Elections spreadsheet ID
         const bootstrapData = Common.Data.Access.getBootstrapData();
         
         // @ts-ignore - Logger is implemented in separate file
-        Common.Logger.info('Triggers', 'Successfully retrieved Bootstrap data', {rowCount: bootstrapData ? bootstrapData.length : 0});
+        AppLogger.info('Triggers', 'Successfully retrieved Bootstrap data', {rowCount: bootstrapData ? bootstrapData.length : 0});
         
         const electionsConfig = bootstrapData.find(row => row.Reference === 'Elections');
         
         if (!electionsConfig) {
             // @ts-ignore - Logger is implemented in separate file
-            Common.Logger.error('Triggers', 'Elections configuration not found in Bootstrap data', {
+            AppLogger.error('Triggers', 'Elections configuration not found in Bootstrap data', {
                 availableReferences: bootstrapData.map(row => row.Reference)
             });
             throw new Error('Elections configuration not found in Bootstrap data');
         }
         
         // @ts-ignore - Logger is implemented in separate file
-        Common.Logger.info('Triggers', 'Found Elections configuration', {
+        AppLogger.info('Triggers', 'Found Elections configuration', {
             electionsId: electionsConfig.id,
             electionsConfig: electionsConfig
         });
@@ -147,7 +147,7 @@ function getElectionsSpreadsheetId() {
         return electionsConfig.id;
     } catch (error) {
         // @ts-ignore - Logger is implemented in separate file
-        Common.Logger.error('Triggers', 'Error getting Elections spreadsheet ID', error);
+        AppLogger.error('Triggers', 'Error getting Elections spreadsheet ID', error);
         throw error;
     }
 }
@@ -167,12 +167,12 @@ function setupElectionsTriggers() {
  * Uses Bootstrap configuration to determine the external spreadsheet ID
  */
 function setupAllTriggers() {
-    Common.Logger.configure();
+    AppLogger.configure();
     try {
-        Common.Logger.info('Triggers', 'Setting up all system triggers...');
+        AppLogger.info('Triggers', 'Setting up all system triggers...');
         
         const electionsSpreadsheetId = getElectionsSpreadsheetId();
-        Common.Logger.info('Triggers', `Found Elections spreadsheet ID: ${electionsSpreadsheetId}`);
+        AppLogger.info('Triggers', `Found Elections spreadsheet ID: ${electionsSpreadsheetId}`);
         
         // Remove any existing triggers for these functions to avoid duplicates
         const existingTriggers = ScriptApp.getProjectTriggers();
@@ -244,7 +244,7 @@ function setupAllTriggers() {
         
     } catch (error) {
         // @ts-ignore - Logger is implemented in separate file  
-        Common.Logger.error('Triggers', 'Error setting up triggers', error);
+        AppLogger.error('Triggers', 'Error setting up triggers', error);
         throw error;
     }
 }
@@ -255,9 +255,9 @@ function setupAllTriggers() {
  * Can be called from a menu item or manually
  */
 function processElectionsChanges() {
-    Common.Logger.configure();
+    AppLogger.configure();
     try {
-        Common.Logger.info('Triggers', 'Processing Elections spreadsheet changes...');
+        AppLogger.info('Triggers', 'Processing Elections spreadsheet changes...');
         
         const electionsSpreadsheetId = getElectionsSpreadsheetId();
         const electionsSpreadsheet = SpreadsheetApp.openById(electionsSpreadsheetId);
@@ -267,10 +267,10 @@ function processElectionsChanges() {
             throw new Error('Elections sheet not found in external spreadsheet');
         }
         
-        Common.Logger.info('Triggers', 'Running election lifecycle management...');
+        AppLogger.info('Triggers', 'Running election lifecycle management...');
         VotingService.manageElectionLifecycles();
         
-        Common.Logger.info('Triggers', 'Elections changes processed successfully');
+        AppLogger.info('Triggers', 'Elections changes processed successfully');
         
         return {
             success: true,
@@ -279,7 +279,7 @@ function processElectionsChanges() {
         
     } catch (error) {
         // @ts-ignore - Logger is implemented in separate file
-        Common.Logger.error('Triggers', 'Error processing Elections changes', error);
+        AppLogger.error('Triggers', 'Error processing Elections changes', error);
         throw error;
     }
 }
@@ -293,7 +293,7 @@ function handleElectionsSheetEdit(e) {
     withLock_((e) => {
         try {
             // @ts-ignore - Logger is implemented in separate file
-            Common.Logger.info('Triggers', 'Elections spreadsheet edit detected');
+            AppLogger.info('Triggers', 'Elections spreadsheet edit detected');
             const sheet = e.range.getSheet();
             const spreadsheetId = e.source.getId();
             
@@ -310,23 +310,23 @@ function handleElectionsSheetEdit(e) {
             }
             
             // @ts-ignore - Logger is implemented in separate file
-            Common.Logger.info('Triggers', `Processing Elections sheet edit: Row ${e.range.getRow()}, Column ${e.range.getColumn()}`);
+            AppLogger.info('Triggers', `Processing Elections sheet edit: Row ${e.range.getRow()}, Column ${e.range.getColumn()}`);
             
             try {
                 // Call the existing VotingService handler with the real event
                 VotingService.Trigger.handleRegistrationSheetEdit(e);
                 
                 // @ts-ignore - Logger is implemented in separate file
-                Common.Logger.info('Triggers', 'Elections sheet edit processed successfully');
+                AppLogger.info('Triggers', 'Elections sheet edit processed successfully');
             } catch (handlerError) {
                 // @ts-ignore - Logger is implemented in separate file
-                Common.Logger.error('Triggers', 'Error in Elections sheet handler - operation failed', handlerError);
+                AppLogger.error('Triggers', 'Error in Elections sheet handler - operation failed', handlerError);
                 throw handlerError; // Re-throw to be caught by outer catch
             }
             
         } catch (error) {
             // @ts-ignore - Logger is implemented in separate file
-            Common.Logger.error('Triggers', 'Error handling Elections sheet edit', error);
+            AppLogger.error('Triggers', 'Error handling Elections sheet edit', error);
             throw error;
         }
     })(e);
@@ -345,7 +345,7 @@ function withLock_(func, lockType = 'document', timeoutMillis = 30000) {
   return function() {
     let lock;
     // Setup the logger
-    Common.Logger.configure();
+    AppLogger.configure();
     // Acquire the correct lock type based on the input.
     if (lockType === 'script') {
       lock = LockService.getScriptLock();
@@ -365,12 +365,12 @@ function withLock_(func, lockType = 'document', timeoutMillis = 30000) {
         func.apply(this, arguments);
       } else {
         // Handle the case where the lock couldn't be acquired.
-        Common.Logger.warn('Could not acquire lock. The resource is busy.');
+        AppLogger.warn('Could not acquire lock. The resource is busy.');
         // You could also throw an error or handle it gracefully here.
       }
     } catch (e) {
       // Gracefully handle any errors from the wrapped function.
-      Common.Logger.error(`An error occurred: ${e.message}`);
+      AppLogger.error(`An error occurred: ${e.message}`);
       // Add your custom error handling logic, e.g., send an email.
     } finally {
       // Ensure the lock is always released.

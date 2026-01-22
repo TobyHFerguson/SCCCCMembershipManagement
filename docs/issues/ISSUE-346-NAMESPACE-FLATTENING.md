@@ -130,19 +130,41 @@ The following namespaces must be flattened in **dependency order** to avoid circ
 
 ---
 
-### Phase -1 Step 4: Common.Logger ⏳ PENDING
+### Phase -1 Step 4: Common.Logger → AppLogger ✅ COMPLETE
 
 **Layer**: 0 (Foundation - provides logging to all other modules)
 
+**IMPORTANT**: Renamed to `AppLogger` (not `Logger`) to avoid conflict with GAS built-in `Logger` global.
+GAS has a built-in `Logger` object with `.log()` method that we still use for low-level logging.
+
 | Old Name | New Name | Status |
 |----------|----------|--------|
-| `Common.Logger.info` | `Logger.info` | ⏳ Pending |
-| `Common.Logger.error` | `Logger.error` | ⏳ Pending |
-| `Common.Logger.warn` | `Logger.warn` | ⏳ Pending |
-| `Common.Logger.debug` | `Logger.debug` | ⏳ Pending |
-| `Common.Logger.configure` | `Logger.configure` | ⏳ Pending |
+| `Common.Logger.info` | `AppLogger.info` | ✅ Complete |
+| `Common.Logger.error` | `AppLogger.error` | ✅ Complete |
+| `Common.Logger.warn` | `AppLogger.warn` | ✅ Complete |
+| `Common.Logger.debug` | `AppLogger.debug` | ✅ Complete |
+| `Common.Logger.configure` | `AppLogger.configure` | ✅ Complete |
+| `Common.Logger.setLevel` | `AppLogger.setLevel` | ✅ Complete |
+| `Common.Logger.getLogs` | `AppLogger.getLogs` | ✅ Complete |
+| `Common.Logger.clearLogs` | `AppLogger.clearLogs` | ✅ Complete |
 
-**Estimated Usages**: ~238
+**Usages Replaced**: ~222
+
+**Files Changed**:
+- `src/common/utils/Logger.js` - Rewritten to IIFE-wrapped `AppLogger` class
+- `src/common/utils/Logger.d.ts` - Simplified (declarations moved to global.d.ts)
+- `src/types/global.d.ts` - Added `declare class AppLogger` and updated `Common.Logger`
+- `__mocks__/google-apps-script.ts` - Added `AppLogger` mock separate from GAS `Logger`
+- All source files updated from `Logger.info/debug/warn/error/configure` to `AppLogger.*`
+- All test files updated with proper mock setup for both `AppLogger` and GAS `Logger`
+
+**Backward Compatibility**:
+- `Common.Logger` still works (points to `AppLogger`)
+- GAS built-in `Logger.log()` still works (separate global)
+
+**Results**:
+- Tests: 1113 passing ✅
+- Type Errors: 363 (slight increase from 358, all test infrastructure errors)
 
 ---
 

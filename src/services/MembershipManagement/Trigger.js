@@ -90,7 +90,7 @@ MembershipManagement.Trigger = {
             return hasPendingPayments
 
         } catch (error) {
-            Common.Logger.error('MembershipManagement.Trigger', `Exception in processTransactions: ${error.message}`);
+            AppLogger.error('MembershipManagement.Trigger', `Exception in processTransactions: ${error.message}`);
             
             try {
                 MailApp.sendEmail({
@@ -104,7 +104,7 @@ Stack: ${error.stack || 'No stack trace'}
 Processing continues with assumption of pending payments.`
                 });
             } catch (emailError) {
-                Common.Logger.error('MembershipManagement.Trigger', `Failed to send exception alert: ${emailError.message}`);
+                AppLogger.error('MembershipManagement.Trigger', `Failed to send exception alert: ${emailError.message}`);
             }
             
             return true;

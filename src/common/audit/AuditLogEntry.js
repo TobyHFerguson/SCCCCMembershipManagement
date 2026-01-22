@@ -86,7 +86,7 @@ var AuditLogEntry = (function() {
       try {
         return new AuditLogEntry(type, outcome, note, error, jsonData, timestamp);
       } catch (validationError) {
-        Common.Logger.error('AuditLogEntry', `Failed to create audit entry: ${validationError.message}`);
+        AppLogger.error('AuditLogEntry', `Failed to create audit entry: ${validationError.message}`);
         
         // Send alert about audit entry construction failure
         try {
@@ -107,7 +107,7 @@ A safe error entry has been created instead to prevent system failure.
 Review the calling code for proper audit entry parameter validation.`
           });
         } catch (emailError) {
-          Common.Logger.error('AuditLogEntry', `Failed to send construction failure alert: ${emailError.message}`);
+          AppLogger.error('AuditLogEntry', `Failed to send construction failure alert: ${emailError.message}`);
         }
         
         // Return a safe error entry instead of throwing
@@ -133,7 +133,7 @@ Review the calling code for proper audit entry parameter validation.`
      */
     static validateArray(entries, context) {
       if (!Array.isArray(entries)) {
-        Common.Logger.error('AuditLogEntry', `${context}: entries is not an array: ${typeof entries}`);
+        AppLogger.error('AuditLogEntry', `${context}: entries is not an array: ${typeof entries}`);
         
         // Send alert about non-array audit entries
         try {
@@ -150,7 +150,7 @@ Processing will continue with empty audit array to prevent system failure.
 Review the ${context} implementation for proper audit entry generation.`
           });
         } catch (emailError) {
-          Common.Logger.error('AuditLogEntry', `Failed to send non-array alert: ${emailError.message}`);
+          AppLogger.error('AuditLogEntry', `Failed to send non-array alert: ${emailError.message}`);
         }
         
         return [];
@@ -165,7 +165,7 @@ Review the ${context} implementation for proper audit entry generation.`
         
         if (!(entry instanceof AuditLogEntry)) {
           corruptionDetected = true;
-          Common.Logger.error('AuditLogEntry', `${context}: entry ${i} is not an AuditLogEntry instance. Type: ${typeof entry}, Value: ${JSON.stringify(entry)}`);
+          AppLogger.error('AuditLogEntry', `${context}: entry ${i} is not an AuditLogEntry instance. Type: ${typeof entry}, Value: ${JSON.stringify(entry)}`);
           
           // Create safe replacement entry
           validEntries.push(AuditLogEntry.create(
@@ -200,7 +200,7 @@ Review that code to ensure proper audit entry construction.
 Processing continues normally with replacement error entries.`
           });
         } catch (emailError) {
-          Common.Logger.error('AuditLogEntry', `Failed to send corruption alert: ${emailError.message}`);
+          AppLogger.error('AuditLogEntry', `Failed to send corruption alert: ${emailError.message}`);
         }
       }
       

@@ -41,7 +41,7 @@ VotingService.Trigger = {
             sheet.getParent().toast(`⚠️ No Form URL provided in row ${editedRow} - please enter a valid Google Form URL`, 'Elections System', 4);
             
             // @ts-ignore - Logger is implemented in separate file
-            Common.Logger.warn('VotingTrigger', `No valid Form ID found in row ${editedRow} - no processing will occur`);
+            AppLogger.warn('VotingTrigger', `No valid Form ID found in row ${editedRow} - no processing will occur`);
             return; // Exit early if no URL to process
         }
         if (editedColumn === formEditUrlColumnIndex) {
@@ -55,7 +55,7 @@ VotingService.Trigger = {
                     sheet.getRange(editedRow, formEditUrlColumnIndex).setNote('Processing ballot creation...');
                     
                     // @ts-ignore - Logger is implemented in separate file
-                    Common.Logger.info('VotingTrigger', `Creating ballot form from source: ${editUrl} for row ${editedRow}`);
+                    AppLogger.info('VotingTrigger', `Creating ballot form from source: ${editUrl} for row ${editedRow}`);
                     
                     const { title, url } = VotingService.createBallotForm(editUrl, electionOfficers);
                     console.log(`editedRow=${editedRow}, titleColumnIndex=${titleColumnIndex}, title=${title}, url=${url}`);
@@ -70,13 +70,13 @@ VotingService.Trigger = {
                     sheet.getParent().toast(`✅ Ballot form '${title}' created successfully and Election Officers notified`, 'Elections System', 5);
                     
                     // @ts-ignore - Logger is implemented in separate file
-                    Common.Logger.info('VotingTrigger', `Successfully created ballot form '${title}' for row ${editedRow}`, {
+                    AppLogger.info('VotingTrigger', `Successfully created ballot form '${title}' for row ${editedRow}`, {
                         ballotUrl: url,
                         electionOfficers: electionOfficers
                     });
                 } catch (error) {
                     // @ts-ignore - Logger is implemented in separate file
-                    Common.Logger.error('VotingTrigger', `Error creating ballot form for row ${editedRow}`, {
+                    AppLogger.error('VotingTrigger', `Error creating ballot form for row ${editedRow}`, {
                         sourceUrl: editUrl,
                         error: error.message,
                         stack: error.stack
@@ -129,13 +129,13 @@ VotingService.Trigger = {
                     sheet.getParent().toast(`✅ Election Officers updated for '${title}' and notifications sent`, 'Elections System', 4);
                     
                     // @ts-ignore - Logger is implemented in separate file
-                    Common.Logger.info('VotingTrigger', `Updated Election Officers for '${title}' and sent notification emails`, {
+                    AppLogger.info('VotingTrigger', `Updated Election Officers for '${title}' and sent notification emails`, {
                         title: title,
                         electionOfficers: electionOfficers
                     });
                 } catch (error) {
                     // @ts-ignore - Logger is implemented in separate file
-                    Common.Logger.error('VotingTrigger', `Error updating Election Officers for '${title}'`, error);
+                    AppLogger.error('VotingTrigger', `Error updating Election Officers for '${title}'`, error);
                     
                     const isServerError = error.message.includes('server error occurred') || 
                                          error.message.includes('Try again') ||
@@ -160,7 +160,7 @@ VotingService.Trigger = {
             }
         } else if (editedColumn === startColumnIndex || editedColumn === endColumnIndex) {
             // @ts-ignore - Logger is implemented in separate file
-            Common.Logger.info('VotingTrigger', `Date edited in row ${editedRow} - triggering election lifecycle management`);
+            AppLogger.info('VotingTrigger', `Date edited in row ${editedRow} - triggering election lifecycle management`);
             
             try {
                 // Show processing status
@@ -181,10 +181,10 @@ VotingService.Trigger = {
                 sheet.getParent().toast('✅ Election lifecycle management completed successfully', 'Elections System', 4);
                 
                 // @ts-ignore - Logger is implemented in separate file
-                Common.Logger.info('VotingTrigger', 'Election lifecycle management completed successfully');
+                AppLogger.info('VotingTrigger', 'Election lifecycle management completed successfully');
             } catch (error) {
                 // @ts-ignore - Logger is implemented in separate file
-                Common.Logger.error('VotingTrigger', 'Error in election lifecycle management', error);
+                AppLogger.error('VotingTrigger', 'Error in election lifecycle management', error);
                 
                 const isServerError = error.message.includes('server error occurred') || 
                                      error.message.includes('Try again') ||

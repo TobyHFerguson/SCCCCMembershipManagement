@@ -34,18 +34,18 @@ ProfileManagementService.Api = ProfileManagementService.Api || {};
  * @returns {{serviceName: string, profile: Object, email: string, error?: string}} Service data
  */
 ProfileManagementService.Api.getData = function(email) {
-  Common.Logger.info('ProfileManagementService', `getData() started for user: ${email}`);
+  AppLogger.info('ProfileManagementService', `getData() started for user: ${email}`);
   
   try {
     // PURE: Normalize email
     const normalizedEmail = ProfileManagementService.Manager.normalizeEmail(email);
     
     // GAS: Get member profile
-    Common.Logger.debug('ProfileManagementService', `Fetching profile for user: ${normalizedEmail}`);
+    AppLogger.debug('ProfileManagementService', `Fetching profile for user: ${normalizedEmail}`);
     const profile = Common.Data.Access.getMember(normalizedEmail);
     
     if (!profile) {
-      Common.Logger.warn('ProfileManagementService', `Profile not found for user: ${email}`);
+      AppLogger.warn('ProfileManagementService', `Profile not found for user: ${email}`);
       return {
         serviceName: 'Profile Management',
         profile: null,
@@ -71,7 +71,7 @@ ProfileManagementService.Api.getData = function(email) {
       delete displayProfile['Renewed On']; // Remove Date object
     }
     
-    Common.Logger.info('ProfileManagementService', `getData() completed successfully for user: ${email}`);
+    AppLogger.info('ProfileManagementService', `getData() completed successfully for user: ${email}`);
     
     return {
       serviceName: 'Profile Management',
@@ -79,7 +79,7 @@ ProfileManagementService.Api.getData = function(email) {
       email: email
     };
   } catch (error) {
-    Common.Logger.error('ProfileManagementService', `getData() failed for user: ${email}`, error);
+    AppLogger.error('ProfileManagementService', `getData() failed for user: ${email}`, error);
     return {
       serviceName: 'Profile Management',
       profile: null,
@@ -253,12 +253,12 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
     const userEmail = params._authenticatedEmail;
     const updates = params.updates;
     
-    Common.Logger.info('ProfileManagementService', `handleUpdateProfile() started for user: ${userEmail}`, {
+    AppLogger.info('ProfileManagementService', `handleUpdateProfile() started for user: ${userEmail}`, {
       updateFields: updates ? Object.keys(updates) : []
     });
 
     if (!userEmail) {
-      Common.Logger.error('ProfileManagementService', 'handleUpdateProfile() failed: No user email');
+      AppLogger.error('ProfileManagementService', 'handleUpdateProfile() failed: No user email');
       return Common.Api.ClientManager.errorResponse(
         'User email not available',
         'NO_EMAIL'
@@ -266,7 +266,7 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
     }
 
     if (!updates || typeof updates !== 'object') {
-      Common.Logger.error('ProfileManagementService', 'handleUpdateProfile() failed: Invalid updates', { updates: updates });
+      AppLogger.error('ProfileManagementService', 'handleUpdateProfile() failed: Invalid updates', { updates: updates });
       return Common.Api.ClientManager.errorResponse(
         'Profile updates must be provided',
         'INVALID_UPDATES'
@@ -278,11 +278,11 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
       const normalizedEmail = ProfileManagementService.Manager.normalizeEmail(userEmail);
 
       // GAS: Get current profile
-      Common.Logger.debug('ProfileManagementService', `Fetching current profile for user: ${normalizedEmail}`);
+      AppLogger.debug('ProfileManagementService', `Fetching current profile for user: ${normalizedEmail}`);
       const originalProfile = Common.Data.Access.getMember(normalizedEmail);
       
       if (!originalProfile) {
-        Common.Logger.warn('ProfileManagementService', `Profile not found for user: ${normalizedEmail}`);
+        AppLogger.warn('ProfileManagementService', `Profile not found for user: ${normalizedEmail}`);
         return Common.Api.ClientManager.errorResponse(
           'Profile not found',
           'PROFILE_NOT_FOUND'
@@ -290,7 +290,7 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
       }
 
       // PURE: Process the update (validation, forbidden field check, merge)
-      Common.Logger.debug('ProfileManagementService', 'Validating and processing profile update');
+      AppLogger.debug('ProfileManagementService', 'Validating and processing profile update');
       const result = ProfileManagementService.Manager.processProfileUpdate(
         originalProfile,
         updates,
@@ -298,7 +298,7 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
       );
 
       if (!result.success) {
-        Common.Logger.warn('ProfileManagementService', `Profile update validation failed for user: ${normalizedEmail}`, {
+        AppLogger.warn('ProfileManagementService', `Profile update validation failed for user: ${normalizedEmail}`, {
           error: result.message
         });
         return Common.Api.ClientManager.errorResponse(
@@ -308,7 +308,7 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
       }
 
       // GAS: Persist the update
-      Common.Logger.info('ProfileManagementService', `Persisting profile update for user: ${normalizedEmail}`);
+      AppLogger.info('ProfileManagementService', `Persisting profile update for user: ${normalizedEmail}`);
       Common.Data.Access.updateMember(normalizedEmail, result.mergedProfile);
       
       // Create audit entry for profile update
@@ -328,10 +328,10 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
       try {
         AuditPersistence.persistAuditEntries([auditEntry]);
       } catch (auditError) {
-        Common.Logger.error('ProfileManagementService', 'Failed to persist audit entry', auditError);
+        AppLogger.error('ProfileManagementService', 'Failed to persist audit entry', auditError);
       }
 
-      Common.Logger.info('ProfileManagementService', `handleUpdateProfile() completed successfully for user: ${normalizedEmail}`, {
+      AppLogger.info('ProfileManagementService', `handleUpdateProfile() completed successfully for user: ${normalizedEmail}`, {
         updatedFields: Object.keys(updates)
       });
 
@@ -342,7 +342,7 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
         profile: ProfileManagementService.Manager.formatProfileForDisplay(result.mergedProfile)
       });
     } catch (error) {
-      Common.Logger.error('ProfileManagementService', `handleUpdateProfile() failed for user: ${userEmail}`, error);
+      AppLogger.error('ProfileManagementService', `handleUpdateProfile() failed for user: ${userEmail}`, error);
       return Common.Api.ClientManager.errorResponse(
         'Failed to update profile',
         'UPDATE_PROFILE_ERROR'

@@ -80,8 +80,8 @@ describe('Circular Dependency Guards', () => {
       expect(loggerSource).toContain('let CONFIG =');
       expect(loggerSource).toContain('let currentLogLevel =');
       
-      // Should have configure function
-      expect(loggerSource).toContain('Common.Logger.configure');
+      // Should have configure function (flat class pattern: Logger.configure)
+      expect(loggerSource).toContain('static configure()');
       expect(loggerSource).toContain('loadConfiguration');
     });
     
@@ -127,17 +127,17 @@ describe('Circular Dependency Guards', () => {
         .replace(/\/\/.*$/gm, '')
         .replace(/\/\*[\s\S]*?\*\//g, '');
       
-      // Look for Common.Logger usage in internal functions (before the public API definitions)
-      // We expect Common.Logger to be defined/assigned, but not called in internal functions
-      const beforePublicApi = sourceWithoutComments.split('Common.Logger.debug =')[0];
+      // Look for AppLogger/Common.Logger usage in internal functions (before the class definition)
+      // The IIFE-wrapped class should not call itself internally
+      const beforeClassDef = sourceWithoutComments.split('class AppLogger {')[0];
       
-      // Check for Common.Logger method calls (not assignments)
-      const loggerCallPattern = /Common\.Logger\.(debug|info|warn|error|configure|setLevel|getLogs|clearLogs)\s*\([^=]/g;
-      const matches = beforePublicApi.match(loggerCallPattern);
+      // Check for AppLogger or Common.Logger method calls (not in the backward compatibility section)
+      const loggerCallPattern = /(AppLogger|Common\.Logger)\.(debug|info|warn|error|configure|setLevel|getLogs|clearLogs)\s*\([^=]/g;
+      const matches = beforeClassDef.match(loggerCallPattern);
       
       if (matches) {
-        fail(`Found ${matches.length} Common.Logger call(s) in Logger.js internal functions: ${matches.join(', ')}\n` +
-             'Logger internal functions must use Logger.log() only to avoid circular dependencies.');
+        fail(`Found ${matches.length} AppLogger/Common.Logger call(s) in Logger.js internal functions: ${matches.join(', ')}\n` +
+             'Logger internal functions must use console.log() only to avoid circular dependencies.');
       }
       
       expect(matches).toBeNull();

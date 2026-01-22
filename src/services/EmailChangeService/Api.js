@@ -33,17 +33,17 @@ EmailChangeService.Api = EmailChangeService.Api || {};
  * @returns {{serviceName: string, currentEmail: string, error?: string}} Service data
  */
 EmailChangeService.Api.getData = function(email) {
-  Common.Logger.info('EmailChangeService', `getData() started for user: ${email}`);
+  AppLogger.info('EmailChangeService', `getData() started for user: ${email}`);
   
   try {
-    Common.Logger.info('EmailChangeService', `getData() completed successfully for user: ${email}`);
+    AppLogger.info('EmailChangeService', `getData() completed successfully for user: ${email}`);
     
     return {
       serviceName: 'Email Change',
       currentEmail: email
     };
   } catch (error) {
-    Common.Logger.error('EmailChangeService', `getData() failed for user: ${email}`, error);
+    AppLogger.error('EmailChangeService', `getData() failed for user: ${email}`, error);
     return {
       serviceName: 'Email Change',
       error: `Failed to load email change service: ${error.message}`,

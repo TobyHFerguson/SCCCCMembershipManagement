@@ -9,17 +9,20 @@
  * 2. Technical system logging (System Logs sheet)
  */
 
-// Mock Common.Logger before importing ServiceLogger
-const mockCommonLogger = {
+// Mock AppLogger (flat class pattern) before importing ServiceLogger
+const mockLogger = {
     info: jest.fn(),
     error: jest.fn(),
     warn: jest.fn(),
     debug: jest.fn()
 };
 
-// Set up global Common namespace
+// Set up global AppLogger (flat)
+global.AppLogger = mockLogger;
+
+// Set up global Common namespace (backward compat)
 global.Common = {
-    Logger: mockCommonLogger,
+    Logger: mockLogger,
     Logging: {}
 };
 
@@ -52,10 +55,10 @@ describe('Common.Logging.ServiceLogger', () => {
 
     beforeEach(() => {
         // Reset all mocks
-        mockCommonLogger.info.mockClear();
-        mockCommonLogger.error.mockClear();
-        mockCommonLogger.warn.mockClear();
-        mockCommonLogger.debug.mockClear();
+        mockLogger.info.mockClear();
+        mockLogger.error.mockClear();
+        mockLogger.warn.mockClear();
+        mockLogger.debug.mockClear();
         
         // Create fresh logger instance
         logger = new global.Common.Logging.ServiceLogger(testServiceName, testUserEmail, testTimestamp);
@@ -84,7 +87,7 @@ describe('Common.Logging.ServiceLogger', () => {
             const auditEntry = logger.logServiceAccess(operation);
 
             // Verify system log was called
-            expect(mockCommonLogger.info).toHaveBeenCalledWith(
+            expect(mockLogger.info).toHaveBeenCalledWith(
                 testServiceName,
                 `User ${testUserEmail} accessed service via ${operation}()`
             );
@@ -116,7 +119,7 @@ describe('Common.Logging.ServiceLogger', () => {
             const auditEntry = logger.logOperation(operationType, 'success', note, undefined, jsonData);
 
             // Verify system log
-            expect(mockCommonLogger.info).toHaveBeenCalledWith(
+            expect(mockLogger.info).toHaveBeenCalledWith(
                 testServiceName,
                 `${operationType}: ${note}`,
                 jsonData
@@ -139,7 +142,7 @@ describe('Common.Logging.ServiceLogger', () => {
             const auditEntry = logger.logOperation(operationType, 'fail', note, error, jsonData);
 
             // Verify system log
-            expect(mockCommonLogger.error).toHaveBeenCalledWith(
+            expect(mockLogger.error).toHaveBeenCalledWith(
                 testServiceName,
                 `${operationType} FAILED: ${error}`,
                 jsonData
@@ -156,7 +159,7 @@ describe('Common.Logging.ServiceLogger', () => {
             const auditEntry = logger.logOperation('SimpleOp', 'success', 'Completed');
 
             expect(auditEntry.JSON).toBe('');
-            expect(mockCommonLogger.info).toHaveBeenCalledWith(
+            expect(mockLogger.info).toHaveBeenCalledWith(
                 testServiceName,
                 'SimpleOp: Completed',
                 undefined
@@ -173,7 +176,7 @@ describe('Common.Logging.ServiceLogger', () => {
             const auditEntry = logger.logError(operation, error);
 
             // Verify system log
-            expect(mockCommonLogger.error).toHaveBeenCalledWith(
+            expect(mockLogger.error).toHaveBeenCalledWith(
                 testServiceName,
                 `Error in ${operation}: Network timeout`,
                 expect.objectContaining({
@@ -202,7 +205,7 @@ describe('Common.Logging.ServiceLogger', () => {
             const auditEntry = logger.logError(operation, error);
 
             // Verify system log
-            expect(mockCommonLogger.error).toHaveBeenCalledWith(
+            expect(mockLogger.error).toHaveBeenCalledWith(
                 testServiceName,
                 `Error in ${operation}: ${error}`,
                 expect.objectContaining({
@@ -235,13 +238,13 @@ describe('Common.Logging.ServiceLogger', () => {
             const error = '';
             const jsonData = { custom: 'data' };
 
-            mockCommonLogger.info.mockClear(); // Clear any previous calls
+            mockLogger.info.mockClear(); // Clear any previous calls
 
             const auditEntry = logger.createAuditEntry(type, outcome, note, error, jsonData);
 
             // Verify NO system log was called
-            expect(mockCommonLogger.info).not.toHaveBeenCalled();
-            expect(mockCommonLogger.error).not.toHaveBeenCalled();
+            expect(mockLogger.info).not.toHaveBeenCalled();
+            expect(mockLogger.error).not.toHaveBeenCalled();
 
             // Verify audit entry was created
             expect(auditEntry.Type).toBe(type);

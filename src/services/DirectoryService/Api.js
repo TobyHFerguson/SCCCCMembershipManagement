@@ -32,14 +32,14 @@ DirectoryService.Api = DirectoryService.Api || {};
  * @returns {{serviceName: string, directoryEntries: Array, email: string, error?: string}} Service data for client renderer
  */
 DirectoryService.Api.getData = function(email) {
-  Common.Logger.info('DirectoryService', `getData() started for user: ${email}`);
+  AppLogger.info('DirectoryService', `getData() started for user: ${email}`);
   
   try {
     // GAS: Get directory entries (security boundary - only returns public data)
-    Common.Logger.debug('DirectoryService', 'Fetching directory entries');
+    AppLogger.debug('DirectoryService', 'Fetching directory entries');
     const directoryEntries = DirectoryService.getDirectoryEntries();
     
-    Common.Logger.info('DirectoryService', `getData() completed successfully for user: ${email}`, {
+    AppLogger.info('DirectoryService', `getData() completed successfully for user: ${email}`, {
       entryCount: directoryEntries ? directoryEntries.length : 0
     });
     
@@ -49,7 +49,7 @@ DirectoryService.Api.getData = function(email) {
       email: email
     };
   } catch (error) {
-    Common.Logger.error('DirectoryService', `getData() failed for user: ${email}`, error);
+    AppLogger.error('DirectoryService', `getData() failed for user: ${email}`, error);
     return {
       serviceName: 'Directory',
       error: `Failed to load directory: ${error.message}`,

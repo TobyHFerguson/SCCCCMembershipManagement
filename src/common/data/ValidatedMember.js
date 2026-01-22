@@ -216,7 +216,7 @@ Common.Data.ValidatedMember = (function() {
         
       } catch (validationError) {
         // Log error
-        Common.Logger.error('ValidatedMember', `Row ${rowNumber}: ${validationError.message}`);
+        AppLogger.error('ValidatedMember', `Row ${rowNumber}: ${validationError.message}`);
         
         // Add to error collector if provided
         if (errorCollector) {
@@ -274,10 +274,10 @@ Processing continued with valid rows only.
 Review the ActiveMembers sheet for data quality issues.`
           });
           
-          Common.Logger.warn('ValidatedMember', `Sent validation error alert email for ${errorCollector.errors.length} errors in ${context}`);
+          AppLogger.warn('ValidatedMember', `Sent validation error alert email for ${errorCollector.errors.length} errors in ${context}`);
           
         } catch (emailError) {
-          Common.Logger.error('ValidatedMember', `Failed to send validation error alert: ${emailError.message}`);
+          AppLogger.error('ValidatedMember', `Failed to send validation error alert: ${emailError.message}`);
         }
       }
       

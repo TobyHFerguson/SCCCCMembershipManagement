@@ -60,7 +60,7 @@ global.Common = {
 };
 
 // Set up Logger
-global.Logger = {
+global.AppLogger = {
   log: jest.fn()
 };
 

@@ -8,7 +8,7 @@
  * Feature flags are stored in Script Properties for persistence across executions.
  * 
  * CRITICAL: This module is in Layer 0 (Foundation).
- * - MUST NOT use Common.Logger.* (creates circular dependency)
+ * - MUST NOT use Logger.* (creates circular dependency)
  * - MUST use Logger.log() only for tracing
  * 
  * @namespace Common.Config.FeatureFlags

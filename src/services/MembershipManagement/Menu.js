@@ -19,7 +19,7 @@ MembershipManagement.Menu = {
 function processTransactions() {
     return Common.Utils.wrapMenuFunction(
         function() {
-            Common.Logger.info('MembershipManagement', 'Menu: Process Transactions - Starting');
+            AppLogger.info('MembershipManagement', 'Menu: Process Transactions - Starting');
             const result = MembershipManagement.processTransactions();
             
             // Create audit entry for menu operation
@@ -39,7 +39,7 @@ function processTransactions() {
             });
             MembershipManagement.Internal.persistAuditEntries_([auditEntry]);
             
-            Common.Logger.info('MembershipManagement', 'Menu: Process Transactions - Completed', {
+            AppLogger.info('MembershipManagement', 'Menu: Process Transactions - Completed', {
                 processed: result.processed || 0,
                 joins: result.joins || 0,
                 renewals: result.renewals || 0,
@@ -72,10 +72,10 @@ function processTransactions() {
 function generateExpiringMembersList() {
     return Common.Utils.wrapMenuFunction(
         function() {
-            Common.Logger.info('MembershipManagement', 'Menu: Process Expirations - Starting');
+            AppLogger.info('MembershipManagement', 'Menu: Process Expirations - Starting');
             const result = MembershipManagement.generateExpiringMembersList();
             
-            Common.Logger.info('MembershipManagement', 'Menu: Process Expirations - Completed', {
+            AppLogger.info('MembershipManagement', 'Menu: Process Expirations - Completed', {
                 addedToQueue: result ? result.addedToQueue : 0,
                 scheduleEntriesProcessed: result ? result.scheduleEntriesProcessed : 0
             });
@@ -104,9 +104,9 @@ function generateExpiringMembersList() {
 function processMigrations() {
     return Common.Utils.wrapMenuFunction(
         function() {
-            Common.Logger.info('MembershipManagement', '[processMigrations] Starting processMigrations');
+            AppLogger.info('MembershipManagement', '[processMigrations] Starting processMigrations');
             MembershipManagement.processMigrations();
-            Common.Logger.info('MembershipManagement', '[processMigrations] Completed');
+            AppLogger.info('MembershipManagement', '[processMigrations] Completed');
         },
         'Process Migrations'
     )();
@@ -115,7 +115,7 @@ function processMigrations() {
 function findPossibleRenewalsFromMenu() {
     return Common.Utils.wrapMenuFunction(
         function() {
-            Common.Logger.info('MembershipManagement', 'Menu: Find Possible Renewals - Starting');
+            AppLogger.info('MembershipManagement', 'Menu: Find Possible Renewals - Starting');
             
             const activeMembers = Common.Data.Access.getMembers();
             const similarMemberPairs = MembershipManagement.Manager.findPossibleRenewals(activeMembers);
@@ -133,7 +133,7 @@ function findPossibleRenewalsFromMenu() {
             });
             MembershipManagement.Internal.persistAuditEntries_([auditEntry]);
             
-            Common.Logger.info('MembershipManagement', 'Menu: Find Possible Renewals - Completed', { 
+            AppLogger.info('MembershipManagement', 'Menu: Find Possible Renewals - Completed', { 
                 pairCount, 
                 pairs: pairDetails 
             });
@@ -170,7 +170,7 @@ function findPossibleRenewalsFromMenu() {
 function mergeSelectedMembers() {
     return Common.Utils.wrapMenuFunction(
         function() {
-            Common.Logger.info('MembershipManagement', 'Menu: Merge Selected Members - Starting');
+            AppLogger.info('MembershipManagement', 'Menu: Merge Selected Members - Starting');
             
             const ui = SpreadsheetApp.getUi();
             try {
@@ -189,7 +189,7 @@ function mergeSelectedMembers() {
                     const range = sheet.getActiveRange();
                     if (!range) { 
                         ui.alert('No selection', 'Please select exactly 2 rows to merge.', ui.ButtonSet.OK); 
-                        Common.Logger.info('MembershipManagement', 'Menu: Merge Selected Members - Aborted (no selection)');
+                        AppLogger.info('MembershipManagement', 'Menu: Merge Selected Members - Aborted (no selection)');
                         return; 
                     }
                     const rStart = range.getRow();
@@ -199,7 +199,7 @@ function mergeSelectedMembers() {
 
                 if (selectedRowNums.size !== 2) { 
                     ui.alert('Invalid selection', 'Please select exactly 2 rows (they may be non-contiguous).', ui.ButtonSet.OK); 
-                    Common.Logger.info('MembershipManagement', 'Menu: Merge Selected Members - Aborted (invalid selection)', { selectedCount: selectedRowNums.size });
+                    AppLogger.info('MembershipManagement', 'Menu: Merge Selected Members - Aborted (invalid selection)', { selectedCount: selectedRowNums.size });
                     return; 
                 }
 
@@ -222,7 +222,7 @@ function mergeSelectedMembers() {
                     });
                     MembershipManagement.Internal.persistAuditEntries_([auditEntry]);
                     
-                    Common.Logger.info('MembershipManagement', 'Menu: Merge Selected Members - Failed', { 
+                    AppLogger.info('MembershipManagement', 'Menu: Merge Selected Members - Failed', { 
                         rowA: rowA + 2, 
                         rowB: rowB + 2, 
                         reason: result.message 
@@ -248,7 +248,7 @@ function mergeSelectedMembers() {
                 });
                 MembershipManagement.Internal.persistAuditEntries_([auditEntry]);
                 
-                Common.Logger.info('MembershipManagement', 'Menu: Merge Selected Members - Completed', result.mergeDetails || { 
+                AppLogger.info('MembershipManagement', 'Menu: Merge Selected Members - Completed', result.mergeDetails || { 
                     rowA: rowA + 2, 
                     rowB: rowB + 2, 
                     message: result.message 
@@ -267,7 +267,7 @@ function mergeSelectedMembers() {
                 });
                 MembershipManagement.Internal.persistAuditEntries_([auditEntry]);
                 
-                Common.Logger.error('MembershipManagement', 'Menu: Merge Selected Members - Error', { error: error.message, stack: error.stack });
+                AppLogger.error('MembershipManagement', 'Menu: Merge Selected Members - Error', { error: error.message, stack: error.stack });
                 SpreadsheetApp.getUi().alert('Error', `Failed to merge selected members: ${error && error.message ? error.message : error}`, SpreadsheetApp.getUi().ButtonSet.OK);
                 throw error;
             }

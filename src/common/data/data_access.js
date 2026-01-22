@@ -97,7 +97,7 @@ Common.Data.Access = {
         );
         
         if (rowIndex === -1) {
-            Common.Logger.warn('data_access', `updateMember: Member not found with email: ${email}`);
+            AppLogger.warn('data_access', `updateMember: Member not found with email: ${email}`);
             return false;
         }
         
@@ -116,7 +116,7 @@ Common.Data.Access = {
             }
         }
         
-        Common.Logger.info('data_access', `updateMember: Updated ${changeCount} cells for ${email}`);
+        AppLogger.info('data_access', `updateMember: Updated ${changeCount} cells for ${email}`);
         
         // Clear cache so subsequent reads get fresh data
         SpreadsheetManager.clearFiddlerCache('ActiveMembers');

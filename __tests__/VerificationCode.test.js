@@ -482,12 +482,22 @@ describe('VerificationCode - GAS Layer', () => {
     // @ts-expect-error - Partial mock for testing
     global.MailApp = mockMailApp;
     
-    // Mock Logger
+    // Mock GAS built-in Logger
     // @ts-ignore - Partial mock for testing
     global.Logger = {
       log: jest.fn(),
       clear: jest.fn(),
       getLog: jest.fn(() => ''),
+    };
+    
+    // Mock AppLogger (our custom logger)
+    // @ts-ignore - Partial mock for testing
+    global.AppLogger = {
+      info: jest.fn(),
+      debug: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      configure: jest.fn()
     };
   });
 
@@ -495,6 +505,7 @@ describe('VerificationCode - GAS Layer', () => {
     delete global.CacheService;
     delete global.MailApp;
     delete global.Logger;
+    delete global.AppLogger;
   });
 
   // ==================== getVerificationConfig Tests ====================

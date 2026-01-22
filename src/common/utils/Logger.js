@@ -1,21 +1,25 @@
 /**
- * Production-friendly logging utility for Google Apps Script
+ * AppLogger - Production-friendly logging utility for Google Apps Script
  * Provides multiple logging destinations for debugging deployed applications
  * 
+ * Named AppLogger (not Logger) to avoid conflict with GAS built-in Logger.
+ * 
  * FOUNDATIONAL FILE: This is a low-level foundational module (like Properties and SpreadsheetManager).
- * It MUST NOT create circular dependencies. Use console.log() for internal tracing, never Common.Logger.
+ * It MUST NOT create circular dependencies. Use console.log() for internal tracing, never AppLogger itself.
  * 
  * ARCHITECTURE: This module uses static configuration loaded once at initialization.
- * Call Common.Logger.configure() AFTER Properties and SpreadsheetManager are ready
+ * Call AppLogger.configure() AFTER Properties and SpreadsheetManager are ready
  * to load configuration from the Properties sheet.
  * 
  * Safe defaults allow logging to work even before configure() is called.
  * System Logs are managed through the Bootstrap process. The Bootstrap sheet should contain:
  * | Reference | iD | sheetName | createIfMissing |
  * | SystemLogs |  | System Logs | True |
+ * 
+ * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
  */
 
-(function() {
+var AppLogger = (function() {
   const LOG_LEVELS = {
     DEBUG: 0,
     INFO: 1,
@@ -116,7 +120,7 @@
     try {
       // Check if SpreadsheetManager is available (flat class pattern)
       if (typeof SpreadsheetManager === 'undefined') {
-        console.log('[Logger.getLogFiddler] SpreadsheetManager not available yet, using fallback');
+        console.log('[AppLogger.getLogFiddler] SpreadsheetManager not available yet, using fallback');
         return null;
       }
       
@@ -125,7 +129,7 @@
       return fiddler;
     } catch (error) {
       // If SystemLogs is not configured in Bootstrap or any other error, log and return null
-      console.log('[Logger.getLogFiddler] Failed to get SystemLogs fiddler: ' + (error && error.message ? error.message : String(error)));
+      console.log('[AppLogger.getLogFiddler] Failed to get SystemLogs fiddler: ' + (error && error.message ? error.message : String(error)));
       return null;
     }
   }
@@ -157,7 +161,7 @@
       
       return containerId;
     } catch (error) {
-      console.log('[Common.Logger.getContainerSpreadsheetId] Failed: ' + error);
+      console.log('[AppLogger.getContainerSpreadsheetId] Failed: ' + error);
       return null;
     }
   }
@@ -200,7 +204,7 @@
       
       return logSheet;
     } catch (error) {
-      console.log('[Common.Logger.getLogSheetFallback] Failed: ' + error);
+      console.log('[AppLogger.getLogSheetFallback] Failed: ' + error);
       return null;
     }
   }
@@ -302,7 +306,7 @@
         }
       }
     } catch (error) {
-      console.log('[Common.Logger.logToSheet] Failed: ' + (error && error.message ? error.message : String(error)));
+      console.log('[AppLogger.logToSheet] Failed: ' + (error && error.message ? error.message : String(error)));
     }
   }
   
@@ -392,7 +396,6 @@
       console.log(formattedMessage);
     }
     
-    
     // Sheet logging
     if (CONFIG.SHEET_LOGGING) {
       logToSheet(level, service, message, data);
@@ -409,114 +412,164 @@
     }
   }
   
-  // Populate Common.Logger with the implementation
-  Common.Logger.debug = function(service, message, data) {
-    log('DEBUG', service, message, data);
-  };
-  
-  Common.Logger.info = function(service, message, data) {
-    log('INFO', service, message, data);
-  };
-  
-  Common.Logger.warn = function(service, message, data) {
-    log('WARN', service, message, data);
-  };
-  
-  Common.Logger.error = function(service, message, data) {
-    // if (data instanceof Error) {
-    //   data = {
-    //     name: data.name,
-    //     message: data.message,
-    //     stack: data.stack
-    //   };
-    // }
-    log('ERROR', service, message, data);
-  };
-  
-  /**
-   * Load/reload logger configuration from Properties sheet
-   * Call this AFTER Properties and SpreadsheetManager are initialized
-   * Safe to call multiple times
-   * 
-   * @example
-   * // In your initialization code (e.g., onOpen trigger):
-   * Common.Logger.configure();
-   */
-  Common.Logger.configure = function() {
-    loadConfiguration();
-  };
-  
-  /**
-   * Set log level programmatically (overrides Properties sheet value until next configure() call)
-   * @param {string} level - 'DEBUG', 'INFO', 'WARN', or 'ERROR'
-   * @deprecated Prefer setting loggerLevel in Properties sheet and calling configure()
-   */
-  Common.Logger.setLevel = function(level) {
-    const levelUpper = level.toUpperCase();
-    if (LOG_LEVELS[levelUpper] !== undefined) {
-      currentLogLevel = LOG_LEVELS[levelUpper];
-      console.log('[Common.Logger] Log level set to: ' + levelUpper);
-    } else {
-      console.log('[Common.Logger] Invalid log level: ' + level);
+  class AppLogger {
+    /**
+     * Log a debug message
+     * @param {string} service - Service name (e.g., 'MembershipManagement')
+     * @param {string} message - Log message
+     * @param {any} [data] - Optional additional data
+     */
+    static debug(service, message, data) {
+      log('DEBUG', service, message, data);
     }
-  };
-  
-  Common.Logger.getLogs = function() {
-    try {
-      const fiddler = getLogFiddler();
-      if (fiddler) {
-        // Use fiddler to get log data
-        const logData = fiddler.getData();
-        // Convert to array format matching legacy interface: [Timestamp, Level, Service, Message, Data]
-        return logData.map(entry => [
-          entry.Timestamp,
-          entry.Level,
-          entry.Service,
-          entry.Message,
-          entry.Data
-        ]);
+    
+    /**
+     * Log an info message
+     * @param {string} service - Service name (e.g., 'MembershipManagement')
+     * @param {string} message - Log message
+     * @param {any} [data] - Optional additional data
+     */
+    static info(service, message, data) {
+      log('INFO', service, message, data);
+    }
+    
+    /**
+     * Log a warning message
+     * @param {string} service - Service name (e.g., 'MembershipManagement')
+     * @param {string} message - Log message
+     * @param {any} [data] - Optional additional data
+     */
+    static warn(service, message, data) {
+      log('WARN', service, message, data);
+    }
+    
+    /**
+     * Log an error message
+     * @param {string} service - Service name (e.g., 'MembershipManagement')
+     * @param {string} message - Log message
+     * @param {any} [data] - Optional additional data
+     */
+    static error(service, message, data) {
+      log('ERROR', service, message, data);
+    }
+    
+    /**
+     * Load/reload logger configuration from Properties sheet
+     * Call this AFTER Properties and SpreadsheetManager are initialized
+     * Safe to call multiple times
+     * 
+     * @example
+     * // In your initialization code (e.g., onOpen trigger):
+     * AppLogger.configure();
+     */
+    static configure() {
+      loadConfiguration();
+    }
+    
+    /**
+     * Set log level programmatically (overrides Properties sheet value until next configure() call)
+     * @param {string} level - 'DEBUG', 'INFO', 'WARN', or 'ERROR'
+     * @deprecated Prefer setting loggerLevel in Properties sheet and calling configure()
+     */
+    static setLevel(level) {
+      const levelUpper = level.toUpperCase();
+      if (LOG_LEVELS[levelUpper] !== undefined) {
+        currentLogLevel = LOG_LEVELS[levelUpper];
+        console.log('[Logger] Log level set to: ' + levelUpper);
       } else {
-        // Fallback to legacy approach
-        const logSheet = getLogSheetFallback();
-        if (!logSheet) return [];
-        
-        const lastRow = logSheet.getLastRow();
-        if (lastRow <= 1) return [];
-        
-        return logSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+        console.log('[Logger] Invalid log level: ' + level);
       }
-    } catch (error) {
-      console.log('[Common.Logger.getLogs] Failed: ' + (error && error.message ? error.message : String(error)));
-      return [];
     }
-  };
-  
- 
-  Common.Logger.clearLogs = function() {
-    try {
-      const fiddler = getLogFiddler();
-      if (fiddler) {
-        // Use fiddler to clear log data
-        fiddler.setData([]).dumpValues();
-      } else {
-        // Fallback to legacy approach
-        const logSheet = getLogSheetFallback();
-        if (logSheet && logSheet.getLastRow() > 1) {
-          logSheet.getRange(2, 1, logSheet.getLastRow() - 1, 5).clearContent();
+    
+    /**
+     * Get all log entries
+     * @returns {Array<Array<any>>} Log entries as [Timestamp, Level, Service, Message, Data]
+     */
+    static getLogs() {
+      try {
+        const fiddler = getLogFiddler();
+        if (fiddler) {
+          // Use fiddler to get log data
+          const logData = fiddler.getData();
+          // Convert to array format matching legacy interface: [Timestamp, Level, Service, Message, Data]
+          return logData.map(entry => [
+            entry.Timestamp,
+            entry.Level,
+            entry.Service,
+            entry.Message,
+            entry.Data
+          ]);
+        } else {
+          // Fallback to legacy approach
+          const logSheet = getLogSheetFallback();
+          if (!logSheet) return [];
+          
+          const lastRow = logSheet.getLastRow();
+          if (lastRow <= 1) return [];
+          
+          return logSheet.getRange(2, 1, lastRow - 1, 5).getValues();
         }
+      } catch (error) {
+        console.log('[AppLogger.getLogs] Failed: ' + (error && error.message ? error.message : String(error)));
+        return [];
       }
-    } catch (error) {
-      console.log('[Common.Logger.clearLogs] Failed: ' + (error && error.message ? error.message : String(error)));
     }
-  };
+    
+    /**
+     * Clear all log entries
+     */
+    static clearLogs() {
+      try {
+        const fiddler = getLogFiddler();
+        if (fiddler) {
+          // Use fiddler to clear log data
+          fiddler.setData([]).dumpValues();
+        } else {
+          // Fallback to legacy approach
+          const logSheet = getLogSheetFallback();
+          if (logSheet && logSheet.getLastRow() > 1) {
+            logSheet.getRange(2, 1, logSheet.getLastRow() - 1, 5).clearContent();
+          }
+        }
+      } catch (error) {
+        console.log('[AppLogger.clearLogs] Failed: ' + (error && error.message ? error.message : String(error)));
+      }
+    }
+    
+    /**
+     * Set the container spreadsheet ID for logging
+     * @param {string} spreadsheetId - Spreadsheet ID
+     */
+    static setContainerSpreadsheet(spreadsheetId) {
+      try {
+        const properties = PropertiesService.getScriptProperties();
+        properties.setProperty('CONTAINER_SPREADSHEET_ID', spreadsheetId);
+      } catch (error) {
+        console.error('Failed to set container spreadsheet ID:', error);
+      }
+    }
+  }
   
- 
-  Common.Logger.setContainerSpreadsheet = function(spreadsheetId) {
-    try {
-      const properties = PropertiesService.getScriptProperties();
-      properties.setProperty('CONTAINER_SPREADSHEET_ID', spreadsheetId);
-    } catch (error) {
-      console.error('Failed to set container spreadsheet ID:', error);
-    }
-  };
+  return AppLogger;
 })();
+
+// Backward compatibility: Assign to old namespace location
+// This allows gradual migration - old code still works
+if (typeof Common !== 'undefined') {
+  if (!Common.Logger) Common.Logger = {};
+  // Copy all static methods to Common.Logger
+  Common.Logger.debug = AppLogger.debug;
+  Common.Logger.info = AppLogger.info;
+  Common.Logger.warn = AppLogger.warn;
+  Common.Logger.error = AppLogger.error;
+  Common.Logger.configure = AppLogger.configure;
+  Common.Logger.setLevel = AppLogger.setLevel;
+  Common.Logger.getLogs = AppLogger.getLogs;
+  Common.Logger.clearLogs = AppLogger.clearLogs;
+  Common.Logger.setContainerSpreadsheet = AppLogger.setContainerSpreadsheet;
+}
+
+// Node.js export for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = AppLogger;
+}

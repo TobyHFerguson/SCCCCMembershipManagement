@@ -193,8 +193,15 @@ describe('FeatureFlags - GAS Layer', () => {
     };
     
     // Mock Logger
-    global.Logger = {
+    global.AppLogger = {
       log: jest.fn()
+    };
+
+    // Mock GAS built-in Logger
+    global.Logger = {
+      log: jest.fn(),
+      clear: jest.fn(),
+      getLog: jest.fn(() => '')
     };
   });
 

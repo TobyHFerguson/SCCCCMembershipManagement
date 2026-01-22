@@ -15,12 +15,12 @@ if (typeof Common.Utils === 'undefined') Common.Utils = {};
  * @returns {Function} Wrapped function
  */
 Common.Utils.wrapMenuFunction = function(fn, menuItemName) {
-  Common.Logger.configure();
+  AppLogger.configure();
   return function() {
     try {
-      Common.Logger.info('MenuWrapper', `Menu item '${menuItemName}' clicked - starting execution`);
+      AppLogger.info('MenuWrapper', `Menu item '${menuItemName}' clicked - starting execution`);
       const result = fn.apply(this, arguments);
-      Common.Logger.info('MenuWrapper', `Menu item '${menuItemName}' completed successfully`);
+      AppLogger.info('MenuWrapper', `Menu item '${menuItemName}' completed successfully`);
       try {
         SpreadsheetApp.getUi().toast(`${menuItemName} completed successfully`, 'Success', 3);
       } catch (uiError) {
@@ -40,7 +40,7 @@ Common.Utils.wrapMenuFunction = function(fn, menuItemName) {
         );
       } catch (uiError) {
         // UI not available (e.g., running from trigger) - error already logged
-        Common.Logger.warn('MenuWrapper', 'UI not available for error alert');
+        AppLogger.warn('MenuWrapper', 'UI not available for error alert');
       }
       throw error;
     }

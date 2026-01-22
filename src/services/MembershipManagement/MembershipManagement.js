@@ -43,7 +43,7 @@ MembershipManagement.convertJoinToRenew = function (rowAIndex, rowBIndex) {
       membershipData,
       membershipHeaders
     );
-    Common.Logger.info('MembershipManagement', `convertJoinToRenew: Updated ${changeCount} cells in ActiveMembers`);
+    AppLogger.info('MembershipManagement', `convertJoinToRenew: Updated ${changeCount} cells in ActiveMembers`);
     
     expiryFiddler.setData(expiryScheduleData).dumpValues();
   }
@@ -55,7 +55,7 @@ MembershipManagement.processTransactions = function () {
   const transactionsFiddler = SpreadsheetManager.getFiddler('Transactions').needFormulas();
   const transactions = SpreadsheetManager.getDataWithFormulas(transactionsFiddler);
   if (transactions.length === 0) { 
-    Common.Logger.info('MembershipManagement', 'No transactions to process');
+    AppLogger.info('MembershipManagement', 'No transactions to process');
     return { processed: 0, joins: 0, renewals: 0, hasPendingPayments: false, errors: [] }; 
   }
 
@@ -74,7 +74,7 @@ MembershipManagement.processTransactions = function () {
       membershipData,
       membershipHeaders
     );
-    Common.Logger.info('MembershipManagement', `processTransactions: Updated ${changeCount} cells in ActiveMembers`);
+    AppLogger.info('MembershipManagement', `processTransactions: Updated ${changeCount} cells in ActiveMembers`);
     
     expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
   }
@@ -90,7 +90,7 @@ MembershipManagement.processTransactions = function () {
   }
   
   // Log comprehensive summary
-  Common.Logger.info('MembershipManagement', 'Transaction processing completed', {
+  AppLogger.info('MembershipManagement', 'Transaction processing completed', {
     processed,
     joins,
     renewals,
@@ -98,7 +98,7 @@ MembershipManagement.processTransactions = function () {
     hasPendingPayments
   });
   
-  errors.forEach(e => Common.Logger.error('MembershipManagement', `Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}`, { stack: e.stack }));
+  errors.forEach(e => AppLogger.error('MembershipManagement', `Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}`, { stack: e.stack }));
   return { processed, joins, renewals, hasPendingPayments, errors };
 }
 
@@ -119,11 +119,11 @@ MembershipManagement.processMigrations = function () {
   
   // Log any errors that occurred during migration
   if (result.errors && result.errors.length > 0) {
-    result.errors.forEach(e => Common.Logger.error('MembershipManagement', `Migration error on row ${e.rowNum} ${e.email}: ${e.message}`, { stack: e.stack }));
+    result.errors.forEach(e => AppLogger.error('MembershipManagement', `Migration error on row ${e.rowNum} ${e.email}: ${e.message}`, { stack: e.stack }));
   }
   
   if (PropertiesService.getScriptProperties().getProperty('MIGRATION_LOG_ONLY').toLowerCase() === 'true') {
-    Common.Logger.info('MembershipManagement', `logOnly - # newMembers added: ${membershipData.length - mdLength} - #expirySchedule entries added: ${expiryScheduleData.length - esdLength}`);
+    AppLogger.info('MembershipManagement', `logOnly - # newMembers added: ${membershipData.length - mdLength} - #expirySchedule entries added: ${expiryScheduleData.length - esdLength}`);
     return;
   }
   
@@ -142,7 +142,7 @@ MembershipManagement.processMigrations = function () {
     const newRows = newMembers.map(m => m.toArray());
     const startRow = membershipSheet.getLastRow() + 1;
     membershipSheet.getRange(startRow, 1, newRows.length, membershipHeaders.length).setValues(newRows);
-    Common.Logger.info('MembershipManagement', `processMigrations: Appended ${newRows.length} new members to ActiveMembers`);
+    AppLogger.info('MembershipManagement', `processMigrations: Appended ${newRows.length} new members to ActiveMembers`);
     
     // Update existing rows with selective cell updates
     const existingMembers = membershipData.slice(0, originalMembershipRows.length);
@@ -152,7 +152,7 @@ MembershipManagement.processMigrations = function () {
       existingMembers,
       membershipHeaders
     );
-    Common.Logger.info('MembershipManagement', `processMigrations: Updated ${changeCount} cells in existing members`);
+    AppLogger.info('MembershipManagement', `processMigrations: Updated ${changeCount} cells in existing members`);
   } else {
     // Only updates to existing members - use selective cell updates
     const changeCount = Common.Data.MemberPersistence.writeChangedCells(
@@ -161,7 +161,7 @@ MembershipManagement.processMigrations = function () {
       membershipData,
       membershipHeaders
     );
-    Common.Logger.info('MembershipManagement', `processMigrations: Updated ${changeCount} cells in ActiveMembers`);
+    AppLogger.info('MembershipManagement', `processMigrations: Updated ${changeCount} cells in ActiveMembers`);
   }
   
   expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
@@ -169,7 +169,7 @@ MembershipManagement.processMigrations = function () {
 
 MembershipManagement.generateExpiringMembersList = function () {
   try {
-    Common.Logger.info('MembershipManagement', 'Starting membership expiration processing...');
+    AppLogger.info('MembershipManagement', 'Starting membership expiration processing...');
 
     // Use SpreadsheetApp + ValidatedMember for ActiveMembers
     const init = MembershipManagement.Internal.initializeManagerDataWithSpreadsheetApp_();
@@ -184,7 +184,7 @@ MembershipManagement.generateExpiringMembersList = function () {
     const result = manager.generateExpiringMembersList(membershipData, expiryScheduleData, prefillFormTemplate);
 
     if (result.messages.length === 0) {
-      Common.Logger.info('MembershipManagement', 'No memberships required expiration processing');
+      AppLogger.info('MembershipManagement', 'No memberships required expiration processing');
       return { addedToQueue: 0, scheduleEntriesProcessed: 0 };
     }
     
@@ -232,7 +232,7 @@ MembershipManagement.generateExpiringMembersList = function () {
       membershipData,
       membershipHeaders
     );
-    Common.Logger.info('MembershipManagement', `generateExpiringMembersList: Updated ${changeCount} cells in ActiveMembers`);
+    AppLogger.info('MembershipManagement', `generateExpiringMembersList: Updated ${changeCount} cells in ActiveMembers`);
     
     expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
     
@@ -251,7 +251,7 @@ MembershipManagement.generateExpiringMembersList = function () {
     MembershipManagement.Internal.persistAuditEntries_([auditEntry]);
 
     // Log comprehensive summary
-    Common.Logger.info('MembershipManagement', 'Expiration processing completed', {
+    AppLogger.info('MembershipManagement', 'Expiration processing completed', {
       addedToQueue,
       scheduleEntriesProcessed,
       queueLengthBefore: initialQueueLength,
@@ -265,22 +265,22 @@ MembershipManagement.generateExpiringMembersList = function () {
     // Instead, delete any existing trigger and schedule a fresh one.
     if (result.messages.length > 0) {
       try {
-        Common.Logger.info('MembershipManagement', 'Scheduling immediate processing trigger for queue items');
+        AppLogger.info('MembershipManagement', 'Scheduling immediate processing trigger for queue items');
         MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger');
         MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', 1);
       } catch (e) {
-        Common.Logger.error('MembershipManagement', 'Failed to schedule expiration processing trigger', { error: String(e) });
+        AppLogger.error('MembershipManagement', 'Failed to schedule expiration processing trigger', { error: String(e) });
         // CRITICAL: Try to create trigger even if delete failed - orphaned queue is worse than duplicate trigger
         try {
           MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', 1);
-          Common.Logger.info('MembershipManagement', 'Trigger created on retry after delete failure');
+          AppLogger.info('MembershipManagement', 'Trigger created on retry after delete failure');
         } catch (retryError) {
-          Common.Logger.error('MembershipManagement', 'CRITICAL: Failed to create trigger on retry - queue may be orphaned!', { error: String(retryError) });
+          AppLogger.error('MembershipManagement', 'CRITICAL: Failed to create trigger on retry - queue may be orphaned!', { error: String(retryError) });
           // Send notification about orphaned queue
           try {
             MembershipManagement.Internal.sendOrphanedQueueNotification_(retryError, result.messages.length);
           } catch (notifyError) {
-            Common.Logger.error('MembershipManagement', 'Failed to send orphaned queue notification', { error: String(notifyError) });
+            AppLogger.error('MembershipManagement', 'Failed to send orphaned queue notification', { error: String(notifyError) });
           }
         }
       }
@@ -289,7 +289,7 @@ MembershipManagement.generateExpiringMembersList = function () {
     return { addedToQueue, scheduleEntriesProcessed, expiryTypeCounts };
   } catch (error) {
     const errorMessage = `Membership expiration processing failed: ${error.message}`;
-    Common.Logger.error('MembershipManagement', errorMessage, { stack: error.stack });
+    AppLogger.error('MembershipManagement', errorMessage, { stack: error.stack });
 
     // Send email notification to membership automation
     MembershipManagement.Internal.sendExpirationErrorNotification_(error);
@@ -309,7 +309,7 @@ MembershipManagement.generateExpiringMembersList = function () {
  */
 MembershipManagement.processExpirationFIFO = function (opts = {}) {
   try {
-    Common.Logger.info('MembershipManagement', 'Starting Expiration FIFO consumer...');
+    AppLogger.info('MembershipManagement', 'Starting Expiration FIFO consumer...');
     const batchSize = opts.batchSize || Properties.getNumberProperty('expirationBatchSize', 50);
 
     // GAS: Get fiddlers (leverages per-execution caching)
@@ -336,7 +336,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     const queue = MembershipManagement.Utils.convertFIFOItemsFromSpreadsheet(rawQueue);
     
     if (!Array.isArray(queue) || queue.length === 0) {
-      Common.Logger.info('MembershipManagement', 'Expiration FIFO empty - nothing to process');
+      AppLogger.info('MembershipManagement', 'Expiration FIFO empty - nothing to process');
       try { MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger'); } catch (e) { /* ignore */ }
       return { processed: 0, remaining: 0 };
     }
@@ -346,7 +346,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     const { eligibleItems, eligibleIndices } = MembershipManagement.Manager.selectBatchForProcessing(queue, batchSize, now);
 
     if (eligibleItems.length === 0) {
-      Common.Logger.info('MembershipManagement', 'No eligible FIFO entries to process at this time');
+      AppLogger.info('MembershipManagement', 'No eligible FIFO entries to process at this time');
       try { MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger'); } catch (e) { /* ignore */ }
       return { processed: 0, failed: 0, remaining: queue.length };
     }
@@ -429,9 +429,9 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
           // GAS: Convert ISO strings to Date objects for spreadsheet display
           const deadItemsForSheet = MembershipManagement.Utils.convertFIFOItemsToSpreadsheet(deadItems);
           deadFiddler.setData(existing.concat(deadItemsForSheet)).dumpValues();
-          Common.Logger.info('MembershipManagement', `Moved ${deadItems.length} items to ExpirationDeadLetter`);
+          AppLogger.info('MembershipManagement', `Moved ${deadItems.length} items to ExpirationDeadLetter`);
         } catch (e) {
-          Common.Logger.error('MembershipManagement', 'Failed to persist dead-letter items', { error: String(e) });
+          AppLogger.error('MembershipManagement', 'Failed to persist dead-letter items', { error: String(e) });
         }
       }
 
@@ -439,10 +439,10 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       const finalQueueForSheet = MembershipManagement.Utils.convertFIFOItemsToSpreadsheet(finalQueue);
       expirationFIFO.setData(finalQueueForSheet).dumpValues();
     } else {
-      Common.Logger.info('MembershipManagement', 'Dry-run mode: not persisting queue or dead-letter items');
+      AppLogger.info('MembershipManagement', 'Dry-run mode: not persisting queue or dead-letter items');
     }
 
-    Common.Logger.info('MembershipManagement', `Expiration FIFO: # ${queue.length} in queue, ${eligibleItems.length} in this batch, of which completed ${result.processed.length}, ${reattemptItems.length} to be retried, ${deadItems.length} marked dead, with ${finalQueue.length} still to be processed`);
+    AppLogger.info('MembershipManagement', `Expiration FIFO: # ${queue.length} in queue, ${eligibleItems.length} in this batch, of which completed ${result.processed.length}, ${reattemptItems.length} to be retried, ${deadItems.length} marked dead, with ${finalQueue.length} still to be processed`);
 
     // GAS: Schedule continuation trigger if work remains
     if (!opts.dryRun) {
@@ -462,23 +462,23 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
             minutesUntilNext = Math.max(1, Math.ceil(msUntilNext / 60000));
           }
           
-          Common.Logger.info('MembershipManagement', `Scheduling ${minutesUntilNext}-minute trigger for next eligible item`);
+          AppLogger.info('MembershipManagement', `Scheduling ${minutesUntilNext}-minute trigger for next eligible item`);
           MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger');
           MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', minutesUntilNext);
         } catch (e) {
-          Common.Logger.error('MembershipManagement', 'Error scheduling expiration FIFO trigger', { error: String(e) });
+          AppLogger.error('MembershipManagement', 'Error scheduling expiration FIFO trigger', { error: String(e) });
           // DEFENSIVE: If scheduling failed but queue has work, try to create a basic 1-minute trigger
           // Better to process slowly than leave queue orphaned
           try {
             MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger', 1);
-            Common.Logger.info('MembershipManagement', 'Created fallback 1-minute trigger after scheduling error');
+            AppLogger.info('MembershipManagement', 'Created fallback 1-minute trigger after scheduling error');
           } catch (retryError) {
-            Common.Logger.error('MembershipManagement', 'CRITICAL: Failed to create fallback trigger - queue orphaned!', { error: String(retryError) });
+            AppLogger.error('MembershipManagement', 'CRITICAL: Failed to create fallback trigger - queue orphaned!', { error: String(retryError) });
             // Send notification about orphaned queue
             try {
               MembershipManagement.Internal.sendOrphanedQueueNotification_(retryError, finalQueue.length);
             } catch (notifyError) {
-              Common.Logger.error('MembershipManagement', 'Failed to send orphaned queue notification', { error: String(notifyError) });
+              AppLogger.error('MembershipManagement', 'Failed to send orphaned queue notification', { error: String(notifyError) });
             }
           }
         }
@@ -487,29 +487,29 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
         try { MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger'); } catch (e) { /* ignore */ }
       }
     } else {
-      Common.Logger.info('MembershipManagement', 'Dry-run mode enabled: not scheduling or deleting triggers');
+      AppLogger.info('MembershipManagement', 'Dry-run mode enabled: not scheduling or deleting triggers');
     }
 
     return { processed: result.processed.length, failed: reattemptItems.length, remaining: finalQueue.length };
   } catch (error) {
     const errorMessage = `Expiration FIFO consumer failed: ${error.message}`;
-    Common.Logger.error('MembershipManagement', errorMessage, { stack: error.stack });
+    AppLogger.error('MembershipManagement', errorMessage, { stack: error.stack });
     
     // DEFENSIVE: On catastrophic failure, delete trigger to prevent infinite retry loop
     // Queue will need manual intervention, but at least we won't spam errors every minute
     if (!opts.dryRun) {
       try {
-        Common.Logger.info('MembershipManagement', 'Deleting trigger due to catastrophic failure');
+        AppLogger.info('MembershipManagement', 'Deleting trigger due to catastrophic failure');
         MembershipManagement.Trigger._deleteTriggersByFunctionName('processExpirationFIFOTrigger');
       } catch (triggerError) {
-        Common.Logger.error('MembershipManagement', 'Failed to delete trigger after catastrophic failure', { error: String(triggerError) });
+        AppLogger.error('MembershipManagement', 'Failed to delete trigger after catastrophic failure', { error: String(triggerError) });
       }
     }
     
     try { 
       MembershipManagement.Internal.sendCatastrophicFailureNotification_(error, opts.batchSize || 50); 
     } catch (e) { 
-      Common.Logger.error('MembershipManagement', 'Failed to send error notification', { error: String(e) }); 
+      AppLogger.error('MembershipManagement', 'Failed to send error notification', { error: String(e) }); 
     }
     return { processed: 0, failed: 0, remaining: -1, error: errorMessage };
   }
@@ -601,7 +601,7 @@ MembershipManagement.Internal.initializeManagerData_ = function (membershipFiddl
 
 MembershipManagement.Internal.getGroupAdder_ = function () {
   if (Properties.getBooleanProperty('testGroupAdds', false)) {
-    return (memberEmail, groupEmail) => Common.Logger.info('MembershipManagement', `testGroupAdds: true. Would have added: ${memberEmail} to group: ${groupEmail}`);
+    return (memberEmail, groupEmail) => AppLogger.info('MembershipManagement', `testGroupAdds: true. Would have added: ${memberEmail} to group: ${groupEmail}`);
   } else {
     return (memberEmail, groupEmail) => MembershipManagement.Internal.addMemberToGroup_(memberEmail, groupEmail);
   }
@@ -613,7 +613,7 @@ MembershipManagement.Internal.getGroupAdder_ = function () {
  */
 MembershipManagement.Internal.getGroupRemover_ = function () {
   if (Properties.getBooleanProperty('testGroupRemoves', false)) {
-    return (memberEmail, groupEmail) => Common.Logger.info('MembershipManagement', `testGroupRemoves: true. Would have removed: ${memberEmail} from group: ${groupEmail}`);
+    return (memberEmail, groupEmail) => AppLogger.info('MembershipManagement', `testGroupRemoves: true. Would have removed: ${memberEmail} from group: ${groupEmail}`);
   } else {
     return (memberEmail, groupEmail) => MembershipManagement.Internal.removeMemberFromGroup_(memberEmail, groupEmail);
   }
@@ -622,7 +622,7 @@ MembershipManagement.Internal.getGroupRemover_ = function () {
 MembershipManagement.Internal.getGroupEmailReplacer_ = function () {
   if (Properties.getBooleanProperty('testGroupEmailReplacements', false)) {
     return (originalEmail, newEmail) => {
-      Common.Logger.info('MembershipManagement', `testGroupEmailReplacements: true. Would have replaced: ${originalEmail} with: ${newEmail}`);
+      AppLogger.info('MembershipManagement', `testGroupEmailReplacements: true. Would have replaced: ${originalEmail} with: ${newEmail}`);
       return { success: true, message: 'Test mode - no changes made.' };
     }
   } else {
@@ -645,12 +645,12 @@ MembershipManagement.Internal.changeSubscribersEmailInAllGroups_ = function (ori
       GroupSubscription.changeMembersEmail(groupEmail, originalEmail, newEmail);
     } catch (e) {
       errors.push(`group ${groupEmail}: ${e && e.toString ? e.toString() : e}`);
-      Common.Logger.error('MembershipManagement', `Error changing email in group ${groupEmail}`, { error: String(e) });
+      AppLogger.error('MembershipManagement', `Error changing email in group ${groupEmail}`, { error: String(e) });
     }
   }
   if (errors.length > 0) {
     let errMsg = `Errors while updating ${originalEmail} to ${newEmail} in groups: ${errors.join('; ')}`;
-    Common.Logger.error('MembershipManagement', errMsg);
+    AppLogger.error('MembershipManagement', errMsg);
     return { success: false, message: errMsg };
   }
   return { success: true, message: `Successfully updated email from ${originalEmail} to ${newEmail} in all groups.` };
@@ -666,10 +666,10 @@ MembershipManagement.Internal.changeSubscribersEmailInAllGroups_ = function (ori
 MembershipManagement.Internal.addMemberToGroup_ = function (memberEmail, groupEmail) {
   try {
     AdminDirectory.Members.insert({ email: memberEmail, role: "MEMBER" }, groupEmail);
-    Common.Logger.info('MembershipManagement', `Successfully added ${memberEmail} to ${groupEmail}`);
+    AppLogger.info('MembershipManagement', `Successfully added ${memberEmail} to ${groupEmail}`);
   } catch (e) {
     if (e.message && e.message.includes("Member already exists")) {
-      Common.Logger.info('MembershipManagement', `Member ${memberEmail} already exists in ${groupEmail}`);
+      AppLogger.info('MembershipManagement', `Member ${memberEmail} already exists in ${groupEmail}`);
     } else {
       throw e;
     }
@@ -686,18 +686,18 @@ MembershipManagement.Internal.addMemberToGroup_ = function (memberEmail, groupEm
 MembershipManagement.Internal.removeMemberFromGroup_ = function (memberEmail, groupEmail) {
   try {
     AdminDirectory.Members.remove(groupEmail, memberEmail);
-    Common.Logger.info('MembershipManagement', `Successfully removed ${memberEmail} from ${groupEmail}`);
+    AppLogger.info('MembershipManagement', `Successfully removed ${memberEmail} from ${groupEmail}`);
   } catch (e) {
     // ignore "Resource Not Found" errors when the member is not in the group
     if (!e.message) throw e;
     if (e.message.includes("Resource Not Found")) {
       if (e.message.includes('Not Found: groupKey')) {
         const m = `Group ${groupEmail} is invalid. Check Public Groups Sheet to correct.`;
-        Common.Logger.error('MembershipManagement', m)
+        AppLogger.error('MembershipManagement', m)
         e.message = m;
         throw e;
       }
-      Common.Logger.debug(`MembershipManagement`, `Member ${memberEmail} not found in ${groupEmail}, nothing to remove`);
+      AppLogger.debug(`MembershipManagement`, `Member ${memberEmail} not found in ${groupEmail}, nothing to remove`);
       return;
     }
     e.message = `Error deleting ${memberEmail} from ${groupEmail}: ${e.message}`
@@ -711,7 +711,7 @@ MembershipManagement.Internal.getEmailSender_ = function () {
   return (email) => {
     email.replyTo = `membership@${domain}`;
     if (testEmails) {
-      Common.Logger.info('MembershipManagement', 'testEmails is set to true - logging only', { email });
+      AppLogger.info('MembershipManagement', 'testEmails is set to true - logging only', { email });
     } else {
       MembershipManagement.Internal.sendSingleEmail_(email);
     }
@@ -719,12 +719,12 @@ MembershipManagement.Internal.getEmailSender_ = function () {
 }
 
 MembershipManagement.Internal.sendSingleEmail_ = function (email) {
-  Common.Logger.info('MembershipManagement', 'Email Sent', { to: email.to, subject: email.subject });
+  AppLogger.info('MembershipManagement', 'Email Sent', { to: email.to, subject: email.subject });
   try {
     MailApp.sendEmail(email);
     return { Timestamp: new Date(), ...email };
   } catch (error) {
-    Common.Logger.error('MembershipManagement', `Failed to send email to ${email.to}: ${error.message}`);
+    AppLogger.error('MembershipManagement', `Failed to send email to ${email.to}: ${error.message}`);
   }
 }
 
@@ -781,12 +781,12 @@ MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger'
     };
 
     if (testEmails) {
-      Common.Logger.info('MembershipManagement', 'testEmails: true - Orphaned queue notification (test mode)', { email });
+      AppLogger.info('MembershipManagement', 'testEmails: true - Orphaned queue notification (test mode)', { email });
     } else {
       MailApp.sendEmail(email);
     }
   } catch (e) {
-    Common.Logger.error('MembershipManagement', `Failed to send orphaned queue notification: ${e.message}`);
+    AppLogger.error('MembershipManagement', `Failed to send orphaned queue notification: ${e.message}`);
   }
 }
 
@@ -847,12 +847,12 @@ MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger'
     };
 
     if (testEmails) {
-      Common.Logger.info('MembershipManagement', 'testEmails: true - Catastrophic failure notification (test mode)', { email });
+      AppLogger.info('MembershipManagement', 'testEmails: true - Catastrophic failure notification (test mode)', { email });
     } else {
       MailApp.sendEmail(email);
     }
   } catch (e) {
-    Common.Logger.error('MembershipManagement', `Failed to send catastrophic failure notification: ${e.message}`);
+    AppLogger.error('MembershipManagement', `Failed to send catastrophic failure notification: ${e.message}`);
   }
 }
 
@@ -885,15 +885,15 @@ MembershipManagement.Internal.sendExpirationErrorNotification_ = function (error
     };
 
     if (testEmails) {
-      Common.Logger.info('MembershipManagement', 'testEmails is set to true - logging error notification only', { email });
+      AppLogger.info('MembershipManagement', 'testEmails is set to true - logging error notification only', { email });
     } else {
       MailApp.sendEmail(email);
-      Common.Logger.info('MembershipManagement', `Error notification sent to membership-automation@${domain}`);
+      AppLogger.info('MembershipManagement', `Error notification sent to membership-automation@${domain}`);
     }
   } catch (emailError) {
     // If we can't even send the error email, log it but don't throw
-    Common.Logger.error('MembershipManagement', `CRITICAL: Failed to send expiration error notification: ${emailError.message}`);
-    Common.Logger.error('MembershipManagement', `Failed to send error notification: ${emailError.message}`, { originalError: error.message });
+    AppLogger.error('MembershipManagement', `CRITICAL: Failed to send expiration error notification: ${emailError.message}`);
+    AppLogger.error('MembershipManagement', `Failed to send error notification: ${emailError.message}`, { originalError: error.message });
   }
 }
 
@@ -910,11 +910,11 @@ MembershipManagement.Internal.persistAuditEntries_ = function (auditEntries) {
     // Use the canonical persistence helper (enforces schema validation and deduplication)
     const numWritten = AuditPersistence.persistAuditEntries(auditEntries);
     
-    Common.Logger.info('MembershipManagement', `Persisted ${numWritten} audit log entries`);
+    AppLogger.info('MembershipManagement', `Persisted ${numWritten} audit log entries`);
     return numWritten;
   } catch (error) {
     // Log but don't throw - audit logging should not break main functionality
-    Common.Logger.error('MembershipManagement', `Failed to persist audit entries: ${error.message}`);
+    AppLogger.error('MembershipManagement', `Failed to persist audit entries: ${error.message}`);
     return 0;
   }
 }

@@ -54,7 +54,7 @@ var AuditPersistence = (function() {
       const dedupedEntries = classValidatedEntries.filter(entry => {
         if (entry.Id) {
           if (seen.has(entry.Id)) {
-            Common.Logger.warn('AuditPersistence', `Skipping duplicate entry with Id=${entry.Id}`);
+            AppLogger.warn('AuditPersistence', `Skipping duplicate entry with Id=${entry.Id}`);
             return false;
           }
           seen.add(entry.Id);
@@ -83,7 +83,7 @@ var AuditPersistence = (function() {
         // Validate sheet has expected 6-column structure (if not empty)
         if (existingData.length > 0 && existingData[0].length !== 6) {
           const errorMsg = `AUDIT SHEET CORRUPTION: Expected 6 columns, found ${existingData[0].length}`;
-          Common.Logger.error('AuditPersistence', errorMsg);
+          AppLogger.error('AuditPersistence', errorMsg);
           
           // Send critical alert
           try {
@@ -100,7 +100,7 @@ Manual intervention required to fix sheet structure.
 Audit entries cannot be written until sheet is corrected.`
             });
           } catch (emailError) {
-            Common.Logger.error('AuditPersistence', `Failed to send corruption alert: ${emailError.message}`);
+            AppLogger.error('AuditPersistence', `Failed to send corruption alert: ${emailError.message}`);
           }
           
           return 0; // Cannot proceed with corrupted sheet
@@ -113,12 +113,12 @@ Audit entries cannot be written until sheet is corrected.`
           range.setValues(rows);
         }
 
-        Common.Logger.info('AuditPersistence', `Wrote ${rows.length} audit entries directly to sheet`);
+        AppLogger.info('AuditPersistence', `Wrote ${rows.length} audit entries directly to sheet`);
         return rows.length;
 
       } catch (err) {
         const errMsg = `Failed to persist ${rows.length} audit entries: ${err.toString()}`;
-        Common.Logger.error('AuditPersistence', errMsg);
+        AppLogger.error('AuditPersistence', errMsg);
         
         // Send alert about persistence failure
         try {
@@ -132,7 +132,7 @@ Error: ${errMsg}
 Processing continues without audit logging.`
           });
         } catch (emailError) {
-          Common.Logger.error('AuditPersistence', `Failed to send persistence alert: ${emailError.message}`);
+          AppLogger.error('AuditPersistence', `Failed to send persistence alert: ${emailError.message}`);
         }
         
         return 0;

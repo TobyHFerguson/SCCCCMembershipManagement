@@ -44,7 +44,7 @@ Common.Logging.ServiceExecutionLogger = {
         const auditEntries = [];
         
         // Log service access
-        Common.Logger.info(serviceName, `getData() called for user: ${email}`);
+        AppLogger.info(serviceName, `getData() called for user: ${email}`);
         
         try {
             // Execute the actual getData function
@@ -57,7 +57,7 @@ Common.Logging.ServiceExecutionLogger = {
             // Persist audit entries
             this._persistAuditEntries(auditEntries);
             
-            Common.Logger.info(serviceName, `getData() completed successfully for user: ${email}`);
+            AppLogger.info(serviceName, `getData() completed successfully for user: ${email}`);
             
             return result;
         } catch (error) {
@@ -68,7 +68,7 @@ Common.Logging.ServiceExecutionLogger = {
             // Persist audit entries even on error
             this._persistAuditEntries(auditEntries);
             
-            Common.Logger.error(serviceName, `getData() failed for user: ${email}`, error);
+            AppLogger.error(serviceName, `getData() failed for user: ${email}`, error);
             
             // Return error response (don't throw)
             return {
@@ -94,7 +94,7 @@ Common.Logging.ServiceExecutionLogger = {
         const auditEntries = [];
         
         // Log operation start
-        Common.Logger.info(serviceName, `${operationName} started for user: ${email}`, params);
+        AppLogger.info(serviceName, `${operationName} started for user: ${email}`, params);
         
         try {
             // Execute the actual handler function
@@ -114,7 +114,7 @@ Common.Logging.ServiceExecutionLogger = {
                 );
                 auditEntries.push(operationEntry);
                 
-                Common.Logger.info(serviceName, `${operationName} completed successfully for user: ${email}`);
+                AppLogger.info(serviceName, `${operationName} completed successfully for user: ${email}`);
             } else {
                 // Log failed operation
                 const errorMsg = result.error || 'Operation failed';
@@ -127,7 +127,7 @@ Common.Logging.ServiceExecutionLogger = {
                 );
                 auditEntries.push(operationEntry);
                 
-                Common.Logger.warn(serviceName, `${operationName} failed for user: ${email}: ${errorMsg}`);
+                AppLogger.warn(serviceName, `${operationName} failed for user: ${email}: ${errorMsg}`);
             }
             
             // Persist audit entries
@@ -142,7 +142,7 @@ Common.Logging.ServiceExecutionLogger = {
             // Persist audit entries even on error
             this._persistAuditEntries(auditEntries);
             
-            Common.Logger.error(serviceName, `${operationName} threw exception for user: ${email}`, error);
+            AppLogger.error(serviceName, `${operationName} threw exception for user: ${email}`, error);
             
             // Return error response (don't throw)
             return {
@@ -171,10 +171,10 @@ Common.Logging.ServiceExecutionLogger = {
             // Persist entries
             const numWritten = AuditPersistence.persistAuditEntries(auditFiddler, auditEntries);
             
-            Common.Logger.debug('ServiceExecutionLogger', `Persisted ${numWritten} audit entries`);
+            AppLogger.debug('ServiceExecutionLogger', `Persisted ${numWritten} audit entries`);
         } catch (error) {
             // Log error but don't fail the operation
-            Common.Logger.error('ServiceExecutionLogger', 'Failed to persist audit entries', error);
+            AppLogger.error('ServiceExecutionLogger', 'Failed to persist audit entries', error);
         }
     }
 };

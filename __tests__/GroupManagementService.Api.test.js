@@ -15,10 +15,21 @@ beforeEach(() => {
   // Reset GroupManagementService namespace
   global.GroupManagementService = {};
   
-  // Mock Logger
-  global.Logger = {
-    log: jest.fn()
+  // Mock Logger (flat class pattern)
+  global.AppLogger = {
+    log: jest.fn(),
+    info: jest.fn(),
+    debug: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn()
   };
+
+    // Mock GAS built-in Logger
+    global.Logger = {
+      log: jest.fn(),
+      clear: jest.fn(),
+      getLog: jest.fn(() => '')
+    };
 
   // Mock GroupSubscription
   global.GroupSubscription = {
@@ -35,7 +46,7 @@ beforeEach(() => {
     removeMember: jest.fn()
   };
 
-  // Mock Common namespace
+  // Mock Common namespace (backward compat for Logger)
   global.Common = {
     Data: {
       Access: {
@@ -50,12 +61,7 @@ beforeEach(() => {
     Api: {
       ClientManager: require('../src/common/api/ApiClient').ClientManager
     },
-    Logger: {
-      info: jest.fn(),
-      debug: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn()
-    },
+    Logger: global.Logger,
     Logging: {
       ServiceLogger: jest.fn().mockImplementation(() => ({
         logOperation: jest.fn().mockReturnValue({

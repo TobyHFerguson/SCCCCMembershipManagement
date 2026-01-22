@@ -9,7 +9,7 @@
  * Code-internal properties (runtime state) always come from Script Properties and are never in the sheet.
  * 
  * CRITICAL: This module MUST NOT use Logger (formerly Common.Logger)!
- * Reason: Creates infinite loop - Logger reads config from Properties -> Properties fails -> Logger.error -> infinite recursion
+ * Reason: Creates infinite loop - Logger reads config from Properties -> Properties fails -> AppLogger.error -> infinite recursion
  * Use console.log() only for tracing.
  * 
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
