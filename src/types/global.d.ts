@@ -68,6 +68,132 @@ interface FeatureFlagConfig {
     description?: string;
 }
 
+// ============================================================================
+// Auth Classes (Flat Pattern - no namespace nesting)
+// ============================================================================
+
+/**
+ * TokenManager - Multi-use token management for authenticated sessions
+ * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ */
+declare class TokenManager {
+    static generateToken(): string;
+    static getMultiUseToken(email: string): string;
+    static getEmailFromMUT(token: string): string | null;
+    static consumeMUT(token: string): string | null;
+    static updateTokenEmail(token: string, newEmail: string): boolean;
+    static getTokenData(token: string): TokenDataType | null;
+}
+
+/**
+ * TokenStorage - One-time token persistence via SpreadsheetManager
+ * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ */
+declare class TokenStorage {
+    static generateAndStoreToken(email: string): string;
+    static getTokenData(): TokenDataType[];
+    static consumeToken(token: string): TokenDataType | undefined;
+    static deleteTokens(tokensToDelete: string[]): void;
+}
+
+/**
+ * VerificationCodeEntry - Stored verification code data
+ */
+interface VerificationCodeEntry {
+    email: string;
+    code: string;
+    createdAt: string;
+    expiresAt: string;
+    attempts: number;
+    used: boolean;
+    service?: string;
+}
+
+/**
+ * VerificationResult - Result of verification attempt
+ */
+interface VerificationResult {
+    success: boolean;
+    email?: string;
+    error?: string;
+    errorCode?: string;
+}
+
+/**
+ * CodeGenerationResult - Result of code generation
+ */
+interface CodeGenerationResult {
+    success: boolean;
+    code?: string;
+    error?: string;
+    errorCode?: string;
+}
+
+/**
+ * RateLimitResult - Rate limiting check result
+ */
+interface RateLimitResult {
+    allowed: boolean;
+    remaining: number;
+    retryAfter?: number;
+}
+
+/**
+ * VerificationCodeManager - Pure logic for verification code operations
+ * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ */
+declare class VerificationCodeManager {
+    static generateCode(randomFn?: () => number): string;
+    static validateCodeFormat(code: string): { valid: boolean; error?: string };
+    static validateEmail(email: string): { valid: boolean; error?: string };
+    static calculateExpiry(createdAt: Date, expiryMinutes?: number): Date;
+    static isExpired(expiresAt: string, now?: Date): boolean;
+    static isMaxAttemptsExceeded(attempts: number, maxAttempts?: number): boolean;
+    static createEntry(email: string, code: string, now?: Date, service?: string): VerificationCodeEntry;
+    static verifyCode(inputCode: string, entry: VerificationCodeEntry, now?: Date): VerificationResult;
+    static checkGenerationRateLimit(existingEntries: VerificationCodeEntry[], now?: Date): RateLimitResult;
+    static filterActiveEntries(entries: VerificationCodeEntry[], now?: Date): VerificationCodeEntry[];
+    static getConfig(): typeof VERIFICATION_CONFIG;
+}
+
+/**
+ * VerificationCode - GAS layer for verification code storage
+ * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ */
+declare class VerificationCode {
+    static readonly _CACHE_PREFIX: string;
+    static readonly _RATE_LIMIT_PREFIX: string;
+    static getVerificationConfig(): typeof VERIFICATION_CONFIG;
+    static generateAndStore(email: string, service?: string): CodeGenerationResult;
+    static verify(email: string, code: string): VerificationResult;
+    static sendCodeEmail(email: string, code: string, serviceName: string): { success: boolean; error?: string };
+    static requestCode(email: string, serviceName: string, service?: string): { success: boolean; error?: string };
+    static clearCodes(email: string): void;
+    static clearRateLimitForEmail(email: string): boolean;
+    static clearAllVerificationData(): { cleared: number; errors: number };
+}
+
+/**
+ * Verification configuration type
+ */
+declare const VERIFICATION_CONFIG: {
+    CODE_LENGTH: number;
+    CODE_EXPIRY_MINUTES: number;
+    MAX_VERIFICATION_ATTEMPTS: number;
+    MAX_CODES_PER_EMAIL_PER_HOUR: number;
+    RATE_LIMIT_WINDOW_MINUTES: number;
+};
+
+/**
+ * AuthUtils - Deprecated authentication utility functions
+ * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ * @deprecated Use VerificationCode for the new SPA authentication flow
+ */
+declare class AuthUtils {
+    /** @deprecated Use VerificationCode.requestCode() instead */
+    static sendMagicLink(email: string, service: string): { success: boolean };
+}
+
 // Core authentication types (used across services)
 interface TokenDataType {
     Email: string;
@@ -508,87 +634,22 @@ declare namespace Common {
         const FeatureFlagsManager: typeof globalThis.FeatureFlagsManager;
     }
     
-    // Auth namespace
+    // Auth namespace (backward compatibility - points to flat classes)
     namespace Auth {
-        // Verification Code types
-        interface VerificationCodeEntry {
-            email: string;
-            code: string;
-            createdAt: string;
-            expiresAt: string;
-            attempts: number;
-            used: boolean;
-            service?: string;
-        }
+        // Points to flat TokenManager class
+        const TokenManager: typeof globalThis.TokenManager;
         
-            /** Known verification error codes returned by verification APIs */
-            type VerificationErrorCode =
-                | 'NO_CODE'
-                | 'EXPIRED'
-                | 'AUTO_RESENT'
-                | 'INVALID_FORMAT'
-                | 'ALREADY_USED'
-                | 'INCORRECT_CODE'
-                | 'MAX_ATTEMPTS'
-                | 'RATE_LIMITED'
-                | 'EMAIL_FAILED';
-
-            interface VerificationResult {
-            /**
-             * Result of a verification attempt.
-             *
-             * Note: `errorCode` may include the following values used by the system:
-             *  - `NO_CODE` - No code entry was found for the email
-             *  - `EXPIRED` - The existing code had expired
-             *  - `AUTO_RESENT` - The server auto-generated and resent a new code; the `email` field contains the server-normalized canonical email
-             *  - `INVALID_FORMAT`, `ALREADY_USED`, `INCORRECT_CODE`, `MAX_ATTEMPTS`, etc.
-             */
-            success: boolean;
-            /** Canonical server-normalized email (present when AUTO_RESENT or on success) */
-            email?: string;
-            /** Human-friendly error message */
-            error?: string;
-            /** Machine-readable error code */
-            errorCode?: VerificationErrorCode | string;
-        }
+        // Points to flat TokenStorage class
+        const TokenStorage: typeof globalThis.TokenStorage;
         
-        interface CodeGenerationResult {
-            success: boolean;
-            code?: string;
-            error?: string;
-            /** Machine-readable error code for generation failures */
-            errorCode?: VerificationErrorCode | string;
-        }
+        // Points to flat VerificationCode class
+        const VerificationCode: typeof globalThis.VerificationCode;
         
-        interface RateLimitResult {
-            allowed: boolean;
-            remaining: number;
-            retryAfter?: number;
-        }
+        // Points to flat VerificationCodeManager class
+        const VerificationCodeManager: typeof globalThis.VerificationCodeManager;
         
-        // VerificationCode GAS layer
-        namespace VerificationCode {
-            function generateAndStore(email: string, service?: string): CodeGenerationResult;
-            function verify(email: string, code: string): VerificationResult;
-            function sendCodeEmail(email: string, code: string, serviceName: string): { success: boolean; error?: string };
-            function requestCode(email: string, serviceName: string, service?: string): { success: boolean; error?: string };
-            function clearCodes(email: string): void;
-        }
-        
-        // VerificationCodeManager - Pure logic class
-        class VerificationCodeManager {
-            static generateCode(randomFn?: () => number): string;
-            static validateCodeFormat(code: string): { valid: boolean; error?: string };
-            static validateEmail(email: string): { valid: boolean; error?: string };
-            static calculateExpiry(createdAt: Date, expiryMinutes?: number): Date;
-            static isExpired(expiresAt: string, now?: Date): boolean;
-            static isMaxAttemptsExceeded(attempts: number, maxAttempts?: number): boolean;
-            static createEntry(email: string, code: string, now?: Date, service?: string): VerificationCodeEntry;
-            static verifyCode(inputCode: string, entry: VerificationCodeEntry | null, now?: Date): VerificationResult;
-            static checkGenerationRateLimit(existingEntries: VerificationCodeEntry[], now?: Date): RateLimitResult;
-            static filterActiveEntries(entries: VerificationCodeEntry[], now?: Date): VerificationCodeEntry[];
-            static getConfig(): { CODE_LENGTH: number; CODE_EXPIRY_MINUTES: number; MAX_VERIFICATION_ATTEMPTS: number; MAX_CODES_PER_EMAIL_PER_HOUR: number; RATE_LIMIT_WINDOW_MINUTES: number };
-        }
+        // Points to flat AuthUtils class (deprecated)
+        const Utils: typeof globalThis.AuthUtils;
     }
     
     // API namespace

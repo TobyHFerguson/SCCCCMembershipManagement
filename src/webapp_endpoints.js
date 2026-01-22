@@ -14,7 +14,7 @@ function sendMagicLink(email, service) {
   console.warn('[DEPRECATED] sendMagicLink is deprecated. Use sendVerificationCode instead. ' +
     'Call FeatureFlags.enableNewAuth() to switch to the new flow.');
   email = email.toLowerCase().trim(); // Normalize the email address
-  return Common.Auth.Utils.sendMagicLink(email, service);
+  return AuthUtils.sendMagicLink(email, service);
 }
 
 /**
@@ -65,7 +65,7 @@ function sendVerificationCode(email, service) {
   const serviceName = (service && WebServices[service]) ? WebServices[service].name : 'SCCCC Services';
   
   // Request verification code (generates + sends email)
-  const result = Common.Auth.VerificationCode.requestCode(email, serviceName, service);
+  const result = VerificationCode.requestCode(email, serviceName, service);
   
   // Audit log: verification code request
   const auditEntry = logger.logOperation(
@@ -115,7 +115,7 @@ function verifyCode(email, code, service) {
   const auditEntries = [];
   
   // Verify the code
-  const result = Common.Auth.VerificationCode.verify(email, code);
+  const result = VerificationCode.verify(email, code);
   
   // Audit log: verification attempt
   const auditEntry = logger.logOperation(
@@ -133,7 +133,7 @@ function verifyCode(email, code, service) {
   }
   
   // Generate a multi-use token for the session
-  const token = Common.Auth.TokenManager.getMultiUseToken(email);
+  const token = TokenManager.getMultiUseToken(email);
   
   console.log('verifyCode: success, returning token for in-place content swap');
   
@@ -352,7 +352,7 @@ function refreshSession(token) {
   console.log('refreshSession called');
   
   // Get the email from the current token
-  const email = Common.Auth.TokenManager.getEmailFromMUT(token);
+  const email = TokenManager.getEmailFromMUT(token);
   
   if (!email) {
     return {
@@ -363,7 +363,7 @@ function refreshSession(token) {
   }
   
   // Generate a new multi-use token
-  const newToken = Common.Auth.TokenManager.getMultiUseToken(email);
+  const newToken = TokenManager.getMultiUseToken(email);
   
   console.log('refreshSession: success for', email);
   
@@ -399,7 +399,7 @@ function updateUserSubscriptions(updatedSubscriptions, userToken) {
 }
 
 function getProfile(userToken) {
-    const userEmail = Common.Auth.TokenManager.getEmailFromMUT(userToken);
+    const userEmail = TokenManager.getEmailFromMUT(userToken);
     if (!userEmail) {
         console.warn(`Invalid or expired token: ${userToken}`);
         return { success: false, message: "Invalid session. Please refresh the page." };

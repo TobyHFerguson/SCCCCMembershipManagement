@@ -356,7 +356,7 @@ Common.Api.Client = {
         }
         
         // GAS: Validate token
-        const email = Common.Auth.TokenManager.getEmailFromMUT(token);
+        const email = TokenManager.getEmailFromMUT(token);
         if (!email) {
           return this._respond(
             Common.Api.ClientManager.errorResponse(

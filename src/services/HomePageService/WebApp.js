@@ -23,7 +23,7 @@ HomePageService.WebApp = {
         // This should not normally be called since page=request goes through the other path
         // But if called with a valid token, we bootstrap the home page
         template.contentFileName = 'common/html/serviceHomePage.html';
-        template.userToken = Common.Auth.TokenManager.getMultiUseToken(userEmail);
+        template.userToken = TokenManager.getMultiUseToken(userEmail);
         return template.evaluate().setTitle("SCCCC Services - Home");
     }
 };

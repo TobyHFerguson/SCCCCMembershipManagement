@@ -192,13 +192,32 @@ GAS has a built-in `Logger` object with `.log()` method that we still use for lo
 
 ---
 
-### Phase -1 Step 6: Common.Auth Namespace ⏳ PENDING
+### Phase -1 Step 6: Common.Auth Namespace ✅ COMPLETE
+
+**Layer**: 0 (Foundation - cannot use Logger)
 
 | Old Name | New Name | Status |
 |----------|----------|--------|
-| `Common.Auth.TokenManager` | `TokenManager` | ⏳ Pending |
-| `Common.Auth.VerificationCode` | `VerificationCode` | ⏳ Pending |
-| `Common.Auth.Utils` | `AuthUtils` | ⏳ Pending |
+| `Common.Auth.TokenManager` | `TokenManager` | ✅ Complete |
+| `Common.Auth.TokenStorage` | `TokenStorage` | ✅ Complete |
+| `Common.Auth.VerificationCode` | `VerificationCode` | ✅ Complete |
+| `Common.Auth.VerificationCodeManager` | `VerificationCodeManager` | ✅ Complete |
+| `Common.Auth.Utils` | `AuthUtils` | ✅ Complete |
+
+**Changes Made**:
+- Created `TokenManager.js` with IIFE-wrapped class (replaces token_manager.js)
+- Created `TokenStorage.js` with IIFE-wrapped class (replaces token_storage.js)
+- Rewrote `VerificationCode.js` with IIFE-wrapped `VerificationCode` and `VerificationCodeManager` classes
+- Created `AuthUtils.js` with IIFE-wrapped class (replaces utils.js)
+- Added all class declarations to `global.d.ts`
+- Updated ~42 usages across source files
+- Updated `Common.Auth` namespace in `global.d.ts` to reference flat classes
+- Updated `ApiClient.test.js` to mock flat `TokenManager` class
+- Maintained backward compatibility via `Common.Auth.*` bridges
+
+**Results**:
+- Tests: 1113 passing ✅
+- Type Errors: TBD (to verify)
 
 ---
 

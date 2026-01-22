@@ -350,7 +350,7 @@ EmailChangeService.Api.handleVerifyAndChangeEmail = function(params, token) {
 
       // GAS: Update the session token with new email
       if (token) {
-        const tokenUpdated = Common.Auth.TokenManager.updateTokenEmail(token, normalizedNew);
+        const tokenUpdated = TokenManager.updateTokenEmail(token, normalizedNew);
         if (!tokenUpdated) {
           Logger.log('[EmailChangeService.Api] Warning: Could not update token email');
         }

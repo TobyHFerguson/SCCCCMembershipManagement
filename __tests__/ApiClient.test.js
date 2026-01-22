@@ -422,12 +422,15 @@ describe('ApiClient - GAS Layer', () => {
       getLog: jest.fn(() => '')
     };
     
-    // Mock Common.Auth.TokenManager
+    // Mock flat TokenManager class
+    global.TokenManager = {
+      getEmailFromMUT: jest.fn()
+    };
+    
+    // Mock Common.Auth.TokenManager for backward compatibility
     global.Common = {
       Auth: {
-        TokenManager: {
-          getEmailFromMUT: jest.fn()
-        }
+        TokenManager: global.TokenManager
       },
       Api: require('../src/common/api/ApiClient')
     };
@@ -435,6 +438,7 @@ describe('ApiClient - GAS Layer', () => {
 
   afterEach(() => {
     delete global.Logger;
+    delete global.TokenManager;
     delete global.Common;
   });
 
@@ -500,7 +504,7 @@ describe('ApiClient - GAS Layer', () => {
 
     test('returns error for invalid token', () => {
       ApiClient.registerHandler('test', jest.fn());
-      Common.Auth.TokenManager.getEmailFromMUT.mockReturnValue(null);
+      TokenManager.getEmailFromMUT.mockReturnValue(null);
       
       const result = JSON.parse(ApiClient.handleRequest({ 
         action: 'test', 
@@ -514,7 +518,7 @@ describe('ApiClient - GAS Layer', () => {
     test('calls handler with params and token', () => {
       const handler = jest.fn().mockReturnValue({ success: true, data: 'result' });
       ApiClient.registerHandler('test', handler);
-      Common.Auth.TokenManager.getEmailFromMUT.mockReturnValue('user@example.com');
+      TokenManager.getEmailFromMUT.mockReturnValue('user@example.com');
       
       const result = JSON.parse(ApiClient.handleRequest({ 
         action: 'test', 

@@ -40,7 +40,7 @@ ProfileManagementService._checkForForbiddenUpdates = function (originalObject, u
 
 ProfileManagementService.updateProfile = function (userToken, updatedProfile) {
   const forbiddenFields = ["Status", "Email", "Joined", "Expires", "Period", "Migrated", "Renewed On"]; // Define the fields that are forbidden to update
-  const userEmail = Common.Auth.TokenManager.getEmailFromMUT(userToken);
+  const userEmail = TokenManager.getEmailFromMUT(userToken);
   if (!userEmail) {
     console.warn(`Invalid or expired token: ${userToken}`);
     return JSON.stringify({ success: false, message: "Invalid session. Please refresh the page." });
