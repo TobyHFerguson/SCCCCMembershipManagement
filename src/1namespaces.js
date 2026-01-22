@@ -1,19 +1,36 @@
 /// <reference path="./types/global.d.ts" />
 // @ts-check
+
+/**
+ * Namespace declarations for GAS runtime
+ * 
+ * NOTE: Many namespaces have been flattened to IIFE-wrapped classes per gas-best-practices.md
+ * The Common.* structure below provides backward compatibility during the migration.
+ * New code should use flat class names directly (e.g., ServiceLogger, not Common.Logging.ServiceLogger)
+ * 
+ * Flattened namespaces (Phase -1 complete):
+ * - Audit.* → AuditLogEntry, AuditLogger, AuditPersistence
+ * - Common.Data.ValidatedMember → ValidatedMember
+ * - Common.Data.MemberPersistence → MemberPersistence
+ * - Common.Data.Access → DataAccess
+ * - Common.Data.Storage.SpreadsheetManager → SpreadsheetManager
+ * - Common.Logging.ServiceLogger → ServiceLogger
+ * - Common.Logging.ServiceExecutionLogger → ServiceExecutionLogger
+ * - Common.Config.FeatureFlags → FeatureFlags, FeatureFlagsManager
+ * - Common.Auth.* → AuthUtils, TokenManager, TokenStorage, VerificationCode, VerificationCodeManager
+ * - Common.Api.* → ApiClient, ApiClientManager
+ */
+
 const Common = {
     Auth: {},
+    Config: {},
     Data: {
-        Storage: {
-            SpreadsheetManager: {}
-        }
+        Storage: {}
     },
+    Logging: {},
+    Api: {},
     Logger: {}
 };
-
-// Audit namespace has been flattened to:
-// - AuditLogEntry (src/common/audit/AuditLogEntry.js)
-// - AuditLogger (src/common/audit/AuditLogger.js)  
-// - AuditPersistence (src/common/audit/AuditPersistence.js)
 
 const GroupSubscription = {};
 
