@@ -73,4 +73,30 @@ declare namespace Audit {
         /** Optional detailed data to be JSON-serialized */
         jsonData?: any;
     }
+
+    /**
+     * Pure JavaScript audit logger
+     * Follows generator pattern - creates audit log entries without side effects
+     */
+    class Logger {
+        /**
+         * Constructor
+         * @param today - Optional date to use for timestamps (defaults to current date)
+         */
+        constructor(today?: Date);
+
+        /**
+         * Creates an audit log entry using the safe Audit.LogEntry class
+         * @param params - Audit log parameters
+         * @returns Validated audit log entry ready for persistence
+         */
+        createLogEntry(params: LogParams): LogEntry;
+
+        /**
+         * Creates multiple audit log entries at once
+         * @param paramsArray - Array of audit log parameters
+         * @returns Array of validated audit log entries
+         */
+        createLogEntries(paramsArray: LogParams[]): LogEntry[];
+    }
 }
