@@ -9,8 +9,9 @@
 jest.mock('../src/common/config/Properties.js', () => ({}));
 jest.mock('../src/common/utils/Logger.js', () => ({}));
 
-// Load the ValidatedMember class
-require('../src/common/data/ValidatedMember.js');
+// Load the ValidatedMember class and assign to global
+const Common = require('../src/common/data/ValidatedMember.js');
+global.Common = Common;
 
 describe('Common.Data.ValidatedMember Class', () => {
   
@@ -676,9 +677,8 @@ describe('Common.Data.ValidatedMember Class', () => {
   
   describe('Round-trip Consistency', () => {
     
-    const headers = Common.Data.ValidatedMember.HEADERS;
-    
     test('should maintain data integrity through fromRow -> toArray cycle', () => {
+      const headers = Common.Data.ValidatedMember.HEADERS;
       const originalRow = [
         'Active',
         'test@example.com',

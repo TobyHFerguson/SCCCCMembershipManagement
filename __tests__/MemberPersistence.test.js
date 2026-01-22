@@ -8,9 +8,12 @@
 jest.mock('../src/common/config/Properties.js', () => ({}));
 jest.mock('../src/common/utils/Logger.js', () => ({}));
 
-// Load dependencies
-require('../src/common/data/ValidatedMember.js');
+// Load dependencies and assign to global
+// ValidatedMember must be loaded first as MemberPersistence depends on it
+const Common = require('../src/common/data/ValidatedMember.js');
+// MemberPersistence adds to the same Common object
 require('../src/common/data/MemberPersistence.js');
+global.Common = Common;
 
 describe('Common.Data.MemberPersistence', () => {
   
