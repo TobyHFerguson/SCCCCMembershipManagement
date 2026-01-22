@@ -712,96 +712,20 @@ declare namespace Common {
             }
         }
         
-        namespace Access {
-            /**
-             * Gets Bootstrap configuration data
-             * @returns Array of Bootstrap configuration entries
-             */
-            function getBootstrapData(): BootstrapData[];
-            
-            /**
-             * Gets all email addresses from active members
-             * @returns Array of lowercase email addresses
-             */
-            function getEmailAddresses(): string[];
-            
-            /**
-             * Gets all members
-             * @returns Array of member objects
-             */
-            function getMembers(): Member[];
-            
-            /**
-             * Gets action specifications with processed body content
-             * @returns Object with action specs keyed by Type
-             */
-            function getActionSpecs(): Record<string, MembershipManagement.ActionSpec>;
-            
-            /**
-             * Gets public groups configuration
-             * @returns Array of public group objects
-             */
-            function getPublicGroups(): Array<{Name: string, Email: string}>;
-            
-            /**
-             * Gets a specific member by email address
-             * @param email - Member's email address (case insensitive)
-             * @returns Member object or undefined if not found
-             */
-            function getMember(email: string): Member | undefined;
-            
-            /**
-             * Updates a member's information
-             * @param email - Current email address (case insensitive)
-             * @param newMember - Updated member object
-             * @returns True if update was successful
-             */
-            function updateMember(email: string, newMember: Member): boolean;
-            
-            /**
-             * Checks if an email address belongs to a member
-             * @param email - Email address to check (case insensitive)
-             * @returns True if email belongs to a member
-             */
-            function isMember(email: string): boolean;
-            
-            /**
-             * Gets all elections data
-             * @returns Array of election objects
-             */
-            function getElections(): VotingService.Election[];
-        }
+        // DataAccess (flat object) - See top-level DataAccess declaration
+        // Backward compat: Common.Data.Access = DataAccess (set at runtime in data_access.js)
     }
     
     // Logger instance (backward compat - points to AppLogger)
     const Logger: typeof AppLogger;
     
-    // Configuration namespace (backward compatibility - points to flat classes)
-    namespace Config {
-        // Points to flat FeatureFlags class
-        const FeatureFlags: typeof globalThis.FeatureFlags;
-        
-        // Points to flat FeatureFlagsManager class  
-        const FeatureFlagsManager: typeof globalThis.FeatureFlagsManager;
-    }
+    // Configuration namespace - Backward compat aliases set at runtime
+    // See flat classes: FeatureFlags, FeatureFlagsManager (declared above)
+    // Runtime setup in: FeatureFlags.js sets Common.Config.FeatureFlags = FeatureFlags
     
-    // Auth namespace (backward compatibility - points to flat classes)
-    namespace Auth {
-        // Points to flat TokenManager class
-        const TokenManager: typeof globalThis.TokenManager;
-        
-        // Points to flat TokenStorage class
-        const TokenStorage: typeof globalThis.TokenStorage;
-        
-        // Points to flat VerificationCode class
-        const VerificationCode: typeof globalThis.VerificationCode;
-        
-        // Points to flat VerificationCodeManager class
-        const VerificationCodeManager: typeof globalThis.VerificationCodeManager;
-        
-        // Points to flat AuthUtils class (deprecated)
-        const Utils: typeof globalThis.AuthUtils;
-    }
+    // Auth namespace - Backward compat aliases set at runtime  
+    // See flat classes: TokenManager, TokenStorage, VerificationCode, VerificationCodeManager, AuthUtils (declared above)
+    // Runtime setup in: TokenManager.js, TokenStorage.js, VerificationCode.js, AuthUtils.js
     
     // API namespace
     namespace Api {
