@@ -325,12 +325,80 @@ All namespace flattening completed successfully:
 
 ---
 
-## After Phase -1: Resume Phase 0
+## Phase 0: Type Definition Fixes ✅ COMPLETE
 
-Once all namespaces are flattened, resume Phase 0 type fixes:
-- Remaining type errors should be actual type mismatches, not namespace conflicts
-- No `@ts-ignore` should be needed for namespace patterns
-- Follow RideManager's proven approach
+**Goal**: Fix remaining type errors by ensuring all flat classes have proper global declarations.
+
+**Starting State** (after Phase -1):
+- Tests: 1113 passing ✅
+- Type Errors: 474
+
+---
+
+### Phase 0 Step 1: Global Type Declaration Fixes ✅ COMPLETE
+
+**Commits**: 
+- `a4b33f7` - Remove circular reference namespace backward compat type aliases
+- `cff06a7` - Add flat ApiClient/ApiClientManager declarations  
+- `a5bf4a5` - Fix DataAccess redeclaration error
+
+**Problem**: TypeScript errors from namespace backward compat type aliases creating circular references, and missing flat class global declarations.
+
+**Changes Made**:
+
+1. **Fixed Circular Reference Namespace Aliases** (474 → 460 errors):
+   - Removed `Common.Config.FeatureFlags: typeof globalThis.FeatureFlags` (circular reference)
+   - Removed `Common.Auth.TokenManager: typeof globalThis.TokenManager` (circular reference)
+   - Removed entire `Common.Data.Access` namespace declaration (duplicate of flat DataAccess)
+   - Added comments: "Backward compat aliases set at runtime in .js files"
+   - **Key Insight**: Backward compat type aliases in `.d.ts` files create circular references. Handle backward compat only at runtime in `.js` files.
+
+2. **Added Flat ApiClient/ApiClientManager Global Declarations** (460 → 421 errors):
+   - Added `declare class ApiClientManager` with all static methods
+   - Added `declare class ApiClient` with handler registration methods
+   - Added supporting types: `ApiResponse`, `ApiRequest`, `ActionHandler`
+   - Resolved ~141 TS2304 "Cannot find name 'ApiClient'" errors
+   - **Key Insight**: Following RideManager pattern - flat IIFE classes need matching `declare class` in global.d.ts
+
+3. **Fixed DataAccess Redeclaration Error** (421 → 413 errors):
+   - Changed `declare const DataAccess` to `declare var DataAccess`
+   - Matches actual JS implementation: `var DataAccess = {...}`
+   - Resolved TS2451 "Cannot redeclare block-scoped variable" error
+   - **Key Insight**: Match declaration keywords - `var X` in JS requires `declare var X` in .d.ts, not `declare const X`
+
+**Final Results**:
+- Tests: 1113 passing ✅
+- Type Errors: 474 → 413 (61 fewer, 13% reduction)
+
+**Remaining Errors**: 413 errors in test files (mock typing issues that don't reveal errors tests wouldn't catch - accepted per user direction)
+
+---
+
+## Phase 0 Summary: COMPLETE ✅
+
+**Total Error Reduction**: 480 (Phase -1 baseline) → 413 (Phase 0 complete) = **67 fewer errors (14% reduction)**
+
+**Key Patterns Established** (Following RideManager):
+
+1. ✅ **Remove namespace backward compat type aliases from `.d.ts` files**
+   - Handled at runtime in `.js` files only
+   - Prevents circular reference errors
+   - Example: `Common.Config.FeatureFlags = FeatureFlags` in JS, not in .d.ts
+
+2. ✅ **Use flat class declarations for IIFE-wrapped classes**
+   - `var X = (function() { class X {...} return X; })()` in JS
+   - `declare class X { ... }` in global.d.ts
+   - Enables proper type checking
+
+3. ✅ **Match declaration keywords**
+   - `var X` in JS → `declare var X` in .d.ts
+   - `const X` in JS → `declare const X` in .d.ts
+   - Prevents redeclaration errors
+
+4. ✅ **Individual `.d.ts` files per module** (Optional, not implemented here)
+   - RideManager uses individual `.d.ts` files with `export default ClassName`
+   - Plus `gas-globals.d.ts` that imports and re-declares as ambient: `const ClassName: typeof ClassName`
+   - We kept everything in `global.d.ts` for simplicity - both approaches work
 
 ---
 
@@ -339,3 +407,5 @@ Once all namespaces are flattened, resume Phase 0 type fixes:
 - **Issue**: #346
 - **RideManager Pattern**: See `gas-best-practices.md` for IIFE class pattern
 - **Related**: Issue #291 (SPA migration), PR #355 (type system improvements)
+- **Type Errors**: 480 baseline → 413 final (67 fewer, 14% reduction)
+- **Tests**: 1113 passing throughout all phases
