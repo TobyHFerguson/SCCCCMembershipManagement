@@ -446,6 +446,105 @@ declare class SpreadsheetManager {
     static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
 }
 
+// Flat ValidatedMember class (new pattern - replaces Common.Data.ValidatedMember)
+declare class ValidatedMember {
+    Email: string;
+    Status: string;
+    First: string;
+    Last: string;
+    Phone: string;
+    Joined: Date;
+    Expires: Date;
+    Period: number | null;
+    'Directory Share Name': boolean;
+    'Directory Share Email': boolean;
+    'Directory Share Phone': boolean;
+    'Renewed On': Date | null;
+    
+    constructor(
+        email: string,
+        status: string,
+        first: string,
+        last: string,
+        phone: string,
+        joined: Date,
+        expires: Date,
+        period: number | null,
+        dirName: boolean,
+        dirEmail: boolean,
+        dirPhone: boolean,
+        renewedOn: Date | null
+    );
+    
+    /** Convert to array for sheet persistence */
+    toArray(): Array<string | Date | number | boolean | null>;
+    
+    /** Static factory - never throws, returns null on failure */
+    static fromRow(
+        rowArray: Array<any>,
+        headers: string[],
+        rowNumber: number,
+        errorCollector: { errors: string[], rowNumbers: number[] } | null
+    ): ValidatedMember | null;
+    
+    /** Batch validation with consolidated email alert */
+    static validateRows(
+        rows: Array<Array<any>>,
+        headers: string[],
+        context: string
+    ): ValidatedMember[];
+    
+    /** Column headers constant */
+    static HEADERS: string[];
+}
+
+// Flat MemberPersistence class (new pattern - replaces Common.Data.MemberPersistence)
+declare class MemberPersistence {
+    /** Write only changed cells to minimize version history noise */
+    static writeChangedCells(
+        sheet: GoogleAppsScript.Spreadsheet.Sheet,
+        originalRows: Array<Array<any>>,
+        modifiedMembers: ValidatedMember[],
+        headers: string[]
+    ): number;
+    
+    /** Value equality that handles Dates and primitives */
+    static valuesEqual(a: any, b: any): boolean;
+}
+
+// Flat DataAccess object (new pattern - replaces Common.Data.Access)
+declare const DataAccess: {
+    /** Gets Bootstrap configuration data */
+    getBootstrapData(): BootstrapData[];
+    
+    /** Gets all email addresses from active members */
+    getEmailAddresses(): string[];
+    
+    /** Gets all members */
+    getMembers(): ValidatedMember[];
+    
+    /** Gets action specifications with processed body content */
+    getActionSpecs(): Record<string, MembershipManagement.ActionSpec>;
+    
+    /** Gets public groups configuration */
+    getPublicGroups(): Array<{Name: string, Email: string, Subscription: string}>;
+    
+    /** Gets a specific member by email address */
+    getMember(email: string): ValidatedMember | undefined;
+    
+    /** Updates a member's information */
+    updateMember(email: string, newMember: ValidatedMember): boolean;
+    
+    /** Checks if an email address belongs to a member */
+    isMember(email: string): boolean;
+    
+    /** Gets all elections data */
+    getElections(): VotingService.Election[];
+    
+    /** Gets system logs */
+    getSystemLogs(): SystemLogEntry[];
+};
+
 // Common Data namespace - ValidatedMember and persistence
 declare namespace Common {
     namespace Data {

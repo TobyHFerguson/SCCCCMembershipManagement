@@ -26,8 +26,10 @@ global.Common.Logger.error = jest.fn();
 global.Common.Logger.debug = jest.fn();
 
 // Load ValidatedMember and MemberPersistence before MembershipManagement
-require('../src/common/data/ValidatedMember.js');
-require('../src/common/data/MemberPersistence.js');
+const { ValidatedMember } = require('../src/common/data/ValidatedMember.js');
+const { MemberPersistence } = require('../src/common/data/MemberPersistence.js');
+global.ValidatedMember = ValidatedMember;
+global.MemberPersistence = MemberPersistence;
 
 // Load utilities and manager so MembershipManagement namespace is populated
 require('../src/services/MembershipManagement/utils.js');
@@ -86,13 +88,16 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
         });
 
         // Mock Data.Access methods needed by Manager construction
-        global.Common.Data.Access = global.Common.Data.Access || {};
-        global.Common.Data.Access.getActionSpecs = jest.fn(() => ({
+        global.DataAccess = global.DataAccess || {};
+        global.DataAccess.getActionSpecs = jest.fn(() => ({
             'Expiry1': { Type: 'Expiry1', Subject: 'Expiry notice', Body: 'Your membership expires' }
         }));
-        global.Common.Data.Access.getPublicGroups = jest.fn(() => [
+        global.DataAccess.getPublicGroups = jest.fn(() => [
             { Name: 'Test Group', Email: 'test@example.com', Subscription: 'auto' }
         ]);
+        
+        // Backward compatibility alias
+        global.Common.Data.Access = global.DataAccess;
 
         // Mock Internal functions
         global.MembershipManagement.Internal = global.MembershipManagement.Internal || {};

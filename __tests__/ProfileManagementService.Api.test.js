@@ -53,13 +53,16 @@ beforeEach(() => {
   // Mock ApiClientManager (flat class pattern)
   global.ApiClientManager = require('../src/common/api/ApiClient').ClientManager;
 
+  // Mock DataAccess (flat class pattern)
+  global.DataAccess = {
+    getMember: jest.fn(),
+    updateMember: jest.fn()
+  };
+
   // Mock Common namespace (backward compat for Logger)
   global.Common = {
     Data: {
-      Access: {
-        getMember: jest.fn(),
-        updateMember: jest.fn()
-      },
+      Access: global.DataAccess,
       Storage: {
         SpreadsheetManager: {
           getFiddler: jest.fn()
@@ -177,7 +180,7 @@ describe('ProfileManagementService.Api', () => {
   describe('handleGetProfile', () => {
     test('returns profile for authenticated user', () => {
       const profile = TestData.createProfile();
-      Common.Data.Access.getMember.mockReturnValue(profile);
+      DataAccess.getMember.mockReturnValue(profile);
 
       const result = ProfileManagementService.Api.handleGetProfile({
         _authenticatedEmail: 'test@example.com'
@@ -192,7 +195,7 @@ describe('ProfileManagementService.Api', () => {
 
     test('includes membership fields and formatted dates', () => {
       const profile = TestData.createProfile();
-      Common.Data.Access.getMember.mockReturnValue(profile);
+      DataAccess.getMember.mockReturnValue(profile);
 
       const result = ProfileManagementService.Api.handleGetProfile({
         _authenticatedEmail: 'test@example.com'
@@ -222,7 +225,7 @@ describe('ProfileManagementService.Api', () => {
     });
 
     test('returns error when profile not found', () => {
-      Common.Data.Access.getMember.mockReturnValue(null);
+      DataAccess.getMember.mockReturnValue(null);
 
       const result = ProfileManagementService.Api.handleGetProfile({
         _authenticatedEmail: 'unknown@example.com'
@@ -233,7 +236,7 @@ describe('ProfileManagementService.Api', () => {
     });
 
     test('handles getMember error gracefully', () => {
-      Common.Data.Access.getMember.mockImplementation(() => {
+      DataAccess.getMember.mockImplementation(() => {
         throw new Error('Database error');
       });
 
@@ -247,13 +250,13 @@ describe('ProfileManagementService.Api', () => {
 
     test('normalizes email to lowercase', () => {
       const profile = TestData.createProfile();
-      Common.Data.Access.getMember.mockReturnValue(profile);
+      DataAccess.getMember.mockReturnValue(profile);
 
       ProfileManagementService.Api.handleGetProfile({
         _authenticatedEmail: 'TEST@EXAMPLE.COM'
       });
 
-      expect(Common.Data.Access.getMember).toHaveBeenCalledWith('test@example.com');
+      expect(DataAccess.getMember).toHaveBeenCalledWith('test@example.com');
     });
   });
 
@@ -262,7 +265,7 @@ describe('ProfileManagementService.Api', () => {
   describe('handleGetEditableFields', () => {
     test('returns editable fields for authenticated user', () => {
       const profile = TestData.createProfile();
-      Common.Data.Access.getMember.mockReturnValue(profile);
+      DataAccess.getMember.mockReturnValue(profile);
 
       const result = ProfileManagementService.Api.handleGetEditableFields({
         _authenticatedEmail: 'test@example.com'
@@ -278,7 +281,7 @@ describe('ProfileManagementService.Api', () => {
 
     test('returns field schema', () => {
       const profile = TestData.createProfile();
-      Common.Data.Access.getMember.mockReturnValue(profile);
+      DataAccess.getMember.mockReturnValue(profile);
 
       const result = ProfileManagementService.Api.handleGetEditableFields({
         _authenticatedEmail: 'test@example.com'
@@ -298,7 +301,7 @@ describe('ProfileManagementService.Api', () => {
     });
 
     test('returns error when profile not found', () => {
-      Common.Data.Access.getMember.mockReturnValue(null);
+      DataAccess.getMember.mockReturnValue(null);
 
       const result = ProfileManagementService.Api.handleGetEditableFields({
         _authenticatedEmail: 'unknown@example.com'
@@ -314,8 +317,8 @@ describe('ProfileManagementService.Api', () => {
   describe('handleUpdateProfile', () => {
     test('successfully updates profile', () => {
       const profile = TestData.createProfile();
-      Common.Data.Access.getMember.mockReturnValue(profile);
-      Common.Data.Access.updateMember.mockReturnValue(true);
+      DataAccess.getMember.mockReturnValue(profile);
+      DataAccess.updateMember.mockReturnValue(true);
 
       const result = ProfileManagementService.Api.handleUpdateProfile({
         _authenticatedEmail: 'test@example.com',
@@ -331,15 +334,15 @@ describe('ProfileManagementService.Api', () => {
 
     test('calls updateMember with merged profile', () => {
       const profile = TestData.createProfile();
-      Common.Data.Access.getMember.mockReturnValue(profile);
-      Common.Data.Access.updateMember.mockReturnValue(true);
+      DataAccess.getMember.mockReturnValue(profile);
+      DataAccess.updateMember.mockReturnValue(true);
 
       ProfileManagementService.Api.handleUpdateProfile({
         _authenticatedEmail: 'test@example.com',
         updates: { First: 'Jane' }
       });
 
-      expect(Common.Data.Access.updateMember).toHaveBeenCalledWith(
+      expect(DataAccess.updateMember).toHaveBeenCalledWith(
         'test@example.com',
         expect.objectContaining({
           First: 'Jane',
@@ -378,7 +381,7 @@ describe('ProfileManagementService.Api', () => {
     });
 
     test('returns error when profile not found', () => {
-      Common.Data.Access.getMember.mockReturnValue(null);
+      DataAccess.getMember.mockReturnValue(null);
 
       const result = ProfileManagementService.Api.handleUpdateProfile({
         _authenticatedEmail: 'unknown@example.com',
@@ -391,7 +394,7 @@ describe('ProfileManagementService.Api', () => {
 
     test('returns error when updating forbidden field', () => {
       const profile = TestData.createProfile();
-      Common.Data.Access.getMember.mockReturnValue(profile);
+      DataAccess.getMember.mockReturnValue(profile);
 
       const result = ProfileManagementService.Api.handleUpdateProfile({
         _authenticatedEmail: 'test@example.com',
@@ -404,7 +407,7 @@ describe('ProfileManagementService.Api', () => {
 
     test('returns error when validation fails', () => {
       const profile = TestData.createProfile();
-      Common.Data.Access.getMember.mockReturnValue(profile);
+      DataAccess.getMember.mockReturnValue(profile);
 
       const result = ProfileManagementService.Api.handleUpdateProfile({
         _authenticatedEmail: 'test@example.com',
@@ -417,8 +420,8 @@ describe('ProfileManagementService.Api', () => {
 
     test('handles updateMember error gracefully', () => {
       const profile = TestData.createProfile();
-      Common.Data.Access.getMember.mockReturnValue(profile);
-      Common.Data.Access.updateMember.mockImplementation(() => {
+      DataAccess.getMember.mockReturnValue(profile);
+      DataAccess.updateMember.mockImplementation(() => {
         throw new Error('Database error');
       });
 
@@ -433,8 +436,8 @@ describe('ProfileManagementService.Api', () => {
 
     test('logs successful update', () => {
       const profile = TestData.createProfile();
-      Common.Data.Access.getMember.mockReturnValue(profile);
-      Common.Data.Access.updateMember.mockReturnValue(true);
+      DataAccess.getMember.mockReturnValue(profile);
+      DataAccess.updateMember.mockReturnValue(true);
 
       ProfileManagementService.Api.handleUpdateProfile({
         _authenticatedEmail: 'test@example.com',
@@ -454,16 +457,16 @@ describe('ProfileManagementService.Api', () => {
 
     test('normalizes email to lowercase before lookup', () => {
       const profile = TestData.createProfile();
-      Common.Data.Access.getMember.mockReturnValue(profile);
-      Common.Data.Access.updateMember.mockReturnValue(true);
+      DataAccess.getMember.mockReturnValue(profile);
+      DataAccess.updateMember.mockReturnValue(true);
 
       ProfileManagementService.Api.handleUpdateProfile({
         _authenticatedEmail: 'TEST@EXAMPLE.COM',
         updates: { First: 'Jane' }
       });
 
-      expect(Common.Data.Access.getMember).toHaveBeenCalledWith('test@example.com');
-      expect(Common.Data.Access.updateMember).toHaveBeenCalledWith(
+      expect(DataAccess.getMember).toHaveBeenCalledWith('test@example.com');
+      expect(DataAccess.updateMember).toHaveBeenCalledWith(
         'test@example.com',
         expect.any(Object)
       );

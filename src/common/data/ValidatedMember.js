@@ -5,32 +5,20 @@
  * Ensures all member records have proper structure and prevents corruption
  * by enforcing validation contracts at the class level.
  * 
- * Layer: Layer 1 Infrastructure (can use Common.Logger)
+ * Layer: Layer 1 Infrastructure (can use AppLogger)
  * 
  * Usage:
- *   const member = new Common.Data.ValidatedMember(email, status, first, last, phone, joined, expires, ...);
- *   const members = Common.Data.ValidatedMember.validateRows(rows, headers, 'data_access.getMembers');
+ *   const member = new ValidatedMember(email, status, first, last, phone, joined, expires, ...);
+ *   const members = ValidatedMember.validateRows(rows, headers, 'data_access.getMembers');
  * 
- * Pattern: IIFE-wrapped class (per gas-best-practices.md)
+ * Pattern: Flat IIFE-wrapped class (per gas-best-practices.md)
  */
-
-// Extend Common.Data namespace (declared in 1namespaces.js in GAS)
-// Use globalThis for Node.js compatibility while maintaining GAS compatibility
-if (typeof Common === 'undefined') {
-  if (typeof globalThis !== 'undefined') {
-    globalThis.Common = globalThis.Common || {};
-    var Common = globalThis.Common;
-  } else {
-    var Common = {};
-  }
-}
-if (typeof Common.Data === 'undefined') Common.Data = {};
 
 /**
- * ValidatedMember class using IIFE-wrapped pattern
+ * ValidatedMember class using flat IIFE-wrapped pattern
  * @class
  */
-Common.Data.ValidatedMember = (function() {
+var ValidatedMember = (function() {
   /**
    * @param {string} email - Member email (required, normalized to lowercase)
    * @param {string} status - Member status (required)
@@ -288,7 +276,12 @@ Review the ActiveMembers sheet for data quality issues.`
   return ValidatedMember;
 })();
 
+// Backward compatibility alias - will be removed in future version
+if (typeof Common === 'undefined') var Common = {};
+if (typeof Common.Data === 'undefined') Common.Data = {};
+Common.Data.ValidatedMember = ValidatedMember;
+
 // Node.js module export for testing
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = Common;
+  module.exports = { ValidatedMember };
 }

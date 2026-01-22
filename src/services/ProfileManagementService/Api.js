@@ -42,7 +42,7 @@ ProfileManagementService.Api.getData = function(email) {
     
     // GAS: Get member profile
     AppLogger.debug('ProfileManagementService', `Fetching profile for user: ${normalizedEmail}`);
-    const profile = Common.Data.Access.getMember(normalizedEmail);
+    const profile = DataAccess.getMember(normalizedEmail);
     
     if (!profile) {
       AppLogger.warn('ProfileManagementService', `Profile not found for user: ${email}`);
@@ -152,7 +152,7 @@ ProfileManagementService.Api.handleGetProfile = function(params) {
       const normalizedEmail = ProfileManagementService.Manager.normalizeEmail(userEmail);
 
       // GAS: Get member profile
-      const profile = Common.Data.Access.getMember(normalizedEmail);
+      const profile = DataAccess.getMember(normalizedEmail);
       
       if (!profile) {
         return ApiClientManager.errorResponse(
@@ -211,7 +211,7 @@ ProfileManagementService.Api.handleGetEditableFields = function(params) {
       const normalizedEmail = ProfileManagementService.Manager.normalizeEmail(userEmail);
 
       // GAS: Get member profile
-      const profile = Common.Data.Access.getMember(normalizedEmail);
+      const profile = DataAccess.getMember(normalizedEmail);
       
       if (!profile) {
         return ApiClientManager.errorResponse(
@@ -279,7 +279,7 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
 
       // GAS: Get current profile
       AppLogger.debug('ProfileManagementService', `Fetching current profile for user: ${normalizedEmail}`);
-      const originalProfile = Common.Data.Access.getMember(normalizedEmail);
+      const originalProfile = DataAccess.getMember(normalizedEmail);
       
       if (!originalProfile) {
         AppLogger.warn('ProfileManagementService', `Profile not found for user: ${normalizedEmail}`);
@@ -309,7 +309,7 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
 
       // GAS: Persist the update
       AppLogger.info('ProfileManagementService', `Persisting profile update for user: ${normalizedEmail}`);
-      Common.Data.Access.updateMember(normalizedEmail, result.mergedProfile);
+      DataAccess.updateMember(normalizedEmail, result.mergedProfile);
       
       // Create audit entry for profile update
       const logger = new Common.Logging.ServiceLogger('ProfileManagementService', userEmail);

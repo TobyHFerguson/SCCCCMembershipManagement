@@ -37,7 +37,7 @@ var AuthUtils = (function () {
                     'Use VerificationCode.requestCode() instead.'
             );
             email = email.toLowerCase().trim(); // Normalize the email address
-            var validEmails = Common.Data.Access.getEmailAddresses();
+            var validEmails = DataAccess.getEmailAddresses();
             if (validEmails.includes(email)) {
                 var token = TokenStorage.generateAndStoreToken(email);
                 var accessLink = ScriptApp.getService().getUrl() + '?token=' + token + '&service=' + service;

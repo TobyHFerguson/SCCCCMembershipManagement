@@ -42,7 +42,7 @@ function sendVerificationCode(email, service) {
   const auditEntries = [];
   
   // Check if the email is a valid active member
-  const validEmails = Common.Data.Access.getEmailAddresses();
+  const validEmails = DataAccess.getEmailAddresses();
   if (!validEmails.includes(email)) {
     // Act as if we sent the code (security: don't reveal if email exists)
     console.log('sendVerificationCode: email not found in active members, returning success (security)');
@@ -404,7 +404,7 @@ function getProfile(userToken) {
         console.warn(`Invalid or expired token: ${userToken}`);
         return { success: false, message: "Invalid session. Please refresh the page." };
     }
-    const profile = Common.Data.Access.getMember(userEmail);
+    const profile = DataAccess.getMember(userEmail);
     if (!profile) {
         return { success: false, message: `Profile not found for email: ${userEmail}` };
     }

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Tests for Common.Data.ValidatedMember class
+ * @fileoverview Tests for ValidatedMember class
  * 
  * Tests the class-based approach to member validation and construction.
  * Ensures proper type safety and data quality.
@@ -10,10 +10,10 @@ jest.mock('../src/common/config/Properties.js', () => ({}));
 jest.mock('../src/common/utils/Logger.js', () => ({}));
 
 // Load the ValidatedMember class and assign to global
-const Common = require('../src/common/data/ValidatedMember.js');
-global.Common = Common;
+const { ValidatedMember } = require('../src/common/data/ValidatedMember.js');
+global.ValidatedMember = ValidatedMember;
 
-describe('Common.Data.ValidatedMember Class', () => {
+describe('ValidatedMember Class', () => {
   
   describe('Constructor Validation', () => {
     
@@ -22,7 +22,7 @@ describe('Common.Data.ValidatedMember Class', () => {
       const expires = new Date('2024-01-15');
       const renewedOn = new Date('2023-12-01');
       
-      const member = new Common.Data.ValidatedMember(
+      const member = new ValidatedMember(
         'test@example.com',
         'Active',
         'John',
@@ -55,7 +55,7 @@ describe('Common.Data.ValidatedMember Class', () => {
       const joined = new Date('2023-01-15');
       const expires = new Date('2024-01-15');
       
-      const member = new Common.Data.ValidatedMember(
+      const member = new ValidatedMember(
         'minimal@example.com',
         'Active',
         'Jane',
@@ -81,7 +81,7 @@ describe('Common.Data.ValidatedMember Class', () => {
     });
     
     test('should normalize email to lowercase', () => {
-      const member = new Common.Data.ValidatedMember(
+      const member = new ValidatedMember(
         'Test@EXAMPLE.COM',
         'Active',
         'John',
@@ -100,7 +100,7 @@ describe('Common.Data.ValidatedMember Class', () => {
     });
     
     test('should trim whitespace from string fields', () => {
-      const member = new Common.Data.ValidatedMember(
+      const member = new ValidatedMember(
         '  test@example.com  ',
         '  Active  ',
         '  John  ',
@@ -123,21 +123,21 @@ describe('Common.Data.ValidatedMember Class', () => {
     });
     
     test('should coerce Directory Share Name to boolean', () => {
-      const member1 = new Common.Data.ValidatedMember(
+      const member1 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, 'yes', false, false, null
       );
       expect(member1['Directory Share Name']).toBe(true);
       
-      const member2 = new Common.Data.ValidatedMember(
+      const member2 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, 0, false, false, null
       );
       expect(member2['Directory Share Name']).toBe(false);
       
-      const member3 = new Common.Data.ValidatedMember(
+      const member3 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, 1, false, false, null
@@ -146,14 +146,14 @@ describe('Common.Data.ValidatedMember Class', () => {
     });
     
     test('should coerce Directory Share Email to boolean', () => {
-      const member1 = new Common.Data.ValidatedMember(
+      const member1 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, 'true', false, null
       );
       expect(member1['Directory Share Email']).toBe(true);
       
-      const member2 = new Common.Data.ValidatedMember(
+      const member2 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, '', false, null
@@ -162,14 +162,14 @@ describe('Common.Data.ValidatedMember Class', () => {
     });
     
     test('should coerce Directory Share Phone to boolean', () => {
-      const member1 = new Common.Data.ValidatedMember(
+      const member1 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, 'yes', null
       );
       expect(member1['Directory Share Phone']).toBe(true);
       
-      const member2 = new Common.Data.ValidatedMember(
+      const member2 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, null, null
@@ -178,19 +178,19 @@ describe('Common.Data.ValidatedMember Class', () => {
     });
     
     test('should throw error for missing email', () => {
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         null, 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, null
       )).toThrow('email is required');
       
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         '', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, null
       )).toThrow('email is required');
       
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         '   ', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, null
@@ -198,19 +198,19 @@ describe('Common.Data.ValidatedMember Class', () => {
     });
     
     test('should throw error for invalid email format', () => {
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'not-an-email', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, null
       )).toThrow('email must be valid format');
       
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'missing-at-sign.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, null
       )).toThrow('email must be valid format');
       
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         '@no-local-part.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, null
@@ -218,13 +218,13 @@ describe('Common.Data.ValidatedMember Class', () => {
     });
     
     test('should throw error for missing status', () => {
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'test@example.com', null, 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, null
       )).toThrow('status is required');
       
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'test@example.com', '', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, null
@@ -232,13 +232,13 @@ describe('Common.Data.ValidatedMember Class', () => {
     });
     
     test('should throw error for missing first name', () => {
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'test@example.com', 'Active', null, 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, null
       )).toThrow('first name is required');
       
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'test@example.com', 'Active', '', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, null
@@ -246,13 +246,13 @@ describe('Common.Data.ValidatedMember Class', () => {
     });
     
     test('should throw error for missing last name', () => {
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', null, '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, null
       )).toThrow('last name is required');
       
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', '', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, null
@@ -260,19 +260,19 @@ describe('Common.Data.ValidatedMember Class', () => {
     });
     
     test('should throw error for invalid joined date', () => {
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         'not-a-date', new Date('2024-01-15'),
         null, false, false, false, null
       )).toThrow('joined date must be valid Date');
       
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('invalid'), new Date('2024-01-15'),
         null, false, false, false, null
       )).toThrow('joined date must be valid Date');
       
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         null, new Date('2024-01-15'),
         null, false, false, false, null
@@ -280,19 +280,19 @@ describe('Common.Data.ValidatedMember Class', () => {
     });
     
     test('should throw error for invalid expires date', () => {
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), 'not-a-date',
         null, false, false, false, null
       )).toThrow('expires date must be valid Date');
       
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('invalid'),
         null, false, false, false, null
       )).toThrow('expires date must be valid Date');
       
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), null,
         null, false, false, false, null
@@ -303,7 +303,7 @@ describe('Common.Data.ValidatedMember Class', () => {
       const joined = new Date('2024-01-15');
       const expires = new Date('2023-01-15'); // Earlier than joined
       
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         joined, expires,
         null, false, false, false, null
@@ -313,7 +313,7 @@ describe('Common.Data.ValidatedMember Class', () => {
     test('should accept expires date equal to joined date', () => {
       const sameDate = new Date('2023-01-15');
       
-      const member = new Common.Data.ValidatedMember(
+      const member = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         sameDate, sameDate,
         null, false, false, false, null
@@ -324,13 +324,13 @@ describe('Common.Data.ValidatedMember Class', () => {
     });
     
     test('should throw error for invalid renewed date if provided', () => {
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, 'not-a-date'
       )).toThrow('renewed date must be valid Date if provided');
       
-      expect(() => new Common.Data.ValidatedMember(
+      expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, new Date('invalid')
@@ -338,21 +338,21 @@ describe('Common.Data.ValidatedMember Class', () => {
     });
     
     test('should accept null/empty renewed date', () => {
-      const member1 = new Common.Data.ValidatedMember(
+      const member1 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, null
       );
       expect(member1['Renewed On']).toBe(null);
       
-      const member2 = new Common.Data.ValidatedMember(
+      const member2 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, undefined
       );
       expect(member2['Renewed On']).toBe(null);
       
-      const member3 = new Common.Data.ValidatedMember(
+      const member3 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
         null, false, false, false, ''
@@ -408,7 +408,7 @@ describe('Common.Data.ValidatedMember Class', () => {
         new Date('2023-12-01')
       ];
       
-      const member = Common.Data.ValidatedMember.fromRow(row, headers, 2, null);
+      const member = ValidatedMember.fromRow(row, headers, 2, null);
       
       expect(member).not.toBeNull();
       expect(member.Email).toBe('test@example.com');
@@ -433,7 +433,7 @@ describe('Common.Data.ValidatedMember Class', () => {
         null
       ];
       
-      const member = Common.Data.ValidatedMember.fromRow(row, headers, 2, null);
+      const member = ValidatedMember.fromRow(row, headers, 2, null);
       
       expect(member).toBeNull();
       expect(Common.Logger.error).toHaveBeenCalledWith(
@@ -459,7 +459,7 @@ describe('Common.Data.ValidatedMember Class', () => {
       ];
       
       const errorCollector = { errors: [], rowNumbers: [] };
-      const member = Common.Data.ValidatedMember.fromRow(row, headers, 5, errorCollector);
+      const member = ValidatedMember.fromRow(row, headers, 5, errorCollector);
       
       expect(member).toBeNull();
       expect(errorCollector.errors.length).toBe(1);
@@ -484,7 +484,7 @@ describe('Common.Data.ValidatedMember Class', () => {
         null // No renewed date
       ];
       
-      const member = Common.Data.ValidatedMember.fromRow(row, headers, 2, null);
+      const member = ValidatedMember.fromRow(row, headers, 2, null);
       
       expect(member).not.toBeNull();
       expect(member.Phone).toBe('');
@@ -536,7 +536,7 @@ describe('Common.Data.ValidatedMember Class', () => {
         ['Expired', 'test3@example.com', 'Bob', 'Jones', '', new Date('2022-01-10'), new Date('2023-01-10'), 12, true, true, true, null]
       ];
       
-      const members = Common.Data.ValidatedMember.validateRows(rows, headers, 'test-context');
+      const members = ValidatedMember.validateRows(rows, headers, 'test-context');
       
       expect(members.length).toBe(3);
       expect(members[0].Email).toBe('test1@example.com');
@@ -552,7 +552,7 @@ describe('Common.Data.ValidatedMember Class', () => {
         ['Active', 'test3@example.com', 'Bob', 'Jones', '', new Date('2022-01-10'), new Date('2023-01-10'), 12, true, true, true, null]
       ];
       
-      const members = Common.Data.ValidatedMember.validateRows(rows, headers, 'test-context');
+      const members = ValidatedMember.validateRows(rows, headers, 'test-context');
       
       expect(members.length).toBe(2);
       expect(members[0].Email).toBe('test1@example.com');
@@ -566,7 +566,7 @@ describe('Common.Data.ValidatedMember Class', () => {
         ['Active', 'test3@example.com', '', 'Jones', '', new Date('2022-01-10'), new Date('2023-01-10'), 12, true, true, true, null] // Missing first name
       ];
       
-      const members = Common.Data.ValidatedMember.validateRows(rows, headers, 'test-batch-context');
+      const members = ValidatedMember.validateRows(rows, headers, 'test-batch-context');
       
       expect(members.length).toBe(1);
       expect(MailApp.sendEmail).toHaveBeenCalledTimes(1);
@@ -586,14 +586,14 @@ describe('Common.Data.ValidatedMember Class', () => {
         ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, true, false, true, null]
       ];
       
-      const members = Common.Data.ValidatedMember.validateRows(rows, headers, 'test-context');
+      const members = ValidatedMember.validateRows(rows, headers, 'test-context');
       
       expect(members.length).toBe(1);
       expect(MailApp.sendEmail).not.toHaveBeenCalled();
     });
     
     test('should handle empty rows array', () => {
-      const members = Common.Data.ValidatedMember.validateRows([], headers, 'test-context');
+      const members = ValidatedMember.validateRows([], headers, 'test-context');
       
       expect(members.length).toBe(0);
       expect(MailApp.sendEmail).not.toHaveBeenCalled();
@@ -604,7 +604,7 @@ describe('Common.Data.ValidatedMember Class', () => {
         ['Active', 'invalid', 'John', 'Doe', '', new Date('2023-01-15'), new Date('2024-01-15'), 12, false, false, false, null]
       ];
       
-      Common.Data.ValidatedMember.validateRows(rows, headers, 'test-email-context');
+      ValidatedMember.validateRows(rows, headers, 'test-email-context');
       
       expect(Common.Logger.warn).toHaveBeenCalledWith(
         'ValidatedMember',
@@ -621,7 +621,7 @@ describe('Common.Data.ValidatedMember Class', () => {
         ['Active', 'invalid', 'John', 'Doe', '', new Date('2023-01-15'), new Date('2024-01-15'), 12, false, false, false, null]
       ];
       
-      const members = Common.Data.ValidatedMember.validateRows(rows, headers, 'test-context');
+      const members = ValidatedMember.validateRows(rows, headers, 'test-context');
       
       expect(members.length).toBe(0);
       expect(Common.Logger.error).toHaveBeenCalledWith(
@@ -639,7 +639,7 @@ describe('Common.Data.ValidatedMember Class', () => {
       const expires = new Date('2024-01-15');
       const renewedOn = new Date('2023-12-01');
       
-      const member = new Common.Data.ValidatedMember(
+      const member = new ValidatedMember(
         'test@example.com',
         'Active',
         'John',
@@ -673,7 +673,7 @@ describe('Common.Data.ValidatedMember Class', () => {
     });
     
     test('should handle null optional fields in array', () => {
-      const member = new Common.Data.ValidatedMember(
+      const member = new ValidatedMember(
         'test@example.com',
         'Active',
         'John',
@@ -700,7 +700,7 @@ describe('Common.Data.ValidatedMember Class', () => {
   describe('Round-trip Consistency', () => {
     
     test('should maintain data integrity through fromRow -> toArray cycle', () => {
-      const headers = Common.Data.ValidatedMember.HEADERS;
+      const headers = ValidatedMember.HEADERS;
       const originalRow = [
         'Active',
         'test@example.com',
@@ -716,7 +716,7 @@ describe('Common.Data.ValidatedMember Class', () => {
         new Date('2023-12-01')
       ];
       
-      const member = Common.Data.ValidatedMember.fromRow(originalRow, headers, 2, null);
+      const member = ValidatedMember.fromRow(originalRow, headers, 2, null);
       const reconstructedRow = member.toArray();
       
       // Compare each field
@@ -739,7 +739,7 @@ describe('Common.Data.ValidatedMember Class', () => {
   describe('HEADERS Constant', () => {
     
     test('should define all required headers in correct order', () => {
-      expect(Common.Data.ValidatedMember.HEADERS).toEqual([
+      expect(ValidatedMember.HEADERS).toEqual([
         'Status',
         'Email',
         'First',
@@ -756,7 +756,7 @@ describe('Common.Data.ValidatedMember Class', () => {
     });
     
     test('should have 12 headers matching toArray() output length', () => {
-      const member = new Common.Data.ValidatedMember(
+      const member = new ValidatedMember(
         'test@example.com',
         'Active',
         'John',
@@ -772,7 +772,7 @@ describe('Common.Data.ValidatedMember Class', () => {
       );
       
       const array = member.toArray();
-      expect(array.length).toBe(Common.Data.ValidatedMember.HEADERS.length);
+      expect(array.length).toBe(ValidatedMember.HEADERS.length);
     });
     
   });

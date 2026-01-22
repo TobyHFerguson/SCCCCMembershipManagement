@@ -124,7 +124,7 @@ GroupManagementService.Api.handleGetSubscriptions = function(params) {
 
       // GAS: Get public groups
       /** @type {Array<{Name: string, Email: string}>} */
-      const groups = /** @type {any} */ (Common.Data.Access.getPublicGroups());
+      const groups = /** @type {any} */ (DataAccess.getPublicGroups());
       
       // GAS: Get member data for each group
       /** @type {Record<string, any>} */

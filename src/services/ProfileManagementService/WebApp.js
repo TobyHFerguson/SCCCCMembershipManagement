@@ -2,7 +2,7 @@ ProfileManagementService.WebApp = {
     doGet: (e, userEmail, template) => {
         // We only get here when the previous token (and therefore email) were valid.
         template.contentFileName = "services/ProfileManagementService/ProfileManagementForm"
-        const profile = Common.Data.Access.getMember(userEmail);
+        const profile = DataAccess.getMember(userEmail);
         if (!profile) {
             throw new Error(`Profile not found for email: ${userEmail}`);
         }

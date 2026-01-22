@@ -1,5 +1,5 @@
 /**
- * @fileoverview Tests for Common.Data.MemberPersistence helper
+ * @fileoverview Tests for MemberPersistence helper
  * 
  * Tests selective cell writing and value comparison logic.
  */
@@ -10,12 +10,12 @@ jest.mock('../src/common/utils/Logger.js', () => ({}));
 
 // Load dependencies and assign to global
 // ValidatedMember must be loaded first as MemberPersistence depends on it
-const Common = require('../src/common/data/ValidatedMember.js');
-// MemberPersistence adds to the same Common object
-require('../src/common/data/MemberPersistence.js');
-global.Common = Common;
+const { ValidatedMember } = require('../src/common/data/ValidatedMember.js');
+const { MemberPersistence } = require('../src/common/data/MemberPersistence.js');
+global.ValidatedMember = ValidatedMember;
+global.MemberPersistence = MemberPersistence;
 
-describe('Common.Data.MemberPersistence', () => {
+describe('MemberPersistence', () => {
   
   beforeEach(() => {
     // Mock AppLogger (flat class pattern)
@@ -41,12 +41,12 @@ describe('Common.Data.MemberPersistence', () => {
   describe('valuesEqual()', () => {
     
     test('should compare primitive values correctly', () => {
-      expect(Common.Data.MemberPersistence.valuesEqual('test', 'test')).toBe(true);
-      expect(Common.Data.MemberPersistence.valuesEqual('test', 'other')).toBe(false);
-      expect(Common.Data.MemberPersistence.valuesEqual(123, 123)).toBe(true);
-      expect(Common.Data.MemberPersistence.valuesEqual(123, 456)).toBe(false);
-      expect(Common.Data.MemberPersistence.valuesEqual(true, true)).toBe(true);
-      expect(Common.Data.MemberPersistence.valuesEqual(true, false)).toBe(false);
+      expect(MemberPersistence.valuesEqual('test', 'test')).toBe(true);
+      expect(MemberPersistence.valuesEqual('test', 'other')).toBe(false);
+      expect(MemberPersistence.valuesEqual(123, 123)).toBe(true);
+      expect(MemberPersistence.valuesEqual(123, 456)).toBe(false);
+      expect(MemberPersistence.valuesEqual(true, true)).toBe(true);
+      expect(MemberPersistence.valuesEqual(true, false)).toBe(false);
     });
     
     test('should compare Date objects by timestamp', () => {
@@ -54,8 +54,8 @@ describe('Common.Data.MemberPersistence', () => {
       const date2 = new Date('2023-01-15T10:00:00Z');
       const date3 = new Date('2023-01-15T11:00:00Z');
       
-      expect(Common.Data.MemberPersistence.valuesEqual(date1, date2)).toBe(true);
-      expect(Common.Data.MemberPersistence.valuesEqual(date1, date3)).toBe(false);
+      expect(MemberPersistence.valuesEqual(date1, date2)).toBe(true);
+      expect(MemberPersistence.valuesEqual(date1, date3)).toBe(false);
     });
     
     test('should handle Date vs non-Date comparison', () => {
@@ -63,23 +63,23 @@ describe('Common.Data.MemberPersistence', () => {
       const string = '2023-01-15';
       const number = date.getTime();
       
-      expect(Common.Data.MemberPersistence.valuesEqual(date, string)).toBe(false);
-      expect(Common.Data.MemberPersistence.valuesEqual(date, number)).toBe(false);
-      expect(Common.Data.MemberPersistence.valuesEqual(string, date)).toBe(false);
+      expect(MemberPersistence.valuesEqual(date, string)).toBe(false);
+      expect(MemberPersistence.valuesEqual(date, number)).toBe(false);
+      expect(MemberPersistence.valuesEqual(string, date)).toBe(false);
     });
     
     test('should handle null and undefined as equal', () => {
-      expect(Common.Data.MemberPersistence.valuesEqual(null, null)).toBe(true);
-      expect(Common.Data.MemberPersistence.valuesEqual(undefined, undefined)).toBe(true);
-      expect(Common.Data.MemberPersistence.valuesEqual(null, undefined)).toBe(true);
-      expect(Common.Data.MemberPersistence.valuesEqual(undefined, null)).toBe(true);
+      expect(MemberPersistence.valuesEqual(null, null)).toBe(true);
+      expect(MemberPersistence.valuesEqual(undefined, undefined)).toBe(true);
+      expect(MemberPersistence.valuesEqual(null, undefined)).toBe(true);
+      expect(MemberPersistence.valuesEqual(undefined, null)).toBe(true);
     });
     
     test('should handle null/undefined vs other values', () => {
-      expect(Common.Data.MemberPersistence.valuesEqual(null, '')).toBe(false);
-      expect(Common.Data.MemberPersistence.valuesEqual(null, 0)).toBe(false);
-      expect(Common.Data.MemberPersistence.valuesEqual(undefined, '')).toBe(false);
-      expect(Common.Data.MemberPersistence.valuesEqual('', null)).toBe(false);
+      expect(MemberPersistence.valuesEqual(null, '')).toBe(false);
+      expect(MemberPersistence.valuesEqual(null, 0)).toBe(false);
+      expect(MemberPersistence.valuesEqual(undefined, '')).toBe(false);
+      expect(MemberPersistence.valuesEqual('', null)).toBe(false);
     });
     
   });
@@ -106,21 +106,21 @@ describe('Common.Data.MemberPersistence', () => {
       ];
       
       // Create members with one field changed
-      const member1 = new Common.Data.ValidatedMember(
+      const member1 = new ValidatedMember(
         'test1@example.com', 'Active', 'John', 'Doe', '555-9999', // Phone changed
         new Date('2023-01-15'), new Date('2024-01-15'), 12,
         true, false, true, null
       );
       
-      const member2 = new Common.Data.ValidatedMember(
+      const member2 = new ValidatedMember(
         'test2@example.com', 'Expired', // Status changed
         'Jane', 'Smith', '555-2222',
         new Date('2023-02-20'), new Date('2024-02-20'), 12,
         false, true, false, null
       );
       
-      const headers = Common.Data.ValidatedMember.HEADERS;
-      const changeCount = Common.Data.MemberPersistence.writeChangedCells(
+      const headers = ValidatedMember.HEADERS;
+      const changeCount = MemberPersistence.writeChangedCells(
         mockSheet,
         originalRows,
         [member1, member2],
@@ -145,14 +145,14 @@ describe('Common.Data.MemberPersistence', () => {
         ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, true, false, true, null]
       ];
       
-      const member1 = new Common.Data.ValidatedMember(
+      const member1 = new ValidatedMember(
         'test1@example.com', 'Active', 'John', 'Doe', '555-1111',
         new Date('2023-01-15'), new Date('2024-01-15'), 12,
         true, false, true, null
       );
       
-      const headers = Common.Data.ValidatedMember.HEADERS;
-      const changeCount = Common.Data.MemberPersistence.writeChangedCells(
+      const headers = ValidatedMember.HEADERS;
+      const changeCount = MemberPersistence.writeChangedCells(
         mockSheet,
         originalRows,
         [member1],
@@ -171,15 +171,15 @@ describe('Common.Data.MemberPersistence', () => {
         ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', originalDate, new Date('2024-01-15'), 12, true, false, true, null]
       ];
       
-      const member1 = new Common.Data.ValidatedMember(
+      const member1 = new ValidatedMember(
         'test1@example.com', 'Active', 'John', 'Doe', '555-1111',
         newDate, // Joined date changed
         new Date('2024-01-15'), 12,
         true, false, true, null
       );
       
-      const headers = Common.Data.ValidatedMember.HEADERS;
-      const changeCount = Common.Data.MemberPersistence.writeChangedCells(
+      const headers = ValidatedMember.HEADERS;
+      const changeCount = MemberPersistence.writeChangedCells(
         mockSheet,
         originalRows,
         [member1],
@@ -198,15 +198,15 @@ describe('Common.Data.MemberPersistence', () => {
         ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', sameDate, new Date('2024-01-15'), 12, true, false, true, null]
       ];
       
-      const member1 = new Common.Data.ValidatedMember(
+      const member1 = new ValidatedMember(
         'test1@example.com', 'Active', 'John', 'Doe', '555-1111',
         sameDate, // Same Date object
         new Date('2024-01-15'), 12,
         true, false, true, null
       );
       
-      const headers = Common.Data.ValidatedMember.HEADERS;
-      const changeCount = Common.Data.MemberPersistence.writeChangedCells(
+      const headers = ValidatedMember.HEADERS;
+      const changeCount = MemberPersistence.writeChangedCells(
         mockSheet,
         originalRows,
         [member1],
@@ -221,7 +221,7 @@ describe('Common.Data.MemberPersistence', () => {
         ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, true, false, true, null]
       ];
       
-      const member1 = new Common.Data.ValidatedMember(
+      const member1 = new ValidatedMember(
         'test1@example.com', 'Active', 'John', 'Doe', '555-1111',
         new Date('2023-01-15'), new Date('2024-01-15'), 12,
         false, // Directory Share Name changed from true to false
@@ -230,8 +230,8 @@ describe('Common.Data.MemberPersistence', () => {
         null
       );
       
-      const headers = Common.Data.ValidatedMember.HEADERS;
-      const changeCount = Common.Data.MemberPersistence.writeChangedCells(
+      const headers = ValidatedMember.HEADERS;
+      const changeCount = MemberPersistence.writeChangedCells(
         mockSheet,
         originalRows,
         [member1],
@@ -248,15 +248,15 @@ describe('Common.Data.MemberPersistence', () => {
         ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), null, true, false, true, null]
       ];
       
-      const member1 = new Common.Data.ValidatedMember(
+      const member1 = new ValidatedMember(
         'test1@example.com', 'Active', 'John', 'Doe', '555-1111',
         new Date('2023-01-15'), new Date('2024-01-15'), 12, // Period changed from null to 12
         true, false, true,
         new Date('2023-12-01') // Renewed On changed from null to date
       );
       
-      const headers = Common.Data.ValidatedMember.HEADERS;
-      const changeCount = Common.Data.MemberPersistence.writeChangedCells(
+      const headers = ValidatedMember.HEADERS;
+      const changeCount = MemberPersistence.writeChangedCells(
         mockSheet,
         originalRows,
         [member1],
@@ -271,22 +271,22 @@ describe('Common.Data.MemberPersistence', () => {
         ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, true, false, true, null]
       ];
       
-      const member1 = new Common.Data.ValidatedMember(
+      const member1 = new ValidatedMember(
         'test1@example.com', 'Active', 'John', 'Doe', '555-1111',
         new Date('2023-01-15'), new Date('2024-01-15'), 12,
         true, false, true, null
       );
       
-      const member2 = new Common.Data.ValidatedMember(
+      const member2 = new ValidatedMember(
         'test2@example.com', 'Active', 'Jane', 'Smith', '555-2222',
         new Date('2023-02-20'), new Date('2024-02-20'), 12,
         false, true, false, null
       );
       
-      const headers = Common.Data.ValidatedMember.HEADERS;
+      const headers = ValidatedMember.HEADERS;
       
       expect(() => {
-        Common.Data.MemberPersistence.writeChangedCells(
+        MemberPersistence.writeChangedCells(
           mockSheet,
           originalRows,
           [member1, member2], // 2 members but only 1 original row
@@ -308,26 +308,26 @@ describe('Common.Data.MemberPersistence', () => {
       ];
       
       // Modify different fields in each row
-      const member1 = new Common.Data.ValidatedMember(
+      const member1 = new ValidatedMember(
         'test1@example.com', 'Expired', 'John', 'Doe', '555-1111', // Status changed
         new Date('2023-01-15'), new Date('2024-01-15'), 12,
         true, false, true, null
       );
       
-      const member2 = new Common.Data.ValidatedMember(
+      const member2 = new ValidatedMember(
         'test2@example.com', 'Active', 'Jane', 'Smith', '555-9999', // Phone changed
         new Date('2023-02-20'), new Date('2024-02-20'), 12,
         false, true, false, null
       );
       
-      const member3 = new Common.Data.ValidatedMember(
+      const member3 = new ValidatedMember(
         'test3@example.com', 'Expired', 'Bob', 'Jones', '555-3333',
         new Date('2022-01-10'), new Date('2023-01-10'), 12,
         false, true, true, null // Directory Share Name changed
       );
       
-      const headers = Common.Data.ValidatedMember.HEADERS;
-      const changeCount = Common.Data.MemberPersistence.writeChangedCells(
+      const headers = ValidatedMember.HEADERS;
+      const changeCount = MemberPersistence.writeChangedCells(
         mockSheet,
         originalRows,
         [member1, member2, member3],

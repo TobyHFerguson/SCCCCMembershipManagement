@@ -24,7 +24,7 @@ if (typeof DirectoryService === 'undefined') DirectoryService = {};
  * @returns {Array<{First: string, Last: string, email: string, phone: string}>}
  */
 DirectoryService.getDirectoryEntries = function() {
-  const activeMembers = Common.Data.Access.getMembers().filter(member => member.Status === 'Active');
+  const activeMembers = DataAccess.getMembers().filter(member => member.Status === 'Active');
   
   // Filter to members who have opted to share their name in the directory
   const publicMembers = activeMembers.filter(member => member['Directory Share Name']);

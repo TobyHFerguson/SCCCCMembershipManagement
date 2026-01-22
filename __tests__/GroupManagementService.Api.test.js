@@ -47,11 +47,15 @@ beforeEach(() => {
   };
 
   // Mock Common namespace (backward compat for Logger)
+  // Mock DataAccess (flat class pattern)
+  global.DataAccess = {
+    getPublicGroups: jest.fn()
+  };
+
+  // Mock Common namespace (backward compat for Logger)
   global.Common = {
     Data: {
-      Access: {
-        getPublicGroups: jest.fn()
-      },
+      Access: global.DataAccess,
       Storage: {
         SpreadsheetManager: {
           getFiddler: jest.fn()
@@ -130,7 +134,7 @@ describe('GroupManagementService.Api', () => {
         TestData.createGroup({ Name: 'Group 2', Email: 'g2@sc3.club' })
       ];
       
-      Common.Data.Access.getPublicGroups.mockReturnValue(groups);
+      DataAccess.getPublicGroups.mockReturnValue(groups);
       GroupSubscription.getMember
         .mockReturnValueOnce(TestData.createMember({ delivery_settings: 'ALL_MAIL' }))
         .mockReturnValueOnce(null);
@@ -156,7 +160,7 @@ describe('GroupManagementService.Api', () => {
     test('handles getMember errors gracefully', () => {
       const groups = [TestData.createGroup()];
       
-      Common.Data.Access.getPublicGroups.mockReturnValue(groups);
+      DataAccess.getPublicGroups.mockReturnValue(groups);
       GroupSubscription.getMember.mockImplementation(() => {
         throw new Error('API error');
       });
@@ -171,7 +175,7 @@ describe('GroupManagementService.Api', () => {
     });
 
     test('handles getPublicGroups error', () => {
-      Common.Data.Access.getPublicGroups.mockImplementation(() => {
+      DataAccess.getPublicGroups.mockImplementation(() => {
         throw new Error('Database error');
       });
 

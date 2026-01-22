@@ -5,7 +5,7 @@ MembershipManagement.convertJoinToRenew = function (rowAIndex, rowBIndex) {
   const allMembershipData = membershipSheet.getDataRange().getValues();
   const membershipHeaders = allMembershipData[0];
   const originalMembershipRows = allMembershipData.slice(1);
-  const membershipData = Common.Data.ValidatedMember.validateRows(
+  const membershipData = ValidatedMember.validateRows(
     originalMembershipRows,
     membershipHeaders,
     'MembershipManagement.convertJoinToRenew'
@@ -15,7 +15,7 @@ MembershipManagement.convertJoinToRenew = function (rowAIndex, rowBIndex) {
   const expiryScheduleData = expiryFiddler.getData();
   
   //@ts-ignore
-  const autoGroups = Common.Data.Access.getPublicGroups().filter(group => group.Subscription.toLowerCase() === 'auto');
+  const autoGroups = DataAccess.getPublicGroups().filter(group => group.Subscription.toLowerCase() === 'auto');
   const groupManager = {
     groupAddFun: MembershipManagement.Internal.getGroupAdder_(),
     groupRemoveFun: MembershipManagement.Internal.getGroupRemover_(),
@@ -26,7 +26,7 @@ MembershipManagement.convertJoinToRenew = function (rowAIndex, rowBIndex) {
   const auditLogger = typeof AuditLogger !== 'undefined' ? new AuditLogger() : null;
   
   const manager = new MembershipManagement.Manager(
-    Common.Data.Access.getActionSpecs(), 
+    DataAccess.getActionSpecs(), 
     autoGroups, 
     groupManager, 
     MembershipManagement.Internal.getEmailSender_(),
@@ -37,7 +37,7 @@ MembershipManagement.convertJoinToRenew = function (rowAIndex, rowBIndex) {
   const result = manager.convertJoinToRenew(rowAIndex, rowBIndex, membershipData, expiryScheduleData);
   if (result.success) {
     // Write ActiveMembers using selective cell updates
-    const changeCount = Common.Data.MemberPersistence.writeChangedCells(
+    const changeCount = MemberPersistence.writeChangedCells(
       membershipSheet,
       originalMembershipRows,
       membershipData,
@@ -68,7 +68,7 @@ MembershipManagement.processTransactions = function () {
     transactionsFiddler.setData(transactions).dumpValues();
     
     // Write ActiveMembers using selective cell updates
-    const changeCount = Common.Data.MemberPersistence.writeChangedCells(
+    const changeCount = MemberPersistence.writeChangedCells(
       membershipSheet,
       originalMembershipRows,
       membershipData,
@@ -146,7 +146,7 @@ MembershipManagement.processMigrations = function () {
     
     // Update existing rows with selective cell updates
     const existingMembers = membershipData.slice(0, originalMembershipRows.length);
-    const changeCount = Common.Data.MemberPersistence.writeChangedCells(
+    const changeCount = MemberPersistence.writeChangedCells(
       membershipSheet,
       originalMembershipRows,
       existingMembers,
@@ -155,7 +155,7 @@ MembershipManagement.processMigrations = function () {
     AppLogger.info('MembershipManagement', `processMigrations: Updated ${changeCount} cells in existing members`);
   } else {
     // Only updates to existing members - use selective cell updates
-    const changeCount = Common.Data.MemberPersistence.writeChangedCells(
+    const changeCount = MemberPersistence.writeChangedCells(
       membershipSheet,
       originalMembershipRows,
       membershipData,
@@ -226,7 +226,7 @@ MembershipManagement.generateExpiringMembersList = function () {
     expirationFIFO.setData(expirationQueue).dumpValues();
     
     // Write ActiveMembers using selective cell updates
-    const changeCount = Common.Data.MemberPersistence.writeChangedCells(
+    const changeCount = MemberPersistence.writeChangedCells(
       membershipSheet,
       originalMembershipRows,
       membershipData,
@@ -358,7 +358,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
                           || Properties.getNumberProperty('maxRetries', 5);
     
     // Load membership data using SpreadsheetApp + ValidatedMember (if not already loaded)
-    const membershipData = Common.Data.ValidatedMember.validateRows(
+    const membershipData = ValidatedMember.validateRows(
       originalMembershipRows,
       membershipHeaders,
       'MembershipManagement.processExpirationFIFO'
@@ -366,7 +366,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     const expiryScheduleData = expiryScheduleFiddler.getData();
     
     //@ts-ignore
-    const autoGroups = Common.Data.Access.getPublicGroups().filter(group => group.Subscription.toLowerCase() === 'auto');
+    const autoGroups = DataAccess.getPublicGroups().filter(group => group.Subscription.toLowerCase() === 'auto');
     const groupManager = {
       groupAddFun: MembershipManagement.Internal.getGroupAdder_(),
       groupRemoveFun: MembershipManagement.Internal.getGroupRemover_(),
@@ -377,7 +377,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     const auditLogger = typeof AuditLogger !== 'undefined' ? new AuditLogger() : null;
     
     const manager = new MembershipManagement.Manager(
-      Common.Data.Access.getActionSpecs(), 
+      DataAccess.getActionSpecs(), 
       autoGroups, 
       groupManager, 
       MembershipManagement.Internal.getEmailSender_(),
@@ -528,7 +528,7 @@ MembershipManagement.Internal.initializeManagerDataWithSpreadsheetApp_ = functio
   const allMembershipData = membershipSheet.getDataRange().getValues();
   const membershipHeaders = allMembershipData[0];
   const originalMembershipRows = allMembershipData.slice(1);
-  const membershipData = Common.Data.ValidatedMember.validateRows(
+  const membershipData = ValidatedMember.validateRows(
     originalMembershipRows,
     membershipHeaders,
     'MembershipManagement.initializeManagerData'
@@ -539,7 +539,7 @@ MembershipManagement.Internal.initializeManagerDataWithSpreadsheetApp_ = functio
   const expiryScheduleData = expiryScheduleFiddler.getData();
   
   //@ts-ignore
-  const autoGroups = Common.Data.Access.getPublicGroups().filter(group => group.Subscription.toLowerCase() === 'auto');
+  const autoGroups = DataAccess.getPublicGroups().filter(group => group.Subscription.toLowerCase() === 'auto');
   const groupManager = {
     groupAddFun: MembershipManagement.Internal.getGroupAdder_(),
     groupRemoveFun: MembershipManagement.Internal.getGroupRemover_(),
@@ -550,7 +550,7 @@ MembershipManagement.Internal.initializeManagerDataWithSpreadsheetApp_ = functio
   const auditLogger = typeof AuditLogger !== 'undefined' ? new AuditLogger() : null;
   
   const manager = new MembershipManagement.Manager(
-    Common.Data.Access.getActionSpecs(), 
+    DataAccess.getActionSpecs(), 
     autoGroups, 
     groupManager, 
     MembershipManagement.Internal.getEmailSender_(),
@@ -577,7 +577,7 @@ MembershipManagement.Internal.initializeManagerData_ = function (membershipFiddl
   const membershipData = membershipFiddler.getData();
   const expiryScheduleData = expiryScheduleFiddler.getData();
   //@ts-ignore
-  const autoGroups = Common.Data.Access.getPublicGroups().filter(group => group.Subscription.toLowerCase() === 'auto');
+  const autoGroups = DataAccess.getPublicGroups().filter(group => group.Subscription.toLowerCase() === 'auto');
   const groupManager = {
     groupAddFun: MembershipManagement.Internal.getGroupAdder_(),
     groupRemoveFun: MembershipManagement.Internal.getGroupRemover_(),
@@ -588,7 +588,7 @@ MembershipManagement.Internal.initializeManagerData_ = function (membershipFiddl
   const auditLogger = typeof AuditLogger !== 'undefined' ? new AuditLogger() : null;
   
   const manager = new MembershipManagement.Manager(
-    Common.Data.Access.getActionSpecs(), 
+    DataAccess.getActionSpecs(), 
     autoGroups, 
     groupManager, 
     MembershipManagement.Internal.getEmailSender_(),

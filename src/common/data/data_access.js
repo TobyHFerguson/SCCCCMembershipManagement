@@ -1,6 +1,21 @@
 /// <reference path="../../types/global.d.ts" />
 
 /**
+ * DataAccess Module
+ * 
+ * Purpose: High-level data access functions for member data and other shared data.
+ * Uses SpreadsheetManager for sheet access and ValidatedMember for type-safe member data.
+ * 
+ * Layer: Layer 1 Infrastructure (can use AppLogger)
+ * 
+ * Usage:
+ *   const members = DataAccess.getMembers();
+ *   const member = DataAccess.getMember(email);
+ * 
+ * Pattern: Flat object literal (per gas-best-practices.md)
+ */
+
+/**
  * @returns {Fiddler<VotingService.Election>}
  */
 function getElectionsFiddler() {
@@ -21,7 +36,10 @@ function getSystemLogsFiddler() {
     return SpreadsheetManager.getFiddler('SystemLogs');
 }
 
-Common.Data.Access = {
+/**
+ * DataAccess object - provides high-level data access functions
+ */
+var DataAccess = {
     getBootstrapData: () => {
         const bootStrapFiddler = SpreadsheetManager.getFiddler('Bootstrap');
         return bootStrapFiddler.getData();
@@ -32,7 +50,7 @@ Common.Data.Access = {
         const allData = sheet.getDataRange().getValues();
         const headers = allData[0];
         const rows = allData.slice(1);
-        const members = Common.Data.ValidatedMember.validateRows(rows, headers, 'data_access.getEmailAddresses');
+        const members = ValidatedMember.validateRows(rows, headers, 'data_access.getEmailAddresses');
         const emails = members.map(member => member.Email.toLowerCase());
         return emails;
     },
@@ -42,7 +60,7 @@ Common.Data.Access = {
         const allData = sheet.getDataRange().getValues();
         const headers = allData[0];
         const rows = allData.slice(1);
-        const members = Common.Data.ValidatedMember.validateRows(rows, headers, 'data_access.getMembers');
+        const members = ValidatedMember.validateRows(rows, headers, 'data_access.getMembers');
         return members;
     },
     getActionSpecs: () => {
@@ -79,7 +97,7 @@ Common.Data.Access = {
         if (rowIndex === -1) return undefined;
         
         // Use fromRow to create ValidatedMember (returns null on failure)
-        const member = Common.Data.ValidatedMember.fromRow(rows[rowIndex], headers, rowIndex + 2, null);
+        const member = ValidatedMember.fromRow(rows[rowIndex], headers, rowIndex + 2, null);
         return member || undefined;
     },
     updateMember: (email, newMember) => {
@@ -107,7 +125,7 @@ Common.Data.Access = {
         
         let changeCount = 0;
         for (let j = 0; j < modified.length; j++) {
-            if (!Common.Data.MemberPersistence.valuesEqual(original[j], modified[j])) {
+            if (!MemberPersistence.valuesEqual(original[j], modified[j])) {
                 // Write single cell that changed
                 // Row index: rowIndex + 2 (skip header row, 1-based indexing)
                 // Column index: j + 1 (1-based indexing)
@@ -141,4 +159,9 @@ Common.Data.Access = {
         const systemLogs = SpreadsheetManager.getFiddler('SystemLogs').getData();
         return systemLogs;
     }
-}
+};
+
+// Backward compatibility alias - will be removed in future version
+if (typeof Common === 'undefined') var Common = {};
+if (typeof Common.Data === 'undefined') Common.Data = {};
+Common.Data.Access = DataAccess;

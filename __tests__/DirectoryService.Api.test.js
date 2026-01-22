@@ -76,12 +76,15 @@ global.ApiClientManager = {
   }))
 };
 
-// Mock Common namespace
+// Mock DataAccess (flat class pattern)
+global.DataAccess = {
+  getMembers: jest.fn(() => mockMembers)
+};
+
+// Mock Common namespace (backward compatibility)
 global.Common = {
   Data: {
-    Access: {
-      getMembers: jest.fn(() => mockMembers)
-    }
+    Access: global.DataAccess
   },
   Api: {
     Client: global.ApiClient,
@@ -100,7 +103,7 @@ describe('DirectoryService.Api', () => {
   
   beforeEach(() => {
     jest.clearAllMocks();
-    Common.Data.Access.getMembers.mockReturnValue(mockMembers);
+    DataAccess.getMembers.mockReturnValue(mockMembers);
   });
 
   // ==================== handleGetEntries Tests ====================
@@ -230,7 +233,7 @@ describe('DirectoryService.Api', () => {
     });
 
     test('handles data access error', () => {
-      Common.Data.Access.getMembers.mockImplementation(() => {
+      DataAccess.getMembers.mockImplementation(() => {
         throw new Error('Database error');
       });
       
@@ -301,7 +304,7 @@ describe('DirectoryService.Api', () => {
     });
 
     test('handles data access error', () => {
-      Common.Data.Access.getMembers.mockImplementation(() => {
+      DataAccess.getMembers.mockImplementation(() => {
         throw new Error('Database error');
       });
       
@@ -315,7 +318,7 @@ describe('DirectoryService.Api', () => {
     });
 
     test('handles empty members list', () => {
-      Common.Data.Access.getMembers.mockReturnValue([]);
+      DataAccess.getMembers.mockReturnValue([]);
       
       const params = { _authenticatedEmail: 'user@example.com' };
       

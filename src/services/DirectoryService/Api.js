@@ -122,7 +122,7 @@ DirectoryService.Api.handleGetEntries = function(params) {
 
     try {
       // GAS: Get all members
-      const members = Common.Data.Access.getMembers();
+      const members = DataAccess.getMembers();
 
       // PURE: Process directory (filter, transform, sort)
       const entries = DirectoryService.Manager.processDirectory(members, {
@@ -163,7 +163,7 @@ DirectoryService.Api.handleGetStats = function(params) {
 
     try {
       // GAS: Get all members
-      const members = Common.Data.Access.getMembers();
+      const members = DataAccess.getMembers();
 
       // PURE: Get directory statistics
       const stats = DirectoryService.Manager.getDirectoryStats(members);

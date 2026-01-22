@@ -123,7 +123,7 @@ function getElectionsSpreadsheetId() {
         AppLogger.info('Triggers', 'Starting getElectionsSpreadsheetId - attempting to get Bootstrap data');
         
         // Get Bootstrap configuration to find Elections spreadsheet ID
-        const bootstrapData = Common.Data.Access.getBootstrapData();
+        const bootstrapData = DataAccess.getBootstrapData();
         
         // @ts-ignore - Logger is implemented in separate file
         AppLogger.info('Triggers', 'Successfully retrieved Bootstrap data', {rowCount: bootstrapData ? bootstrapData.length : 0});

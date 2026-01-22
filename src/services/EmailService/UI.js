@@ -9,7 +9,7 @@ EmailService.UI = {
         SpreadsheetApp.getUi().showModalDialog(html, 'Send Test Email');
     },
     _getActionSpecTypes: () => {
-        var actionSpecs = Common.Data.Access.getActionSpecs();
+        var actionSpecs = DataAccess.getActionSpecs();
         const result = Object.keys(actionSpecs);
         console.log('getActionSpecTypes', result);
         return result;

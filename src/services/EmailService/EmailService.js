@@ -3,9 +3,9 @@ EmailService.sendTestEmail = function (form) {
   const sendToEmail = form.sendToEmail;
   const selectedKeys = Array.isArray(form.selectedKeys) ? form.selectedKeys : [form.selectedKeys]; // Ensure selectedKeys is always an array
 
-  const actionSpecs = Common.Data.Access.getActionSpecs(); // Assuming this function returns the ActionSpecs object
+  const actionSpecs = DataAccess.getActionSpecs(); // Assuming this function returns the ActionSpecs object
 
-  const member = Common.Data.Access.getMember(lookupEmail);
+  const member = DataAccess.getMember(lookupEmail);
   if (!member) {
     console.error(`sending an email but the member ${lookupEmail} was not found`)
     return;

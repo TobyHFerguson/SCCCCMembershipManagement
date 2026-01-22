@@ -117,7 +117,7 @@ function findPossibleRenewalsFromMenu() {
         function() {
             AppLogger.info('MembershipManagement', 'Menu: Find Possible Renewals - Starting');
             
-            const activeMembers = Common.Data.Access.getMembers();
+            const activeMembers = DataAccess.getMembers();
             const similarMemberPairs = MembershipManagement.Manager.findPossibleRenewals(activeMembers);
             const pairCount = (similarMemberPairs || []).length;
             

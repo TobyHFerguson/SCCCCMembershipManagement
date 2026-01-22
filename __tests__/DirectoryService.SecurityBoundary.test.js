@@ -18,11 +18,16 @@ global.ScriptApp = {
 
 // Mock Common.Data.Access
 const mockMembers = [];
+
+// Mock DataAccess (flat class pattern)
+global.DataAccess = {
+  getMembers: jest.fn(() => mockMembers)
+};
+
+// Mock Common namespace (backward compatibility)
 global.Common = {
   Data: {
-    Access: {
-      getMembers: jest.fn(() => mockMembers)
-    }
+    Access: global.DataAccess
   }
 };
 

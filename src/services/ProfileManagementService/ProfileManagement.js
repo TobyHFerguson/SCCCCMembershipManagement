@@ -48,7 +48,7 @@ ProfileManagementService.updateProfile = function (userToken, updatedProfile) {
   if (!updatedProfile) {
     throw new Error("Original and updated profiles must be provided.");
   }
-  const originalProfile = Common.Data.Access.getMember(userEmail);
+  const originalProfile = DataAccess.getMember(userEmail);
   if (!originalProfile) {
     throw new Error(`Profile not found for email: ${userEmail}`);
   }
@@ -59,7 +59,7 @@ ProfileManagementService.updateProfile = function (userToken, updatedProfile) {
   console.log('mergedProfile', updatedProfile);
 
   // Proceed with the update if no forbidden fields were modified
-  Common.Data.Access.updateMember(userEmail, updatedProfile);
+  DataAccess.updateMember(userEmail, updatedProfile);
   return { success: true, message: "Profile updated successfully." };
 }
 

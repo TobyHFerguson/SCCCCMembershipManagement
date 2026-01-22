@@ -41,7 +41,7 @@ GroupManagementService.getUserGroupSubscription = function(userEmail) {
     const normalizedEmail = GroupManagementService.Manager.normalizeEmail(userEmail);
     
     // GAS: Get public groups
-    const groups = Common.Data.Access.getPublicGroups();
+    const groups = DataAccess.getPublicGroups();
     
     // GAS: Get member data for each group
     const membersByGroup = {};

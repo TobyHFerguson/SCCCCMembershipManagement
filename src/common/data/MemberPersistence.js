@@ -4,40 +4,28 @@
  * Purpose: Provides selective cell writing for member updates to minimize
  * version history noise and improve debugging of sheet changes.
  * 
- * Layer: Layer 1 Infrastructure (can use Common.Logger)
+ * Layer: Layer 1 Infrastructure (can use AppLogger)
  * 
  * Usage:
- *   const changeCount = Common.Data.MemberPersistence.writeChangedCells(
+ *   const changeCount = MemberPersistence.writeChangedCells(
  *     sheet, originalRows, modifiedMembers, headers
  *   );
  * 
- * Pattern: IIFE-wrapped class (per gas-best-practices.md)
+ * Pattern: Flat IIFE-wrapped class (per gas-best-practices.md)
  */
-
-// Extend Common.Data namespace (declared in 1namespaces.js in GAS)
-// Use globalThis for Node.js compatibility while maintaining GAS compatibility
-if (typeof Common === 'undefined') {
-  if (typeof globalThis !== 'undefined') {
-    globalThis.Common = globalThis.Common || {};
-    var Common = globalThis.Common;
-  } else {
-    var Common = {};
-  }
-}
-if (typeof Common.Data === 'undefined') Common.Data = {};
 
 /**
- * MemberPersistence class using IIFE-wrapped pattern
+ * MemberPersistence class using flat IIFE-wrapped pattern
  * @class
  */
-Common.Data.MemberPersistence = (function() {
+var MemberPersistence = (function() {
   class MemberPersistence {
     /**
      * Write only changed member cells to minimize version history noise
      * 
      * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The ActiveMembers sheet
      * @param {Array<Array<*>>} originalRows - Original row data from sheet (without header)
-     * @param {Array<Common.Data.ValidatedMember>} modifiedMembers - Updated member objects
+     * @param {Array<ValidatedMember>} modifiedMembers - Updated member objects
      * @param {Array<string>} headers - Column headers
      * @returns {number} Number of cells changed
      */
@@ -102,7 +90,12 @@ Common.Data.MemberPersistence = (function() {
   return MemberPersistence;
 })();
 
+// Backward compatibility alias - will be removed in future version
+if (typeof Common === 'undefined') var Common = {};
+if (typeof Common.Data === 'undefined') Common.Data = {};
+Common.Data.MemberPersistence = MemberPersistence;
+
 // Node.js module export for testing
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = Common;
+  module.exports = { MemberPersistence };
 }
