@@ -19,6 +19,8 @@ declare namespace Audit {
         Error: string;
         /** JSON-serialized detailed data (e.g., stack traces, error details) */
         JSON: string;
+        /** Optional unique identifier for deduplication */
+        Id?: string;
 
         /**
          * Constructor
@@ -98,5 +100,17 @@ declare namespace Audit {
          * @returns Array of validated audit log entries
          */
         createLogEntries(paramsArray: LogParams[]): LogEntry[];
+    }
+
+    /**
+     * Persistence namespace for writing audit entries to the Audit sheet
+     */
+    namespace Persistence {
+        /**
+         * Persist audit entries to the Audit sheet via direct SpreadsheetApp
+         * @param auditEntries - Array of audit log entries from Manager
+         * @returns Number of rows written
+         */
+        function persistAuditEntries(auditEntries: LogEntry[]): number;
     }
 }
