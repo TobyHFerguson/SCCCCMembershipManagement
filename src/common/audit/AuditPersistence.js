@@ -72,7 +72,7 @@ var AuditPersistence = (function() {
       // Append rows to Audit sheet via direct SpreadsheetApp
       try {
         // Get the Audit sheet directly
-        const auditSheet = Common.Data.Storage.SpreadsheetManager.getSheet('Audit');
+        const auditSheet = SpreadsheetManager.getSheet('Audit');
         if (!auditSheet) {
           throw new Error('Audit sheet not found');
         }

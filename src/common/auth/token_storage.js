@@ -2,7 +2,7 @@
  * Common.Auth.TokenStorage
  *
  * Utilities for generating, retrieving and modifying one-time tokens persisted via
- * the Common.Data.Storage.SpreadsheetManager "Tokens" fiddler.
+ * the SpreadsheetManager "Tokens" fiddler.
  *
  * Side effects:
  * - Reads and writes the "Tokens" fiddler.
@@ -37,7 +37,7 @@ Common.Auth.TokenStorage = {
             Timestamp: new Date(),
             Used: false
         }
-        const tokenFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens');
+        const tokenFiddler = SpreadsheetManager.getFiddler('Tokens');
         const tokens = tokenFiddler.getData();
         tokens.push(newEntry)
         tokenFiddler.setData(tokens).dumpValues();
@@ -52,7 +52,7 @@ Common.Auth.TokenStorage = {
      * @returns {TokenEntry[]} Array of TokenEntry objects currently stored.
      */
     getTokenData: function ()  {
-        const tokenData = Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens').getData();
+        const tokenData = SpreadsheetManager.getFiddler('Tokens').getData();
         return tokenData;
     },
     /**
@@ -63,7 +63,7 @@ Common.Auth.TokenStorage = {
      * The underlying token entry is marked as used if it was found and not already used.
      */
     consumeToken:function (token) {
-        const tokenFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens');
+        const tokenFiddler = SpreadsheetManager.getFiddler('Tokens');
         const tokens = tokenFiddler.getData();
         const td = tokens.find((tokenData) => tokenData.Token === token)
         const tokenToBeReturned = td ? { ...td } : undefined; // Return a copy to avoid external mutation
@@ -88,7 +88,7 @@ Common.Auth.TokenStorage = {
      * @returns {void}
      */
     deleteTokens: function (tokensToDelete) {
-        const tokenFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Tokens');
+        const tokenFiddler = SpreadsheetManager.getFiddler('Tokens');
         let tokens = tokenFiddler.getData();
         tokens = tokens.filter((tokenData) => !tokensToDelete.includes(tokenData.Token));
         tokenFiddler.setData(tokens).dumpValues();

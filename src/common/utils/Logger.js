@@ -114,21 +114,18 @@
    */
   function getLogFiddler() {
     try {
-      // Check if SpreadsheetManager is available
-      if (typeof Common === 'undefined' || 
-          !Common.Data || 
-          !Common.Data.Storage || 
-          !Common.Data.Storage.SpreadsheetManager) {
-        console.log('[Common.Logger.getLogFiddler] SpreadsheetManager not available yet, using fallback');
+      // Check if SpreadsheetManager is available (flat class pattern)
+      if (typeof SpreadsheetManager === 'undefined') {
+        console.log('[Logger.getLogFiddler] SpreadsheetManager not available yet, using fallback');
         return null;
       }
       
       // Get the fiddler for SystemLogs from Bootstrap configuration
-      const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('SystemLogs');
+      const fiddler = SpreadsheetManager.getFiddler('SystemLogs');
       return fiddler;
     } catch (error) {
       // If SystemLogs is not configured in Bootstrap or any other error, log and return null
-      console.log('[Common.Logger.getLogFiddler] Failed to get SystemLogs fiddler: ' + (error && error.message ? error.message : String(error)));
+      console.log('[Logger.getLogFiddler] Failed to get SystemLogs fiddler: ' + (error && error.message ? error.message : String(error)));
       return null;
     }
   }

@@ -41,13 +41,16 @@ beforeEach(() => {
     changeMembersEmail: jest.fn()
   };
 
-  // Mock Common.Data.Storage.SpreadsheetManager
+  // Mock SpreadsheetManager (flat class pattern)
+  global.SpreadsheetManager = {
+    getFiddler: jest.fn()
+  };
+
+  // Mock SpreadsheetManager - backward compat via Common namespace
   global.Common = {
     Data: {
       Storage: {
-        SpreadsheetManager: {
-          getFiddler: jest.fn()
-        }
+        SpreadsheetManager: global.SpreadsheetManager
       }
     },
     Api: {
@@ -396,7 +399,7 @@ describe('EmailChangeService.Api', () => {
       mockFiddler = TestData.createMockFiddler([
         { Email: 'old@example.com', First: 'John' }
       ]);
-      Common.Data.Storage.SpreadsheetManager.getFiddler.mockReturnValue(mockFiddler);
+      SpreadsheetManager.getFiddler.mockReturnValue(mockFiddler);
     });
 
     test('changes email in groups successfully', () => {
@@ -482,14 +485,14 @@ describe('EmailChangeService.Api', () => {
 
       expect(result.success).toBe(true);
       // Should be called for ActiveMembers, ExpirySchedule, and EmailChange log
-      expect(Common.Data.Storage.SpreadsheetManager.getFiddler).toHaveBeenCalled();
+      expect(SpreadsheetManager.getFiddler).toHaveBeenCalled();
     });
 
     test('logs email change', () => {
       const logData = [];
       const logFiddler = TestData.createMockFiddler(logData);
       
-      Common.Data.Storage.SpreadsheetManager.getFiddler.mockImplementation((ref) => {
+      SpreadsheetManager.getFiddler.mockImplementation((ref) => {
         if (ref === 'EmailChange') {
           return logFiddler;
         }
@@ -650,19 +653,19 @@ describe('EmailChangeService.Api', () => {
         mapRows: jest.fn(),
         dumpValues: jest.fn()
       };
-      Common.Data.Storage.SpreadsheetManager.getFiddler.mockReturnValue(mockFiddler);
+      SpreadsheetManager.getFiddler.mockReturnValue(mockFiddler);
 
       EmailChangeService.Api.changeEmailInSpreadsheets('old@example.com', 'new@example.com');
 
       // Should be called for ActiveMembers and ExpirySchedule
-      expect(Common.Data.Storage.SpreadsheetManager.getFiddler).toHaveBeenCalledWith('ActiveMembers');
-      expect(Common.Data.Storage.SpreadsheetManager.getFiddler).toHaveBeenCalledWith('ExpirySchedule');
+      expect(SpreadsheetManager.getFiddler).toHaveBeenCalledWith('ActiveMembers');
+      expect(SpreadsheetManager.getFiddler).toHaveBeenCalledWith('ExpirySchedule');
       expect(mockFiddler.mapRows).toHaveBeenCalledTimes(2);
       expect(mockFiddler.dumpValues).toHaveBeenCalledTimes(2);
     });
 
     test('handles errors gracefully', () => {
-      Common.Data.Storage.SpreadsheetManager.getFiddler.mockImplementation(() => {
+      SpreadsheetManager.getFiddler.mockImplementation(() => {
         throw new Error('Sheet not found');
       });
 
@@ -676,17 +679,17 @@ describe('EmailChangeService.Api', () => {
   describe('logEmailChange', () => {
     test('appends log entry to EmailChange sheet', () => {
       const logFiddler = TestData.createMockFiddler([]);
-      Common.Data.Storage.SpreadsheetManager.getFiddler.mockReturnValue(logFiddler);
+      SpreadsheetManager.getFiddler.mockReturnValue(logFiddler);
 
       EmailChangeService.Api.logEmailChange('old@example.com', 'new@example.com');
 
-      expect(Common.Data.Storage.SpreadsheetManager.getFiddler).toHaveBeenCalledWith('EmailChange');
+      expect(SpreadsheetManager.getFiddler).toHaveBeenCalledWith('EmailChange');
       expect(logFiddler.setData).toHaveBeenCalled();
       expect(logFiddler.dumpValues).toHaveBeenCalled();
     });
 
     test('handles errors gracefully', () => {
-      Common.Data.Storage.SpreadsheetManager.getFiddler.mockImplementation(() => {
+      SpreadsheetManager.getFiddler.mockImplementation(() => {
         throw new Error('Sheet not found');
       });
 

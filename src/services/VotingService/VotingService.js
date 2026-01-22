@@ -14,7 +14,7 @@
 VotingService.getBallotFolderId = function () {
     try {
         // @ts-ignore - Common namespace is available at runtime
-        const configFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ElectionConfiguration');
+        const configFiddler = SpreadsheetManager.getFiddler('ElectionConfiguration');
         /** @type {any[]} */
         const config = configFiddler.getData();
         

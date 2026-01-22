@@ -219,6 +219,52 @@ declare class AuditPersistence {
     static persistAuditEntries(auditEntries: AuditLogEntry[]): number;
 }
 
+// ============================================================================
+// SpreadsheetManager (Flat Pattern - no namespace nesting)
+// ============================================================================
+
+/**
+ * SpreadsheetManager class - Low-level spreadsheet access via bmPreFiddler
+ */
+declare class SpreadsheetManager {
+    /**
+     * Gets a fiddler based on the sheet name.
+     */
+    static getFiddler(sheetName: 'Tokens'): Fiddler<TokenDataType>;
+    static getFiddler(sheetName: 'Elections'): Fiddler<VotingService.Election>;
+    static getFiddler(sheetName: 'Form Responses 1'): Fiddler<FormResponse>;
+    static getFiddler(sheetName: 'Validated Results'): Fiddler<Result>;
+    static getFiddler(sheetName: 'Invalid Results'): Fiddler<Result>;
+    static getFiddler(sheetName: 'Bootstrap'): Fiddler<BootstrapData>;
+    static getFiddler(sheetName: 'SystemLogs'): Fiddler<SystemLogEntry>;
+    static getFiddler(sheetName: 'ActiveMembers'): Fiddler<Member>;
+    static getFiddler(sheetName: 'ActionSpecs'): Fiddler<MembershipManagement.ActionSpec>;
+    static getFiddler(sheetName: 'ExpirySchedule'): Fiddler<MembershipManagement.ExpirySchedule>;
+    static getFiddler(sheetName: 'ExpirationFIFO'): Fiddler<ExpiredMember>;
+    static getFiddler(sheetName: 'Audit'): Fiddler<AuditLogEntry>;
+    static getFiddler(sheetName: string): Fiddler<any>;
+
+    /**
+     * Clear cached fiddler(s). Call when external code may have modified the sheet.
+     */
+    static clearFiddlerCache(sheetName?: string): void;
+
+    /**
+     * Returns the data from a fiddler with formulas merged into it.
+     */
+    static getDataWithFormulas<T>(fiddler: Fiddler<T>): T[];
+
+    /**
+     * Converts links in a sheet to hyperlinks.
+     */
+    static convertLinks(sheetName: string): void;
+
+    /**
+     * Get a sheet directly by name (replaces fiddler for simpler access)
+     */
+    static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
+}
+
 // Common Data namespace - ValidatedMember and persistence
 declare namespace Common {
     namespace Data {

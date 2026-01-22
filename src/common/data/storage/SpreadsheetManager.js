@@ -1,18 +1,25 @@
 /**
  * SpreadsheetManager - Low-level spreadsheet access via bmPreFiddler
  * 
- * CRITICAL: This module MUST NOT use Common.Logger!
- * Reason: Creates infinite loop via Properties -> getFiddler -> _initializeSheets -> getContainerSpreadsheetId -> Common.Logger -> Properties
+ * CRITICAL: This module MUST NOT use Logger (formerly Common.Logger)!
+ * Reason: Creates infinite loop via Properties -> getFiddler -> _initializeSheets -> getContainerSpreadsheetId -> Logger -> Properties
  * Use console.log() only for tracing.
+ * 
+ * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
  */
-Common.Data.Storage = {}
-Common.Data.Storage.SpreadsheetManager = (function () {
+
+var SpreadsheetManager = (function() {
+  /** @type {Object.<string, any>|undefined} */
   let sheets;
-  const __fiddlerCache = {}; // Per-execution cache for fiddler instances
+  
+  /** @type {Object.<string, any>} Per-execution cache for fiddler instances */
+  const __fiddlerCache = {};
 
   /**
    * Gets the container spreadsheet ID from script properties or current binding
-   * @returns {string|null} The container spreadsheet ID
+   * @returns {string} The container spreadsheet ID
+   * @throws {Error} If spreadsheet ID cannot be determined
+   * @private
    */
   function getContainerSpreadsheetId() {
     try {
@@ -34,7 +41,6 @@ Common.Data.Storage.SpreadsheetManager = (function () {
         } catch (e) {
           // We might be in a trigger context where getActiveSpreadsheet() doesn't work reliably
           console.log('[SpreadsheetManager.getContainerSpreadsheetId] Could not get active spreadsheet: ' + e);
-          // NOTE: Don't use Common.Logger here - it creates circular dependency via Properties -> getFiddler -> _initializeSheets -> getContainerSpreadsheetId
         }
       }
 
@@ -47,15 +53,16 @@ Common.Data.Storage.SpreadsheetManager = (function () {
       return containerId;
     } catch (error) {
       console.log('[SpreadsheetManager.getContainerSpreadsheetId] Failed: ' + error);
-      // NOTE: Don't use Common.Logger here - creates circular dependency
       throw error;
     }
   }
 
+  /**
+   * Initialize sheets from Bootstrap
+   * @private
+   */
   function _initializeSheets() {
     try {
-      // NOTE: Don't use Common.Logger here - it creates circular dependency via Properties
-
       // Get the container spreadsheet ID to ensure we're accessing the correct spreadsheet
       const containerSpreadsheetId = getContainerSpreadsheetId();
 
@@ -74,9 +81,6 @@ Common.Data.Storage.SpreadsheetManager = (function () {
         
         // If row has an id field, extract the ID from URL if it's a URL
         if (processedRow.id && typeof processedRow.id === 'string') {
-          // Use Common.Utils.extractSpreadsheetId to handle both URLs and plain IDs
-          // Note: Common.Utils may not be loaded yet during early initialization
-          // So we inline a simple extraction to avoid circular dependencies
           const trimmed = processedRow.id.trim();
           const urlPattern = /\/d\/([a-zA-Z0-9-_]+)/;
           const match = trimmed.match(urlPattern);
@@ -91,19 +95,20 @@ Common.Data.Storage.SpreadsheetManager = (function () {
       }));
     } catch (error) {
       console.log('[SpreadsheetManager._initializeSheets] Error: ' + error);
-      // NOTE: Don't use Common.Logger here - creates circular dependency
       throw error;
     }
   }
+
   /**
-* Combines two arrays of objects by merging the properties of objects at the same index.
-* If a property in the first array's object is an empty string or undefined, the property from the second array's object is used.
-* 
-* @param {Array<Object>} arr1 - The first array of objects.
-* @param {Array<Object>} arr2 - The second array of objects.
-* @returns {Array<Object>} A new array of objects with combined properties.
-* @throws {Error} If the lengths of the two arrays are not equal.
-*/
+   * Combines two arrays of objects by merging the properties of objects at the same index.
+   * If a property in the first array's object is an empty string or undefined, the property from the second array's object is used.
+   * 
+   * @param {Array<Object>} arr1 - The first array of objects.
+   * @param {Array<Object>} arr2 - The second array of objects.
+   * @returns {Array<Object>} A new array of objects with combined properties.
+   * @throws {Error} If the lengths of the two arrays are not equal.
+   * @private
+   */
   function _combineArrays(arr1, arr2) {
     if (arr1.length !== arr2.length) {
       throw new Error("Both arrays must have the same length");
@@ -120,15 +125,13 @@ Common.Data.Storage.SpreadsheetManager = (function () {
     });
   }
 
-  return {
-
-
+  class SpreadsheetManager {
     /**
-  * Gets a fiddler based on the sheet name.
-  * @param {String} sheetName - the name of the sheet.
-  * @returns {Fiddler} - The fiddler.
-  */
-    getFiddler: (sheetName) => {
+     * Gets a fiddler based on the sheet name.
+     * @param {string} sheetName - the name of the sheet.
+     * @returns {Fiddler} - The fiddler.
+     */
+    static getFiddler(sheetName) {
       try {
         // Check cache first
         const containerSpreadsheetId = getContainerSpreadsheetId();
@@ -165,9 +168,9 @@ Common.Data.Storage.SpreadsheetManager = (function () {
           fiddlerConfig = sheetConfig;
         } else {
           // If no ID in config, add container spreadsheet ID (local sheet)
-          const containerSpreadsheetId = getContainerSpreadsheetId();
-          fiddlerConfig = containerSpreadsheetId
-            ? { ...sheetConfig, id: containerSpreadsheetId }
+          const containerIdForConfig = getContainerSpreadsheetId();
+          fiddlerConfig = containerIdForConfig
+            ? { ...sheetConfig, id: containerIdForConfig }
             : sheetConfig;
         }
 
@@ -182,13 +185,13 @@ Common.Data.Storage.SpreadsheetManager = (function () {
         error.message = `SpreadsheetManager.getFiddler(${sheetName}) failed: ${error.message}`;
         throw error;
       }
-    },
+    }
 
     /**
      * Clear cached fiddler(s). Call when external code may have modified the sheet.
      * @param {string} [sheetName] - Specific sheet to clear, or omit to clear all
      */
-    clearFiddlerCache: (sheetName) => {
+    static clearFiddlerCache(sheetName) {
       if (!sheetName) {
         for (const k in __fiddlerCache) delete __fiddlerCache[k];
         return;
@@ -200,27 +203,24 @@ Common.Data.Storage.SpreadsheetManager = (function () {
       if (__fiddlerCache[cacheKey]) {
         delete __fiddlerCache[cacheKey];
       }
-    },
+    }
 
     /**
-      * Returns the data from a fiddler with formulas merged into it.
-      * @template
+     * Returns the data from a fiddler with formulas merged into it.
+     * @template T
      * @param {Fiddler<T>} fiddler 
      * @returns {T[]} - The merged data.
      */
-
-    getDataWithFormulas: (fiddler) => {
+    static getDataWithFormulas(fiddler) {
       fiddler.needFormulas();
       return _combineArrays(fiddler.getFormulaData(), fiddler.getData());
-    },
-
-
+    }
 
     /**
      * Converts links in a sheet to hyperlinks.
-     * @param {String} sheetName - The name of the sheet.
+     * @param {string} sheetName - The name of the sheet.
      */
-    convertLinks: (sheetName) => {
+    static convertLinks(sheetName) {
       const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
       if (!sheet) return;
       const range = sheet.getDataRange();
@@ -237,14 +237,14 @@ Common.Data.Storage.SpreadsheetManager = (function () {
       });
       range.setValues(newValues);
       SpreadsheetApp.flush();
-    },
+    }
 
     /**
      * Get a sheet directly by name (replaces fiddler for simpler access)
      * @param {string} sheetName - Name of the sheet from Bootstrap
      * @returns {GoogleAppsScript.Spreadsheet.Sheet} The sheet instance
      */
-    getSheet: (sheetName) => {
+    static getSheet(sheetName) {
       if (!sheets) {
         _initializeSheets();
       }
@@ -273,4 +273,19 @@ Common.Data.Storage.SpreadsheetManager = (function () {
       return ss.getSheetByName(sheet.sheetName);
     }
   }
-})()
+
+  return SpreadsheetManager;
+})();
+
+// Backward compatibility: Assign to old namespace location
+// This allows gradual migration - old code still works
+if (typeof Common !== 'undefined') {
+  if (!Common.Data) Common.Data = {};
+  if (!Common.Data.Storage) Common.Data.Storage = {};
+  SpreadsheetManager = SpreadsheetManager;
+}
+
+// Node.js module export for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = SpreadsheetManager;
+}

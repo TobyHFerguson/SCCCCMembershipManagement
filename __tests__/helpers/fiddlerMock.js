@@ -9,21 +9,21 @@ module.exports = function createFiddlerMock(initialFifo = [], initialDead = []) 
     global.Common = global.Common || {};
     global.Common.Data = global.Common.Data || {};
     global.Common.Data.Storage = global.Common.Data.Storage || {};
-    global.Common.Data.Storage.SpreadsheetManager = global.Common.Data.Storage.SpreadsheetManager || {};
+    global.SpreadsheetManager = global.SpreadsheetManager || {};
     
-    originalGetFiddler = global.Common.Data.Storage.SpreadsheetManager.getFiddler;
-    global.Common.Data.Storage.SpreadsheetManager.getFiddler = (name) => {
+    originalGetFiddler = global.SpreadsheetManager.getFiddler;
+    global.SpreadsheetManager.getFiddler = (name) => {
       if (name === 'ExpirationFIFO') {
         return {
           getData: () => fifoData.slice(),
-          setData: (d) => { fifoData = Array.isArray(d) ? d.slice() : []; return global.Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationFIFO'); },
+          setData: (d) => { fifoData = Array.isArray(d) ? d.slice() : []; return global.SpreadsheetManager.getFiddler('ExpirationFIFO'); },
           dumpValues: () => { }
         };
       }
       if (name === 'ExpirationDeadLetter') {
         return {
           getData: () => deadData.slice(),
-          setData: (d) => { deadData = Array.isArray(d) ? d.slice() : []; return global.Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationDeadLetter'); },
+          setData: (d) => { deadData = Array.isArray(d) ? d.slice() : []; return global.SpreadsheetManager.getFiddler('ExpirationDeadLetter'); },
           dumpValues: () => { }
         };
       }
@@ -33,7 +33,7 @@ module.exports = function createFiddlerMock(initialFifo = [], initialDead = []) 
   }
 
   function restore() {
-    if (originalGetFiddler) global.Common.Data.Storage.SpreadsheetManager.getFiddler = originalGetFiddler;
+    if (originalGetFiddler) global.SpreadsheetManager.getFiddler = originalGetFiddler;
   }
 
   function getFifo() { return fifoData.slice(); }

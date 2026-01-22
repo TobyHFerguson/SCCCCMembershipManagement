@@ -645,7 +645,7 @@ EmailChangeService.Api.sendVerificationEmail = function(email, content) {
 EmailChangeService.Api.changeEmailInSpreadsheets = function(oldEmail, newEmail) {
     for (const ref of EMAIL_CHANGE_SHEET_REFS) {
       try {
-        const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler(ref);
+        const fiddler = SpreadsheetManager.getFiddler(ref);
         fiddler.mapRows(/** @param {any} row */ (row) => {
           if (row.Email && row.Email.toLowerCase() === oldEmail) {
             row.Email = newEmail;
@@ -670,7 +670,7 @@ EmailChangeService.Api.logEmailChange = function(oldEmail, newEmail) {
     const entry = EmailChangeService.Manager.createChangeLogEntry(oldEmail, newEmail);
     
     // GAS: Append to log sheet
-    const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('EmailChange');
+    const fiddler = SpreadsheetManager.getFiddler('EmailChange');
     const data = fiddler.getData();
     data.push(entry);
     fiddler.setData(data).dumpValues();

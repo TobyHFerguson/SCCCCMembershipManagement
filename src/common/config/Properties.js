@@ -61,7 +61,7 @@ Common.Config.Properties = (function () {
     _isLoadingProperties = true;
     
     try {
-      const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Properties');
+      const fiddler = SpreadsheetManager.getFiddler('Properties');
       const data = fiddler.getData() || [];
       
       _propertyCache = {};

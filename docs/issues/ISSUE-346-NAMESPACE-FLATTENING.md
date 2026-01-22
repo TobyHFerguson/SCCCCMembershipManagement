@@ -73,7 +73,54 @@ Each class gets:
 
 ---
 
-### Phase -1 Step 2: Common.Logger Namespace ⏳ PENDING
+## Dependency Order for Remaining Steps
+
+The following namespaces must be flattened in **dependency order** to avoid circular reference issues:
+
+1. **SpreadsheetManager** - Layer 0 foundation, no Common.* dependencies
+2. **Properties** - Layer 0, depends on SpreadsheetManager
+3. **Logger** - Layer 0, depends on Properties + SpreadsheetManager
+4. **All other Common.* namespaces** - Layer 1+, depend on Logger
+
+---
+
+### Phase -1 Step 2: Common.Data.Storage.SpreadsheetManager ✅ COMPLETE
+
+**Layer**: 0 (Foundation - cannot use Logger)
+
+| Old Name | New Name | Status |
+|----------|----------|--------|
+| `Common.Data.Storage.SpreadsheetManager` | `SpreadsheetManager` | ✅ Complete |
+
+**Changes Made**:
+- Converted `SpreadsheetManager.js` to flat IIFE class pattern
+- Created `SpreadsheetManager.d.ts` with typed method signatures
+- Added global declaration in `global.d.ts` with typed overloads
+- Updated ~50 usages from `Common.Data.Storage.SpreadsheetManager` to `SpreadsheetManager`
+- Updated `Logger.js` availability check to use flat class pattern
+- Updated `circular-dependency.test.js` assertion for new doc string
+- Updated `EmailChangeService.Api.test.js` mock to include flat SpreadsheetManager
+- Added backward compatibility bridge for gradual migration
+
+**Results**:
+- Tests: 1113 passing ✅
+- Type Errors: 332 (slight increase, to be addressed in later phases)
+
+---
+
+### Phase -1 Step 3: Common.Config.Properties ⏳ PENDING
+
+**Layer**: 0 (Foundation - cannot use Common.Logger)
+
+| Old Name | New Name | Status |
+|----------|----------|--------|
+| `Common.Config.Properties` | `Properties` | ⏳ Pending |
+
+---
+
+### Phase -1 Step 4: Common.Logger ⏳ PENDING
+
+**Layer**: 0 (Foundation - provides logging to all other modules)
 
 | Old Name | New Name | Status |
 |----------|----------|--------|
@@ -83,20 +130,19 @@ Each class gets:
 | `Common.Logger.debug` | `Logger.debug` | ⏳ Pending |
 | `Common.Logger.configure` | `Logger.configure` | ⏳ Pending |
 
-**Estimated Usages**: ~230
+**Estimated Usages**: ~238
 
 ---
 
-### Phase -1 Step 3: Common.Config Namespace ⏳ PENDING
+### Phase -1 Step 5: Common.Config.FeatureFlags ⏳ PENDING
 
 | Old Name | New Name | Status |
 |----------|----------|--------|
-| `Common.Config.Properties` | `Properties` | ⏳ Pending |
 | `Common.Config.FeatureFlags` | `FeatureFlags` | ⏳ Pending |
 
 ---
 
-### Phase -1 Step 4: Common.Auth Namespace ⏳ PENDING
+### Phase -1 Step 6: Common.Auth Namespace ⏳ PENDING
 
 | Old Name | New Name | Status |
 |----------|----------|--------|
@@ -106,7 +152,7 @@ Each class gets:
 
 ---
 
-### Phase -1 Step 5: Common.Api Namespace ⏳ PENDING
+### Phase -1 Step 7: Common.Api Namespace ⏳ PENDING
 
 | Old Name | New Name | Status |
 |----------|----------|--------|
@@ -114,18 +160,17 @@ Each class gets:
 
 ---
 
-### Phase -1 Step 6: Common.Data Namespace ⏳ PENDING
+### Phase -1 Step 8: Common.Data Namespace ⏳ PENDING
 
 | Old Name | New Name | Status |
 |----------|----------|--------|
 | `Common.Data.ValidatedMember` | `ValidatedMember` | ⏳ Pending |
 | `Common.Data.MemberPersistence` | `MemberPersistence` | ⏳ Pending |
 | `Common.Data.Access` | `DataAccess` | ⏳ Pending |
-| `Common.Data.Storage.SpreadsheetManager` | `SpreadsheetManager` | ⏳ Pending |
 
 ---
 
-### Phase -1 Step 7: Common.Logging Namespace ⏳ PENDING
+### Phase -1 Step 9: Common.Logging Namespace ⏳ PENDING
 
 | Old Name | New Name | Status |
 |----------|----------|--------|

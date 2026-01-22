@@ -67,7 +67,7 @@ describe('Circular Dependency Guards', () => {
       const smSource = fs.readFileSync(smPath, 'utf8');
       
       expect(smSource).toContain('CRITICAL');
-      expect(smSource).toContain('MUST NOT use Common.Logger');
+      expect(smSource).toContain('MUST NOT use Logger');
     });
   });
   

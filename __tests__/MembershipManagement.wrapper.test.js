@@ -62,7 +62,7 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
             ['Active', 's3@example.com', 'User', 'Three', '555-3333', new Date('2023-01-01'), new Date('2024-01-01'), 12, true, false, false, null]
         ];
         
-        global.Common.Data.Storage.SpreadsheetManager.getSheet = jest.fn((sheetName) => {
+        global.SpreadsheetManager.getSheet = jest.fn((sheetName) => {
             if (sheetName === 'ActiveMembers') {
                 return {
                     getDataRange: jest.fn(() => ({
@@ -233,7 +233,7 @@ describe('MembershipManagement audit persistence integration', () => {
         global.Common = global.Common || {};
         global.Common.Data = global.Common.Data || {};
         global.Common.Data.Storage = global.Common.Data.Storage || {};
-        global.Common.Data.Storage.SpreadsheetManager = {
+        global.SpreadsheetManager = {
             getSheet: jest.fn(() => mockSheet)
         };
 
@@ -241,7 +241,7 @@ describe('MembershipManagement audit persistence integration', () => {
         const numWritten = global.MembershipManagement.Internal.persistAuditEntries_(mockAuditEntries);
 
         // Verify getSheet was called with correct sheet name
-        expect(global.Common.Data.Storage.SpreadsheetManager.getSheet).toHaveBeenCalledWith('Audit');
+        expect(global.SpreadsheetManager.getSheet).toHaveBeenCalledWith('Audit');
 
         // Verify sheet operations were called
         expect(mockSheet.getDataRange).toHaveBeenCalled();
@@ -272,7 +272,7 @@ describe('MembershipManagement audit persistence integration', () => {
         global.Common = global.Common || {};
         global.Common.Data = global.Common.Data || {};
         global.Common.Data.Storage = global.Common.Data.Storage || {};
-        global.Common.Data.Storage.SpreadsheetManager = {
+        global.SpreadsheetManager = {
             getSheet: jest.fn(() => {
                 throw new Error('Sheet error');
             })

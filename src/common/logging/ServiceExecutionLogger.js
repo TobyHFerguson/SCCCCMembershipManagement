@@ -166,7 +166,7 @@ Common.Logging.ServiceExecutionLogger = {
         
         try {
             // Get Audit fiddler
-            const auditFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Audit');
+            const auditFiddler = SpreadsheetManager.getFiddler('Audit');
             
             // Persist entries
             const numWritten = AuditPersistence.persistAuditEntries(auditFiddler, auditEntries);

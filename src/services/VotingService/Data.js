@@ -9,7 +9,7 @@ VotingService.Data = {
      * @returns {Fiddler<VotingService.Election>} Fiddler instance for the Elections sheet.
      */
     getFiddler_: function () {
-        return Common.Data.Storage.SpreadsheetManager.getFiddler('Elections');
+        return SpreadsheetManager.getFiddler('Elections');
     },
 
     /**
