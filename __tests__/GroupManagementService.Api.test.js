@@ -46,11 +46,22 @@ beforeEach(() => {
     removeMember: jest.fn()
   };
 
-  // Mock Common namespace (backward compat for Logger)
   // Mock DataAccess (flat class pattern)
   global.DataAccess = {
     getPublicGroups: jest.fn()
   };
+
+  // Mock ServiceLogger (flat class pattern)
+  global.ServiceLogger = jest.fn().mockImplementation(() => ({
+    logOperation: jest.fn().mockReturnValue({
+      Timestamp: new Date(),
+      Type: 'Test.Operation',
+      Outcome: 'success',
+      Note: 'Test note',
+      Error: '',
+      JSON: ''
+    })
+  }));
 
   // Mock Common namespace (backward compat for Logger)
   global.Common = {
@@ -67,16 +78,7 @@ beforeEach(() => {
     },
     Logger: global.Logger,
     Logging: {
-      ServiceLogger: jest.fn().mockImplementation(() => ({
-        logOperation: jest.fn().mockReturnValue({
-          Timestamp: new Date(),
-          Type: 'Test.Operation',
-          Outcome: 'success',
-          Note: 'Test note',
-          Error: '',
-          JSON: ''
-        })
-      }))
+      ServiceLogger: global.ServiceLogger  // backward compat alias
     }
   };
   

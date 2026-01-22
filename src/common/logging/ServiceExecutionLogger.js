@@ -14,22 +14,20 @@
  * 
  * Usage:
  *   // In Api.getData:
- *   return Common.Logging.ServiceExecutionLogger.wrapGetData(
+ *   return ServiceExecutionLogger.wrapGetData(
  *     'GroupManagementService',
  *     email,
  *     () => { actual getData logic  }
  *   );
  * 
- * Layer: Layer 1 Infrastructure (can use Common.Logger)
+ * Layer: Layer 1 Infrastructure (can use AppLogger)
+ * Pattern: Flat object literal (per gas-best-practices.md)
  */
 
-// Namespace declaration pattern
-// @ts-expect-error - Namespace initialization for GAS/Jest compatibility
-if (typeof Common === 'undefined') Common = {};
-// @ts-expect-error - Namespace initialization for GAS/Jest compatibility
-if (typeof Common.Logging === 'undefined') Common.Logging = {};
-
-Common.Logging.ServiceExecutionLogger = {
+/**
+ * ServiceExecutionLogger object for wrapping service API calls
+ */
+var ServiceExecutionLogger = {
     /**
      * Wrap a getData function with logging
      * Logs service access and persists audit entry automatically
@@ -40,7 +38,7 @@ Common.Logging.ServiceExecutionLogger = {
      * @returns {Object} Service data with logging metadata
      */
     wrapGetData: function(serviceName, email, getDataFn) {
-        const logger = new Common.Logging.ServiceLogger(serviceName, email);
+        const logger = new ServiceLogger(serviceName, email);
         const auditEntries = [];
         
         // Log service access
@@ -90,7 +88,7 @@ Common.Logging.ServiceExecutionLogger = {
      * @returns {Object} Handler result with logging metadata
      */
     wrapApiHandler: function(serviceName, operationName, email, handlerFn, params) {
-        const logger = new Common.Logging.ServiceLogger(serviceName, email);
+        const logger = new ServiceLogger(serviceName, email);
         const auditEntries = [];
         
         // Log operation start
@@ -179,8 +177,12 @@ Common.Logging.ServiceExecutionLogger = {
     }
 };
 
+// Backward compatibility alias - will be removed in future version
+if (typeof Common === 'undefined') var Common = {};
+if (typeof Common.Logging === 'undefined') Common.Logging = {};
+Common.Logging.ServiceExecutionLogger = ServiceExecutionLogger;
+
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {
-    // @ts-expect-error - Export Common namespace for testing
-    module.exports = { Common };
+    module.exports = { ServiceExecutionLogger };
 }

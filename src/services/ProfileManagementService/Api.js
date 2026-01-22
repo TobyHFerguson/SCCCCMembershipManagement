@@ -312,7 +312,7 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
       DataAccess.updateMember(normalizedEmail, result.mergedProfile);
       
       // Create audit entry for profile update
-      const logger = new Common.Logging.ServiceLogger('ProfileManagementService', userEmail);
+      const logger = new ServiceLogger('ProfileManagementService', userEmail);
       const auditEntry = logger.logOperation(
         'ProfileUpdate',
         'success',

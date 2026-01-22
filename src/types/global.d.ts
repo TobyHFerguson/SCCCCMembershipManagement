@@ -545,6 +545,58 @@ declare const DataAccess: {
     getSystemLogs(): SystemLogEntry[];
 };
 
+// Flat ServiceLogger class (new pattern - replaces Common.Logging.ServiceLogger)
+declare class ServiceLogger {
+    serviceName: string;
+    userEmail: string;
+    timestamp: Date;
+    auditLogger: AuditLogger;
+    
+    constructor(serviceName: string, userEmail: string, timestamp?: Date);
+    
+    /** Log service access (getData call) */
+    logServiceAccess(operation: string): AuditLogEntry;
+    
+    /** Log service operation (update, delete, etc.) */
+    logOperation(
+        operationType: string,
+        outcome: 'success' | 'fail',
+        note: string,
+        error?: string,
+        jsonData?: any
+    ): AuditLogEntry;
+    
+    /** Log service error (unexpected failures during execution) */
+    logError(operation: string, error: Error | string, additionalData?: any): AuditLogEntry;
+    
+    /** Create a custom audit entry without system logging */
+    createAuditEntry(
+        type: string,
+        outcome: 'success' | 'fail',
+        note: string,
+        error?: string,
+        jsonData?: any
+    ): AuditLogEntry;
+}
+
+// Flat ServiceExecutionLogger object (new pattern - replaces Common.Logging.ServiceExecutionLogger)
+declare const ServiceExecutionLogger: {
+    /** Wrap a getData function with logging */
+    wrapGetData(serviceName: string, email: string, getDataFn: () => any): any;
+    
+    /** Wrap an API handler function with logging */
+    wrapApiHandler(
+        serviceName: string,
+        operationName: string,
+        email: string,
+        handlerFn: () => any,
+        params?: any
+    ): any;
+    
+    /** Persist audit entries to the Audit sheet (private) */
+    _persistAuditEntries(auditEntries: AuditLogEntry[]): void;
+};
+
 // Common Data namespace - ValidatedMember and persistence
 declare namespace Common {
     namespace Data {

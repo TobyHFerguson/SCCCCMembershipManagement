@@ -38,7 +38,7 @@ function sendVerificationCode(email, service) {
   email = email.toLowerCase().trim();
   
   // Create audit logger for verification attempts
-  const logger = new Common.Logging.ServiceLogger('Authentication', email);
+  const logger = new ServiceLogger('Authentication', email);
   const auditEntries = [];
   
   // Check if the email is a valid active member
@@ -111,7 +111,7 @@ function verifyCode(email, code, service) {
   email = email.toLowerCase().trim();
   
   // Create audit logger for verification attempts
-  const logger = new Common.Logging.ServiceLogger('Authentication', email);
+  const logger = new ServiceLogger('Authentication', email);
   const auditEntries = [];
   
   // Verify the code
@@ -165,7 +165,7 @@ function getServiceContent(email, service) {
   AppLogger.configure();
   
   // Create logger for this service execution
-  const logger = new Common.Logging.ServiceLogger(service, email);
+  const logger = new ServiceLogger(service, email);
   const auditEntries = [];
   
   // Log service access start

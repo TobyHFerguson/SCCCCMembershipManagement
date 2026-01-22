@@ -2,7 +2,7 @@
 // @ts-check
 
 /**
- * Tests for Common.Logging.ServiceLogger
+ * Tests for ServiceLogger (flat class pattern)
  * 
  * Tests the unified service execution logging utility that provides:
  * 1. Business audit logging (Audit sheet)
@@ -44,10 +44,11 @@ global.AuditLogger = class {
     }
 };
 
-// Import ServiceLogger
-require('../src/common/logging/ServiceLogger.js');
+// Import ServiceLogger (flat class with backward compat alias)
+const { ServiceLogger } = require('../src/common/logging/ServiceLogger.js');
+global.ServiceLogger = ServiceLogger;
 
-describe('Common.Logging.ServiceLogger', () => {
+describe('ServiceLogger', () => {
     let logger;
     const testServiceName = 'TestService';
     const testUserEmail = 'user@example.com';
@@ -60,8 +61,8 @@ describe('Common.Logging.ServiceLogger', () => {
         mockLogger.warn.mockClear();
         mockLogger.debug.mockClear();
         
-        // Create fresh logger instance
-        logger = new global.Common.Logging.ServiceLogger(testServiceName, testUserEmail, testTimestamp);
+        // Create fresh logger instance (use flat class)
+        logger = new ServiceLogger(testServiceName, testUserEmail, testTimestamp);
     });
 
     describe('constructor', () => {
@@ -73,7 +74,7 @@ describe('Common.Logging.ServiceLogger', () => {
         });
 
         test('should use current date if timestamp not provided', () => {
-            const loggerWithoutTimestamp = new global.Common.Logging.ServiceLogger(
+            const loggerWithoutTimestamp = new ServiceLogger(
                 testServiceName,
                 testUserEmail
             );

@@ -265,7 +265,7 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
       );
       
       // Create audit entry for subscription changes
-      const logger = new Common.Logging.ServiceLogger('GroupManagementService', userEmail);
+      const logger = new ServiceLogger('GroupManagementService', userEmail);
       const auditEntry = logger.logOperation(
         'SubscriptionUpdate',
         result.success ? 'success' : 'fail',

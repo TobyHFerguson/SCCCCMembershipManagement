@@ -10,26 +10,24 @@
  * 
  * Architecture:
  * - Pure function pattern - returns audit entries for persistence
- * - Calls Common.Logger for system logs (side effect)
+ * - Calls AppLogger for system logs (side effect)
  * - Follows existing AuditLogger generator pattern
  * 
  * Usage:
- *   const logger = new Common.Logging.ServiceLogger('GroupManagementService', 'user@example.com');
+ *   const logger = new ServiceLogger('GroupManagementService', 'user@example.com');
  *   logger.logServiceAccess('getData'); // Logs both audit + system
  *   const auditEntry = logger.createAuditEntry('ProfileUpdate', 'success', 'Updated phone number');
  *   // Later: AuditPersistence.persistAuditEntries(fiddler, [auditEntry]);
  * 
- * Layer: Layer 1 Infrastructure (can use Common.Logger)
+ * Layer: Layer 1 Infrastructure (can use AppLogger)
+ * Pattern: Flat IIFE-wrapped class (per gas-best-practices.md)
  */
-
-// Namespace declaration pattern
-if (typeof Common === 'undefined') Common = {};
-if (typeof Common.Logging === 'undefined') Common.Logging = {};
 
 /**
  * ServiceLogger class for unified service execution logging
  */
-Common.Logging.ServiceLogger = class {
+var ServiceLogger = (function() {
+    class ServiceLogger {
     /**
      * @param {string} serviceName - Service name (e.g., 'GroupManagementService')
      * @param {string} userEmail - User email for audit trail
@@ -158,9 +156,17 @@ Common.Logging.ServiceLogger = class {
             jsonData: jsonData
         });
     }
-};
+}
+
+    return ServiceLogger;
+})();
+
+// Backward compatibility alias - will be removed in future version
+if (typeof Common === 'undefined') var Common = {};
+if (typeof Common.Logging === 'undefined') Common.Logging = {};
+Common.Logging.ServiceLogger = ServiceLogger;
 
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Common };
+    module.exports = { ServiceLogger };
 }
