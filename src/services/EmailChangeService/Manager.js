@@ -369,9 +369,9 @@ EmailChangeService.Manager = class {
 
   /**
    * Create member update object for spreadsheet update
-   * @param {Object} originalMember - The original member record
+   * @param {ValidatedMember} originalMember - The original member record
    * @param {string} newEmail - The new email address
-   * @returns {Object} Updated member record
+   * @returns {ValidatedMember} Updated member record
    */
   static createUpdatedMemberRecord(originalMember, newEmail) {
     if (!originalMember) {
@@ -469,10 +469,7 @@ EmailChangeService.Manager = class {
    * Process a single group update with retry logic
    * This is a pure function that returns the next action to take
    * 
-   * @param {Object} params - Parameters
-   * @param {number} params.attempt - Current attempt number (1-indexed)
-   * @param {number} params.maxRetries - Maximum number of retry attempts
-   * @param {Error} [params.error] - Error from previous attempt (if any)
+   * @param {{attempt: number, maxRetries: number, error?: Error}} params - Parameters object with attempt count, max retries, and optional error
    * @returns {{action: 'retry'|'fail'|'initial', backoffMs?: number, errorMessage?: string}}
    */
   static getRetryAction(params) {
@@ -500,9 +497,7 @@ EmailChangeService.Manager = class {
 
   /**
    * Create a group update result entry
-   * @param {Object} group - Group info from GroupSubscription
-   * @param {string} group.email - Group email address
-   * @param {string} [group.name] - Group display name
+   * @param {{email: string, name?: string}} group - Group info from GroupSubscription
    * @param {boolean} success - Whether the update succeeded
    * @param {string} [error] - Error message if failed
    * @returns {{groupEmail: string, groupName: string, success: boolean, error?: string}}

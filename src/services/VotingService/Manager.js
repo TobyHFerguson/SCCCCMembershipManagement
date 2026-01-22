@@ -161,7 +161,7 @@ VotingService.Manager = class {
 
   /**
    * Validate election data
-   * @param {Object} election - Election object
+   * @param {{Title?: string}} election - Election object with at minimum a Title property
    * @returns {ValidationResult}
    */
   static validateElection(election) {
@@ -321,7 +321,7 @@ VotingService.Manager = class {
 
   /**
    * Process election data for display
-   * @param {Object} election - Raw election data
+   * @param {{Title: string, Start?: string, End?: string, 'Form Edit URL'?: string}} election - Raw election data from spreadsheet
    * @param {string} userEmail - Current user's email
    * @param {Array<{Email: string}>} voters - Voters who have voted
    * @param {boolean} [ballotPublished] - Whether ballot is published
@@ -430,7 +430,7 @@ VotingService.Manager = class {
   /**
    * Build manual count needed email content
    * @param {string} electionTitle - Election title
-   * @param {Object} vote - The invalid vote data
+   * @param {Record<string, any>} vote - The invalid vote data from form submission
    * @param {string} tokenFieldName - Name of the token field
    * @returns {{subject: string, body: string}}
    */

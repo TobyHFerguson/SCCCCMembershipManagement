@@ -235,8 +235,8 @@ ProfileManagementService.Manager = class {
 
   /**
    * Check if a profile update contains forbidden field modifications
-   * @param {Object} originalProfile - The original profile
-   * @param {Object} updatedProfile - The updated profile
+   * @param {ValidatedMember} originalProfile - The original profile
+   * @param {ValidatedMember} updatedProfile - The updated profile
    * @param {string[]} [forbiddenFields] - List of forbidden fields
    * @returns {ForbiddenFieldCheckResult}
    */
@@ -269,7 +269,7 @@ ProfileManagementService.Manager = class {
 
   /**
    * Validate an entire profile update
-   * @param {Object} updatedProfile - The profile data to validate
+   * @param {Record<string, any>} updatedProfile - The profile data to validate (can be partial ValidatedMember)
    * @returns {ValidationResult}
    */
   static validateProfileUpdate(updatedProfile) {
@@ -324,9 +324,9 @@ ProfileManagementService.Manager = class {
 
   /**
    * Merge original profile with updates
-   * @param {Object} originalProfile - The original profile
-   * @param {Object} updates - The updates to apply
-   * @returns {Object} The merged profile
+   * @param {ValidatedMember} originalProfile - The original profile
+   * @param {Record<string, any>} updates - The updates to apply (field name to new value)
+   * @returns {ValidatedMember} The merged profile
    */
   static mergeProfiles(originalProfile, updates) {
     return { ...originalProfile, ...updates };
@@ -334,8 +334,8 @@ ProfileManagementService.Manager = class {
 
   /**
    * Process a profile update (full validation and merge)
-   * @param {Object} originalProfile - The original profile
-   * @param {Object} updatedProfile - The updated profile data
+   * @param {ValidatedMember} originalProfile - The original profile
+   * @param {ValidatedMember} updatedProfile - The updated profile data
    * @param {string[]} [forbiddenFields] - List of forbidden fields
    * @returns {ProfileUpdateResult}
    */
@@ -387,8 +387,8 @@ ProfileManagementService.Manager = class {
   /**
    * Format a profile for display (client-safe view)
    * Removes sensitive fields that shouldn't be exposed to the client
-   * @param {Object} profile - The full profile
-   * @returns {Object} The safe profile for display
+   * @param {ValidatedMember} profile - The full profile
+   * @returns {Record<string, any>} The safe profile for display
    */
   static formatProfileForDisplay(profile) {
     if (!profile) {
@@ -420,8 +420,8 @@ ProfileManagementService.Manager = class {
 
   /**
    * Get editable fields from a profile
-   * @param {Object} profile - The full profile
-   * @returns {Object} Only the editable fields
+   * @param {ValidatedMember} profile - The full profile
+   * @returns {Record<string, any>} Only the editable fields
    */
   static getEditableFields(profile) {
     if (!profile) {
