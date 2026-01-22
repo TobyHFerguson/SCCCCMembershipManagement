@@ -116,7 +116,7 @@ EmailChangeService.initApi = function() {
  * Handle sendVerificationCode API request
  * Generates and sends a verification code to the new email
  * 
- * @param {Object} params - Request parameters
+ * @param {{_authenticatedEmail: string, newEmail: string}} params - Request parameters
  * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
  * @param {string} params.newEmail - The new email address to verify
  * @returns {Common.Api.ApiResponse}
@@ -215,7 +215,7 @@ EmailChangeService.Api.handleSendVerificationCode = function(params) {
  * Combined handler that verifies the code and executes the email change in one step
  * This simplifies the client flow for the 3-step UI
  * 
- * @param {Object} params - Request parameters
+ * @param {{_authenticatedEmail: string, newEmail: string, verificationCode: string}} params - Request parameters
  * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
  * @param {string} params.newEmail - The new email address
  * @param {string} params.verificationCode - The verification code
@@ -391,7 +391,7 @@ EmailChangeService.Api.handleVerifyAndChangeEmail = function(params, token) {
  * Handle verifyAndGetGroups API request
  * Verifies the code and returns list of groups the user is a member of
  * 
- * @param {Object} params - Request parameters
+ * @param {{_authenticatedEmail: string, newEmail: string, verificationCode: string}} params - Request parameters
  * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
  * @param {string} params.newEmail - The new email address
  * @param {string} params.verificationCode - The verification code
@@ -477,7 +477,7 @@ EmailChangeService.Api.handleVerifyAndGetGroups = function(params) {
  * Handle changeEmail API request
  * Executes the email change in all groups and spreadsheets
  * 
- * @param {Object} params - Request parameters
+ * @param {{_authenticatedEmail: string, newEmail: string, groups: Array<{name: string, email: string, isMember: boolean, delivery?: string}>}} params - Request parameters
  * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
  * @param {string} params.newEmail - The new email address
  * @param {Array} params.groups - Array of group membership info
@@ -572,7 +572,7 @@ EmailChangeService.Api.handleChangeEmail = function(params) {
 /**
  * Store verification data in Script Properties
  * @param {string} code - The verification code (used as key suffix)
- * @param {Object} data - The verification data to store
+ * @param {{originalEmail: string, newEmail: string, expiry: number}} data - The verification data to store
  */
 EmailChangeService.Api.storeVerificationData = function(code, data) {
     const key = VERIFICATION_KEY_PREFIX + code;

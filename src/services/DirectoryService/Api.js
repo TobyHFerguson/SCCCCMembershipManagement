@@ -93,7 +93,7 @@ DirectoryService.initApi = function() {
  * Handle getEntries API request
  * Gets directory entries for active public members
  * 
- * @param {Object} params - Request parameters
+ * @param {{_authenticatedEmail: string, searchTerm?: string}} params - Request parameters
  * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
  * @param {string} [params.searchTerm] - Optional search term to filter results
  * @returns {Common.Api.ApiResponse}
@@ -147,7 +147,7 @@ DirectoryService.Api.handleGetEntries = function(params) {
  * Handle getStats API request
  * Gets directory statistics
  * 
- * @param {Object} params - Request parameters
+ * @param {{_authenticatedEmail: string}} params - Request parameters
  * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
  * @returns {Common.Api.ApiResponse}
  */

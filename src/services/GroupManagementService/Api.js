@@ -104,7 +104,7 @@ GroupManagementService.initApi = function() {
  * Handle getSubscriptions API request
  * Gets user's current group subscription settings
  * 
- * @param {Object} params - Request parameters
+ * @param {{_authenticatedEmail: string}} params - Request parameters
  * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
  * @returns {Common.Api.ApiResponse}
  */
@@ -170,7 +170,7 @@ GroupManagementService.Api.handleGetSubscriptions = function(params) {
  * LOGGING: Logs full execution flow including validation, actions, and results
  * Creates audit entries for subscription changes
  * 
- * @param {Object} params - Request parameters
+ * @param {{_authenticatedEmail: string, updates: Array<{groupEmail: string, currentDelivery: string | null, newDelivery: string | null}>}} params - Request parameters
  * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
  * @param {Array} params.updates - Array of subscription updates
  * @returns {Common.Api.ApiResponse}
@@ -339,7 +339,7 @@ GroupManagementService.Api.handleGetDeliveryOptions = function() {
 /**
  * Execute a subscription action
  * @private
- * @param {Object} action - The action to execute
+ * @param {{action: 'subscribe' | 'update' | 'unsubscribe', groupEmail: string, userEmail: string, deliveryValue?: string}} action - The action to execute
  * @param {'subscribe'|'update'|'unsubscribe'} action.action - Action type
  * @param {string} action.groupEmail - Group email
  * @param {string} action.userEmail - User email
