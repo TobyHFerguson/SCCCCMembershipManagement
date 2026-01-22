@@ -2,12 +2,8 @@
 const ns = require('../src/1namespaces.js');
 const createFiddlerMock = require('./helpers/fiddlerMock');
 
-// Set up Common mocks FIRST before loading any MembershipManagement code
-global.Common = global.Common || {};
-global.Common.Data = global.Common.Data || {};
-global.Common.Data.Storage = global.Common.Data.Storage || {};
-global.Common.Config = global.Common.Config || {};
-global.Common.Config.Properties = {
+// Set up mock for flat Properties class (new pattern)
+global.Properties = {
     getProperty: jest.fn((key, defaultValue) => defaultValue),
     getNumberProperty: jest.fn((key, defaultValue) => defaultValue),
     getBooleanProperty: jest.fn((key, defaultValue) => defaultValue),
@@ -16,6 +12,13 @@ global.Common.Config.Properties = {
     clearCache: jest.fn(),
     getAllUserProperties: jest.fn(() => ({}))
 };
+
+// Set up Common mocks FIRST before loading any MembershipManagement code
+global.Common = global.Common || {};
+global.Common.Data = global.Common.Data || {};
+global.Common.Data.Storage = global.Common.Data.Storage || {};
+global.Common.Config = global.Common.Config || {};
+global.Common.Config.Properties = global.Properties; // Backward compat
 global.Common.Logger = global.Common.Logger || {};
 global.Common.Logger.info = jest.fn();
 global.Common.Logger.warn = jest.fn();

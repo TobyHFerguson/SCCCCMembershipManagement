@@ -177,7 +177,7 @@ MembershipManagement.generateExpiringMembersList = function () {
     
     // Get ExpirationFIFO fiddler
     const expirationFIFO = SpreadsheetManager.getFiddler('ExpirationFIFO');
-    const prefillFormTemplate = Common.Config.Properties.getProperty('PREFILL_FORM_TEMPLATE');
+    const prefillFormTemplate = Properties.getProperty('PREFILL_FORM_TEMPLATE');
     if (!prefillFormTemplate) {
       throw new Error("PREFILL_FORM_TEMPLATE property is not set.");
     }
@@ -310,7 +310,7 @@ MembershipManagement.generateExpiringMembersList = function () {
 MembershipManagement.processExpirationFIFO = function (opts = {}) {
   try {
     Common.Logger.info('MembershipManagement', 'Starting Expiration FIFO consumer...');
-    const batchSize = opts.batchSize || Common.Config.Properties.getNumberProperty('expirationBatchSize', 50);
+    const batchSize = opts.batchSize || Properties.getNumberProperty('expirationBatchSize', 50);
 
     // GAS: Get fiddlers (leverages per-execution caching)
     const expirationFIFO = opts.fiddlers?.expirationFIFO || SpreadsheetManager.getFiddler('ExpirationFIFO');
@@ -352,10 +352,10 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     }
 
     // GAS: Get configuration and initialize manager with SpreadsheetApp data
-    const scriptMaxAttempts = Common.Config.Properties.getNumberProperty('expirationMaxAttempts', 0)
-                          || Common.Config.Properties.getNumberProperty('expirationMaxRetries', 0)
-                          || Common.Config.Properties.getNumberProperty('maxAttempts', 0)
-                          || Common.Config.Properties.getNumberProperty('maxRetries', 5);
+    const scriptMaxAttempts = Properties.getNumberProperty('expirationMaxAttempts', 0)
+                          || Properties.getNumberProperty('expirationMaxRetries', 0)
+                          || Properties.getNumberProperty('maxAttempts', 0)
+                          || Properties.getNumberProperty('maxRetries', 5);
     
     // Load membership data using SpreadsheetApp + ValidatedMember (if not already loaded)
     const membershipData = Common.Data.ValidatedMember.validateRows(
@@ -600,7 +600,7 @@ MembershipManagement.Internal.initializeManagerData_ = function (membershipFiddl
 }
 
 MembershipManagement.Internal.getGroupAdder_ = function () {
-  if (Common.Config.Properties.getBooleanProperty('testGroupAdds', false)) {
+  if (Properties.getBooleanProperty('testGroupAdds', false)) {
     return (memberEmail, groupEmail) => Common.Logger.info('MembershipManagement', `testGroupAdds: true. Would have added: ${memberEmail} to group: ${groupEmail}`);
   } else {
     return (memberEmail, groupEmail) => MembershipManagement.Internal.addMemberToGroup_(memberEmail, groupEmail);
@@ -612,7 +612,7 @@ MembershipManagement.Internal.getGroupAdder_ = function () {
  * @returns function(memberEmail: string, groupEmail: string): void 
  */
 MembershipManagement.Internal.getGroupRemover_ = function () {
-  if (Common.Config.Properties.getBooleanProperty('testGroupRemoves', false)) {
+  if (Properties.getBooleanProperty('testGroupRemoves', false)) {
     return (memberEmail, groupEmail) => Common.Logger.info('MembershipManagement', `testGroupRemoves: true. Would have removed: ${memberEmail} from group: ${groupEmail}`);
   } else {
     return (memberEmail, groupEmail) => MembershipManagement.Internal.removeMemberFromGroup_(memberEmail, groupEmail);
@@ -620,7 +620,7 @@ MembershipManagement.Internal.getGroupRemover_ = function () {
 }
 
 MembershipManagement.Internal.getGroupEmailReplacer_ = function () {
-  if (Common.Config.Properties.getBooleanProperty('testGroupEmailReplacements', false)) {
+  if (Properties.getBooleanProperty('testGroupEmailReplacements', false)) {
     return (originalEmail, newEmail) => {
       Common.Logger.info('MembershipManagement', `testGroupEmailReplacements: true. Would have replaced: ${originalEmail} with: ${newEmail}`);
       return { success: true, message: 'Test mode - no changes made.' };
@@ -706,8 +706,8 @@ MembershipManagement.Internal.removeMemberFromGroup_ = function (memberEmail, gr
 }
 
 MembershipManagement.Internal.getEmailSender_ = function () {
-  const testEmails = Common.Config.Properties.getBooleanProperty('testEmails', false);
-  const domain = Common.Config.Properties.getProperty('domain', 'sc3.club');
+  const testEmails = Properties.getBooleanProperty('testEmails', false);
+  const domain = Properties.getProperty('domain', 'sc3.club');
   return (email) => {
     email.replyTo = `membership@${domain}`;
     if (testEmails) {
@@ -735,8 +735,8 @@ MembershipManagement.Internal.sendSingleEmail_ = function (email) {
  */
 MembershipManagement.Internal.sendOrphanedQueueNotification_ = function (error, queueSize) {
   try {
-    const domain = Common.Config.Properties.getProperty('domain', 'sc3.club');
-    const testEmails = Common.Config.Properties.getBooleanProperty('testEmails', false);
+    const domain = Properties.getProperty('domain', 'sc3.club');
+    const testEmails = Properties.getBooleanProperty('testEmails', false);
 
     const email = {
       to: `membership-automation@${domain}`,
@@ -797,8 +797,8 @@ MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger'
  */
 MembershipManagement.Internal.sendCatastrophicFailureNotification_ = function (error, batchSize) {
   try {
-    const domain = Common.Config.Properties.getProperty('domain', 'sc3.club');
-    const testEmails = Common.Config.Properties.getBooleanProperty('testEmails', false);
+    const domain = Properties.getProperty('domain', 'sc3.club');
+    const testEmails = Properties.getBooleanProperty('testEmails', false);
 
     const email = {
       to: `membership-automation@${domain}`,
@@ -858,8 +858,8 @@ MembershipManagement.Trigger._createMinuteTrigger('processExpirationFIFOTrigger'
 
 MembershipManagement.Internal.sendExpirationErrorNotification_ = function (error) {
   try {
-    const domain = Common.Config.Properties.getProperty('domain', 'sc3.club');
-    const testEmails = Common.Config.Properties.getBooleanProperty('testEmails', false);
+    const domain = Properties.getProperty('domain', 'sc3.club');
+    const testEmails = Properties.getBooleanProperty('testEmails', false);
 
     const email = {
       to: `membership-automation@${domain}`,

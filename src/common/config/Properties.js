@@ -2,21 +2,20 @@
 /// <reference path="../../types/global.d.ts" />
 
 /**
- * Common.Properties - Manages application properties with spreadsheet-backed storage for user-configurable
+ * Properties - Manages application properties with spreadsheet-backed storage for user-configurable
  * settings and Script Properties for code-internal state tracking.
  * 
  * Properties are loaded once per execution from the Properties sheet (key/value pairs) and cached.
  * Code-internal properties (runtime state) always come from Script Properties and are never in the sheet.
  * 
- * CRITICAL: This module MUST NOT use Common.Logger!
- * Reason: Creates infinite loop - Common.Logger reads config from Properties -> Properties fails -> Common.Logger.error -> infinite recursion
+ * CRITICAL: This module MUST NOT use Logger (formerly Common.Logger)!
+ * Reason: Creates infinite loop - Logger reads config from Properties -> Properties fails -> Logger.error -> infinite recursion
  * Use console.log() only for tracing.
+ * 
+ * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
  */
 
-if (typeof Common === 'undefined') Common = {};
-if (typeof Common.Config === 'undefined') Common.Config = {};
-
-Common.Config.Properties = (function () {
+var Properties = (function() {
   
   /**
    * Per-execution cache of Properties sheet data
@@ -53,7 +52,7 @@ Common.Config.Properties = (function () {
   function _loadPropertiesSheet() {
     // Detect circular dependency
     if (_isLoadingProperties) {
-      const error = new Error('CIRCULAR DEPENDENCY DETECTED: _loadPropertiesSheet called recursively! This usually means Common.Logger is being used in Properties or SpreadsheetManager.');
+      const error = new Error('CIRCULAR DEPENDENCY DETECTED: _loadPropertiesSheet called recursively! This usually means Logger is being used in Properties or SpreadsheetManager.');
       console.log('[Properties._loadPropertiesSheet] CRITICAL: ' + error.message);
       throw error;
     }
@@ -79,18 +78,18 @@ Common.Config.Properties = (function () {
         if (!propertyName) continue; // Skip rows without property name
                 
         if (CODE_INTERNAL_PROPERTIES.has(propertyName)) {
-          // NOTE: Don't use Common.Logger here - creates infinite loop
+          // NOTE: Don't use Logger here - creates infinite loop
           console.log('[Properties._loadPropertiesSheet] WARNING: Property ' + propertyName + ' is code-internal and should not be in Properties sheet');
           continue;
         }
         
         _propertyCache[propertyName] = value;
       }
-            // NOTE: Don't use Common.Logger here - creates infinite loop
+            // NOTE: Don't use Logger here - creates infinite loop
     } catch (error) {
       console.log('[Properties._loadPropertiesSheet] CRITICAL ERROR: ' + error);
-      // NOTE: NEVER use Common.Logger here - it creates infinite loop!
-      // Common.Logger tries to read config from Properties, which calls this function again
+      // NOTE: NEVER use Logger here - it creates infinite loop!
+      // Logger tries to read config from Properties, which calls this function again
       throw new Error(`Properties sheet not configured in Bootstrap. Add a row with Reference='Properties' pointing to your Properties sheet. Original error: ${error && error.message ? error.message : String(error)}`);
     } finally {
       // Always reset the guard flag, even if an error occurred
@@ -115,7 +114,7 @@ Common.Config.Properties = (function () {
     return false;
   }
 
-  return {
+  class Properties {
     /**
      * Get a property value. User-configurable properties are read from Properties sheet (with Script Properties fallback).
      * Code-internal properties always come from Script Properties.
@@ -124,7 +123,7 @@ Common.Config.Properties = (function () {
      * @param {string} [defaultValue] - Default value if property not found
      * @returns {string|null} Property value or default
      */
-    getProperty: function(propertyName, defaultValue = null) {
+    static getProperty(propertyName, defaultValue = null) {
       // Code-internal properties always come from Script Properties
       if (_isCodeInternalProperty(propertyName)) {
         return PropertiesService.getScriptProperties().getProperty(propertyName) || defaultValue;
@@ -147,7 +146,7 @@ Common.Config.Properties = (function () {
       }
 
       return defaultValue;
-    },
+    }
 
     /**
      * Get a numeric property value
@@ -155,12 +154,12 @@ Common.Config.Properties = (function () {
      * @param {number} [defaultValue] - Default value if property not found or not a number
      * @returns {number} Property value as number or default
      */
-    getNumberProperty: function(propertyName, defaultValue = 0) {
-      const value = this.getProperty(propertyName);
+    static getNumberProperty(propertyName, defaultValue = 0) {
+      const value = Properties.getProperty(propertyName);
       if (value === null) return defaultValue;
       const num = Number(value);
       return isNaN(num) ? defaultValue : num;
-    },
+    }
 
     /**
      * Get a boolean property value (checks for 'true' case-insensitive)
@@ -168,11 +167,11 @@ Common.Config.Properties = (function () {
      * @param {boolean} [defaultValue] - Default value if property not found
      * @returns {boolean} Property value as boolean or default
      */
-    getBooleanProperty: function(propertyName, defaultValue = false) {
-      const value = this.getProperty(propertyName);
+    static getBooleanProperty(propertyName, defaultValue = false) {
+      const value = Properties.getProperty(propertyName);
       if (value === null) return defaultValue;
       return String(value).toLowerCase() === 'true';
-    },
+    }
 
     /**
      * Set a code-internal property (Script Properties only).
@@ -182,45 +181,55 @@ Common.Config.Properties = (function () {
      * @param {string} value - Value to set
      * @throws {Error} If attempting to set a user-configurable property via this method
      */
-    setCodeInternalProperty: function(propertyName, value) {
+    static setCodeInternalProperty(propertyName, value) {
       if (!_isCodeInternalProperty(propertyName)) {
         throw new Error(`Property '${propertyName}' is not a code-internal property. Set it in the Properties sheet instead.`);
       }
-      PropertiesService.getScriptProperties().setProperty(propertyName, value);    },
+      PropertiesService.getScriptProperties().setProperty(propertyName, value);
+    }
 
     /**
      * Delete a code-internal property from Script Properties
      * @param {string} propertyName - Name of property to delete
      * @throws {Error} If attempting to delete a user-configurable property
      */
-    deleteCodeInternalProperty: function(propertyName) {
+    static deleteCodeInternalProperty(propertyName) {
       if (!_isCodeInternalProperty(propertyName)) {
         throw new Error(`Property '${propertyName}' is not a code-internal property. Remove it from the Properties sheet instead.`);
       }
       PropertiesService.getScriptProperties().deleteProperty(propertyName);
-    },
+    }
 
     /**
      * Clear the property cache. Call if Properties sheet is modified during execution.
      */
-    clearCache: function() {
+    static clearCache() {
       _propertyCache = null;
-    },
+    }
 
     /**
      * Get all user-configurable properties as an object (for debugging/display)
      * @returns {Object.<string, string>} Map of property names to values
      */
-    getAllUserProperties: function() {
+    static getAllUserProperties() {
       if (_propertyCache === null) {
         _loadPropertiesSheet();
       }
       return { ..._propertyCache }; // Return copy to prevent mutation
     }
-  };
+  }
+  
+  return Properties;
 })();
+
+// Backward compatibility: Assign to old namespace location
+// This allows gradual migration - old code still works
+if (typeof Common !== 'undefined') {
+  if (!Common.Config) Common.Config = {};
+  Common.Config.Properties = Properties;
+}
 
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { Properties: Common.Config.Properties };
+  module.exports = Properties;
 }

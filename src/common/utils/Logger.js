@@ -48,27 +48,27 @@
    * Safe to call multiple times to refresh configuration
    */
   function loadConfiguration() {
-    // Only load if Properties module is available and ready
-    if (typeof Common === 'undefined' || !Common.Config || !Common.Config.Properties) {
-      console.log('[Common.Logger] Properties not available, using default configuration');
+    // Only load if Properties module is available and ready (flat class pattern)
+    if (typeof Properties === 'undefined') {
+      console.log('[Logger] Properties not available, using default configuration');
       return;
     }
     
     try {
-      CONFIG.CONSOLE_LOGGING = Common.Config.Properties.getBooleanProperty('loggerConsoleLogging', true);
-      CONFIG.SHEET_LOGGING = Common.Config.Properties.getBooleanProperty('loggerSheetLogging', false);
-      CONFIG.SCRIPT_PROPERTIES = Common.Config.Properties.getBooleanProperty('loggerScriptProperties', false);
-      CONFIG.EMAIL_ERRORS = Common.Config.Properties.getBooleanProperty('loggerEmailErrors', false);
-      CONFIG.EMAIL_RECIPIENT = Common.Config.Properties.getProperty('loggerEmailRecipient', 'membership@sc3.club');
-      CONFIG.NAMESPACES = Common.Config.Properties.getProperty('loggerNamespaces', '*');
+      CONFIG.CONSOLE_LOGGING = Properties.getBooleanProperty('loggerConsoleLogging', true);
+      CONFIG.SHEET_LOGGING = Properties.getBooleanProperty('loggerSheetLogging', false);
+      CONFIG.SCRIPT_PROPERTIES = Properties.getBooleanProperty('loggerScriptProperties', false);
+      CONFIG.EMAIL_ERRORS = Properties.getBooleanProperty('loggerEmailErrors', false);
+      CONFIG.EMAIL_RECIPIENT = Properties.getProperty('loggerEmailRecipient', 'membership@sc3.club');
+      CONFIG.NAMESPACES = Properties.getProperty('loggerNamespaces', '*');
       
-      const levelName = Common.Config.Properties.getProperty('loggerLevel', 'INFO').toUpperCase();
+      const levelName = Properties.getProperty('loggerLevel', 'INFO').toUpperCase();
       currentLogLevel = LOG_LEVELS[levelName] !== undefined ? LOG_LEVELS[levelName] : LOG_LEVELS.INFO;
       
-      console.log('[Common.Logger] Configuration loaded from Properties sheet');
+      console.log('[Logger] Configuration loaded from Properties sheet');
     } catch (error) {
       // If Properties fails to load, keep using defaults
-      console.log('[Common.Logger] Failed to load configuration from Properties, using defaults: ' + error);
+      console.log('[Logger] Failed to load configuration from Properties, using defaults: ' + error);
     }
   }
   
