@@ -22,6 +22,10 @@ global.Common.Logger.warn = jest.fn();
 global.Common.Logger.error = jest.fn();
 global.Common.Logger.debug = jest.fn();
 
+// Load ValidatedMember and MemberPersistence before MembershipManagement
+require('../src/common/data/ValidatedMember.js');
+require('../src/common/data/MemberPersistence.js');
+
 // Load utilities and manager so MembershipManagement namespace is populated
 require('../src/services/MembershipManagement/utils.js');
 require('../src/services/MembershipManagement/Manager.js');
@@ -50,6 +54,50 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
         fiddlers = createFiddlerMock(fifoData, deadData);
         fiddlers.install();
 
+        // Mock getSheet for ActiveMembers (processExpirationFIFO loads membership data)
+        const mockActiveMembersData = [
+            ['Status', 'Email', 'First', 'Last', 'Phone', 'Joined', 'Expires', 'Period', 'Directory Share Name', 'Directory Share Email', 'Directory Share Phone', 'Renewed On'],
+            ['Active', 's1@example.com', 'User', 'One', '555-1111', new Date('2023-01-01'), new Date('2024-01-01'), 12, true, false, false, null],
+            ['Active', 's2@example.com', 'User', 'Two', '555-2222', new Date('2023-01-01'), new Date('2024-01-01'), 12, true, false, false, null],
+            ['Active', 's3@example.com', 'User', 'Three', '555-3333', new Date('2023-01-01'), new Date('2024-01-01'), 12, true, false, false, null]
+        ];
+        
+        global.Common.Data.Storage.SpreadsheetManager.getSheet = jest.fn((sheetName) => {
+            if (sheetName === 'ActiveMembers') {
+                return {
+                    getDataRange: jest.fn(() => ({
+                        getValues: jest.fn(() => mockActiveMembersData)
+                    })),
+                    getRange: jest.fn(() => ({
+                        setValue: jest.fn()
+                    })),
+                    getLastRow: jest.fn(() => mockActiveMembersData.length)
+                };
+            }
+            // Default mock for other sheets
+            return {
+                getDataRange: jest.fn(() => ({
+                    getValues: jest.fn(() => [[]])
+                }))
+            };
+        });
+
+        // Mock Data.Access methods needed by Manager construction
+        global.Common.Data.Access = global.Common.Data.Access || {};
+        global.Common.Data.Access.getActionSpecs = jest.fn(() => ({
+            'Expiry1': { Type: 'Expiry1', Subject: 'Expiry notice', Body: 'Your membership expires' }
+        }));
+        global.Common.Data.Access.getPublicGroups = jest.fn(() => [
+            { Name: 'Test Group', Email: 'test@example.com', Subscription: 'auto' }
+        ]);
+
+        // Mock Internal functions
+        global.MembershipManagement.Internal = global.MembershipManagement.Internal || {};
+        global.MembershipManagement.Internal.getEmailSender_ = jest.fn(() => jest.fn());
+        global.MembershipManagement.Internal.getGroupAdder_ = jest.fn(() => jest.fn());
+        global.MembershipManagement.Internal.getGroupRemover_ = jest.fn(() => jest.fn());
+        global.MembershipManagement.Internal.getGroupEmailReplacer_ = jest.fn(() => jest.fn());
+
         // Stub trigger helpers so tests don't call ScriptApp
         global.MembershipManagement.Trigger = global.MembershipManagement.Trigger || {};
         global.MembershipManagement.Trigger._deleteTriggersByFunctionName = jest.fn();
@@ -63,7 +111,7 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
     });
 
     it('persists manager-provided failed items into FIFO and moves dead items to ExpirationDeadLetter', () => {
-        // Arrange: stub initializeManagerData_ to provide a fake manager
+        // Arrange: stub Manager.processExpiredMembers to provide fake result
         const fakeResult = {
             processed: [{ id: 'r1', email: 's1@example.com', subject: '', htmlBody: '', groups: '', attempts: 0, lastAttemptAt: '', lastError: '', nextAttemptAt: '' }],
             failed: [
@@ -72,11 +120,9 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
             ]
         };
 
-        // Override initializeManagerData_ to return our manager
-        // @ts-ignore - Mock partial implementation for testing
-        global.MembershipManagement.Internal.initializeManagerData_ = jest.fn(() => {
-            return { manager: { processExpiredMembers: jest.fn(() => fakeResult) }, membershipData: [], expiryScheduleData: [] };
-        });
+        // Mock the Manager's processExpiredMembers method
+        const originalProcessExpiredMembers = global.MembershipManagement.Manager.prototype.processExpiredMembers;
+        global.MembershipManagement.Manager.prototype.processExpiredMembers = jest.fn(() => fakeResult);
 
         // Act
         const res = global.MembershipManagement.processExpirationFIFO();
@@ -93,6 +139,9 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
         const r2row = fiddlers.getFifo().find(r => r.id === 'r2');
         expect(r2row.attempts).toBe(2);
         expect(r2row.lastError).toBe('Error: transient');
+
+        // Restore
+        global.MembershipManagement.Manager.prototype.processExpiredMembers = originalProcessExpiredMembers;
     });
 
     it('schedules a minute trigger when work remains after processing', () => {
@@ -105,13 +154,17 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
                 { id: 'r1', email: 's1@example.com', subject: 's1', htmlBody: 'b', groups: '', attempts: 1, lastAttemptAt: '2020-01-01T00:00:00.000Z', lastError: 'Err', nextAttemptAt: '2020-01-01T00:05:00.000Z', dead: false }
             ]
         };
-        // @ts-ignore - Mock partial implementation for testing
-        global.MembershipManagement.Internal.initializeManagerData_ = jest.fn(() => {
-            return { manager: { processExpiredMembers: jest.fn(() => fakeResult) }, membershipData: [], expiryScheduleData: [] };
-        });
+        
+        // Mock the Manager's processExpiredMembers method
+        const originalProcessExpiredMembers = global.MembershipManagement.Manager.prototype.processExpiredMembers;
+        global.MembershipManagement.Manager.prototype.processExpiredMembers = jest.fn(() => fakeResult);
+        
         const res = global.MembershipManagement.processExpirationFIFO({ batchSize: 10 });
         // updated queue still has entries (r1 remains) so trigger should be scheduled
         expect(global.MembershipManagement.Trigger._createMinuteTrigger).toHaveBeenCalled();
+        
+        // Restore
+        global.MembershipManagement.Manager.prototype.processExpiredMembers = originalProcessExpiredMembers;
     });
 
     it('skips non-eligible rows with future nextAttemptAt', () => {
@@ -122,16 +175,20 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
             fiddlers.getFifo()[2]
         ]);
         const fakeResult = { processed: [{}, {}], failed: [], auditEntries: [] };
-        // @ts-ignore - Mock partial implementation for testing
-        global.MembershipManagement.Internal.initializeManagerData_ = jest.fn(() => {
-            return { manager: { processExpiredMembers: jest.fn(() => fakeResult) }, membershipData: [], expiryScheduleData: [] };
-        });
+        
+        // Mock the Manager's processExpiredMembers method
+        const originalProcessExpiredMembers = global.MembershipManagement.Manager.prototype.processExpiredMembers;
+        global.MembershipManagement.Manager.prototype.processExpiredMembers = jest.fn(() => fakeResult);
+        
         const res = global.MembershipManagement.processExpirationFIFO({ batchSize: 10 });
         // One row (r1) skipped; processed should reflect eligible count (2)
         expect(res.processed).toBeGreaterThanOrEqual(0);
         // ensure skipped r1 is still present in FIFO
         const ids = fiddlers.getFifo().map(r => r.id);
         expect(ids).toContain('r1');
+        
+        // Restore
+        global.MembershipManagement.Manager.prototype.processExpiredMembers = originalProcessExpiredMembers;
     });
 });
 

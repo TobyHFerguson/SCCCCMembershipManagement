@@ -27,12 +27,22 @@ Common.Data.Access = {
         return bootStrapFiddler.getData();
     },
     getEmailAddresses: function () {
-        const members = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').getData();
+        // Use SpreadsheetApp with ValidatedMember
+        const sheet = Common.Data.Storage.SpreadsheetManager.getSheet('ActiveMembers');
+        const allData = sheet.getDataRange().getValues();
+        const headers = allData[0];
+        const rows = allData.slice(1);
+        const members = Common.Data.ValidatedMember.validateRows(rows, headers, 'data_access.getEmailAddresses');
         const emails = members.map(member => member.Email.toLowerCase());
         return emails;
     },
     getMembers: () => {
-        const members = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').getData()
+        // Use SpreadsheetApp with ValidatedMember
+        const sheet = Common.Data.Storage.SpreadsheetManager.getSheet('ActiveMembers');
+        const allData = sheet.getDataRange().getValues();
+        const headers = allData[0];
+        const rows = allData.slice(1);
+        const members = Common.Data.ValidatedMember.validateRows(rows, headers, 'data_access.getMembers');
         return members;
     },
     getActionSpecs: () => {
@@ -55,23 +65,73 @@ Common.Data.Access = {
     },
     getMember: (email) => {
         email = email.toLowerCase();
-        const members = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').getData();
-        const member = members.filter(member => member.Email.toLowerCase() === email).map(member => { return { ...member, Email: member.Email.toLowerCase() } })
-        return member[0];
+        // Use SpreadsheetApp with ValidatedMember for single member lookup
+        const sheet = Common.Data.Storage.SpreadsheetManager.getSheet('ActiveMembers');
+        const allData = sheet.getDataRange().getValues();
+        const headers = allData[0];
+        const emailCol = headers.indexOf('Email');
+        const rows = allData.slice(1);
+
+        const rowIndex = rows.findIndex(row => 
+            row[emailCol]?.toString().toLowerCase() === email
+        );
+
+        if (rowIndex === -1) return undefined;
+        
+        // Use fromRow to create ValidatedMember (returns null on failure)
+        const member = Common.Data.ValidatedMember.fromRow(rows[rowIndex], headers, rowIndex + 2, null);
+        return member || undefined;
     },
     updateMember: (email, newMember) => {
         email = email.toLowerCase();
-        Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').mapRows(member => {
-            return (member.Email.toLowerCase() === email) ? newMember : member;
-        }).dumpValues();
+        // Use SpreadsheetApp with selective cell updates via MemberPersistence
+        const sheet = Common.Data.Storage.SpreadsheetManager.getSheet('ActiveMembers');
+        const allData = sheet.getDataRange().getValues();
+        const headers = allData[0];
+        const originalRows = allData.slice(1);
+        const emailCol = headers.indexOf('Email');
+        
+        // Find the member to update
+        const rowIndex = originalRows.findIndex(row => 
+            row[emailCol]?.toString().toLowerCase() === email
+        );
+        
+        if (rowIndex === -1) {
+            Common.Logger.warn('data_access', `updateMember: Member not found with email: ${email}`);
+            return false;
+        }
+        
+        // Write only changed cells for the specific row
+        const original = originalRows[rowIndex];
+        const modified = newMember.toArray();
+        
+        let changeCount = 0;
+        for (let j = 0; j < modified.length; j++) {
+            if (!Common.Data.MemberPersistence.valuesEqual(original[j], modified[j])) {
+                // Write single cell that changed
+                // Row index: rowIndex + 2 (skip header row, 1-based indexing)
+                // Column index: j + 1 (1-based indexing)
+                sheet.getRange(rowIndex + 2, j + 1).setValue(modified[j]);
+                changeCount++;
+            }
+        }
+        
+        Common.Logger.info('data_access', `updateMember: Updated ${changeCount} cells for ${email}`);
+        
         // Clear cache so subsequent reads get fresh data
         Common.Data.Storage.SpreadsheetManager.clearFiddlerCache('ActiveMembers');
         return true;
     },
     isMember:(email) => {
         email = email.toLowerCase();
-        const members = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers').getData();
-        return members.some(member => member.Email.toLowerCase() === email);
+        // Use SpreadsheetApp for quick email check
+        const sheet = Common.Data.Storage.SpreadsheetManager.getSheet('ActiveMembers');
+        const allData = sheet.getDataRange().getValues();
+        const headers = allData[0];
+        const emailCol = headers.indexOf('Email');
+        const rows = allData.slice(1);
+        
+        return rows.some(row => row[emailCol]?.toString().toLowerCase() === email);
     },
     getElections: () => {
         const votingData = Common.Data.Storage.SpreadsheetManager.getFiddler('Elections').getData();

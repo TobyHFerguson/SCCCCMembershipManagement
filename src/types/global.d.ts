@@ -142,9 +142,91 @@ interface Member {
 
 
 
-// Common Data Storage namespace - only for truly shared data access
+// Common Data namespace - ValidatedMember and persistence
 declare namespace Common {
     namespace Data {
+        /**
+         * ValidatedMember class with constructor validation
+         */
+        class ValidatedMember {
+            Email: string;
+            Status: string;
+            First: string;
+            Last: string;
+            Phone: string;
+            Joined: Date;
+            Expires: Date;
+            Period: number | null;
+            'Directory Share Name': boolean;
+            'Directory Share Email': boolean;
+            'Directory Share Phone': boolean;
+            'Renewed On': Date | null;
+            
+            constructor(
+                email: string,
+                status: string,
+                first: string,
+                last: string,
+                phone: string,
+                joined: Date,
+                expires: Date,
+                period: number | null,
+                dirName: boolean,
+                dirEmail: boolean,
+                dirPhone: boolean,
+                renewedOn: Date | null
+            );
+            
+            /**
+             * Convert to array for sheet persistence
+             */
+            toArray(): Array<string | Date | number | boolean | null>;
+            
+            /**
+             * Static factory - never throws, returns null on failure
+             */
+            static fromRow(
+                rowArray: Array<any>,
+                headers: string[],
+                rowNumber: number,
+                errorCollector: { errors: string[], rowNumbers: number[] } | null
+            ): ValidatedMember | null;
+            
+            /**
+             * Batch validation with consolidated email alert
+             */
+            static validateRows(
+                rows: Array<Array<any>>,
+                headers: string[],
+                context: string
+            ): ValidatedMember[];
+            
+            /**
+             * Column headers constant
+             */
+            static HEADERS: string[];
+        }
+        
+        /**
+         * Member persistence helper for selective writes
+         */
+        namespace MemberPersistence {
+            /**
+             * Write only changed cells to minimize version history noise
+             */
+            function writeChangedCells(
+                sheet: GoogleAppsScript.Spreadsheet.Sheet,
+                originalRows: Array<Array<any>>,
+                modifiedMembers: ValidatedMember[],
+                headers: string[]
+            ): number;
+            
+            /**
+             * Value equality that handles Dates and primitives
+             */
+            function valuesEqual(a: any, b: any): boolean;
+        }
+        
         namespace Storage {
             namespace SpreadsheetManager {
                 // Most specific overloads first
@@ -164,8 +246,14 @@ declare namespace Common {
                 // Generic fallback
                 function getFiddler(sheetName: string): Fiddler<any>;
                 
+                /**
+                 * Get sheet directly via SpreadsheetApp (for native API access)
+                 */
+                function getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
+                
                 function getDataWithFormulas<T>(fiddler: Fiddler<T>): T[];
                 function convertLinks(sheetName: string): void;
+                function clearFiddlerCache(sheetName: string): void;
             }
         }
         
