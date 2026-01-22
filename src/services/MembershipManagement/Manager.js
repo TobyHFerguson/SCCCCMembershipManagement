@@ -100,7 +100,7 @@ MembershipManagement.Manager = class {
    * @param {MembershipManagement.FIFOItem[]} fifoItems - Array of FIFO items with attempt bookkeeping
    * @param {function(GoogleAppsScript.Mail.MailAdvancedParameters): void} sendEmailFun
    * @param {function(string, string): void} groupRemoveFun
-   * @param {object} opts
+   * @param {{now?: Date}} opts - Options object with optional 'now' for testing
    * @returns {{processed: MembershipManagement.FIFOItem[], failed: MembershipManagement.FIFOItem[], auditEntries: any[]}}
    *
    * Returns:
@@ -427,7 +427,7 @@ MembershipManagement.Manager = class {
    * 
    * @param {string} oldEmail - The old email address
    * @param {string} newEmail - The new email address
-   * @param {Object} member - The member object to update
+   * @param {ValidatedMember} member - The member object to update
    * @param {Array} expirySchedule - The expiry schedule array
    * @private
    */
@@ -598,10 +598,10 @@ MembershipManagement.Manager = class {
    * Uses isPossibleRenewal to match on name (first letter) + phone/email + temporal relationship.
    * Only matches Active members.
    * 
-   * @param {Object} txn - Transaction data with "Email Address", "First Name", "Last Name", Phone
-   * @param {Array<Object>} membershipData - All member records
+   * @param {{'Email Address': string, 'First Name': string, 'Last Name': string, Phone?: string}} txn - Transaction data from payment processor
+   * @param {ValidatedMember[]} membershipData - All member records
    * @param {Date|string} today - Current date for temporal validation
-   * @returns {{found: boolean, index: number, member: Object|null, matchType: string}}
+   * @returns {{found: boolean, index: number, member: ValidatedMember|null, matchType: string}}
    *   matchType values: 'POSSIBLE_RENEWAL' | 'NEW_MEMBER'
    */
   static findExistingMemberForTransaction(txn, membershipData, today) {
@@ -648,8 +648,8 @@ MembershipManagement.Manager = class {
    * - Same phone OR same email
    * - The later Joined date is before or equal to the earlier Expires date (if both have joined/expires)
    * 
-   * @param {Object} memberA - First member object
-   * @param {Object} memberB - Second member object
+   * @param {ValidatedMember} memberA - First member object
+   * @param {ValidatedMember} memberB - Second member object
    * @returns {boolean} True if the pair is a possible renewal
    */
   /**

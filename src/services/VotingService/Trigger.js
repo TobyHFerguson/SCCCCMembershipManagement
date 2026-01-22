@@ -258,9 +258,8 @@ VotingService.Trigger = {
     },
     
     /**
-     * @param {object} spreadsheet
-     * @param {function():string} spreadsheet.getName 
-     * @returns 
+     * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} spreadsheet - GAS Spreadsheet object
+     * @returns {string} Election title extracted from spreadsheet name
      */
     getElectionTitle_: function (spreadsheet) {
         let electionTitle = spreadsheet.getName();
@@ -384,8 +383,8 @@ VotingService.Trigger = {
     /**
     * Takes an object whose values are arrays and returns an object with the same keys,
      * but each value is the first element of the original array.
-     * @param {Object} obj
-     * @returns {Object}
+     * @param {Record<string, any[]>} obj - Object with array values
+     * @returns {Record<string, any>} Object with first array element as value
      */
     firstValues_: function (obj) {
         const result = {};

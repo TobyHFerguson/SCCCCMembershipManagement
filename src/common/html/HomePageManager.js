@@ -51,8 +51,8 @@ Common.HomePage.Manager = class {
   /**
    * Get WebServices object (allows dependency injection for testing)
    * @private
-   * @param {Object} [webServicesOverride] - Optional WebServices override for testing
-   * @returns {Object} WebServices object
+   * @param {Record<string, {name: string, description?: string, icon?: string}>} [webServicesOverride] - Optional WebServices override for testing
+   * @returns {Record<string, {name: string, description?: string, icon?: string}>} WebServices object
    */
   static _getWebServices(webServicesOverride) {
     if (webServicesOverride) {
@@ -70,7 +70,7 @@ Common.HomePage.Manager = class {
    * Extract service info from a service definition object
    * @private
    * @param {string} serviceId - The service identifier
-   * @param {Object} serviceObj - The service object from WebServices
+   * @param {{name: string, description?: string, icon?: string}} serviceObj - The service object from WebServices
    * @returns {ServiceInfo|null} Service info or null if invalid
    */
   static _extractServiceInfo(serviceId, serviceObj) {
@@ -89,7 +89,7 @@ Common.HomePage.Manager = class {
   /**
    * Get all available services as ServiceInfo array
    * Services are derived from WebServices defined in 1namespaces.js
-   * @param {Object} [webServicesOverride] - Optional WebServices override for testing
+   * @param {Record<string, {name: string, description?: string, icon?: string}>} [webServicesOverride] - Optional WebServices override for testing
    * @returns {ServiceInfo[]} Array of service information
    */
   static getAvailableServices(webServicesOverride) {
@@ -114,7 +114,7 @@ Common.HomePage.Manager = class {
   /**
    * Get service info by ID
    * @param {string} serviceId - The service identifier
-   * @param {Object} [webServicesOverride] - Optional WebServices override for testing
+   * @param {Record<string, {name: string, description?: string, icon?: string}>} [webServicesOverride] - Optional WebServices override for testing
    * @returns {ServiceInfo|null} Service info or null if not found
    */
   static getServiceById(serviceId, webServicesOverride) {
@@ -132,7 +132,7 @@ Common.HomePage.Manager = class {
   /**
    * Validate a service ID
    * @param {string} serviceId - The service identifier to validate
-   * @param {Object} [webServicesOverride] - Optional WebServices override for testing
+   * @param {Record<string, {name: string, description?: string, icon?: string}>} [webServicesOverride] - Optional WebServices override for testing
    * @returns {{valid: boolean, error?: string, errorCode?: string}}
    */
   static validateServiceId(serviceId, webServicesOverride) {
@@ -169,7 +169,7 @@ Common.HomePage.Manager = class {
   /**
    * Build complete home page data
    * @param {string} email - Authenticated user email
-   * @param {Object} [webServicesOverride] - Optional WebServices override for testing
+   * @param {Record<string, {name: string, description?: string, icon?: string}>} [webServicesOverride] - Optional WebServices override for testing
    * @returns {HomePageData} Complete home page data
    */
   static buildHomePageData(email, webServicesOverride) {
@@ -194,7 +194,7 @@ Common.HomePage.Manager = class {
 
   /**
    * Get service count
-   * @param {Object} [webServicesOverride] - Optional WebServices override for testing
+   * @param {Record<string, {name: string, description?: string, icon?: string}>} [webServicesOverride] - Optional WebServices override for testing
    * @returns {number} Total number of available services
    */
   static getServiceCount(webServicesOverride) {

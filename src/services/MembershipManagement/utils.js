@@ -139,7 +139,7 @@ MembershipManagement.Utils.convertFIFOItemsFromSpreadsheet = function(items) {
      * Date fields specified in the dateFields array are converted to local date strings.
      *
      * @param {string} template - The template string containing placeholders.
-     * @param {Object} row - The object containing values to replace placeholders.
+     * @param {ValidatedMember | Record<string, any>} row - Member or object containing values to replace placeholders
      * @returns {string} - The expanded template string with placeholders replaced by corresponding values.
      */
 MembershipManagement.Utils.expandTemplate = function(template, row) {

@@ -302,10 +302,7 @@ MembershipManagement.generateExpiringMembersList = function () {
  * Consumer: process up to batchSize entries from the ExpirationFIFO sheet.
  * This function is intended to be called by a time-based trigger (minute-based) while work remains.
  * It will reschedule itself (create a 1-minute trigger) if more work remains after processing the batch.
- * @param {Object} opts - Options object
- * @param {number} [opts.batchSize] - Maximum number of items to process
- * @param {boolean} [opts.dryRun] - If true, don't persist changes
- * @param {Object} [opts.fiddlers] - Pre-fetched fiddlers to reuse (avoids redundant getFiddler calls)
+ * @param {{batchSize?: number, dryRun?: boolean, fiddlers?: Record<string, any>}} opts - Options with optional batchSize, dryRun flag, and pre-fetched fiddlers
  */
 MembershipManagement.processExpirationFIFO = function (opts = {}) {
   try {

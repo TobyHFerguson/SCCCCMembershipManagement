@@ -84,8 +84,8 @@ var ServiceExecutionLogger = {
      * @param {string} operationName - Operation name (e.g., 'updateProfile')
      * @param {string} email - User email
      * @param {Function} handlerFn - Handler function that performs the operation
-     * @param {Object} [params] - Optional parameters for logging context
-     * @returns {Object} Handler result with logging metadata
+     * @param {Record<string, any>} [params] - Optional parameters for logging context (JUSTIFIED: arbitrary debugging data)
+     * @returns {Record<string, any>} Handler result with logging metadata
      */
     wrapApiHandler: function(serviceName, operationName, email, handlerFn, params) {
         const logger = new ServiceLogger(serviceName, email);
