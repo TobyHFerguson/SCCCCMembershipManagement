@@ -283,7 +283,7 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
       // Persist audit entry
       try {
         const auditFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Audit');
-        Audit.Persistence.persistAuditEntries(auditFiddler, [auditEntry]);
+        AuditPersistence.persistAuditEntries(auditFiddler, [auditEntry]);
       } catch (auditError) {
         Common.Logger.error('GroupManagementService', 'Failed to persist audit entry', auditError);
       }

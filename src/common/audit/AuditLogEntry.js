@@ -1,5 +1,5 @@
 /**
- * Audit Log Entry Class
+ * AuditLogEntry Class
  * 
  * Purpose: Provides type safety and validation for audit log entries.
  * Ensures all audit entries have proper structure and prevents corruption
@@ -8,20 +8,17 @@
  * Layer: Layer 1 Infrastructure (can use Common.Logger)
  * 
  * Usage:
- *   const entry = Audit.LogEntry.create('transaction', 'success', 'Payment processed');
- *   const validEntries = Audit.LogEntry.validateArray(auditEntries, 'processTransactions');
+ *   const entry = AuditLogEntry.create('transaction', 'success', 'Payment processed');
+ *   const validEntries = AuditLogEntry.validateArray(auditEntries, 'processTransactions');
  * 
  * Pattern: IIFE-wrapped class (per gas-best-practices.md)
  */
 
-// Extend Audit namespace (declared in 1namespaces.js in GAS)
-if (typeof Audit === 'undefined') var Audit = {};
-
 /**
- * Audit Log Entry class using IIFE-wrapped pattern
+ * AuditLogEntry class using IIFE-wrapped pattern
  * @class
  */
-Audit.LogEntry = (function() {
+var AuditLogEntry = (function() {
   /**
    * @param {string} type - The type of audit event (e.g., 'transaction', 'member-update')
    * @param {string} outcome - The outcome ('success', 'fail', 'partial')
@@ -30,15 +27,15 @@ Audit.LogEntry = (function() {
    * @param {string} [jsonData] - Structured data as JSON string
    * @param {Date} [timestamp] - Entry timestamp (defaults to current time)
    */
-  class LogEntry {
+  class AuditLogEntry {
     constructor(type, outcome, note, error, jsonData, timestamp) {
       // Validate required fields at construction time
       if (typeof type !== 'string' || type.trim() === '') {
-        throw new Error(`Audit.LogEntry type must be non-empty string, got: ${typeof type} "${type}"`);
+        throw new Error(`AuditLogEntry type must be non-empty string, got: ${typeof type} "${type}"`);
       }
       
       if (typeof outcome !== 'string' || outcome.trim() === '') {
-        throw new Error(`Audit.LogEntry outcome must be non-empty string, got: ${typeof outcome} "${outcome}"`);
+        throw new Error(`AuditLogEntry outcome must be non-empty string, got: ${typeof outcome} "${outcome}"`);
       }
       
       // Assign validated properties
@@ -83,13 +80,13 @@ Audit.LogEntry = (function() {
      * @param {string} [error] - Error details if any
      * @param {string} [jsonData] - Structured data
      * @param {Date} [timestamp] - Entry timestamp (defaults to current time)
-     * @returns {LogEntry} Valid audit entry (may be error entry if construction failed)
+     * @returns {AuditLogEntry} Valid audit entry (may be error entry if construction failed)
      */
     static create(type, outcome, note, error, jsonData, timestamp) {
       try {
-        return new LogEntry(type, outcome, note, error, jsonData, timestamp);
+        return new AuditLogEntry(type, outcome, note, error, jsonData, timestamp);
       } catch (validationError) {
-        Common.Logger.error('Audit.LogEntry', `Failed to create audit entry: ${validationError.message}`);
+        Common.Logger.error('AuditLogEntry', `Failed to create audit entry: ${validationError.message}`);
         
         // Send alert about audit entry construction failure
         try {
@@ -110,11 +107,11 @@ A safe error entry has been created instead to prevent system failure.
 Review the calling code for proper audit entry parameter validation.`
           });
         } catch (emailError) {
-          Common.Logger.error('Audit.LogEntry', `Failed to send construction failure alert: ${emailError.message}`);
+          Common.Logger.error('AuditLogEntry', `Failed to send construction failure alert: ${emailError.message}`);
         }
         
         // Return a safe error entry instead of throwing
-        return new LogEntry(
+        return new AuditLogEntry(
           'audit-construction-error',
           'fail',
           `Original audit entry construction failed: ${validationError.message}`,
@@ -127,16 +124,16 @@ Review the calling code for proper audit entry parameter validation.`
 
     /**
      * Validate an array of audit entries - static validation method
-     * Ensures all entries are proper Audit.LogEntry instances
+     * Ensures all entries are proper AuditLogEntry instances
      * Replaces invalid entries with error entries to prevent corruption
      * 
-     * @param {Array<LogEntry|object>} entries - Array of potential audit entries
+     * @param {Array<AuditLogEntry|object>} entries - Array of potential audit entries
      * @param {string} context - Context string for error reporting
-     * @returns {Array<LogEntry>} Array of validated Audit.LogEntry instances
+     * @returns {Array<AuditLogEntry>} Array of validated AuditLogEntry instances
      */
     static validateArray(entries, context) {
       if (!Array.isArray(entries)) {
-        Common.Logger.error('Audit.LogEntry', `${context}: entries is not an array: ${typeof entries}`);
+        Common.Logger.error('AuditLogEntry', `${context}: entries is not an array: ${typeof entries}`);
         
         // Send alert about non-array audit entries
         try {
@@ -153,28 +150,28 @@ Processing will continue with empty audit array to prevent system failure.
 Review the ${context} implementation for proper audit entry generation.`
           });
         } catch (emailError) {
-          Common.Logger.error('Audit.LogEntry', `Failed to send non-array alert: ${emailError.message}`);
+          Common.Logger.error('AuditLogEntry', `Failed to send non-array alert: ${emailError.message}`);
         }
         
         return [];
       }
       
-      /** @type {Array<LogEntry>} */
+      /** @type {Array<AuditLogEntry>} */
       const validEntries = [];
       let corruptionDetected = false;
       
       for (let i = 0; i < entries.length; i++) {
         const entry = entries[i];
         
-        if (!(entry instanceof LogEntry)) {
+        if (!(entry instanceof AuditLogEntry)) {
           corruptionDetected = true;
-          Common.Logger.error('Audit.LogEntry', `${context}: entry ${i} is not an Audit.LogEntry instance. Type: ${typeof entry}, Value: ${JSON.stringify(entry)}`);
+          Common.Logger.error('AuditLogEntry', `${context}: entry ${i} is not an AuditLogEntry instance. Type: ${typeof entry}, Value: ${JSON.stringify(entry)}`);
           
           // Create safe replacement entry
-          validEntries.push(LogEntry.create(
+          validEntries.push(AuditLogEntry.create(
             'type-validation-error',
             'fail',
-            `Non-Audit.LogEntry object detected at index ${i} in ${context}`,
+            `Non-AuditLogEntry object detected at index ${i} in ${context}`,
             `Object was: ${JSON.stringify(entry)}`,
             ''
           ));
@@ -188,7 +185,7 @@ Review the ${context} implementation for proper audit entry generation.`
         try {
           MailApp.sendEmail({
             to: 'membership-automation@sc3.club',
-            subject: 'CRITICAL: Non-Audit.LogEntry Objects Detected',
+            subject: 'CRITICAL: Non-AuditLogEntry Objects Detected',
             body: `Invalid audit entry objects detected at ${new Date().toISOString()}
 
 Context: ${context}
@@ -197,13 +194,13 @@ Invalid objects found and replaced with error entries.
 
 THIS INDICATES A BUG IN AUDIT ENTRY GENERATION CODE.
 
-The ${context} code is creating raw objects instead of using Audit.LogEntry.create().
+The ${context} code is creating raw objects instead of using AuditLogEntry.create().
 Review that code to ensure proper audit entry construction.
 
 Processing continues normally with replacement error entries.`
           });
         } catch (emailError) {
-          Common.Logger.error('Audit.LogEntry', `Failed to send corruption alert: ${emailError.message}`);
+          Common.Logger.error('AuditLogEntry', `Failed to send corruption alert: ${emailError.message}`);
         }
       }
       
@@ -211,10 +208,10 @@ Processing continues normally with replacement error entries.`
     }
   }
 
-  return LogEntry;
+  return AuditLogEntry;
 })();
 
 // Node.js module export for testing
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = Audit;
+  module.exports = AuditLogEntry;
 }

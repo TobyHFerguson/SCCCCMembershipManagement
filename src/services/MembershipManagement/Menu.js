@@ -23,7 +23,7 @@ function processTransactions() {
             const result = MembershipManagement.processTransactions();
             
             // Create audit entry for menu operation
-            const auditLogger = new Audit.Logger();
+            const auditLogger = new AuditLogger();
             const auditEntry = auditLogger.createLogEntry({
                 type: 'MenuProcessTransactions',
                 outcome: 'success',
@@ -122,7 +122,7 @@ function findPossibleRenewalsFromMenu() {
             const pairCount = (similarMemberPairs || []).length;
             
             // Create audit entry for this operation
-            const auditLogger = new Audit.Logger();
+            const auditLogger = new AuditLogger();
             const pairDetails = similarMemberPairs.map(p => ({ rowA: p[0] + 2, rowB: p[1] + 2 }));
             const auditEntry = auditLogger.createLogEntry({
                 type: 'FindPossibleRenewals',
@@ -212,7 +212,7 @@ function mergeSelectedMembers() {
                 
                 if (!result.success) {
                     // Create audit entry for failed merge
-                    const auditLogger = new Audit.Logger();
+                    const auditLogger = new AuditLogger();
                     const auditEntry = auditLogger.createLogEntry({
                         type: 'MergeSelectedMembers',
                         outcome: 'fail',
@@ -233,7 +233,7 @@ function mergeSelectedMembers() {
                 }
                 
                 // Create audit entry for successful merge
-                const auditLogger = new Audit.Logger();
+                const auditLogger = new AuditLogger();
                 const auditEntry = auditLogger.createLogEntry({
                     type: 'MergeSelectedMembers',
                     outcome: 'success',
@@ -257,7 +257,7 @@ function mergeSelectedMembers() {
                 ui.alert('Merge successful', `${result.message}`, ui.ButtonSet.OK);
             } catch (error) {
                 // Create audit entry for error
-                const auditLogger = new Audit.Logger();
+                const auditLogger = new AuditLogger();
                 const auditEntry = auditLogger.createLogEntry({
                     type: 'MergeSelectedMembers',
                     outcome: 'fail',

@@ -140,7 +140,84 @@ interface Member {
     'Renewed On': Date;
 }
 
+// ============================================================================
+// Audit Classes (Flat Pattern - no namespace nesting)
+// ============================================================================
 
+/**
+ * Audit Log Entry class - creates validated audit entries
+ */
+declare class AuditLogEntry {
+    /** Timestamp of the event */
+    Timestamp: Date;
+    /** Type of business event (ActionType values or 'DeadLetter') */
+    Type: string;
+    /** Outcome of the operation */
+    Outcome: string;
+    /** Additional human-readable note */
+    Note: string;
+    /** Error message if applicable */
+    Error: string;
+    /** JSON-serialized detailed data */
+    JSON: string;
+    /** Optional unique identifier for deduplication */
+    Id?: string;
+
+    constructor(
+        type: string,
+        outcome: string,
+        note?: string,
+        error?: string,
+        jsonData?: string,
+        timestamp?: Date
+    );
+
+    /** Convert to array for spreadsheet persistence */
+    toArray(): Array<Date | string>;
+
+    /** Static factory method - never throws */
+    static create(
+        type: string,
+        outcome: string,
+        note?: string,
+        error?: string,
+        jsonData?: string,
+        timestamp?: Date
+    ): AuditLogEntry;
+
+    /** Validate array of entries */
+    static validateArray(
+        entries: Array<AuditLogEntry | object>,
+        context: string
+    ): AuditLogEntry[];
+}
+
+/**
+ * Parameters for creating an audit log entry
+ */
+interface AuditLogParams {
+    type: string;
+    outcome: 'success' | 'fail';
+    note?: string;
+    error?: string;
+    jsonData?: any;
+}
+
+/**
+ * Pure JavaScript audit logger - creates audit entries without side effects
+ */
+declare class AuditLogger {
+    constructor(today?: Date);
+    createLogEntry(params: AuditLogParams): AuditLogEntry;
+    createLogEntries(paramsArray: AuditLogParams[]): AuditLogEntry[];
+}
+
+/**
+ * Audit persistence class - writes to Audit sheet
+ */
+declare class AuditPersistence {
+    static persistAuditEntries(auditEntries: AuditLogEntry[]): number;
+}
 
 // Common Data namespace - ValidatedMember and persistence
 declare namespace Common {
@@ -241,7 +318,7 @@ declare namespace Common {
                 function getFiddler(sheetName: 'ActionSpecs'): Fiddler<MembershipManagement.ActionSpec>;
                 function getFiddler(sheetName: 'ExpirySchedule'): Fiddler<MembershipManagement.ExpirySchedule>;
                 function getFiddler(sheetName: 'ExpirationFIFO'): Fiddler<ExpiredMember>;
-                function getFiddler(sheetName: 'Audit'): Fiddler<Audit.LogEntry>;
+                function getFiddler(sheetName: 'Audit'): Fiddler<AuditLogEntry>;
                 
                 // Generic fallback
                 function getFiddler(sheetName: string): Fiddler<any>;

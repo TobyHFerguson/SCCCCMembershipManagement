@@ -201,21 +201,20 @@ describe('MembershipManagement audit persistence integration', () => {
         global.Common.Logger.error = jest.fn();
         global.Common.Logger.warn = jest.fn();  // Added for deduplication warnings
         
-        // Ensure Audit namespace exists globally and load both modules
-        const auditLogEntryModule = require('../src/common/audit/AuditLogEntry.js');
-        const auditPersistenceModule = require('../src/common/audit/AuditPersistence.js');
+        // Import flat classes (no namespace nesting)
+        const AuditLogEntry = require('../src/common/audit/AuditLogEntry.js');
+        const AuditPersistence = require('../src/common/audit/AuditPersistence.js');
         
-        // The AuditLogEntry exports the base Audit namespace with LogEntry
-        global.Audit = auditLogEntryModule;
-        // The AuditPersistence module adds the Persistence namespace
-        global.Audit.Persistence = auditPersistenceModule.Audit.Persistence;
+        // Make them available globally for tests
+        global.AuditLogEntry = AuditLogEntry;
+        global.AuditPersistence = AuditPersistence;
     });
 
-    it('persistAuditEntries_ uses Audit.Persistence.persistAuditEntries helper', () => {
-        // Use factory method to create proper Audit.LogEntry instances
+    it('persistAuditEntries_ uses AuditPersistence.persistAuditEntries helper', () => {
+        // Use factory method to create proper AuditLogEntry instances
         const mockAuditEntries = [
-            global.Audit.LogEntry.create('ProcessExpiredMember', 'success', 'Test entry 1', '', '', new Date('2024-01-01T00:00:00.000Z')),
-            global.Audit.LogEntry.create('DeadLetter', 'fail', 'Test entry 2', 'Test error', '', new Date('2024-01-01T00:00:01.000Z'))
+            global.AuditLogEntry.create('ProcessExpiredMember', 'success', 'Test entry 1', '', '', new Date('2024-01-01T00:00:00.000Z')),
+            global.AuditLogEntry.create('DeadLetter', 'fail', 'Test entry 2', 'Test error', '', new Date('2024-01-01T00:00:01.000Z'))
         ];
 
         // Mock SpreadsheetManager.getSheet to return a mock sheet

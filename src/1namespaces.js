@@ -10,7 +10,10 @@ const Common = {
     Logger: {}
 };
 
-const Audit = {};
+// Audit namespace has been flattened to:
+// - AuditLogEntry (src/common/audit/AuditLogEntry.js)
+// - AuditLogger (src/common/audit/AuditLogger.js)  
+// - AuditPersistence (src/common/audit/AuditPersistence.js)
 
 const GroupSubscription = {};
 

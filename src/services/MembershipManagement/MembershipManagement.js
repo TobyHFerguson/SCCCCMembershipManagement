@@ -22,8 +22,8 @@ MembershipManagement.convertJoinToRenew = function (rowAIndex, rowBIndex) {
     groupEmailReplaceFun: MembershipManagement.Internal.getGroupEmailReplacer_()
   }
   
-  // Create audit logger if Audit.Logger is available
-  const auditLogger = typeof Audit !== 'undefined' && Audit.Logger ? new Audit.Logger() : null;
+  // Create audit logger if AuditLogger is available
+  const auditLogger = typeof AuditLogger !== 'undefined' ? new AuditLogger() : null;
   
   const manager = new MembershipManagement.Manager(
     Common.Data.Access.getActionSpecs(), 
@@ -240,7 +240,7 @@ MembershipManagement.generateExpiringMembersList = function () {
     const scheduleEntriesProcessed = result.scheduleEntriesProcessed || result.messages.length;
     
     // Create audit entry for this operation
-    const auditLogger = new Audit.Logger();
+    const auditLogger = new AuditLogger();
     const auditEntry = auditLogger.createLogEntry({
       type: 'ProcessExpirations',
       outcome: 'success',
@@ -373,8 +373,8 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       groupEmailReplaceFun: MembershipManagement.Internal.getGroupEmailReplacer_()
     }
     
-    // Create audit logger if Audit.Logger is available
-    const auditLogger = typeof Audit !== 'undefined' && Audit.Logger ? new Audit.Logger() : null;
+    // Create audit logger if AuditLogger is available
+    const auditLogger = typeof AuditLogger !== 'undefined' ? new AuditLogger() : null;
     
     const manager = new MembershipManagement.Manager(
       Common.Data.Access.getActionSpecs(), 
@@ -546,8 +546,8 @@ MembershipManagement.Internal.initializeManagerDataWithSpreadsheetApp_ = functio
     groupEmailReplaceFun: MembershipManagement.Internal.getGroupEmailReplacer_()
   }
   
-  // Create audit logger if Audit.Logger is available
-  const auditLogger = typeof Audit !== 'undefined' && Audit.Logger ? new Audit.Logger() : null;
+  // Create audit logger if AuditLogger is available
+  const auditLogger = typeof AuditLogger !== 'undefined' ? new AuditLogger() : null;
   
   const manager = new MembershipManagement.Manager(
     Common.Data.Access.getActionSpecs(), 
@@ -584,8 +584,8 @@ MembershipManagement.Internal.initializeManagerData_ = function (membershipFiddl
     groupEmailReplaceFun: MembershipManagement.Internal.getGroupEmailReplacer_()
   }
   
-  // Create audit logger if Audit.Logger is available
-  const auditLogger = typeof Audit !== 'undefined' && Audit.Logger ? new Audit.Logger() : null;
+  // Create audit logger if AuditLogger is available
+  const auditLogger = typeof AuditLogger !== 'undefined' ? new AuditLogger() : null;
   
   const manager = new MembershipManagement.Manager(
     Common.Data.Access.getActionSpecs(), 
@@ -899,7 +899,7 @@ MembershipManagement.Internal.sendExpirationErrorNotification_ = function (error
 
 /**
  * Persists audit log entries to the Audit sheet using the canonical helper
- * @param {Audit.LogEntry[]} auditEntries - Array of audit log entries to persist
+ * @param {AuditLogEntry[]} auditEntries - Array of audit log entries to persist
  */
 MembershipManagement.Internal.persistAuditEntries_ = function (auditEntries) {
   if (!auditEntries || auditEntries.length === 0) {
@@ -908,7 +908,7 @@ MembershipManagement.Internal.persistAuditEntries_ = function (auditEntries) {
   
   try {
     // Use the canonical persistence helper (enforces schema validation and deduplication)
-    const numWritten = Audit.Persistence.persistAuditEntries(auditEntries);
+    const numWritten = AuditPersistence.persistAuditEntries(auditEntries);
     
     Common.Logger.info('MembershipManagement', `Persisted ${numWritten} audit log entries`);
     return numWritten;

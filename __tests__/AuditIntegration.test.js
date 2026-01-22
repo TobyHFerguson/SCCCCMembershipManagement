@@ -1,7 +1,7 @@
-if (typeof require !== 'undefined') {
-    var { Audit } = require('../src/common/audit/AuditLogger');
-    var { MembershipManagement } = require('../src/services/MembershipManagement/Manager');
-}
+// Import flat classes (no namespace nesting)
+const AuditLogEntry = require('../src/common/audit/AuditLogEntry');
+const AuditLogger = require('../src/common/audit/AuditLogger');
+const { MembershipManagement } = require('../src/services/MembershipManagement/Manager');
 
 /**
  * Integration tests for audit logging in Manager
@@ -16,7 +16,7 @@ describe('Manager Audit Integration', () => {
 
     beforeEach(() => {
         testDate = new Date('2024-01-15T10:00:00Z');
-        auditLogger = new Audit.Logger(testDate);
+        auditLogger = new AuditLogger(testDate);
         
         actionSpecs = {
             Join: { Type: 'Join', Subject: 'Welcome!', Body: 'Welcome {First}!' },

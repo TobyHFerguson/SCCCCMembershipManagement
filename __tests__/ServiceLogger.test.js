@@ -23,23 +23,21 @@ global.Common = {
     Logging: {}
 };
 
-// Mock Audit.Logger
-global.Audit = {
-    Logger: class {
-        constructor(timestamp) {
-            this._timestamp = timestamp || new Date();
-        }
-        
-        createLogEntry(params) {
-            return {
-                Timestamp: new Date(this._timestamp),
-                Type: params.type,
-                Outcome: params.outcome,
-                Note: params.note || '',
-                Error: params.error || '',
-                JSON: params.jsonData ? JSON.stringify(params.jsonData, null, 2) : ''
-            };
-        }
+// Mock AuditLogger (flat class, no namespace)
+global.AuditLogger = class {
+    constructor(timestamp) {
+        this._timestamp = timestamp || new Date();
+    }
+    
+    createLogEntry(params) {
+        return {
+            Timestamp: new Date(this._timestamp),
+            Type: params.type,
+            Outcome: params.outcome,
+            Note: params.note || '',
+            Error: params.error || '',
+            JSON: params.jsonData ? JSON.stringify(params.jsonData, null, 2) : ''
+        };
     }
 };
 

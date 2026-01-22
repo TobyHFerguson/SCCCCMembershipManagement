@@ -326,7 +326,7 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
       
       // Persist audit entry
       try {
-        Audit.Persistence.persistAuditEntries([auditEntry]);
+        AuditPersistence.persistAuditEntries([auditEntry]);
       } catch (auditError) {
         Common.Logger.error('ProfileManagementService', 'Failed to persist audit entry', auditError);
       }

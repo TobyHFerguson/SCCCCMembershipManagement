@@ -273,7 +273,7 @@ function getServiceContent(email, service) {
  * Helper function to persist audit entries
  * Internal helper for getServiceContent logging
  * 
- * @param {Audit.LogEntry[]} auditEntries - Audit entries to persist
+ * @param {AuditLogEntry[]} auditEntries - Audit entries to persist
  * @private
  */
 function _persistAuditEntries(auditEntries) {
@@ -283,7 +283,7 @@ function _persistAuditEntries(auditEntries) {
   
   try {
     // Persist entries using direct SpreadsheetApp access
-    const numWritten = Audit.Persistence.persistAuditEntries(auditEntries);
+    const numWritten = AuditPersistence.persistAuditEntries(auditEntries);
     
     Common.Logger.debug('WebApp', `Persisted ${numWritten} audit entries`);
   } catch (error) {

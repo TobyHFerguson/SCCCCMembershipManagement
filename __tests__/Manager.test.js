@@ -1,5 +1,7 @@
 const { MembershipManagement } = require('../src/services/MembershipManagement/Manager');
-const { Audit } = require('../src/common/audit/AuditLogger');
+// Import flat classes (no namespace nesting)
+const AuditLogEntry = require('../src/common/audit/AuditLogEntry');
+const AuditLogger = require('../src/common/audit/AuditLogger');
 const utils = MembershipManagement.Utils;
 
 // @ts-check
@@ -401,7 +403,7 @@ describe('Manager tests', () => {
       })
       it('should generate audit entries for successful processing', () => {
         // Create a manager with an audit logger
-        const auditLogger = new Audit.Logger(today);
+        const auditLogger = new AuditLogger(today);
         const managerWithAudit = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger);
         
         const res = managerWithAudit.processExpiredMembers(expiredMembers, sendEmailFun, groupManager.groupRemoveFun);
@@ -562,7 +564,7 @@ describe('Manager tests', () => {
 
     describe('audit trail', () => {
       it('should generate audit entries for dead letter failures', () => {
-        const auditLogger = new Audit.Logger(today);
+        const auditLogger = new AuditLogger(today);
         const managerWithAudit = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger);
         
         sendEmailFun.mockImplementation(() => { throw new Error('Email service down'); });
@@ -768,7 +770,7 @@ describe('Manager tests', () => {
 
     describe('audit trail', () => {
       it('should generate audit entries for successful migrations', () => {
-        const auditLogger = new Audit.Logger(today);
+        const auditLogger = new AuditLogger(today);
         const managerWithAudit = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger);
         
         const migrators = [
@@ -788,7 +790,7 @@ describe('Manager tests', () => {
       });
       
       it('should generate audit entries for migration failures', () => {
-        const auditLogger = new Audit.Logger(today);
+        const auditLogger = new AuditLogger(today);
         groupManager.groupAddFun = jest.fn(() => { throw new Error('Group service error'); });
         const managerWithAudit = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger);
         
@@ -1184,7 +1186,7 @@ describe('Manager tests', () => {
 
     describe('audit trail', () => {
       it('should generate audit entries for successful joins', () => {
-        const auditLogger = new Audit.Logger(today);
+        const auditLogger = new AuditLogger(today);
         const managerWithAudit = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger);
         
         const txns = [TestData.paidTransaction({ "Email Address": "newmember@example.com", "First Name": "New", "Last Name": "Member" })];
@@ -1201,7 +1203,7 @@ describe('Manager tests', () => {
       });
 
       it('should generate audit entries for successful renewals', () => {
-        const auditLogger = new Audit.Logger(today);
+        const auditLogger = new AuditLogger(today);
         const managerWithAudit = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger);
         
         const members = [TestData.activeMember({ Email: "renewing@example.com", First: "Test", Last: "User", Expires: utils.addDaysToDate(today, 10) })];
@@ -1219,7 +1221,7 @@ describe('Manager tests', () => {
       });
 
       it('should generate audit entries for transaction processing failures', () => {
-        const auditLogger = new Audit.Logger(today);
+        const auditLogger = new AuditLogger(today);
         sendEmailFun.mockImplementation(() => { throw new Error('Email service down'); });
         const managerWithAudit = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger);
         
@@ -1239,7 +1241,7 @@ describe('Manager tests', () => {
       });
 
       it('should generate enhanced audit entry for renewal with email change', () => {
-        const auditLogger = new Audit.Logger(today);
+        const auditLogger = new AuditLogger(today);
         const managerWithAudit = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger);
         
         // Existing member with old email
@@ -1280,7 +1282,7 @@ describe('Manager tests', () => {
       });
 
       it('should generate standard audit entry for renewal without email change', () => {
-        const auditLogger = new Audit.Logger(today);
+        const auditLogger = new AuditLogger(today);
         const managerWithAudit = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger);
         
         const members = [TestData.activeMember({ 

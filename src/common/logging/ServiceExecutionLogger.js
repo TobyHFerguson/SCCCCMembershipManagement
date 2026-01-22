@@ -156,7 +156,7 @@ Common.Logging.ServiceExecutionLogger = {
      * Persist audit entries to the Audit sheet
      * Internal helper that safely handles persistence errors
      * 
-     * @param {Audit.LogEntry[]} auditEntries - Audit entries to persist
+     * @param {AuditLogEntry[]} auditEntries - Audit entries to persist
      * @private
      */
     _persistAuditEntries: function(auditEntries) {
@@ -169,7 +169,7 @@ Common.Logging.ServiceExecutionLogger = {
             const auditFiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Audit');
             
             // Persist entries
-            const numWritten = Audit.Persistence.persistAuditEntries(auditFiddler, auditEntries);
+            const numWritten = AuditPersistence.persistAuditEntries(auditFiddler, auditEntries);
             
             Common.Logger.debug('ServiceExecutionLogger', `Persisted ${numWritten} audit entries`);
         } catch (error) {

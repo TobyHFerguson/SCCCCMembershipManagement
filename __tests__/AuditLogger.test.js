@@ -1,14 +1,14 @@
-if (typeof require !== 'undefined') {
-    var { Audit } = require('../src/common/audit/AuditLogger');
-}
+// Import flat classes (no namespace nesting)
+const AuditLogEntry = require('../src/common/audit/AuditLogEntry');
+const AuditLogger = require('../src/common/audit/AuditLogger');
 
-describe('Audit.Logger', () => {
+describe('AuditLogger', () => {
     let logger;
     let testDate;
 
     beforeEach(() => {
         testDate = new Date('2024-01-15T10:30:00Z');
-        logger = new Audit.Logger(testDate);
+        logger = new AuditLogger(testDate);
     });
 
     describe('createLogEntry', () => {
@@ -157,7 +157,7 @@ describe('Audit.Logger', () => {
     describe('timestamp handling', () => {
         it('should use provided date for all entries', () => {
             const customDate = new Date('2023-06-15T14:20:00Z');
-            const customLogger = new Audit.Logger(customDate);
+            const customLogger = new AuditLogger(customDate);
 
             const entry = customLogger.createLogEntry({ type: 'Join', outcome: 'success' });
 
@@ -165,7 +165,7 @@ describe('Audit.Logger', () => {
         });
 
         it('should use current date if no date provided', () => {
-            const loggerNoDate = new Audit.Logger();
+            const loggerNoDate = new AuditLogger();
             const beforeCreation = new Date();
             
             const entry = loggerNoDate.createLogEntry({ type: 'Join', outcome: 'success' });

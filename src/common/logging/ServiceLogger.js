@@ -11,13 +11,13 @@
  * Architecture:
  * - Pure function pattern - returns audit entries for persistence
  * - Calls Common.Logger for system logs (side effect)
- * - Follows existing Audit.Logger generator pattern
+ * - Follows existing AuditLogger generator pattern
  * 
  * Usage:
  *   const logger = new Common.Logging.ServiceLogger('GroupManagementService', 'user@example.com');
  *   logger.logServiceAccess('getData'); // Logs both audit + system
  *   const auditEntry = logger.createAuditEntry('ProfileUpdate', 'success', 'Updated phone number');
- *   // Later: Audit.Persistence.persistAuditEntries(fiddler, [auditEntry]);
+ *   // Later: AuditPersistence.persistAuditEntries(fiddler, [auditEntry]);
  * 
  * Layer: Layer 1 Infrastructure (can use Common.Logger)
  */
@@ -39,7 +39,7 @@ Common.Logging.ServiceLogger = class {
         this.serviceName = serviceName;
         this.userEmail = userEmail;
         this.timestamp = timestamp || new Date();
-        this.auditLogger = new Audit.Logger(this.timestamp);
+        this.auditLogger = new AuditLogger(this.timestamp);
     }
 
     /**
@@ -47,7 +47,7 @@ Common.Logging.ServiceLogger = class {
      * Creates audit entry + system log for service access
      * 
      * @param {string} operation - Operation name (e.g., 'getData', 'getProfile')
-     * @returns {Audit.LogEntry} Audit entry for persistence
+     * @returns {AuditLogEntry} Audit entry for persistence
      */
     logServiceAccess(operation) {
         // System log: INFO level for normal access
@@ -73,7 +73,7 @@ Common.Logging.ServiceLogger = class {
      * @param {string} note - Human-readable description of what happened
      * @param {string} [error] - Error message if outcome is 'fail'
      * @param {any} [jsonData] - Additional structured data for debugging
-     * @returns {Audit.LogEntry} Audit entry for persistence
+     * @returns {AuditLogEntry} Audit entry for persistence
      */
     logOperation(operationType, outcome, note, error, jsonData) {
         // System log: INFO for success, ERROR for failure
@@ -108,7 +108,7 @@ Common.Logging.ServiceLogger = class {
      * @param {string} operation - Operation that failed
      * @param {Error | string} error - Error object or message
      * @param {any} [additionalData] - Additional debugging data
-     * @returns {Audit.LogEntry} Audit entry for persistence
+     * @returns {AuditLogEntry} Audit entry for persistence
      */
     logError(operation, error, additionalData) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -147,7 +147,7 @@ Common.Logging.ServiceLogger = class {
      * @param {string} note - Human-readable note
      * @param {string} [error] - Error message
      * @param {any} [jsonData] - Additional data
-     * @returns {Audit.LogEntry} Audit entry for persistence
+     * @returns {AuditLogEntry} Audit entry for persistence
      */
     createAuditEntry(type, outcome, note, error, jsonData) {
         return this.auditLogger.createLogEntry({

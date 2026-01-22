@@ -4,7 +4,7 @@
  * Purpose: Guarantee that Manager business methods return exactly one audit entry per business event.
  * 
  * Contract Rules:
- * 1. Every business event (success or failure) MUST generate exactly one Audit.LogEntry
+ * 1. Every business event (success or failure) MUST generate exactly one AuditLogEntry
  * 2. No other audit entries should be generated (no noise)
  * 3. Each audit entry must have: type, outcome, note/error, timestamp
  * 
@@ -18,13 +18,15 @@
  * processExpiredMembers when the queue is consumed.
  */
 
+// Import flat classes (no namespace nesting)
+const AuditLogEntry = require('../src/common/audit/AuditLogEntry');
+const AuditLogger = require('../src/common/audit/AuditLogger');
+
 const ns = require('../src/1namespaces.js');
 require('../src/services/MembershipManagement/utils.js');
 require('../src/services/MembershipManagement/Manager.js');
-require('../src/common/audit/AuditLogger.js');
 
 const MembershipManagement = global.MembershipManagement;
-const Audit = global.Audit;
 const utils = MembershipManagement.Utils;
 
 describe('Audit Contract Tests', () => {
@@ -38,7 +40,7 @@ describe('Audit Contract Tests', () => {
 
   beforeEach(() => {
     today = new Date('2024-01-15');
-    auditLogger = new Audit.Logger();
+    auditLogger = new AuditLogger();
     
     actionSpecs = {
       Expiry1: { Type: 'Expiry1', Subject: 'Expiring soon', Body: 'Your membership expires on {Expires}', Offset: -30 },
