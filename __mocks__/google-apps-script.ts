@@ -58,10 +58,12 @@ global.Utilities = {
     getLog: jest.fn(() => ''),
 } as any;
 
-// Mock ApiClient and ApiClientManager (flat class pattern)
-const { ApiClient, ClientManager } = require('../src/common/api/ApiClient');
-(global as any).ApiClient = ApiClient;
-(global as any).ApiClientManager = ClientManager;
+// ApiClient and ApiClientManager are declared in global.d.ts
+// In GAS runtime, they are loaded from ApiClient.js
+// In tests, we need to load the actual implementation
+const ApiClientModule = require('../src/common/api/ApiClient');
+(global as any).ApiClient = ApiClientModule.ApiClient;
+(global as any).ApiClientManager = ApiClientModule.ClientManager;
 
 // Mock Common namespace (backward compatibility for Common.Logger)
 (global as any).Common = (global as any).Common || {};

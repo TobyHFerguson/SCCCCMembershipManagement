@@ -55,7 +55,7 @@ var ApiClientManager = (function () {
         /**
          * Create a successful response
          * @param {*} data - Response data
-         * @param {Object} [meta] - Optional metadata
+         * @param {Record<string, any>} [meta] - Optional metadata (key-value pairs)
          * @returns {ApiResponse}
          */
         static successResponse(data, meta) {
@@ -73,7 +73,7 @@ var ApiClientManager = (function () {
          * Create an error response
          * @param {string} error - Error message
          * @param {string} [errorCode] - Machine-readable error code
-         * @param {Object} [meta] - Optional metadata
+         * @param {Record<string, any>} [meta] - Optional metadata (key-value pairs)
          * @returns {ApiResponse}
          */
         static errorResponse(error, errorCode, meta) {
@@ -108,7 +108,7 @@ var ApiClientManager = (function () {
 
         /**
          * Validate that required parameters are present
-         * @param {Object} params - Request parameters
+         * @param {Record<string, any>} params - Request parameters (key-value pairs)
          * @param {string[]} required - Required parameter names
          * @returns {{valid: boolean, missing?: string[]}}
          */
@@ -149,9 +149,9 @@ var ApiClientManager = (function () {
 
         /**
          * Sanitize request parameters
-         * @param {Object} params - Parameters to sanitize
-         * @param {Object} schema - Schema defining max lengths per field
-         * @returns {Object}
+         * @param {Record<string, any>} params - Parameters to sanitize (key-value pairs)
+         * @param {Record<string, number | Record<string, any>>} schema - Schema defining max lengths per field
+         * @returns {Record<string, any>}
          */
         static sanitizeParams(params, schema) {
             if (schema === undefined) schema = {};
@@ -211,7 +211,7 @@ var ApiClientManager = (function () {
         /**
          * Create metadata from request context
          * @param {{action: string, requestId: string, startTime: number}} context - Request context
-         * @returns {Object}
+         * @returns {{requestId: string, duration: number, action: string}}
          */
         static createMetaFromContext(context) {
             return {
@@ -267,8 +267,8 @@ var ApiClientManager = (function () {
         /**
          * Format an error for logging (hide sensitive data)
          * @param {Error|string} error - The error
-         * @param {Object} [request] - The request (optional, will be sanitized)
-         * @returns {Object}
+         * @param {{action?: string, params?: any, token?: string}} [request] - The request (optional, will be sanitized)
+         * @returns {{message: string, stack?: string, action?: string, hasParams?: boolean, hasToken?: boolean}}
          */
         static formatErrorForLogging(error, request) {
             var result = {
@@ -309,8 +309,8 @@ var ApiClient = (function () {
         /**
          * Register an action handler
          * @param {string} action - Action name
-         * @param {function(Object, string): ApiResponse} handler - Handler function
-         * @param {Object} [options] - Handler options
+         * @param {function(Record<string, any>, string): ApiResponse} handler - Handler function
+         * @param {{requiresAuth?: boolean, description?: string}} [options] - Handler options
          * @param {boolean} [options.requiresAuth=true] - Whether authentication is required
          * @param {string} [options.description] - Action description
          */
@@ -393,7 +393,7 @@ var ApiClient = (function () {
          * Format and return response
          * @private
          * @param {ApiResponse} response - The response
-         * @param {Object} context - Request context
+         * @param {{action: string, requestId: string, startTime: number}} context - Request context
          * @returns {string} JSON-encoded response
          */
         static _respond(response, context) {
