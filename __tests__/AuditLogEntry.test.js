@@ -9,8 +9,9 @@
 jest.mock('../src/common/config/Properties.js', () => ({}));
 jest.mock('../src/common/utils/Logger.js', () => ({}));
 
-// Load the AuditLogEntry class
-require('../src/common/audit/AuditLogEntry.js');
+// Load the AuditLogEntry class and assign to global
+const Audit = require('../src/common/audit/AuditLogEntry.js');
+global.Audit = Audit;
 
 describe('Audit.LogEntry Class', () => {
   

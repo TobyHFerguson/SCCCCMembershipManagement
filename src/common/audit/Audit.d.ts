@@ -4,21 +4,58 @@
 
 declare namespace Audit {
     /**
-     * Audit log entry type
+     * Audit Log Entry class (IIFE-wrapped pattern)
      */
-    interface LogEntry {
-        /** Timestamp of the event in ISO format */
+    class LogEntry {
+        /** Timestamp of the event */
         Timestamp: Date;
         /** Type of business event (ActionType values or 'DeadLetter') */
         Type: string;
         /** Outcome of the operation */
-        Outcome: 'success' | 'fail';
+        Outcome: string;
         /** Additional human-readable note */
         Note: string;
         /** Error message if applicable */
         Error: string;
         /** JSON-serialized detailed data (e.g., stack traces, error details) */
         JSON: string;
+
+        /**
+         * Constructor
+         */
+        constructor(
+            type: string,
+            outcome: string,
+            note?: string,
+            error?: string,
+            jsonData?: string,
+            timestamp?: Date
+        );
+
+        /**
+         * Convert to array for spreadsheet persistence
+         */
+        toArray(): Array<Date | string>;
+
+        /**
+         * Static factory method - never throws
+         */
+        static create(
+            type: string,
+            outcome: string,
+            note?: string,
+            error?: string,
+            jsonData?: string,
+            timestamp?: Date
+        ): LogEntry;
+
+        /**
+         * Validate array of entries
+         */
+        static validateArray(
+            entries: Array<LogEntry | object>,
+            context: string
+        ): LogEntry[];
     }
 
     /**

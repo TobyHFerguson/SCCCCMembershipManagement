@@ -2,7 +2,13 @@
 
 // Load AuditLogEntry class for Node.js/Jest environment
 if (typeof module !== 'undefined') {
-    require('./AuditLogEntry.js');
+    const loaded = require('./AuditLogEntry.js');
+    // Ensure Audit.LogEntry is available globally
+    if (typeof globalThis.Audit === 'undefined') {
+        globalThis.Audit = loaded;
+    } else if (loaded && loaded.LogEntry) {
+        globalThis.Audit.LogEntry = loaded.LogEntry;
+    }
 }
 
 // Audit namespace declared in src/1namespaces.js
@@ -10,6 +16,9 @@ if (typeof module !== 'undefined') {
 if (typeof globalThis.Audit === 'undefined') {
     globalThis.Audit = {};
 }
+
+// Also create local reference for use in this file
+var Audit = globalThis.Audit;
 
 /**
  * Pure JavaScript audit logger
