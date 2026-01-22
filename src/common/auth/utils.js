@@ -4,7 +4,7 @@
  * @deprecated The sendMagicLink function is deprecated and will be removed in a future release.
  *             Use Common.Auth.VerificationCode for the new SPA authentication flow.
  *             This module remains for backward compatibility when new auth is disabled.
- *             Call Common.Config.FeatureFlags.enableNewAuth() to switch to the new flow.
+ *             Call FeatureFlags.enableNewAuth() to switch to the new flow.
  */
 Common.Auth.Utils = {
 
@@ -12,7 +12,7 @@ Common.Auth.Utils = {
      * Send a magic link to the user's email address.
      * 
      * @deprecated This method is deprecated. Use Common.Auth.VerificationCode.requestCode() instead.
-     *             Call Common.Config.FeatureFlags.enableNewAuth() to switch to the new flow.
+     *             Call FeatureFlags.enableNewAuth() to switch to the new flow.
      * @param {string} email - The user's email address (will be normalized)
      * @param {string} service - The service identifier (e.g., 'GroupManagementService')
      * @returns {{success: boolean}} Always returns success (security: don't reveal if email exists)

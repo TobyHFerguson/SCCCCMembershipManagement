@@ -30,6 +30,44 @@ declare class AppLogger {
     static setContainerSpreadsheet(spreadsheetId: string): void;
 }
 
+/**
+ * FeatureFlags - Feature flag management for Google Apps Script
+ * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ */
+declare class FeatureFlags {
+    static isEnabled(flagName: string, defaultValue?: boolean): boolean;
+    static setFlag(flagName: string, value: boolean): { success: boolean; error?: string };
+    static deleteFlag(flagName: string): { success: boolean; error?: string };
+    static getAllFlags(): Record<string, boolean>;
+    static getSummary(): { enabled: string[]; disabled: string[]; total: number };
+    static enableNewAuth(): { success: boolean; error?: string };
+    static emergencyRollback(): { success: boolean; error?: string };
+    static isNewAuthEnabled(): boolean;
+    static isSPAModeEnabled(): boolean;
+    static getKnownFlags(): Record<string, FeatureFlagConfig>;
+}
+
+/**
+ * FeatureFlagsManager - Pure logic helper class for feature flag operations
+ * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ */
+declare class FeatureFlagsManager {
+    static validateFlagName(flagName: string): { valid: boolean; error?: string };
+    static parseBoolean(value: string | boolean | null | undefined, defaultValue: boolean): boolean;
+    static formatForStorage(value: boolean): string;
+    static shouldEnableFeature(flagValue: boolean, isProduction: boolean, forceEnabled?: boolean): boolean;
+    static summarizeFlags(flags: Record<string, boolean>): { enabled: string[]; disabled: string[]; total: number };
+}
+
+/**
+ * Feature flag configuration interface
+ */
+interface FeatureFlagConfig {
+    name: string;
+    defaultValue: boolean;
+    description?: string;
+}
+
 // Core authentication types (used across services)
 interface TokenDataType {
     Email: string;
@@ -461,36 +499,13 @@ declare namespace Common {
     // Logger instance (backward compat - points to AppLogger)
     const Logger: typeof AppLogger;
     
-    // Configuration namespace
+    // Configuration namespace (backward compatibility - points to flat classes)
     namespace Config {
-        // Feature Flags
-        interface FeatureFlagConfig {
-            name: string;
-            defaultValue: boolean;
-            description?: string;
-        }
+        // Points to flat FeatureFlags class
+        const FeatureFlags: typeof globalThis.FeatureFlags;
         
-        namespace FeatureFlags {
-            function isEnabled(flagName: string, defaultValue?: boolean): boolean;
-            function setFlag(flagName: string, value: boolean): { success: boolean; error?: string };
-            function deleteFlag(flagName: string): { success: boolean; error?: string };
-            function getAllFlags(): Record<string, boolean>;
-            function getSummary(): { enabled: string[]; disabled: string[]; total: number };
-            function enableNewAuth(): { success: boolean; error?: string };
-            function emergencyRollback(): { success: boolean; error?: string };
-            function isNewAuthEnabled(): boolean;
-            function isSPAModeEnabled(): boolean;
-            function getKnownFlags(): Record<string, FeatureFlagConfig>;
-        }
-        
-        // FeatureFlagsManager - Pure logic class
-        class FeatureFlagsManager {
-            static validateFlagName(flagName: string): { valid: boolean; error?: string };
-            static parseBoolean(value: string | boolean | null | undefined, defaultValue: boolean): boolean;
-            static formatForStorage(value: boolean): string;
-            static shouldEnableFeature(flagValue: boolean, isProduction: boolean, forceEnabled?: boolean): boolean;
-            static summarizeFlags(flags: Record<string, boolean>): { enabled: string[]; disabled: string[]; total: number };
-        }
+        // Points to flat FeatureFlagsManager class  
+        const FeatureFlagsManager: typeof globalThis.FeatureFlagsManager;
     }
     
     // Auth namespace

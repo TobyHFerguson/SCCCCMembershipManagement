@@ -30,13 +30,13 @@ function doGet(e) {
     template.include = _includeHtml;
     
     // Check feature flag to determine which auth flow to use
-    const useNewAuth = Common.Config.FeatureFlags.isNewAuthEnabled();
+    const useNewAuth = FeatureFlags.isNewAuthEnabled();
     template.contentFileName = useNewAuth ? VERIFICATION_CODE_INPUT : MAGIC_LINK_INPUT;
     
     // Log which auth flow is being used for monitoring
     if (!useNewAuth) {
         console.warn('[DEPRECATED] Using legacy Magic Link authentication flow. ' +
-            'Call Common.Config.FeatureFlags.enableNewAuth() to use the new Verification Code flow.');
+            'Call FeatureFlags.enableNewAuth() to use the new Verification Code flow.');
     }
     
     const output = template.evaluate()

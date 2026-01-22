@@ -4,7 +4,7 @@
  * @deprecated This function is deprecated and will be removed in a future release.
  *             Use sendVerificationCode() instead, which is part of the new SPA authentication flow.
  *             This function remains for backward compatibility when new auth is disabled.
- *             Call Common.Config.FeatureFlags.enableNewAuth() to switch to the new flow.
+ *             Call FeatureFlags.enableNewAuth() to switch to the new flow.
  * @param {string} email - The user's email address
  * @param {string} service - The service identifier (e.g., 'GroupManagementService')
  * @returns {{success: boolean, error?: string}} Result of the operation
@@ -12,7 +12,7 @@
 function sendMagicLink(email, service) {
   console.log('sendMagicLink(', email, service, ')');
   console.warn('[DEPRECATED] sendMagicLink is deprecated. Use sendVerificationCode instead. ' +
-    'Call Common.Config.FeatureFlags.enableNewAuth() to switch to the new flow.');
+    'Call FeatureFlags.enableNewAuth() to switch to the new flow.');
   email = email.toLowerCase().trim(); // Normalize the email address
   return Common.Auth.Utils.sendMagicLink(email, service);
 }
@@ -319,7 +319,7 @@ function getHomePageContent(email) {
 function getVerificationPageContent() {
   try {
     // Check feature flag to determine which auth flow to use
-    const useNewAuth = Common.Config.FeatureFlags.isNewAuthEnabled();
+    const useNewAuth = FeatureFlags.isNewAuthEnabled();
     
     const VERIFICATION_CODE_INPUT = 'common/auth/verificationCodeInput';
     const MAGIC_LINK_INPUT = 'common/auth/magicLinkInput';

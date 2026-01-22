@@ -168,11 +168,27 @@ GAS has a built-in `Logger` object with `.log()` method that we still use for lo
 
 ---
 
-### Phase -1 Step 5: Common.Config.FeatureFlags ⏳ PENDING
+### Phase -1 Step 5: Common.Config.FeatureFlags ✅ COMPLETE
+
+**Layer**: 0 (Foundation - cannot use Logger)
 
 | Old Name | New Name | Status |
 |----------|----------|--------|
-| `Common.Config.FeatureFlags` | `FeatureFlags` | ⏳ Pending |
+| `Common.Config.FeatureFlags` | `FeatureFlags` | ✅ Complete |
+| `Common.Config.FeatureFlagsManager` | `FeatureFlagsManager` | ✅ Complete |
+
+**Changes Made**:
+- Converted `FeatureFlags.js` to flat IIFE class pattern with two classes
+- Created `FeatureFlags.d.ts` with reference to global.d.ts
+- Added `declare class FeatureFlags` and `declare class FeatureFlagsManager` to `global.d.ts`
+- Added `interface FeatureFlagConfig` to `global.d.ts`
+- Updated ~7 usages from `Common.Config.FeatureFlags` to `FeatureFlags`
+- Updated `Common.Config` namespace in `global.d.ts` to reference flat classes
+- Added backward compatibility bridge for gradual migration
+
+**Results**:
+- Tests: 1113 passing ✅
+- Type Errors: 363 (stable from Step 4)
 
 ---
 
