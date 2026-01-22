@@ -221,21 +221,46 @@ GAS has a built-in `Logger` object with `.log()` method that we still use for lo
 
 ---
 
-### Phase -1 Step 7: Common.Api Namespace ⏳ PENDING
+### Phase -1 Step 7: Common.Api Namespace ✅ COMPLETE
+
+**Commit**: `0647f03` (2026-01-22)
 
 | Old Name | New Name | Status |
 |----------|----------|--------|
-| `Common.Api.ClientManager` | `ApiClientManager` | ⏳ Pending |
+| `Common.Api.ClientManager` | `ApiClientManager` | ✅ Complete |
+
+**Changes Made**:
+- Converted `ApiClient.js` to flat IIFE classes: `ApiClient`, `ApiClientManager`
+- Added flat class declarations in `global.d.ts`
+- Updated 10 files to use flat class names
+- Maintained backward compatibility via `Common.Api.*` bridges
+
+**Results**:
+- Tests: 1113 passing ✅
 
 ---
 
-### Phase -1 Step 8: Common.Data Namespace ⏳ PENDING
+### Phase -1 Step 8: Common.Data Namespace ✅ COMPLETE
+
+**Commit**: `41a4da8` (2026-01-22)
 
 | Old Name | New Name | Status |
 |----------|----------|--------|
-| `Common.Data.ValidatedMember` | `ValidatedMember` | ⏳ Pending |
-| `Common.Data.MemberPersistence` | `MemberPersistence` | ⏳ Pending |
-| `Common.Data.Access` | `DataAccess` | ⏳ Pending |
+| `Common.Data.ValidatedMember` | `ValidatedMember` | ✅ Complete |
+| `Common.Data.MemberPersistence` | `MemberPersistence` | ✅ Complete |
+| `Common.Data.Access` | `DataAccess` | ✅ Complete |
+
+**Changes Made**:
+- Converted `ValidatedMember.js` to flat IIFE class
+- Converted `MemberPersistence.js` to flat IIFE class
+- Converted `data_access.js` to flat `DataAccess` object
+- Added flat class declarations in `global.d.ts`
+- Updated 25 files with ~40 usages across src/ and __tests__/
+- Maintained backward compatibility via `Common.Data.*` bridges
+
+**Results**:
+- Tests: 1113 passing ✅
+- Type Errors: 475 (reduced from 480 baseline)
 
 ---
 
