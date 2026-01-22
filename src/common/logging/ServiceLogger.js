@@ -70,7 +70,7 @@ var ServiceLogger = (function() {
      * @param {'success' | 'fail'} outcome - Operation outcome
      * @param {string} note - Human-readable description of what happened
      * @param {string} [error] - Error message if outcome is 'fail'
-     * @param {any} [jsonData] - Additional structured data for debugging
+     * @param {any} [jsonData] - Additional structured data for debugging (JUSTIFIED: arbitrary debugging data)
      * @returns {AuditLogEntry} Audit entry for persistence
      */
     logOperation(operationType, outcome, note, error, jsonData) {
@@ -105,7 +105,7 @@ var ServiceLogger = (function() {
      * 
      * @param {string} operation - Operation that failed
      * @param {Error | string} error - Error object or message
-     * @param {any} [additionalData] - Additional debugging data
+     * @param {any} [additionalData] - Additional debugging data (JUSTIFIED: arbitrary debugging data)
      * @returns {AuditLogEntry} Audit entry for persistence
      */
     logError(operation, error, additionalData) {
@@ -144,7 +144,7 @@ var ServiceLogger = (function() {
      * @param {'success' | 'fail'} outcome - Operation outcome
      * @param {string} note - Human-readable note
      * @param {string} [error] - Error message
-     * @param {any} [jsonData] - Additional data
+     * @param {any} [jsonData] - Additional data (JUSTIFIED: arbitrary debugging data)
      * @returns {AuditLogEntry} Audit entry for persistence
      */
     createAuditEntry(type, outcome, note, error, jsonData) {

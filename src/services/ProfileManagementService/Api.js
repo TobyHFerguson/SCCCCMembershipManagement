@@ -133,8 +133,7 @@ ProfileManagementService.initApi = function() {
  * Handle getProfile API request
  * Gets user's full profile data
  * 
- * @param {Object} params - Request parameters
- * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
+ * @param {{_authenticatedEmail: string}} params - Request parameters
  * @returns {Common.Api.ApiResponse}
  */
 ProfileManagementService.Api.handleGetProfile = function(params) {
@@ -192,8 +191,7 @@ ProfileManagementService.Api.handleGetProfile = function(params) {
  * Handle getEditableFields API request
  * Gets only the editable fields from user's profile
  * 
- * @param {Object} params - Request parameters
- * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
+ * @param {{_authenticatedEmail: string}} params - Request parameters
  * @returns {Common.Api.ApiResponse}
  */
 ProfileManagementService.Api.handleGetEditableFields = function(params) {
@@ -244,9 +242,7 @@ ProfileManagementService.Api.handleGetEditableFields = function(params) {
  * LOGGING: Logs full execution flow including validation and update results
  * Creates audit entries for profile changes
  * 
- * @param {Object} params - Request parameters
- * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
- * @param {Object} params.updates - Profile updates to apply
+ * @param {{_authenticatedEmail: string, updates: Record<string, any>}} params - Request parameters with updates object containing field values
  * @returns {Common.Api.ApiResponse}
  */
 ProfileManagementService.Api.handleUpdateProfile = function(params) {

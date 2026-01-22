@@ -97,7 +97,7 @@ var AppLogger = (function() {
    * @param {string} level - Log level (DEBUG, INFO, WARN, ERROR)
    * @param {string} service - Service name
    * @param {string} message - Log message
-   * @param {any} data - Optional additional data
+   * @param {any} data - Optional additional data (JUSTIFIED: arbitrary debugging data, JSON-serialized)
    * @returns {string} Formatted message
    */
   function formatMessage(level, service, message, data) {
@@ -214,7 +214,7 @@ var AppLogger = (function() {
    * @param {string} level - Log level
    * @param {string} service - Service name
    * @param {string} message - Message
-   * @param {any} data - Optional data
+   * @param {any} data - Optional data (JUSTIFIED: arbitrary debugging data, JSON-serialized)
    */
   function logToSheet(level, service, message, data) {
     try {
@@ -349,7 +349,7 @@ var AppLogger = (function() {
    * Sends error notifications via email
    * @param {string} service - Service name
    * @param {string} message - Error message
-   * @param {any} error - Error object or additional data
+   * @param {any} error - Error object or additional data (JUSTIFIED: arbitrary error data, JSON-serialized)
    */
   function sendErrorEmail(service, message, error) {
     try {
@@ -379,7 +379,7 @@ var AppLogger = (function() {
    * @param {string} level - Log level
    * @param {string} service - Service name (e.g., 'MembershipManagement', 'VotingService')
    * @param {string} message - Message
-   * @param {any} data - Optional additional data
+   * @param {any} data - Optional additional data (JUSTIFIED: arbitrary debugging data, JSON-serialized)
    */
   function log(level, service, message, data) {
     const levelValue = LOG_LEVELS[level] || LOG_LEVELS.INFO;
@@ -417,7 +417,7 @@ var AppLogger = (function() {
      * Log a debug message
      * @param {string} service - Service name (e.g., 'MembershipManagement')
      * @param {string} message - Log message
-     * @param {any} [data] - Optional additional data
+     * @param {any} [data] - Optional additional data (JUSTIFIED: arbitrary debugging data, JSON-serialized)
      */
     static debug(service, message, data) {
       log('DEBUG', service, message, data);
@@ -427,7 +427,7 @@ var AppLogger = (function() {
      * Log an info message
      * @param {string} service - Service name (e.g., 'MembershipManagement')
      * @param {string} message - Log message
-     * @param {any} [data] - Optional additional data
+     * @param {any} [data] - Optional additional data (JUSTIFIED: arbitrary debugging data, JSON-serialized)
      */
     static info(service, message, data) {
       log('INFO', service, message, data);
@@ -437,7 +437,7 @@ var AppLogger = (function() {
      * Log a warning message
      * @param {string} service - Service name (e.g., 'MembershipManagement')
      * @param {string} message - Log message
-     * @param {any} [data] - Optional additional data
+     * @param {any} [data] - Optional additional data (JUSTIFIED: arbitrary debugging data, JSON-serialized)
      */
     static warn(service, message, data) {
       log('WARN', service, message, data);
@@ -447,7 +447,7 @@ var AppLogger = (function() {
      * Log an error message
      * @param {string} service - Service name (e.g., 'MembershipManagement')
      * @param {string} message - Log message
-     * @param {any} [data] - Optional additional data
+     * @param {any} [data] - Optional additional data (JUSTIFIED: arbitrary debugging data, JSON-serialized)
      */
     static error(service, message, data) {
       log('ERROR', service, message, data);
