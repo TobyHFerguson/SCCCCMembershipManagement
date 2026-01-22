@@ -27,19 +27,19 @@
  * @property {*} [data] - Response data (if success)
  * @property {string} [error] - Error message (if failed)
  * @property {string} [errorCode] - Machine-readable error code
- * @property {Object} [meta] - Optional metadata (timing, version, etc.)
+ * @property {{requestId: string, duration: number, action: string}} [meta] - Optional metadata with request tracking
  */
 
 /**
  * @typedef {Object} ApiRequest
  * @property {string} action - The API action to perform
- * @property {Object} [params] - Action parameters
+ * @property {Record<string, any>} [params] - Action parameters (key-value pairs)
  * @property {string} [token] - Authentication token
  */
 
 /**
  * @typedef {Object} ActionHandler
- * @property {function(Object, string): ApiResponse} handler - The handler function
+ * @property {function(Record<string, any>, string): ApiResponse} handler - The handler function (params, token) => ApiResponse
  * @property {boolean} [requiresAuth] - Whether authentication is required
  * @property {string} [description] - Action description
  */

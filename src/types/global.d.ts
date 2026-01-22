@@ -234,7 +234,11 @@ interface ApiResponse {
     data?: any;
     error?: string;
     errorCode?: string;
-    meta?: Record<string, any>;
+    meta?: {
+        requestId: string;
+        duration: number;
+        action: string;
+    };
 }
 
 interface ApiRequest {
