@@ -568,7 +568,7 @@ declare class MemberPersistence {
 }
 
 // Flat DataAccess object (new pattern - replaces Common.Data.Access)
-declare const DataAccess: {
+declare var DataAccess: {
     /** Gets Bootstrap configuration data */
     getBootstrapData(): BootstrapData[];
     
