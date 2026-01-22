@@ -264,16 +264,29 @@ GAS has a built-in `Logger` object with `.log()` method that we still use for lo
 
 ---
 
-### Phase -1 Step 9: Common.Logging Namespace ⏳ PENDING
+### Phase -1 Step 9: Common.Logging Namespace ✅ COMPLETE
+
+**Commit**: `4f39411` (2026-01-21)
 
 | Old Name | New Name | Status |
 |----------|----------|--------|
-| `Common.Logging.ServiceLogger` | `ServiceLogger` | ⏳ Pending |
-| `Common.Logging.ServiceExecutionLogger` | `ServiceExecutionLogger` | ⏳ Pending |
+| `Common.Logging.ServiceLogger` | `ServiceLogger` | ✅ Complete |
+| `Common.Logging.ServiceExecutionLogger` | `ServiceExecutionLogger` | ✅ Complete |
+
+**Changes Made**:
+- ServiceLogger.js: Flat IIFE-wrapped class with backward compat alias
+- ServiceExecutionLogger.js: Flat object with backward compat alias
+- Updated usages in webapp_endpoints.js, Api.js files
+- Updated test files with flat class mocks
+- Added flat declarations to global.d.ts
+
+**Results**:
+- Tests: 1113 passing ✅
+- Files: 9 changed
 
 ---
 
-### Phase -1 Step 8: Cleanup ⏳ PENDING
+### Phase -1 Step 10: Cleanup ⏳ PENDING
 
 - [ ] Remove empty namespace declarations from `1namespaces.js`
 - [ ] Update `NAMESPACE_DECLARATION_PATTERN.md` to reference new flat pattern
