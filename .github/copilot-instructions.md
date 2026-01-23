@@ -258,24 +258,18 @@ const result = manager.processPaidTransactions(txns, members, schedule);
 **Status**: Tracked in Issue #291
 
 **Completed Phases**:
-- ✅ Phase 0-7: All 5 services migrated to SPA + verification code auth
+- ✅ Phase 0-9: All 5 services migrated to SPA + verification code auth with production rollout complete
   - GroupManagementService
   - ProfileManagementService  
   - DirectoryService
   - EmailChangeService
   - VotingService
 
-**Key Migration Principles**:
-1. **Feature Flags**: `Common.Config.FeatureFlags.isNewAuthEnabled()` for safe rollout
-2. **Backward Compatibility**: Magic links still work when flag is OFF (will be removed)
-3. **Verification Codes**: 6-digit codes, 10-minute expiry, rate limiting (5 attempts)
-4. **SPA Pattern**: Single doGet for bootstrap, then `google.script.run` APIs
-5. **Session Management**: Tokens in memory only (not in HTML/URL)
-
-**Deprecated Code** (will be removed after production rollout):
-- `sendMagicLink()` in `webapp_endpoints.js`
-- `Common.Auth.Utils.sendMagicLink()` in `utils.js`
-- `src/common/auth/magicLinkInput.html`
+**Key Patterns**:
+1. **Verification Codes**: 6-digit codes, 10-minute expiry, rate limiting (5 attempts)
+2. **SPA Pattern**: Single doGet for bootstrap, then `google.script.run` APIs
+3. **Session Management**: Tokens in memory only (not in HTML/URL)
+4. **Feature Flags**: `Common.Config.FeatureFlags.isNewAuthEnabled()` for future rollouts
 
 **Complete Migration Plan**: `docs/issues/ISSUE-SPA-AND-AUTH-COMBINED.md`
 

@@ -1,4 +1,3 @@
-const MAGIC_LINK_INPUT = 'common/auth/magicLinkInput.html'; // Name of the HTML file for magic link input form
 const VERIFICATION_CODE_INPUT = 'common/auth/verificationCodeInput.html'; // Name of the HTML file for verification code input
 const _LAYOUT_FILE = 'common/html/_Layout.html'; // Name of the layout file
 
@@ -28,16 +27,7 @@ function doGet(e) {
         tabletMax: tabletMaxBreakpoint
     };
     template.include = _includeHtml;
-    
-    // Check feature flag to determine which auth flow to use
-    const useNewAuth = FeatureFlags.isNewAuthEnabled();
-    template.contentFileName = useNewAuth ? VERIFICATION_CODE_INPUT : MAGIC_LINK_INPUT;
-    
-    // Log which auth flow is being used for monitoring
-    if (!useNewAuth) {
-        console.warn('[DEPRECATED] Using legacy Magic Link authentication flow. ' +
-            'Call FeatureFlags.enableNewAuth() to use the new Verification Code flow.');
-    }
+    template.contentFileName = VERIFICATION_CODE_INPUT;
     
     const output = template.evaluate()
         .setTitle('SCCCC Services - Request Verification Code')

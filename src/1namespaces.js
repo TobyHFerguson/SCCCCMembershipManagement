@@ -17,7 +17,7 @@
  * - Common.Logging.ServiceLogger → ServiceLogger
  * - Common.Logging.ServiceExecutionLogger → ServiceExecutionLogger
  * - Common.Config.FeatureFlags → FeatureFlags, FeatureFlagsManager
- * - Common.Auth.* → AuthUtils, TokenManager, TokenStorage, VerificationCode, VerificationCodeManager
+ * - Common.Auth.* → TokenManager, TokenStorage, VerificationCode, VerificationCodeManager
  * - Common.Api.* → ApiClient, ApiClientManager
  * 
  * NOTE: Common namespace REMOVED - all classes now flat (use ApiResponse, not Common.Api.ApiResponse)

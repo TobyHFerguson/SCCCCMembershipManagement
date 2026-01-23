@@ -184,16 +184,6 @@ declare const VERIFICATION_CONFIG: {
     RATE_LIMIT_WINDOW_MINUTES: number;
 };
 
-/**
- * AuthUtils - Deprecated authentication utility functions
- * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
- * @deprecated Use VerificationCode for the new SPA authentication flow
- */
-declare class AuthUtils {
-    /** @deprecated Use VerificationCode.requestCode() instead */
-    static sendMagicLink(email: string, service: string): { success: boolean };
-}
-
 // ============================================================================
 // API Client Classes (Flat Pattern - no namespace nesting)
 // ============================================================================

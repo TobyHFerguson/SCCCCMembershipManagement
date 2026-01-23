@@ -1,23 +1,4 @@
 /**
- * Send a magic link to the user's email address.
- * 
- * @deprecated This function is deprecated and will be removed in a future release.
- *             Use sendVerificationCode() instead, which is part of the new SPA authentication flow.
- *             This function remains for backward compatibility when new auth is disabled.
- *             Call FeatureFlags.enableNewAuth() to switch to the new flow.
- * @param {string} email - The user's email address
- * @param {string} service - The service identifier (e.g., 'GroupManagementService')
- * @returns {{success: boolean, error?: string}} Result of the operation
- */
-function sendMagicLink(email, service) {
-  console.log('sendMagicLink(', email, service, ')');
-  console.warn('[DEPRECATED] sendMagicLink is deprecated. Use sendVerificationCode instead. ' +
-    'Call FeatureFlags.enableNewAuth() to switch to the new flow.');
-  email = email.toLowerCase().trim(); // Normalize the email address
-  return AuthUtils.sendMagicLink(email, service);
-}
-
-/**
  * Send a verification code to the user's email address.
  * This is the new authentication flow for SPA services.
  * 
@@ -318,16 +299,9 @@ function getHomePageContent(email) {
  */
 function getVerificationPageContent() {
   try {
-    // Check feature flag to determine which auth flow to use
-    const useNewAuth = FeatureFlags.isNewAuthEnabled();
-    
-    const VERIFICATION_CODE_INPUT = 'common/auth/verificationCodeInput';
-    const MAGIC_LINK_INPUT = 'common/auth/magicLinkInput';
-    const contentFileName = useNewAuth ? VERIFICATION_CODE_INPUT : MAGIC_LINK_INPUT;
-    
     // Create template for just the content (no layout wrapper)
     // This is used for container replacement when signing out
-    const template = HtmlService.createTemplateFromFile(contentFileName);
+    const template = HtmlService.createTemplateFromFile('common/auth/verificationCodeInput');
     template.service = ''; // No specific service for verification page
     
     // Evaluate and return just the inner HTML content
