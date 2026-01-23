@@ -505,6 +505,26 @@ declare class SpreadsheetManager {
     static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
 }
 
+/**
+ * Plain object shape of ValidatedMember data (without class methods)
+ * Use this for functions that return/accept member data as plain objects
+ * rather than ValidatedMember class instances
+ */
+interface ValidatedMemberData {
+    Email: string;
+    Status: string;
+    First: string;
+    Last: string;
+    Phone: string;
+    Joined: Date;
+    Expires: Date;
+    Period: number | null;
+    'Directory Share Name': boolean;
+    'Directory Share Email': boolean;
+    'Directory Share Phone': boolean;
+    'Renewed On': Date | null;
+}
+
 // Flat ValidatedMember class (new pattern - replaces Common.Data.ValidatedMember)
 declare class ValidatedMember {
     Email: string;
@@ -591,8 +611,8 @@ declare var DataAccess: {
     /** Gets a specific member by email address */
     getMember: (email: string) => ValidatedMember | undefined;
     
-    /** Updates a member's information */
-    updateMember: (email: string, newMember: ValidatedMember) => boolean;
+    /** Updates a member's information (accepts class instance or plain object) */
+    updateMember: (email: string, newMember: ValidatedMember | ValidatedMemberData) => boolean;
     
     /** Checks if an email address belongs to a member */
     isMember: (email: string) => boolean;
@@ -1045,7 +1065,7 @@ declare namespace ProfileManagementService {
     interface ProfileUpdateResult {
         success: boolean;
         message: string;
-        mergedProfile?: Record<string, any>;
+        mergedProfile?: ValidatedMemberData;
     }
 
     // Profile field schema

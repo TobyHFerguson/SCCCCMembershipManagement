@@ -253,7 +253,7 @@ Based on the analysis:
 
 ## Next Steps for Opus
 
-1. **Review this handoff document**
+1. **Review this handoff document, copilot-instructions and gas-best-practices**
 2. **Examine `/tmp/phase3-errors.txt` for detailed error messages**
 3. **For each of the 13 errors**:
    - Read the code context

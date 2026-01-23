@@ -580,11 +580,14 @@ VotingService.Manager = class {
         .map(e => this.normalizeEmail(e))
         .filter(e => e.length > 0);
 
+    /** @type {Set<string>} */
     const newSet = new Set(normalizeAndFilter(newOfficers));
+    /** @type {Set<string>} */
     const currentSet = new Set(normalizeAndFilter(currentOfficers));
 
-    const toAdd = [...newSet].filter(e => !currentSet.has(e));
-    const toRemove = [...currentSet].filter(e => !newSet.has(e));
+    // Use Array.from() for TypeScript compatibility (GAS V8 supports Set spread, but TS target is ES5)
+    const toAdd = Array.from(newSet).filter(e => !currentSet.has(e));
+    const toRemove = Array.from(currentSet).filter(e => !newSet.has(e));
 
     return { toAdd, toRemove };
   }

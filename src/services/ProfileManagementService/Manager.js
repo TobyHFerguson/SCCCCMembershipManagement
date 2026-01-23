@@ -326,7 +326,7 @@ ProfileManagementService.Manager = class {
    * Merge original profile with updates
    * @param {ValidatedMember} originalProfile - The original profile
    * @param {Record<string, any>} updates - The updates to apply (field name to new value)
-   * @returns {ValidatedMember} The merged profile
+   * @returns {ValidatedMemberData} The merged profile (plain object, not class instance)
    */
   static mergeProfiles(originalProfile, updates) {
     return { ...originalProfile, ...updates };

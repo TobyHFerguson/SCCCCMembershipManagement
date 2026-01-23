@@ -250,6 +250,7 @@ VotingService.Trigger = {
 
         // console.log('recording valid vote', vote);
         const votes = fiddler.getData();
+        // @ts-ignore - vote has required 'Voter Email' field added during processing
         votes.push(vote);
         fiddler.setData(votes).dumpValues();
         VotingService.Trigger.sendValidVoteEmail_(email, VotingService.Trigger.getElectionTitle_(fiddler.getSheet().getParent()));

@@ -365,12 +365,12 @@ function withLock_(func, lockType = 'document', timeoutMillis = 30000) {
         func.apply(this, arguments);
       } else {
         // Handle the case where the lock couldn't be acquired.
-        AppLogger.warn('Could not acquire lock. The resource is busy.');
+        AppLogger.warn('triggers', 'Could not acquire lock. The resource is busy.');
         // You could also throw an error or handle it gracefully here.
       }
     } catch (e) {
       // Gracefully handle any errors from the wrapped function.
-      AppLogger.error(`An error occurred: ${e.message}`);
+      AppLogger.error('triggers', `An error occurred: ${e.message}`);
       // Add your custom error handling logic, e.g., send an email.
     } finally {
       // Ensure the lock is always released.

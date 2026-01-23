@@ -44,19 +44,17 @@ GroupManagementService.getUserGroupSubscription = function(userEmail) {
     const groups = DataAccess.getPublicGroups();
     
     // GAS: Get member data for each group
+    /** @type {Record<string, GroupManagementService.GroupMember|null>} */
     const membersByGroup = {};
     groups.forEach(group => {
         const member = GroupSubscription.getMember(group.Email, normalizedEmail);
+        // @ts-ignore - GAS Admin SDK Member type has optional email, but at runtime email is always present
         membersByGroup[group.Email] = member;
     });
     
     // PURE: Build subscriptions using Manager
-    // @ts-ignore - Type compatible at runtime
-    const subscriptions = GroupManagementService.Manager.buildUserSubscriptions(
-        groups,
-        membersByGroup,
-        GroupSubscription.deliveryOptions
-    );
+    // @ts-ignore - GroupSubscription.deliveryOptions returns string[] but Manager expects [string, string] tuples - compatible at runtime
+    const subscriptions = GroupManagementService.Manager.buildUserSubscriptions(groups, membersByGroup, GroupSubscription.deliveryOptions);
     
     return subscriptions;
 }
@@ -68,9 +66,11 @@ GroupManagementService.updateUserSubscriptions = function (updatedSubscriptions,
     const normalizedEmail = GroupManagementService.Manager.normalizeEmail(userEmail);
     
     // GAS: Get current member status for each group
+    /** @type {Record<string, GroupManagementService.GroupMember|null>} */
     const currentMembersByGroup = {};
     for (const subscription of updatedSubscriptions) {
         const member = GroupSubscription.getMember(subscription.groupEmail, normalizedEmail);
+        // @ts-ignore - GAS Admin SDK Member type has optional email, but at runtime email is always present
         currentMembersByGroup[subscription.groupEmail] = member;
     }
     

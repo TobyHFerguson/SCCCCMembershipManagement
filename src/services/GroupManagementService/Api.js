@@ -169,7 +169,7 @@ GroupManagementService.Api.handleGetSubscriptions = function(params) {
  * LOGGING: Logs full execution flow including validation, actions, and results
  * Creates audit entries for subscription changes
  * 
- * @param {{_authenticatedEmail: string, updates: Array<{groupEmail: string, currentDelivery: string | null, newDelivery: string | null}>}} params - Request parameters (_authenticatedEmail injected by ApiClient, updates is array of subscription changes)
+ * @param {{_authenticatedEmail: string, updates: GroupManagementService.SubscriptionUpdate[]}} params - Request parameters (_authenticatedEmail injected by ApiClient, updates is array of subscription changes with groupEmail and deliveryValue)
  * @returns {Common.Api.ApiResponse}
  */
 // @ts-ignore - Function signature compatible with handler type, optional params handled at runtime

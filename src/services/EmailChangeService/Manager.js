@@ -371,7 +371,7 @@ EmailChangeService.Manager = class {
    * Create member update object for spreadsheet update
    * @param {ValidatedMember} originalMember - The original member record
    * @param {string} newEmail - The new email address
-   * @returns {ValidatedMember} Updated member record
+   * @returns {ValidatedMemberData|null} Updated member record (plain object, not class instance)
    */
   static createUpdatedMemberRecord(originalMember, newEmail) {
     if (!originalMember) {

@@ -43,7 +43,7 @@ ProfileManagementService.updateProfile = function (userToken, updatedProfile) {
   const userEmail = TokenManager.getEmailFromMUT(userToken);
   if (!userEmail) {
     console.warn(`Invalid or expired token: ${userToken}`);
-    return JSON.stringify({ success: false, message: "Invalid session. Please refresh the page." });
+    return { success: false, message: "Invalid session. Please refresh the page." };
   }
   if (!updatedProfile) {
     throw new Error("Original and updated profiles must be provided.");
