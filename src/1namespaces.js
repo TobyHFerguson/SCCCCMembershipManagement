@@ -19,18 +19,9 @@
  * - Common.Config.FeatureFlags → FeatureFlags, FeatureFlagsManager
  * - Common.Auth.* → AuthUtils, TokenManager, TokenStorage, VerificationCode, VerificationCodeManager
  * - Common.Api.* → ApiClient, ApiClientManager
+ * 
+ * NOTE: Common namespace REMOVED - all classes now flat (use ApiResponse, not Common.Api.ApiResponse)
  */
-
-const Common = {
-    Auth: {},
-    Config: {},
-    Data: {
-        Storage: {}
-    },
-    Logging: {},
-    Api: {},
-    Logger: {}
-};
 
 const GroupSubscription = {};
 

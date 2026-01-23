@@ -676,230 +676,6 @@ declare const ServiceExecutionLogger: {
     _persistAuditEntries(auditEntries: AuditLogEntry[]): void;
 };
 
-// Common Data namespace - ValidatedMember and persistence
-declare namespace Common {
-    namespace Data {
-        /**
-         * ValidatedMember class with constructor validation
-         */
-        class ValidatedMember {
-            Email: string;
-            Status: string;
-            First: string;
-            Last: string;
-            Phone: string;
-            Joined: Date;
-            Expires: Date;
-            Period: number | null;
-            'Directory Share Name': boolean;
-            'Directory Share Email': boolean;
-            'Directory Share Phone': boolean;
-            'Renewed On': Date | null;
-            
-            constructor(
-                email: string,
-                status: string,
-                first: string,
-                last: string,
-                phone: string,
-                joined: Date,
-                expires: Date,
-                period: number | null,
-                dirName: boolean,
-                dirEmail: boolean,
-                dirPhone: boolean,
-                renewedOn: Date | null
-            );
-            
-            /**
-             * Convert to array for sheet persistence
-             */
-            toArray(): Array<string | Date | number | boolean | null>;
-            
-            /**
-             * Static factory - never throws, returns null on failure
-             */
-            static fromRow(
-                rowArray: Array<any>,
-                headers: string[],
-                rowNumber: number,
-                errorCollector: { errors: string[], rowNumbers: number[] } | null
-            ): ValidatedMember | null;
-            
-            /**
-             * Batch validation with consolidated email alert
-             */
-            static validateRows(
-                rows: Array<Array<any>>,
-                headers: string[],
-                context: string
-            ): ValidatedMember[];
-            
-            /**
-             * Column headers constant
-             */
-            static HEADERS: string[];
-        }
-        
-        /**
-         * Member persistence helper for selective writes
-         */
-        namespace MemberPersistence {
-            /**
-             * Write only changed cells to minimize version history noise
-             */
-            function writeChangedCells(
-                sheet: GoogleAppsScript.Spreadsheet.Sheet,
-                originalRows: Array<Array<any>>,
-                modifiedMembers: ValidatedMember[],
-                headers: string[]
-            ): number;
-            
-            /**
-             * Value equality that handles Dates and primitives
-             */
-            function valuesEqual(a: any, b: any): boolean;
-        }
-        
-        namespace Storage {
-            namespace SpreadsheetManager {
-                // Most specific overloads first
-                function getFiddler(sheetName: 'Tokens'): Fiddler<TokenDataType>;
-                function getFiddler(sheetName: 'Elections'): Fiddler<VotingService.Election>;
-                function getFiddler(sheetName: 'Form Responses 1'): Fiddler<FormResponse>;
-                function getFiddler(sheetName: 'Validated Results'): Fiddler<Result>;
-                function getFiddler(sheetName: 'Invalid Results'): Fiddler<Result>;
-                function getFiddler(sheetName: 'Bootstrap'): Fiddler<BootstrapData>;
-                function getFiddler(sheetName: 'SystemLogs'): Fiddler<SystemLogEntry>;
-                function getFiddler(sheetName: 'ActiveMembers'): Fiddler<Member>;
-                function getFiddler(sheetName: 'ActionSpecs'): Fiddler<MembershipManagement.ActionSpec>;
-                function getFiddler(sheetName: 'ExpirySchedule'): Fiddler<MembershipManagement.ExpirySchedule>;
-                function getFiddler(sheetName: 'ExpirationFIFO'): Fiddler<ExpiredMember>;
-                function getFiddler(sheetName: 'Audit'): Fiddler<AuditLogEntry>;
-                
-                // Generic fallback
-                function getFiddler(sheetName: string): Fiddler<any>;
-                
-                /**
-                 * Get sheet directly via SpreadsheetApp (for native API access)
-                 */
-                function getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
-                
-                function getDataWithFormulas<T>(fiddler: Fiddler<T>): T[];
-                function convertLinks(sheetName: string): void;
-                function clearFiddlerCache(sheetName: string): void;
-            }
-        }
-        
-        // DataAccess (flat object) - See top-level DataAccess declaration
-        // Backward compat: Common.Data.Access = DataAccess (set at runtime in data_access.js)
-    }
-    
-    // Logger instance (backward compat - points to AppLogger)
-    const Logger: typeof AppLogger;
-    
-    // Configuration namespace - Backward compat aliases set at runtime
-    // See flat classes: FeatureFlags, FeatureFlagsManager (declared above)
-    // Runtime setup in: FeatureFlags.js sets Common.Config.FeatureFlags = FeatureFlags
-    
-    // Auth namespace - Backward compat aliases set at runtime  
-    // See flat classes: TokenManager, TokenStorage, VerificationCode, VerificationCodeManager, AuthUtils (declared above)
-    // Runtime setup in: TokenManager.js, TokenStorage.js, VerificationCode.js, AuthUtils.js
-    
-    // API namespace
-    namespace Api {
-        // API response types
-        interface ApiResponse {
-            success: boolean;
-            data?: any;
-            error?: string;
-            errorCode?: string;
-            meta?: {
-                requestId: string;
-                duration: number;
-                action: string;
-            };
-        }
-        
-        interface ApiRequest {
-            action: string;
-            params?: Record<string, any>;
-            token?: string;
-        }
-        
-        interface ActionHandler {
-            handler: (params: Record<string, any>, token: string) => ApiResponse;
-            requiresAuth?: boolean;
-            description?: string;
-        }
-        
-        // ApiClient GAS layer
-        namespace Client {
-            function registerHandler(action: string, handler: ActionHandler['handler'], options?: { requiresAuth?: boolean; description?: string }): void;
-            function handleRequest(request: ApiRequest): string;
-            function listActions(): string;
-            function getHandler(action: string): ActionHandler | undefined;
-            function clearHandlers(): void;
-        }
-        
-        // ClientManager - Pure logic class
-        class ClientManager {
-            static successResponse(data: any, meta?: object): ApiResponse;
-            static errorResponse(error: string, errorCode?: string, meta?: object): ApiResponse;
-            static validateRequest(request: any): { valid: boolean; error?: string };
-            static validateRequiredParams(params: Record<string, any>, required: string[]): { valid: boolean; missing?: string[] };
-            static sanitizeString(value: any, maxLength?: number): string;
-            static sanitizeParams(params: Record<string, any>, schema?: Record<string, number>): Record<string, any>;
-            static createRequestContext(action: string, requestId?: string): { action: string; requestId: string; startTime: number };
-            static generateRequestId(): string;
-            static getRequestDuration(context: { startTime: number }): number;
-            static createMetaFromContext(context: { action: string; requestId: string; startTime: number }): object;
-            static actionRequiresAuth(action: string, handlers: Record<string, ActionHandler>): boolean;
-            static listActions(handlers: Record<string, ActionHandler>, includePrivate?: boolean): Array<{ action: string; requiresAuth: boolean; description?: string }>;
-            static formatErrorForLogging(error: Error | string, request?: ApiRequest): object;
-        }
-    }
-    
-    // HomePage namespace - Service home page after authentication
-    namespace HomePage {
-        // Service information type
-        interface ServiceInfo {
-            id: string;
-            name: string;
-            description: string;
-            icon: string;
-        }
-        
-        // Home page data type
-        interface HomePageData {
-            email: string;
-            services: ServiceInfo[];
-            welcomeMessage: string;
-        }
-        
-        // Validation result type
-        interface ValidationResult {
-            valid: boolean;
-            error?: string;
-            errorCode?: string;
-        }
-        
-        // Manager class - Pure business logic for home page
-        // Service definitions are derived from WebServices (defined in 1namespaces.js)
-        class Manager {
-            static _getWebServices(webServicesOverride?: object): object;
-            static _extractServiceInfo(serviceId: string, serviceObj: object): ServiceInfo | null;
-            static getAvailableServices(webServicesOverride?: object): ServiceInfo[];
-            static getServiceById(serviceId: string, webServicesOverride?: object): ServiceInfo | null;
-            static validateServiceId(serviceId: string, webServicesOverride?: object): ValidationResult;
-            static generateWelcomeMessage(email: string): string;
-            static buildHomePageData(email: string, webServicesOverride?: object): HomePageData;
-            static requiresAdditionalAuth(serviceId: string): boolean;
-            static getServiceCount(webServicesOverride?: object): number;
-        }
-    }
-}
-
 // Group management types
 interface GroupByType {
     email: string;
@@ -1026,9 +802,9 @@ declare namespace GroupManagementService {
 
     // Api namespace - GAS layer
     namespace Api {
-        function handleGetSubscriptions(params: { _authenticatedEmail?: string }): Common.Api.ApiResponse;
-        function handleUpdateSubscriptions(params: { _authenticatedEmail?: string; updates?: SubscriptionUpdate[] }): Common.Api.ApiResponse;
-        function handleGetDeliveryOptions(): Common.Api.ApiResponse;
+        function handleGetSubscriptions(params: { _authenticatedEmail?: string }): ApiResponse;
+        function handleUpdateSubscriptions(params: { _authenticatedEmail?: string; updates?: SubscriptionUpdate[] }): ApiResponse;
+        function handleGetDeliveryOptions(): ApiResponse;
     }
 
     // WebApp namespace - doGet handler
@@ -1096,9 +872,9 @@ declare namespace ProfileManagementService {
 
     // Api namespace - GAS layer
     namespace Api {
-        function handleGetProfile(params: { _authenticatedEmail?: string }): Common.Api.ApiResponse;
-        function handleGetEditableFields(params: { _authenticatedEmail?: string }): Common.Api.ApiResponse;
-        function handleUpdateProfile(params: { _authenticatedEmail?: string; updates?: Record<string, any> }): Common.Api.ApiResponse;
+        function handleGetProfile(params: { _authenticatedEmail?: string }): ApiResponse;
+        function handleGetEditableFields(params: { _authenticatedEmail?: string }): ApiResponse;
+        function handleUpdateProfile(params: { _authenticatedEmail?: string; updates?: Record<string, any> }): ApiResponse;
     }
 
     // WebApp namespace - doGet handler
@@ -1157,8 +933,8 @@ declare namespace DirectoryService {
 
     // Api namespace - GAS layer
     namespace Api {
-        function handleGetEntries(params: { _authenticatedEmail?: string; searchTerm?: string }): Common.Api.ApiResponse;
-        function handleGetStats(params: { _authenticatedEmail?: string }): Common.Api.ApiResponse;
+        function handleGetEntries(params: { _authenticatedEmail?: string; searchTerm?: string }): ApiResponse;
+        function handleGetStats(params: { _authenticatedEmail?: string }): ApiResponse;
     }
 
     // WebApp namespace - doGet handler
@@ -1240,9 +1016,9 @@ declare namespace EmailChangeService {
 
     // Api namespace - GAS layer
     namespace Api {
-        function handleSendVerificationCode(params: { _authenticatedEmail?: string; newEmail?: string }): Common.Api.ApiResponse;
-        function handleVerifyAndGetGroups(params: { _authenticatedEmail?: string; newEmail?: string; verificationCode?: string }): Common.Api.ApiResponse;
-        function handleChangeEmail(params: { _authenticatedEmail?: string; newEmail?: string; groups?: GroupMembershipInfo[] }): Common.Api.ApiResponse;
+        function handleSendVerificationCode(params: { _authenticatedEmail?: string; newEmail?: string }): ApiResponse;
+        function handleVerifyAndGetGroups(params: { _authenticatedEmail?: string; newEmail?: string; verificationCode?: string }): ApiResponse;
+        function handleChangeEmail(params: { _authenticatedEmail?: string; newEmail?: string; groups?: GroupMembershipInfo[] }): ApiResponse;
         function storeVerificationData(code: string, data: VerificationData): void;
         function getVerificationData(code: string): VerificationData | null;
         function deleteVerificationData(code: string): void;
@@ -1347,9 +1123,9 @@ declare namespace VotingService {
 
     // Api namespace - GAS layer
     namespace Api {
-        function handleGetActiveElections(params: { _authenticatedEmail?: string }): Common.Api.ApiResponse;
-        function handleGetElectionStats(params: { _authenticatedEmail?: string }): Common.Api.ApiResponse;
-        function handleGenerateBallotToken(params: { _authenticatedEmail?: string; electionTitle?: string }): Common.Api.ApiResponse;
+        function handleGetActiveElections(params: { _authenticatedEmail?: string }): ApiResponse;
+        function handleGetElectionStats(params: { _authenticatedEmail?: string }): ApiResponse;
+        function handleGenerateBallotToken(params: { _authenticatedEmail?: string; electionTitle?: string }): ApiResponse;
     }
 
     // Initialize API handlers

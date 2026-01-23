@@ -90,11 +90,6 @@ var MemberPersistence = (function() {
   return MemberPersistence;
 })();
 
-// Backward compatibility alias - will be removed in future version
-if (typeof Common === 'undefined') var Common = {};
-if (typeof Common.Data === 'undefined') Common.Data = {};
-Common.Data.MemberPersistence = MemberPersistence;
-
 // Node.js module export for testing
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { MemberPersistence };

@@ -850,13 +850,6 @@ var VerificationCode = (function () {
 
     return VerificationCode;
 })();
-
-// Backward compatibility - assign to Common.Auth namespace
-if (typeof Common !== 'undefined' && Common.Auth) {
-    Common.Auth.VerificationCode = VerificationCode;
-    Common.Auth.VerificationCodeManager = VerificationCodeManager;
-}
-
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {

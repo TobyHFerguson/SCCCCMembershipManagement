@@ -221,14 +221,6 @@ var Properties = (function() {
   
   return Properties;
 })();
-
-// Backward compatibility: Assign to old namespace location
-// This allows gradual migration - old code still works
-if (typeof Common !== 'undefined') {
-  if (!Common.Config) Common.Config = {};
-  Common.Config.Properties = Properties;
-}
-
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = Properties;

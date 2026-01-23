@@ -174,10 +174,6 @@ var ServiceExecutionLogger = {
     }
 };
 
-// Backward compatibility alias - will be removed in future version
-if (typeof Common === 'undefined') var Common = {};
-if (typeof Common.Logging === 'undefined') Common.Logging = {};
-Common.Logging.ServiceExecutionLogger = ServiceExecutionLogger;
 
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {

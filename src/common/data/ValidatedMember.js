@@ -276,11 +276,6 @@ Review the ActiveMembers sheet for data quality issues.`
   return ValidatedMember;
 })();
 
-// Backward compatibility alias - will be removed in future version
-if (typeof Common === 'undefined') var Common = {};
-if (typeof Common.Data === 'undefined') Common.Data = {};
-Common.Data.ValidatedMember = ValidatedMember;
-
 // Node.js module export for testing
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { ValidatedMember };

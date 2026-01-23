@@ -94,7 +94,7 @@ DirectoryService.initApi = function() {
  * Gets directory entries for active public members
  * 
  * @param {{_authenticatedEmail: string, searchTerm?: string}} params - Request parameters (_authenticatedEmail is injected by ApiClient, searchTerm is optional filter)
- * @returns {Common.Api.ApiResponse}
+ * @returns {ApiResponse}
  */
 DirectoryService.Api.handleGetEntries = function(params) {
     const userEmail = params._authenticatedEmail;
@@ -146,7 +146,7 @@ DirectoryService.Api.handleGetEntries = function(params) {
  * Gets directory statistics
  * 
  * @param {{_authenticatedEmail: string}} params - Request parameters (_authenticatedEmail injected by ApiClient)
- * @returns {Common.Api.ApiResponse}
+ * @returns {ApiResponse}
  */
 DirectoryService.Api.handleGetStats = function(params) {
     const userEmail = params._authenticatedEmail;

@@ -134,7 +134,7 @@ ProfileManagementService.initApi = function() {
  * Gets user's full profile data
  * 
  * @param {{_authenticatedEmail: string}} params - Request parameters
- * @returns {Common.Api.ApiResponse}
+ * @returns {ApiResponse}
  */
 ProfileManagementService.Api.handleGetProfile = function(params) {
     const userEmail = params._authenticatedEmail;
@@ -192,7 +192,7 @@ ProfileManagementService.Api.handleGetProfile = function(params) {
  * Gets only the editable fields from user's profile
  * 
  * @param {{_authenticatedEmail: string}} params - Request parameters
- * @returns {Common.Api.ApiResponse}
+ * @returns {ApiResponse}
  */
 ProfileManagementService.Api.handleGetEditableFields = function(params) {
     const userEmail = params._authenticatedEmail;
@@ -243,7 +243,7 @@ ProfileManagementService.Api.handleGetEditableFields = function(params) {
  * Creates audit entries for profile changes
  * 
  * @param {{_authenticatedEmail: string, updates: Record<string, any>}} params - Request parameters with updates object containing field values
- * @returns {Common.Api.ApiResponse}
+ * @returns {ApiResponse}
  */
 ProfileManagementService.Api.handleUpdateProfile = function(params) {
     const userEmail = params._authenticatedEmail;

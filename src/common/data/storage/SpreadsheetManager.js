@@ -277,14 +277,6 @@ var SpreadsheetManager = (function() {
   return SpreadsheetManager;
 })();
 
-// Backward compatibility: Assign to old namespace location
-// This allows gradual migration - old code still works
-if (typeof Common !== 'undefined') {
-  if (!Common.Data) Common.Data = {};
-  if (!Common.Data.Storage) Common.Data.Storage = {};
-  SpreadsheetManager = SpreadsheetManager;
-}
-
 // Node.js module export for testing
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = SpreadsheetManager;

@@ -105,12 +105,6 @@ var TokenStorage = (function () {
 
     return TokenStorage;
 })();
-
-// Backward compatibility - assign to Common.Auth.TokenStorage
-if (typeof Common !== 'undefined' && Common.Auth) {
-    Common.Auth.TokenStorage = TokenStorage;
-}
-
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { TokenStorage };

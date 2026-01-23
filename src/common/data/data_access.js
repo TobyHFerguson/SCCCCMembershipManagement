@@ -161,8 +161,3 @@ var DataAccess = {
         return systemLogs;
     }
 };
-
-// Backward compatibility alias - will be removed in future version
-if (typeof Common === 'undefined') var Common = {};
-if (typeof Common.Data === 'undefined') Common.Data = {};
-Common.Data.Access = DataAccess;

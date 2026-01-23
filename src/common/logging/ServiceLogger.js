@@ -161,11 +161,6 @@ var ServiceLogger = (function() {
     return ServiceLogger;
 })();
 
-// Backward compatibility alias - will be removed in future version
-if (typeof Common === 'undefined') var Common = {};
-if (typeof Common.Logging === 'undefined') Common.Logging = {};
-Common.Logging.ServiceLogger = ServiceLogger;
-
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { ServiceLogger };

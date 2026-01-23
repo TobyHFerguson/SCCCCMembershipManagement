@@ -432,17 +432,6 @@ var ApiClient = (function () {
 
     return ApiClient;
 })();
-
-// Backward compatibility - assign to Common.Api namespace
-if (typeof Common !== 'undefined') {
-    if (typeof Common.Api === 'undefined') {
-        // @ts-ignore - Initialize namespace before assigning properties
-        Common.Api = {};
-    }
-    Common.Api.Client = ApiClient;
-    Common.Api.ClientManager = ApiClientManager;
-}
-
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {

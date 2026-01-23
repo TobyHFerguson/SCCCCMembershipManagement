@@ -117,7 +117,7 @@ EmailChangeService.initApi = function() {
  * Generates and sends a verification code to the new email
  * 
  * @param {{_authenticatedEmail: string, newEmail: string}} params - Request parameters (_authenticatedEmail is original email, newEmail is address to verify)
- * @returns {Common.Api.ApiResponse}
+ * @returns {ApiResponse}
  */
 EmailChangeService.Api.handleSendVerificationCode = function(params) {
   Logger.log('[EmailChangeService.Api] handleSendVerificationCode called with params: ' + JSON.stringify(params));
@@ -215,7 +215,7 @@ EmailChangeService.Api.handleSendVerificationCode = function(params) {
  * 
  * @param {{_authenticatedEmail: string, newEmail: string, verificationCode: string}} params - Request parameters (_authenticatedEmail is original email, newEmail is target address, verificationCode is 6-digit code)
  * @param {string} token - The authentication token (passed by ApiClient)
- * @returns {Common.Api.ApiResponse}
+ * @returns {ApiResponse}
  */
 EmailChangeService.Api.handleVerifyAndChangeEmail = function(params, token) {
     Logger.log('[EmailChangeService.Api] handleVerifyAndChangeEmail called');
@@ -387,7 +387,7 @@ EmailChangeService.Api.handleVerifyAndChangeEmail = function(params, token) {
  * Verifies the code and returns list of groups the user is a member of
  * 
  * @param {{_authenticatedEmail: string, newEmail: string, verificationCode: string}} params - Request parameters (_authenticatedEmail is original email, newEmail is target address, verificationCode is 6-digit code)
- * @returns {Common.Api.ApiResponse}
+ * @returns {ApiResponse}
  */
 EmailChangeService.Api.handleVerifyAndGetGroups = function(params) {
     const originalEmail = params._authenticatedEmail;
@@ -473,7 +473,7 @@ EmailChangeService.Api.handleVerifyAndGetGroups = function(params) {
  * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
  * @param {string} params.newEmail - The new email address
  * @param {Array} params.groups - Array of group membership info
- * @returns {Common.Api.ApiResponse}
+ * @returns {ApiResponse}
  */
 EmailChangeService.Api.handleChangeEmail = function(params) {
     const originalEmail = params._authenticatedEmail;

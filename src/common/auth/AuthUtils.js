@@ -76,12 +76,6 @@ var AuthUtils = (function () {
 
     return AuthUtils;
 })();
-
-// Backward compatibility - assign to Common.Auth.Utils
-if (typeof Common !== 'undefined' && Common.Auth) {
-    Common.Auth.Utils = AuthUtils;
-}
-
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { AuthUtils };

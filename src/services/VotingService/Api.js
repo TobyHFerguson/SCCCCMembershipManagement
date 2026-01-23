@@ -106,7 +106,7 @@ VotingService.initApi = function () {
  * Returns list of elections with status for current user
  *
  * @param {{_authenticatedEmail: string}} params - Request parameters
- * @returns {Common.Api.ApiResponse}
+ * @returns {ApiResponse}
  */
 VotingService.Api.handleGetActiveElections = function (params) {
     const userEmail = params._authenticatedEmail;
@@ -195,7 +195,7 @@ VotingService.Api.handleGetActiveElections = function (params) {
  * Returns statistics about elections
  *
  * @param {{_authenticatedEmail: string}} params - Request parameters
- * @returns {Common.Api.ApiResponse}
+ * @returns {ApiResponse}
  */
 VotingService.Api.handleGetElectionStats = function (params) {
     const userEmail = params._authenticatedEmail;
@@ -231,7 +231,7 @@ VotingService.Api.handleGetElectionStats = function (params) {
  * Generates a voting token for a specific ballot
  *
  * @param {{_authenticatedEmail: string, electionTitle: string}} params - Request parameters
- * @returns {Common.Api.ApiResponse}
+ * @returns {ApiResponse}
  */
 VotingService.Api.handleGenerateBallotToken = function (params) {
     const userEmail = params._authenticatedEmail;

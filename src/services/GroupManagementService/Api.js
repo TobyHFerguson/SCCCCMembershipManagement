@@ -105,7 +105,7 @@ GroupManagementService.initApi = function() {
  * Gets user's current group subscription settings
  * 
  * @param {{_authenticatedEmail: string}} params - Request parameters (_authenticatedEmail injected by ApiClient)
- * @returns {Common.Api.ApiResponse}
+ * @returns {ApiResponse}
  */
 GroupManagementService.Api.handleGetSubscriptions = function(params) {
     const userEmail = params._authenticatedEmail;
@@ -170,7 +170,7 @@ GroupManagementService.Api.handleGetSubscriptions = function(params) {
  * Creates audit entries for subscription changes
  * 
  * @param {{_authenticatedEmail: string, updates: GroupManagementService.SubscriptionUpdate[]}} params - Request parameters (_authenticatedEmail injected by ApiClient, updates is array of subscription changes with groupEmail and deliveryValue)
- * @returns {Common.Api.ApiResponse}
+ * @returns {ApiResponse}
  */
 // @ts-ignore - Function signature compatible with handler type, optional params handled at runtime
 GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
@@ -315,7 +315,7 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
  * Handle getDeliveryOptions API request
  * Returns available delivery options for the dropdown
  * 
- * @returns {Common.Api.ApiResponse}
+ * @returns {ApiResponse}
  */
 GroupManagementService.Api.handleGetDeliveryOptions = function() {
     try {

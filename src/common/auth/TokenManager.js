@@ -141,12 +141,6 @@ var TokenManager = (function () {
 
     return TokenManager;
 })();
-
-// Backward compatibility - assign to Common.Auth.TokenManager
-if (typeof Common !== 'undefined' && Common.Auth) {
-    Common.Auth.TokenManager = TokenManager;
-}
-
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { TokenManager };

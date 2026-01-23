@@ -302,14 +302,6 @@ var FeatureFlags = (function() {
   
   return FeatureFlags;
 })();
-
-// Backward compatibility: Assign to old namespace location
-if (typeof Common !== 'undefined') {
-  if (!Common.Config) Common.Config = {};
-  Common.Config.FeatureFlags = FeatureFlags;
-  Common.Config.FeatureFlagsManager = FeatureFlagsManager;
-}
-
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { 
