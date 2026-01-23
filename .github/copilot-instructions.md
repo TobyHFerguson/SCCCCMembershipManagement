@@ -315,7 +315,12 @@ const result = manager.processPaidTransactions(txns, members, schedule);
 - `docs/ExpirationFIFO_SCHEMA.md` - FIFO queue schema and contract
 - `docs/SPA_ARCHITECTURE.md` - Complete SPA implementation guide
 - `docs/GAS-PR-TESTING.md` - How to test PRs in GAS environment
-- `docs/issues/ISSUE-SPA-AND-AUTH-COMBINED.md` - SPA migration master plan
+- `docs/issues/ISSUE-SPA-AND-AUTH-COMBINED.md` - SPA + Auth Phase 9 (current production rollout)
+
+**Archived Documentation** (completed work):
+- `docs/archive/` - Historical migration documentation for completed phases
+- `docs/archive/ISSUE-SPA-PHASES-0-8.md` - SPA migration phases 0-8 (archived for reference)
+- `docs/archive/ISSUE-346-NAMESPACE-FLATTENING.md` - Namespace flattening migration (completed)
 
 ---
 

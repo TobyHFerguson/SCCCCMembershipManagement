@@ -126,4 +126,4 @@ Audit.Persistence = Audit.Persistence || {};  // ReferenceError in Jest
 
 - `gas-best-practices.md` - IIFE class pattern (preferred)
 - `src/1namespaces.js` - Namespace declarations with migration notes
-- `docs/issues/ISSUE-346-NAMESPACE-FLATTENING.md` - Migration tracking
+- `docs/archive/ISSUE-346-NAMESPACE-FLATTENING.md` - Migration tracking (completed work)
