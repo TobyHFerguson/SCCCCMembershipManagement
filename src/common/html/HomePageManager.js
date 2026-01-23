@@ -19,7 +19,9 @@
  */
 
 // Namespace declaration pattern (works in both GAS and Jest)
+// @ts-ignore - Initializing namespace before adding properties
 if (typeof Common === 'undefined') Common = {};
+// @ts-ignore - Initializing HomePage namespace
 if (typeof Common.HomePage === 'undefined') Common.HomePage = {};
 
 /**
@@ -47,6 +49,7 @@ if (typeof Common.HomePage === 'undefined') Common.HomePage = {};
  * 
  * @class
  */
+// @ts-ignore - Assigning class to namespace
 Common.HomePage.Manager = class {
   /**
    * Get WebServices object (allows dependency injection for testing)

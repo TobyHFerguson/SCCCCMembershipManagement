@@ -1,4 +1,4 @@
-/// <reference path="../audit/Audit.d.ts" />
+/// <reference path="../../types/global.d.ts" />
 // @ts-check
 
 /**

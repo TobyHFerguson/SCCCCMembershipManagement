@@ -1,4 +1,4 @@
-/// <reference path="../audit/Audit.d.ts" />
+/// <reference path="../../types/global.d.ts" />
 // @ts-check
 
 /**
@@ -163,11 +163,8 @@ var ServiceExecutionLogger = {
         }
         
         try {
-            // Get Audit fiddler
-            const auditFiddler = SpreadsheetManager.getFiddler('Audit');
-            
-            // Persist entries
-            const numWritten = AuditPersistence.persistAuditEntries(auditFiddler, auditEntries);
+            // Persist entries directly (AuditPersistence handles fiddler internally)
+            const numWritten = AuditPersistence.persistAuditEntries(auditEntries);
             
             AppLogger.debug('ServiceExecutionLogger', `Persisted ${numWritten} audit entries`);
         } catch (error) {

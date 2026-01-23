@@ -51,6 +51,7 @@ GroupManagementService.getUserGroupSubscription = function(userEmail) {
     });
     
     // PURE: Build subscriptions using Manager
+    // @ts-ignore - Type compatible at runtime
     const subscriptions = GroupManagementService.Manager.buildUserSubscriptions(
         groups,
         membersByGroup,

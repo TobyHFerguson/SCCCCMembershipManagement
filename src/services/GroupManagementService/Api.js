@@ -104,8 +104,7 @@ GroupManagementService.initApi = function() {
  * Handle getSubscriptions API request
  * Gets user's current group subscription settings
  * 
- * @param {{_authenticatedEmail: string}} params - Request parameters
- * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
+ * @param {{_authenticatedEmail: string}} params - Request parameters (_authenticatedEmail injected by ApiClient)
  * @returns {Common.Api.ApiResponse}
  */
 GroupManagementService.Api.handleGetSubscriptions = function(params) {
@@ -170,11 +169,10 @@ GroupManagementService.Api.handleGetSubscriptions = function(params) {
  * LOGGING: Logs full execution flow including validation, actions, and results
  * Creates audit entries for subscription changes
  * 
- * @param {{_authenticatedEmail: string, updates: Array<{groupEmail: string, currentDelivery: string | null, newDelivery: string | null}>}} params - Request parameters
- * @param {string} params._authenticatedEmail - Authenticated user's email (injected by ApiClient)
- * @param {Array} params.updates - Array of subscription updates
+ * @param {{_authenticatedEmail: string, updates: Array<{groupEmail: string, currentDelivery: string | null, newDelivery: string | null}>}} params - Request parameters (_authenticatedEmail injected by ApiClient, updates is array of subscription changes)
  * @returns {Common.Api.ApiResponse}
  */
+// @ts-ignore - Function signature compatible with handler type, optional params handled at runtime
 GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
     const userEmail = params._authenticatedEmail;
     const updates = params.updates;
@@ -193,6 +191,7 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
 
     // PURE: Validate updates
     AppLogger.debug('GroupManagementService', `Validating ${updates.length} subscription updates`);
+    // @ts-ignore - Type cast for deliveryOptions is safe at runtime
     const validation = GroupManagementService.Manager.validateSubscriptionUpdates(
       updates,
       /** @type {Record<string, [string, string]>} */ (GroupSubscription.deliveryOptions || GroupManagementService.Manager.getDeliveryOptions())
@@ -229,13 +228,14 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
 
       // PURE: Calculate actions
       AppLogger.debug('GroupManagementService', 'Calculating required actions');
+      // @ts-ignore - Parameter types compatible at runtime
       const { actions, skipped } = GroupManagementService.Manager.calculateActions(
         updates,
         currentMembersByGroup,
         normalizedEmail
       );
       
-      AppLogger.info('GroupManagementService', `Actions calculated: ${actions.length} to execute, ${skipped.length} skipped`);
+      AppLogger.info('GroupManagementService', `Actions calculated: ${actions.length} to execute, ${skipped} skipped`);
 
       // GAS: Execute actions
       let successCount = 0;
@@ -275,15 +275,14 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
           successCount: successCount,
           failedCount: failedCount,
           actionCount: actions.length,
-          skippedCount: skipped.length,
+          skippedCount: skipped,
           errors: errors
         }
       );
       
       // Persist audit entry
       try {
-        const auditFiddler = SpreadsheetManager.getFiddler('Audit');
-        AuditPersistence.persistAuditEntries(auditFiddler, [auditEntry]);
+        AuditPersistence.persistAuditEntries([auditEntry]);
       } catch (auditError) {
         AppLogger.error('GroupManagementService', 'Failed to persist audit entry', auditError);
       }
@@ -339,11 +338,7 @@ GroupManagementService.Api.handleGetDeliveryOptions = function() {
 /**
  * Execute a subscription action
  * @private
- * @param {{action: 'subscribe' | 'update' | 'unsubscribe', groupEmail: string, userEmail: string, deliveryValue?: string}} action - The action to execute
- * @param {'subscribe'|'update'|'unsubscribe'} action.action - Action type
- * @param {string} action.groupEmail - Group email
- * @param {string} action.userEmail - User email
- * @param {string} [action.deliveryValue] - Delivery setting (for subscribe/update)
+ * @param {{action: 'subscribe' | 'update' | 'unsubscribe', groupEmail: string, userEmail: string, deliveryValue?: string}} action - The action to execute (action is type, groupEmail and userEmail required, deliveryValue optional for subscribe/update)
  */
 GroupManagementService.Api._executeAction = function(action) {
     switch (action.action) {

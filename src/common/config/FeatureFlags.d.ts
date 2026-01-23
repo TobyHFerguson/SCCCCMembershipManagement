@@ -15,5 +15,5 @@
  * This file is kept for documentation purposes.
  */
 
-// Node.js module export for testing
-export { FeatureFlags, FeatureFlagsManager };
+// Types are declared globally in src/types/global.d.ts
+// No export needed - classes are available globally in GAS runtime

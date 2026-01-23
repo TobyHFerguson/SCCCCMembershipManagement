@@ -161,12 +161,15 @@ var ApiClientManager = (function () {
             for (var i = 0; i < entries.length; i++) {
                 var key = entries[i][0];
                 var value = entries[i][1];
-                var maxLength = schema[key] || 1000;
+                var schemaValue = schema[key];
                 if (typeof value === 'string') {
+                    // For strings, schema value should be a number (max length)
+                    var maxLength = typeof schemaValue === 'number' ? schemaValue : 1000;
                     result[key] = ApiClientManager.sanitizeString(value, maxLength);
                 } else if (typeof value === 'object' && value !== null) {
                     // Recursively sanitize nested objects
-                    result[key] = ApiClientManager.sanitizeParams(value, schema[key] || {});
+                    var nestedSchema = typeof schemaValue === 'object' ? schemaValue : {};
+                    result[key] = ApiClientManager.sanitizeParams(value, nestedSchema);
                 } else {
                     result[key] = value;
                 }
@@ -267,7 +270,7 @@ var ApiClientManager = (function () {
         /**
          * Format an error for logging (hide sensitive data)
          * @param {Error|string} error - The error
-         * @param {{action?: string, params?: any, token?: string}} [request] - The request (optional, will be sanitized)
+         * @param {{action?: string, params?: Record<string, any>, token?: string}} [request] - The request (optional, will be sanitized, params are truly dynamic API data)
          * @returns {{message: string, stack?: string, action?: string, hasParams?: boolean, hasToken?: boolean}}
          */
         static formatErrorForLogging(error, request) {
@@ -310,9 +313,7 @@ var ApiClient = (function () {
          * Register an action handler
          * @param {string} action - Action name
          * @param {function(Record<string, any>, string): ApiResponse} handler - Handler function
-         * @param {{requiresAuth?: boolean, description?: string}} [options] - Handler options
-         * @param {boolean} [options.requiresAuth=true] - Whether authentication is required
-         * @param {string} [options.description] - Action description
+         * @param {{requiresAuth?: boolean, description?: string}} [options] - Handler options (requiresAuth defaults to true, description is optional)
          */
         static registerHandler(action, handler, options) {
             if (options === undefined) options = {};
@@ -434,7 +435,10 @@ var ApiClient = (function () {
 
 // Backward compatibility - assign to Common.Api namespace
 if (typeof Common !== 'undefined') {
-    if (typeof Common.Api === 'undefined') Common.Api = {};
+    if (typeof Common.Api === 'undefined') {
+        // @ts-ignore - Initialize namespace before assigning properties
+        Common.Api = {};
+    }
     Common.Api.Client = ApiClient;
     Common.Api.ClientManager = ApiClientManager;
 }

@@ -15,6 +15,7 @@
  */
 
 // Namespace declaration pattern (works in both GAS and Jest)
+// @ts-ignore - Initializing namespace before adding properties
 if (typeof DirectoryService === 'undefined') DirectoryService = {};
 
 /**
@@ -32,9 +33,9 @@ if (typeof DirectoryService === 'undefined') DirectoryService = {};
  * @property {string} First - First name
  * @property {string} Last - Last name
  * @property {string} Phone - Phone number
- * @property {boolean} ['Directory Share Name'] - Whether to share name in directory
- * @property {boolean} ['Directory Share Email'] - Whether to share email in directory
- * @property {boolean} ['Directory Share Phone'] - Whether to share phone in directory
+ * @property {boolean} DirectoryShareName - Whether to share name in directory (mapped from 'Directory Share Name')
+ * @property {boolean} DirectoryShareEmail - Whether to share email in directory (mapped from 'Directory Share Email')
+ * @property {boolean} DirectorySharePhone - Whether to share phone in directory (mapped from 'Directory Share Phone')
  */
 
 /**

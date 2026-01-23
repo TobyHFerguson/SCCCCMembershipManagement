@@ -3,6 +3,7 @@
  * This service provides the verification code request page that leads to the home page
  */
 
+// @ts-ignore - Initializing namespace before adding properties
 if (typeof HomePageService === 'undefined') HomePageService = {};
 
 HomePageService.WebApp = {

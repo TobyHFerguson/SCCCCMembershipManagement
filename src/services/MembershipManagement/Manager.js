@@ -28,7 +28,7 @@ MembershipManagement.Manager = class {
    * @param {Member[]} activeMembers 
    * @param {MembershipManagement.ExpirySchedule[]} expirySchedule 
    * @param {string} prefillFormTemplate 
-   * @returns {{messages: MembershipManagement.ExpiredMembersQueue}} array of messages to be sent
+   * @returns {{messages: MembershipManagement.ExpiredMembersQueue, scheduleEntriesProcessed: number}} array of messages to be sent and count of schedule entries processed
    */
   generateExpiringMembersList(activeMembers, expirySchedule, prefillFormTemplate) {
     expirySchedule.forEach(sched => { sched.Date = MembershipManagement.Utils.dateOnly(new Date(sched.Date) )});
@@ -45,7 +45,7 @@ MembershipManagement.Manager = class {
     
     if (!prefillFormTemplate) {
       console.error("Prefill form template is required");
-      return { messages: [] };
+      return { messages: [], scheduleEntriesProcessed: 0 };
     }
     // collect messages to allow generator/consumer separation
     const messages = /** @type {MembershipManagement.ExpiringMember[]} */ [];
@@ -92,7 +92,7 @@ MembershipManagement.Manager = class {
           expirySchedule.splice(i, 1);
         }
       }
-    return { messages };
+    return { messages, scheduleEntriesProcessed: processedCount };
   }
 
   /**
@@ -100,8 +100,8 @@ MembershipManagement.Manager = class {
    * @param {MembershipManagement.FIFOItem[]} fifoItems - Array of FIFO items with attempt bookkeeping
    * @param {function(GoogleAppsScript.Mail.MailAdvancedParameters): void} sendEmailFun
    * @param {function(string, string): void} groupRemoveFun
-   * @param {{now?: Date}} opts - Options object with optional 'now' for testing
-   * @returns {{processed: MembershipManagement.FIFOItem[], failed: MembershipManagement.FIFOItem[], auditEntries: any[]}}
+   * @param {{now?: Date, maxAttempts?: number, computeNextAttemptAt?: function(number, number=, number=): Date}} opts - Options object with optional 'now' for testing
+   * @returns {{processed: MembershipManagement.FIFOItem[], failed: MembershipManagement.FIFOItem[], auditEntries: AuditLogEntry[]}}
    *
    * Returns:
    *  - processed: array of successfully completed FIFOItems
@@ -207,7 +207,7 @@ MembershipManagement.Manager = class {
         } else if (computeNext) {
           item.dead = false;
           try {
-            item.nextAttemptAt = computeNext(item.attempts);
+            item.nextAttemptAt = String(computeNext(item.attempts));
           } catch (e) {
             // computeNext threw; fallback to 1-minute retry
             item.nextAttemptAt = new Date(Date.now() + 60000).toISOString();

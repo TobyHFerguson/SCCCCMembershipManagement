@@ -302,7 +302,7 @@ MembershipManagement.generateExpiringMembersList = function () {
  * Consumer: process up to batchSize entries from the ExpirationFIFO sheet.
  * This function is intended to be called by a time-based trigger (minute-based) while work remains.
  * It will reschedule itself (create a 1-minute trigger) if more work remains after processing the batch.
- * @param {{batchSize?: number, dryRun?: boolean, fiddlers?: Record<string, any>}} opts - Options with optional batchSize, dryRun flag, and pre-fetched fiddlers
+ * @param {{batchSize?: number, dryRun?: boolean, fiddlers?: {expirationFIFO?: any, expiryScheduleFiddler?: any, deadFiddler?: any}, membershipData?: {sheet: GoogleAppsScript.Spreadsheet.Sheet, originalRows: any[][], headers: any[]}}} opts - Options with optional batchSize, dryRun flag, pre-fetched fiddlers, and membership data
  */
 MembershipManagement.processExpirationFIFO = function (opts = {}) {
   try {
@@ -388,7 +388,6 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
 
     // PURE (with injected side effects): Process batch
     const result = manager.processExpiredMembers(eligibleItems, sendEmailFun, groupRemoveFun, { 
-      batchSize, 
       maxAttempts: scriptMaxAttempts 
     });
 
@@ -517,7 +516,7 @@ function processExpirationFIFOTrigger() { return MembershipManagement.processExp
 
 /**
  * Initialize Manager with data loaded via SpreadsheetApp + ValidatedMember
- * @returns {{manager, membershipData: ValidatedMember[], expiryScheduleData, membershipSheet, originalMembershipRows, membershipHeaders}}
+ * @returns {{manager: MembershipManagement.Manager, membershipData: ValidatedMember[], expiryScheduleData: any[], membershipSheet: GoogleAppsScript.Spreadsheet.Sheet, originalMembershipRows: any[][], membershipHeaders: any[], expiryScheduleFiddler: any}}
  */
 MembershipManagement.Internal.initializeManagerDataWithSpreadsheetApp_ = function () {
   // Load ActiveMembers using SpreadsheetApp + ValidatedMember

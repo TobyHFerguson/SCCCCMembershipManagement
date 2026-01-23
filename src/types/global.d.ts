@@ -574,34 +574,34 @@ declare class MemberPersistence {
 // Flat DataAccess object (new pattern - replaces Common.Data.Access)
 declare var DataAccess: {
     /** Gets Bootstrap configuration data */
-    getBootstrapData(): BootstrapData[];
+    getBootstrapData: () => BootstrapData[];
     
     /** Gets all email addresses from active members */
-    getEmailAddresses(): string[];
+    getEmailAddresses: () => string[];
     
     /** Gets all members */
-    getMembers(): ValidatedMember[];
+    getMembers: () => ValidatedMember[];
     
     /** Gets action specifications with processed body content */
-    getActionSpecs(): Record<string, MembershipManagement.ActionSpec>;
+    getActionSpecs: () => {[k: string]: MembershipManagement.ActionSpec};
     
     /** Gets public groups configuration */
-    getPublicGroups(): Array<{Name: string, Email: string, Subscription: string}>;
+    getPublicGroups: () => Array<{Name: string, Email: string, Subscription: string}>;
     
     /** Gets a specific member by email address */
-    getMember(email: string): ValidatedMember | undefined;
+    getMember: (email: string) => ValidatedMember | undefined;
     
     /** Updates a member's information */
-    updateMember(email: string, newMember: ValidatedMember): boolean;
+    updateMember: (email: string, newMember: ValidatedMember) => boolean;
     
     /** Checks if an email address belongs to a member */
-    isMember(email: string): boolean;
+    isMember: (email: string) => boolean;
     
     /** Gets all elections data */
-    getElections(): VotingService.Election[];
+    getElections: () => VotingService.Election[];
     
     /** Gets system logs */
-    getSystemLogs(): SystemLogEntry[];
+    getSystemLogs: () => SystemLogEntry[];
 };
 
 // Flat ServiceLogger class (new pattern - replaces Common.Logging.ServiceLogger)
@@ -1335,3 +1335,10 @@ declare namespace VotingService {
     // Initialize API handlers
     function initApi(): void;
 }
+
+// ============================================================================
+// Global Variables - Additional runtime globals not covered above
+// ============================================================================
+
+// Properties Management (not a class, just a namespace object)
+declare const Properties: any; // TODO: Add proper Properties type

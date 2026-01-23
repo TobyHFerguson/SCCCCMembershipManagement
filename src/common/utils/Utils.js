@@ -5,7 +5,9 @@
  * Common.Utils - Utility functions for the application
  */
 
+// @ts-ignore - Initializing namespace before adding properties
 if (typeof Common === 'undefined') Common = {};
+// @ts-ignore - Initializing Utils namespace
 if (typeof Common.Utils === 'undefined') Common.Utils = {};
 
 /**
@@ -22,6 +24,7 @@ Common.Utils.wrapMenuFunction = function(fn, menuItemName) {
       const result = fn.apply(this, arguments);
       AppLogger.info('MenuWrapper', `Menu item '${menuItemName}' completed successfully`);
       try {
+        // @ts-ignore - toast method exists on Ui but not in type definitions
         SpreadsheetApp.getUi().toast(`${menuItemName} completed successfully`, 'Success', 3);
       } catch (uiError) {
         // UI not available (e.g., running from trigger) - just log

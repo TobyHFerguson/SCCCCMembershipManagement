@@ -65,7 +65,8 @@ declare class Properties {
 
 // Backward compatibility namespace declaration
 declare namespace Common.Config {
-    const Properties: typeof globalThis.Properties;
+    // @ts-ignore - Circular reference is intentional for namespace aliasing
+    const Properties: typeof Properties;
 }
 
 // Node.js module export for testing

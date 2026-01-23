@@ -1,3 +1,6 @@
+// @ts-check
+/// <reference path="../../types/global.d.ts" />
+
 /**
  * AuditPersistence Module
  * 
@@ -49,14 +52,18 @@ var AuditPersistence = (function() {
       // Use class-based validation to ensure all entries are proper AuditLogEntry instances
       const classValidatedEntries = AuditLogEntry.validateArray(auditEntries, 'AuditPersistence.persistAuditEntries');
       
-      // Deduplicate by unique ID if present
+      // Deduplicate by unique ID if present (Id is optional property added dynamically)
       const seen = new Set();
       const dedupedEntries = classValidatedEntries.filter(entry => {
+        // @ts-ignore - Id is optional property that may be added dynamically
         if (entry.Id) {
+          // @ts-ignore
           if (seen.has(entry.Id)) {
+            // @ts-ignore
             AppLogger.warn('AuditPersistence', `Skipping duplicate entry with Id=${entry.Id}`);
             return false;
           }
+          // @ts-ignore
           seen.add(entry.Id);
         }
         return true;

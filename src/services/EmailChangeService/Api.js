@@ -116,9 +116,7 @@ EmailChangeService.initApi = function() {
  * Handle sendVerificationCode API request
  * Generates and sends a verification code to the new email
  * 
- * @param {{_authenticatedEmail: string, newEmail: string}} params - Request parameters
- * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
- * @param {string} params.newEmail - The new email address to verify
+ * @param {{_authenticatedEmail: string, newEmail: string}} params - Request parameters (_authenticatedEmail is original email, newEmail is address to verify)
  * @returns {Common.Api.ApiResponse}
  */
 EmailChangeService.Api.handleSendVerificationCode = function(params) {
@@ -215,10 +213,7 @@ EmailChangeService.Api.handleSendVerificationCode = function(params) {
  * Combined handler that verifies the code and executes the email change in one step
  * This simplifies the client flow for the 3-step UI
  * 
- * @param {{_authenticatedEmail: string, newEmail: string, verificationCode: string}} params - Request parameters
- * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
- * @param {string} params.newEmail - The new email address
- * @param {string} params.verificationCode - The verification code
+ * @param {{_authenticatedEmail: string, newEmail: string, verificationCode: string}} params - Request parameters (_authenticatedEmail is original email, newEmail is target address, verificationCode is 6-digit code)
  * @param {string} token - The authentication token (passed by ApiClient)
  * @returns {Common.Api.ApiResponse}
  */
@@ -391,10 +386,7 @@ EmailChangeService.Api.handleVerifyAndChangeEmail = function(params, token) {
  * Handle verifyAndGetGroups API request
  * Verifies the code and returns list of groups the user is a member of
  * 
- * @param {{_authenticatedEmail: string, newEmail: string, verificationCode: string}} params - Request parameters
- * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
- * @param {string} params.newEmail - The new email address
- * @param {string} params.verificationCode - The verification code
+ * @param {{_authenticatedEmail: string, newEmail: string, verificationCode: string}} params - Request parameters (_authenticatedEmail is original email, newEmail is target address, verificationCode is 6-digit code)
  * @returns {Common.Api.ApiResponse}
  */
 EmailChangeService.Api.handleVerifyAndGetGroups = function(params) {

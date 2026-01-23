@@ -15,6 +15,7 @@
  */
 
 // Namespace declaration pattern (works in both GAS and Jest)
+// @ts-ignore - Initializing namespace before adding properties
 if (typeof GroupManagementService === 'undefined') GroupManagementService = {};
 
 /**

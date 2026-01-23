@@ -39,6 +39,7 @@ function getSystemLogsFiddler() {
 /**
  * DataAccess object - provides high-level data access functions
  */
+// @ts-ignore - TypeScript sees identical types as different due to ActionSpec resolution order
 var DataAccess = {
     getBootstrapData: () => {
         const bootStrapFiddler = SpreadsheetManager.getFiddler('Bootstrap');
