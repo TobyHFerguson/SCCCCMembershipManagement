@@ -553,21 +553,6 @@ var AppLogger = (function() {
   return AppLogger;
 })();
 
-// Backward compatibility: Assign to old namespace location
-// This allows gradual migration - old code still works
-if (typeof Common !== 'undefined') {
-  if (!Common.Logger) Common.Logger = {};
-  // Copy all static methods to Common.Logger
-  Common.Logger.debug = AppLogger.debug;
-  Common.Logger.info = AppLogger.info;
-  Common.Logger.warn = AppLogger.warn;
-  Common.Logger.error = AppLogger.error;
-  Common.Logger.configure = AppLogger.configure;
-  Common.Logger.setLevel = AppLogger.setLevel;
-  Common.Logger.getLogs = AppLogger.getLogs;
-  Common.Logger.clearLogs = AppLogger.clearLogs;
-  Common.Logger.setContainerSpreadsheet = AppLogger.setContainerSpreadsheet;
-}
 
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {

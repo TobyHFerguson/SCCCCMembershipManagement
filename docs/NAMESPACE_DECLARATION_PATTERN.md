@@ -122,8 +122,247 @@ const Audit = Audit || {};
 Audit.Persistence = Audit.Persistence || {};  // ReferenceError in Jest
 ```
 
+## Namespace Classification
+
+### Removed (Backward Compatibility Only)
+
+These were removed in Issue #346 and Issue #362:
+- **`Common.*`** - Fully migrated to flat classes (ApiResponse, TokenManager, FeatureFlags, etc.)
+- **`Audit.*`** - Migrated to AuditLogEntry, AuditLogger, AuditPersistence
+- **`Common.Logger`** - Bridge removed in Issue #362 (all code uses AppLogger directly)
+- **`Common.Utils`** - Bridge removed in Issue #362 (wrapMenuFunction moved to Menu.js, extractSpreadsheetId kept in Utils.js)
+
+**Exception**: One `Common.*` namespace remains ACTIVE:
+- **`Common.HomePage.Manager`** - Active home page manager class - 1 usage in webapp_endpoints.js
+
+### Active (Organizational Structure)
+
+These are **ACTIVE namespaces** for service organization (NOT backward compatibility):
+
+#### MembershipManagement Service Namespaces
+- **`MembershipManagement.Internal`** - Private GAS adapter functions (52 usages)
+  - Examples: getGroupAdder_(), getEmailSender_(), persistAuditEntries_()
+  - Purpose: Encapsulate GAS-dependent initialization and persistence
+  
+- **`MembershipManagement.Utils`** - Shared utilities (54 usages)
+  - Examples: addDaysToDate(), calculateExpirationDate(), expandTemplate(), convertFIFOItemsToSpreadsheet()
+  - Purpose: Date math, FIFO queue conversion, template expansion
+  
+- **`MembershipManagement.Manager`** - Pure logic class (testable, ~800 lines)
+
+#### Other Service Namespaces
+- **`VotingService.*`** - Service-specific types and constants
+- **`GroupManagementService.*`** - Service-specific types  
+- **`ProfileManagementService.*`** - Service-specific types
+- **`DirectoryService.*`** - Service-specific types
+- **`EmailChangeService.*`** - Service-specific types
+
+**Pattern**: Each service follows `Service.Internal`, `Service.Manager`, `Service.Api`, `Service.Trigger` structure.
+
+---
+
+## When to Use Namespace vs Flat Class
+
+### Use Flat Class (IIFE-wrapped)
+
+**For shared utilities across services:**
+- Global types: `ApiResponse`, `AuditLogEntry`, `ValidatedMember`
+- Infrastructure classes: `SpreadsheetManager`, `TokenManager`, `VerificationCodeManager`
+- Cross-service utilities: `AppLogger`, `FeatureFlags`, `ServiceLogger`
+
+**Pattern**:
+```javascript
+var TokenManager = (function() {
+    class TokenManager {
+        static generateToken(email, serviceName) {
+            // Pure logic, testable
+        }
+        
+        static validateToken(token) {
+            // Pure logic, testable
+        }
+    }
+    return TokenManager;
+})();
+```
+
+**Benefits**:
+- Direct class name access
+- TypeScript-friendly with `.d.ts` files
+- 100% testable in Jest
+- No namespace pollution
+
+---
+
+### Use Namespace (Object literal)
+
+**For service-specific organization:**
+- Service internal adapters: `Service.Internal`
+- Service utilities: `Service.Utils` (when service-specific)
+- Service types: `Service.Manager`, `Service.Api`
+- Multiple related functions that belong together logically
+
+**Pattern**:
+```javascript
+// In 1namespaces.js
+const MembershipManagement = {
+    Internal: {},
+    Utils: {},
+    Manager: null  // Will be assigned in Manager.js
+};
+
+// In service file
+MembershipManagement.Utils.addDaysToDate = function(date, days) {
+    const result = MembershipManagement.Utils.dateOnly(date);
+    result.setDate(result.getDate() + days);
+    return result;
+};
+
+MembershipManagement.Utils.calculateExpirationDate = function(referenceDate, expires, period) {
+    // Service-specific business logic
+};
+```
+
+**Benefits**:
+- Organizes related service functions
+- Clear service boundaries
+- Encapsulates service-specific logic
+- Reduces global namespace clutter
+
+---
+
+## Decision Tree: Namespace vs Flat Class
+
+```
+Is this utility/class used by MULTIPLE services?
+├─ YES → Use Flat Class (e.g., TokenManager, ApiResponse)
+│         Shared across services = global utility
+│
+└─ NO → Is it service-specific?
+        ├─ YES → Use Namespace (e.g., MembershipManagement.Utils)
+        │         Service-specific = organizational namespace
+        │
+        └─ NO → Consider if it should be shared
+                Maybe it belongs in a flat class after all
+```
+
+---
+
+## Examples: Good vs Bad
+
+### ✅ GOOD: Flat Class for Global Utility
+
+```javascript
+// TokenManager is used by authentication across ALL services
+var TokenManager = (function() {
+    class TokenManager {
+        static generateToken(email, serviceName) {
+            const timestamp = Date.now();
+            const randomBytes = Utilities.getUuid();
+            return `${email}:${serviceName}:${timestamp}:${randomBytes}`;
+        }
+    }
+    return TokenManager;
+})();
+
+// Used everywhere:
+// - GroupManagementService
+// - ProfileManagementService
+// - VotingService
+// - etc.
+```
+
+### ✅ GOOD: Namespace for Service Organization
+
+```javascript
+// MembershipManagement.Utils contains ONLY membership-specific utilities
+MembershipManagement.Utils.calculateExpirationDate = function(referenceDate, expires, period) {
+    // Business logic specific to membership expiration rules
+    // Only used within MembershipManagement service
+};
+
+MembershipManagement.Utils.convertFIFOItemsToSpreadsheet = function(items) {
+    // FIFO queue format specific to MembershipManagement
+    // Only used within MembershipManagement service
+};
+```
+
+### ❌ BAD: Global Utility in Nested Namespace
+
+```javascript
+// ❌ WRONG - DateHelper is useful across ALL services, should be flat class
+Common.Utils.DateHelper = {
+    addDays: function(date, days) {
+        const result = new Date(date);
+        result.setDate(result.getDate() + days);
+        return result;
+    }
+};
+
+// ✅ CORRECT - Flat class for global utility
+var DateHelper = (function() {
+    class DateHelper {
+        static addDays(date, days) {
+            const result = new Date(date);
+            result.setDate(result.getDate() + days);
+            return result;
+        }
+    }
+    return DateHelper;
+})();
+```
+
+### ❌ BAD: Service-Specific Function in Global Namespace
+
+```javascript
+// ❌ WRONG - This is ONLY used by MembershipManagement
+var calculateMembershipExpiration = function(referenceDate, expires, period) {
+    // Service-specific logic
+};
+
+// ✅ CORRECT - Use service namespace
+MembershipManagement.Utils.calculateExpirationDate = function(referenceDate, expires, period) {
+    // Service-specific logic, properly scoped
+};
+```
+
+---
+
+## Migration Notes
+
+### Issue #346: Namespace Flattening (Completed)
+
+**Migrated from nested namespaces to flat classes:**
+- `Common.Auth.TokenManager` → `TokenManager`
+- `Common.Auth.VerificationCode` → `VerificationCodeManager`
+- `Common.Logging.ServiceLogger` → `ServiceLogger`
+- `Common.Data.ValidatedMember` → `ValidatedMember`
+- `Audit.LogEntry` → `AuditLogEntry`
+- `Audit.Logger` → `AuditLogger`
+- `Audit.Persistence` → `AuditPersistence`
+
+**Preserved active service namespaces:**
+- `MembershipManagement.Internal` (52 usages) ✅ KEEP
+- `MembershipManagement.Utils` (54 usages) ✅ KEEP
+- Service-specific namespaces (VotingService.*, etc.) ✅ KEEP
+
+### Remaining Common.* Namespace (Active, Not Backward Compat)
+
+One `Common.*` namespace remains because it's actively used:
+
+1. **`Common.HomePage.Manager`** (HomePageManager.js) - Active manager
+   - 1 usage in webapp_endpoints.js (getAvailableServices)
+   - **Status**: KEEP - actively used
+
+**Removed in Issue #362**:
+- **`Common.Logger`** - Bridge removed (all code uses AppLogger directly)
+- **`Common.Utils`** - Bridge removed (wrapMenuFunction moved to Menu.js, extractSpreadsheetId kept in Utils.js as standalone function)
+
+---
+
 ## Related Documentation
 
 - `gas-best-practices.md` - IIFE class pattern (preferred)
 - `src/1namespaces.js` - Namespace declarations with migration notes
 - `docs/archive/ISSUE-346-NAMESPACE-FLATTENING.md` - Migration tracking (completed work)
+- Issue #362 - Namespace cleanup verification and documentation

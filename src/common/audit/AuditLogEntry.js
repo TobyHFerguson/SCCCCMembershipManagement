@@ -5,7 +5,7 @@
  * Ensures all audit entries have proper structure and prevents corruption
  * by enforcing construction contracts at the class level.
  * 
- * Layer: Layer 1 Infrastructure (can use Common.Logger)
+ * Layer: Layer 1 Infrastructure (can use AppLogger)
  * 
  * Usage:
  *   const entry = AuditLogEntry.create('transaction', 'success', 'Payment processed');
