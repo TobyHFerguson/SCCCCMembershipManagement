@@ -62,12 +62,12 @@ describe('Circular Dependency Guards', () => {
       expect(matches).toBeNull();
     });
     
-    it('should have documentation warning about Common.Logger', () => {
+    it('should have documentation warning about AppLogger', () => {
       const smPath = path.join(__dirname, '../src/common/data/storage/SpreadsheetManager.js');
       const smSource = fs.readFileSync(smPath, 'utf8');
       
       expect(smSource).toContain('CRITICAL');
-      expect(smSource).toContain('MUST NOT use Logger');
+      expect(smSource).toContain('MUST NOT use AppLogger');
     });
   });
   
