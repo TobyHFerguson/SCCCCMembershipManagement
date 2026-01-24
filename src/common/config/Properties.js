@@ -8,8 +8,8 @@
  * Properties are loaded once per execution from the Properties sheet (key/value pairs) and cached.
  * Code-internal properties (runtime state) always come from Script Properties and are never in the sheet.
  * 
- * CRITICAL: This module MUST NOT use Logger (formerly Common.Logger)!
- * Reason: Creates infinite loop - Logger reads config from Properties -> Properties fails -> AppLogger.error -> infinite recursion
+ * CRITICAL: This module MUST NOT use AppLogger!
+ * Reason: Creates infinite loop - AppLogger reads config from Properties -> Properties fails -> AppLogger.error -> infinite recursion
  * Use console.log() only for tracing.
  * 
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)

@@ -1,8 +1,8 @@
 /**
  * SpreadsheetManager - Low-level spreadsheet access via bmPreFiddler
  * 
- * CRITICAL: This module MUST NOT use Logger (formerly Common.Logger)!
- * Reason: Creates infinite loop via Properties -> getFiddler -> _initializeSheets -> getContainerSpreadsheetId -> Logger -> Properties
+ * CRITICAL: This module MUST NOT use AppLogger!
+ * Reason: Creates infinite loop via Properties -> getFiddler -> _initializeSheets -> getContainerSpreadsheetId -> AppLogger -> Properties
  * Use console.log() only for tracing.
  * 
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
