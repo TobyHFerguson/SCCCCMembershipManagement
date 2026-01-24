@@ -4,7 +4,7 @@
  * DataAccess Module
  * 
  * Purpose: High-level data access functions for member data and other shared data.
- * Uses SpreadsheetManager for sheet access and ValidatedMember for type-safe member data.
+ * Uses SheetAccess for sheet access and ValidatedMember for type-safe member data.
  * 
  * Layer: Layer 1 Infrastructure (can use AppLogger)
  * 
@@ -19,21 +19,21 @@
  * @returns {Fiddler<VotingService.Election>}
  */
 function getElectionsFiddler() {
-    return SpreadsheetManager.getFiddler('Elections');
+    return SheetAccess.getFiddler('Elections');
 }
 
 /**
  * @returns {Fiddler<TokenDataType>}
  */
 function getTokensFiddler() {
-    return SpreadsheetManager.getFiddler('Tokens');
+    return SheetAccess.getFiddler('Tokens');
 }
 
 /**
  * @returns {Fiddler<SystemLogEntry>}
  */
 function getSystemLogsFiddler() {
-    return SpreadsheetManager.getFiddler('SystemLogs');
+    return SheetAccess.getFiddler('SystemLogs');
 }
 
 /**
@@ -42,13 +42,11 @@ function getSystemLogsFiddler() {
 // @ts-ignore - TypeScript sees identical types as different due to ActionSpec resolution order
 var DataAccess = {
     getBootstrapData: () => {
-        const bootStrapFiddler = SpreadsheetManager.getFiddler('Bootstrap');
-        return bootStrapFiddler.getData();
+        return SheetAccess.getData('Bootstrap');
     },
     getEmailAddresses: function () {
-        // Use SpreadsheetApp with ValidatedMember
-        const sheet = SpreadsheetManager.getSheet('ActiveMembers');
-        const allData = sheet.getDataRange().getValues();
+        // Use SheetAccess with ValidatedMember
+        const allData = SheetAccess.getDataAsArrays('ActiveMembers');
         const headers = allData[0];
         const rows = allData.slice(1);
         const members = ValidatedMember.validateRows(rows, headers, 'data_access.getEmailAddresses');
@@ -56,18 +54,17 @@ var DataAccess = {
         return emails;
     },
     getMembers: () => {
-        // Use SpreadsheetApp with ValidatedMember
-        const sheet = SpreadsheetManager.getSheet('ActiveMembers');
-        const allData = sheet.getDataRange().getValues();
+        // Use SheetAccess with ValidatedMember
+        const allData = SheetAccess.getDataAsArrays('ActiveMembers');
         const headers = allData[0];
         const rows = allData.slice(1);
         const members = ValidatedMember.validateRows(rows, headers, 'data_access.getMembers');
         return members;
     },
     getActionSpecs: () => {
-        SpreadsheetManager.convertLinks('Action Specs');
-        // We use getDataWithFormulas_ because the Body of an ActionSpec may contain formulas with a URL.
-        const actionSpecsAsArray = /** @type {MembershipManagement.ActionSpec[]} */ (SpreadsheetManager.getDataWithFormulas(SpreadsheetManager.getFiddler('ActionSpecs')))
+        SheetAccess.convertLinks('Action Specs');
+        // We use getDataWithFormulas because the Body of an ActionSpec may contain formulas with a URL.
+        const actionSpecsAsArray = /** @type {MembershipManagement.ActionSpec[]} */ (SheetAccess.getDataWithFormulas('ActionSpecs'))
         const actionSpecs = Object.fromEntries(actionSpecsAsArray.map(spec => [spec.Type, spec]));
         for (const actionSpec of Object.values(actionSpecs)) {
             let match = actionSpec.Body.match(/=hyperlink\("(https:\/\/docs.google.com\/document\/d\/[^"]+)"/);
@@ -79,14 +76,12 @@ var DataAccess = {
         return actionSpecs;
     },
     getPublicGroups: () => {
-        const publicGroups = SpreadsheetManager.getFiddler('PublicGroups').getData();
-        return publicGroups;
+        return SheetAccess.getData('PublicGroups');
     },
     getMember: (email) => {
         email = email.toLowerCase();
-        // Use SpreadsheetApp with ValidatedMember for single member lookup
-        const sheet = SpreadsheetManager.getSheet('ActiveMembers');
-        const allData = sheet.getDataRange().getValues();
+        // Use SheetAccess with ValidatedMember for single member lookup
+        const allData = SheetAccess.getDataAsArrays('ActiveMembers');
         const headers = allData[0];
         const emailCol = headers.indexOf('Email');
         const rows = allData.slice(1);
@@ -103,8 +98,8 @@ var DataAccess = {
     },
     updateMember: (email, newMember) => {
         email = email.toLowerCase();
-        // Use SpreadsheetApp with selective cell updates via MemberPersistence
-        const sheet = SpreadsheetManager.getSheet('ActiveMembers');
+        // Use SheetAccess with selective cell updates via MemberPersistence
+        const sheet = SheetAccess.getSheet('ActiveMembers');
         const allData = sheet.getDataRange().getValues();
         const headers = allData[0];
         const originalRows = allData.slice(1);
@@ -138,14 +133,13 @@ var DataAccess = {
         AppLogger.info('data_access', `updateMember: Updated ${changeCount} cells for ${email}`);
         
         // Clear cache so subsequent reads get fresh data
-        SpreadsheetManager.clearFiddlerCache('ActiveMembers');
+        SheetAccess.clearCache('ActiveMembers');
         return true;
     },
     isMember:(email) => {
         email = email.toLowerCase();
-        // Use SpreadsheetApp for quick email check
-        const sheet = SpreadsheetManager.getSheet('ActiveMembers');
-        const allData = sheet.getDataRange().getValues();
+        // Use SheetAccess for quick email check
+        const allData = SheetAccess.getDataAsArrays('ActiveMembers');
         const headers = allData[0];
         const emailCol = headers.indexOf('Email');
         const rows = allData.slice(1);
@@ -153,11 +147,9 @@ var DataAccess = {
         return rows.some(row => row[emailCol]?.toString().toLowerCase() === email);
     },
     getElections: () => {
-        const votingData = SpreadsheetManager.getFiddler('Elections').getData();
-        return votingData;
+        return SheetAccess.getData('Elections');
     },
     getSystemLogs: () => {
-        const systemLogs = SpreadsheetManager.getFiddler('SystemLogs').getData();
-        return systemLogs;
+        return SheetAccess.getData('SystemLogs');
     }
 };
