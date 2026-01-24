@@ -63,7 +63,8 @@ npm run prod:deploy-live    # Production deploy with git versioning
 > see [`gas-best-practices.md`](./gas-best-practices.md).
 
 **DO NOT (SCCCCMembershipManagement-specific)**:
-- Access spreadsheets directly via `SpreadsheetApp.getActiveSpreadsheet()` - **always use Fiddler**
+- Access spreadsheets directly via `SpreadsheetApp.getActiveSpreadsheet()` - **always use SheetAccess**
+- Use SpreadsheetManager or Fiddler directly in new code - **use SheetAccess abstraction**
 - Use `AppLogger` in Layer 0 modules (SpreadsheetManager.js, Properties.js, Logger.js) - creates circular dependency
 - Throw exceptions from Manager methods - **return errors as data** instead (allows partial success handling)
 - Skip tests when modifying Manager class business logic
@@ -73,7 +74,7 @@ npm run prod:deploy-live    # Production deploy with git versioning
 **ALWAYS (SCCCCMembershipManagement-specific)**:
 - Run `npm test` BEFORE every commit and verify all tests pass
 - Use `npm run {env}:*` scripts for deployment (never run clasp commands directly)
-- Use Fiddler library for ALL spreadsheet access
+- Use SheetAccess for ALL spreadsheet operations (wraps SpreadsheetManager/Fiddler)
 - Extract business logic into testable Manager classes
 - Follow the SPA architecture for web services (see below)
 
@@ -147,18 +148,40 @@ html.is-mobile-portrait #form {
 
 ---
 
-## Data Access via Fiddler
+## Data Access Pattern
 
-All spreadsheet access goes through `Common.Data.Storage.SpreadsheetManager.getFiddler(sheetName)` which uses the external `bmPreFiddler` library.
+**ALWAYS use `SheetAccess` for spreadsheet operations** (not direct SpreadsheetManager or Fiddler calls):
 
-**Pattern**:
+**Recommended Pattern**:
 ```javascript
-const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
-const data = fiddler.getData();           // Get current data
-fiddler.setData(newData).dumpValues();   // Write back to sheet
+// Read data as objects
+const data = SheetAccess.getData('ActiveMembers');
+
+// Read data as 2D arrays (with headers)
+const allData = SheetAccess.getDataAsArrays('ActiveMembers');
+
+// Write data
+SheetAccess.setData('ActiveMembers', updatedData);
+
+// For formulas/rich text links
+SheetAccess.convertLinks('ActionSpecs');
+const specs = SheetAccess.getDataWithFormulas('ActionSpecs');
+
+// Advanced: Get raw Sheet or Fiddler when needed
+const sheet = SheetAccess.getSheet('ActiveMembers');
+const fiddler = SheetAccess.getFiddler('ActiveMembers');
 ```
 
-**Per-execution caching**: Fiddlers are automatically cached within a single GAS execution. When multiple functions run in the same execution, fetch all needed fiddlers at the start and pass them through to avoid cache lookups.
+**SheetAccess provides abstraction over Fiddler library**, enabling future migration to native SpreadsheetApp without changing call sites.
+
+### Legacy Pattern (avoid in new code)
+```javascript
+// ❌ Old pattern - direct SpreadsheetManager/Fiddler use
+const fiddler = SpreadsheetManager.getFiddler('ActiveMembers');
+const data = fiddler.getData();
+```
+
+**Per-execution caching**: SheetAccess maintains Fiddler's per-execution caching behavior. When multiple functions run in the same execution, the same data is reused automatically.
 
 **Sheets Configuration**: All sheet references configured in `Bootstrap` sheet. See `docs/BOOTSTRAP_CONFIGURATION.md`.
 
@@ -176,6 +199,7 @@ fiddler.setData(newData).dumpValues();   // Write back to sheet
 Use `Logger.log()` (GAS built-in) only - no `AppLogger` methods.
 
 **Layer 1: Infrastructure** (`AppLogger` safe):
+- `src/common/data/SheetAccess.js` - Spreadsheet abstraction layer (wraps SpreadsheetManager)
 - `src/common/data/data_access.js` - High-level data access
 - Other utility modules
 
