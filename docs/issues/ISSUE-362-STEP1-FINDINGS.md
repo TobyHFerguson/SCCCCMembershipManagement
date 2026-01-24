@@ -6,11 +6,15 @@
 
 ## Summary
 
+**UPDATE (Post-Step 3)**: After documentation, `Common.Logger` and `Common.Utils` bridges were removed.
+
 Executed comprehensive search for remaining namespace backward compatibility bridges and identified:
 
-- **32 total Common.* references** in production code (outside 1namespaces.js)
-- **10 unique files** containing Common.* references
+- **32 total Common.* references** in production code (outside 1namespaces.js) - at time of Step 1
+- **10 unique files** containing Common.* references - at time of Step 1
 - **3 categories** identified: comments/docs, active namespace bridges, and active method calls
+
+**Resolution**: `Common.Logger` and `Common.Utils` bridges removed in subsequent cleanup.
 
 ## Pre-requisite Check: Common. Namespace Removal
 
@@ -166,18 +170,20 @@ grep -r "Common\." src/ --include="*.js" | grep -v "1namespaces.js" | cut -d: -f
 
 ## Context for Step 2
 
-**Active Backward Compatibility Bridges Found**:
-1. `Common.Logger.*` (11 references in Logger.js)
-   - Used by: Application services for logging
-   - Bridge: AppLogger → Common.Logger
+**Active Backward Compatibility Bridges Found** (at time of Step 1):
+1. `Common.Logger.*` (11 references in Logger.js) - **REMOVED POST-STEP 3**
+   - Was: Bridge AppLogger → Common.Logger
+   - Resolution: Bridge removed, all code uses AppLogger directly
 
-2. `Common.Utils.*` (4 references in Utils.js)
-   - Used by: MembershipManagement.Menu (5 calls)
+2. `Common.Utils.*` (4 references in Utils.js) - **REMOVED POST-STEP 3**
+   - Was: Used by MembershipManagement.Menu (5 calls)
    - Methods: wrapMenuFunction, extractSpreadsheetId
+   - Resolution: wrapMenuFunction moved to Menu.js, extractSpreadsheetId kept in Utils.js
 
-3. `Common.HomePage.Manager.*` (5 references in HomePageManager.js)
+3. `Common.HomePage.Manager.*` (5 references in HomePageManager.js) - **KEPT**
    - Used by: webapp_endpoints.js (1 call)
    - Method: getAvailableServices()
+   - Status: Remains active
 
 **For Step 2 Analysis**:
 - Check grep counts: how many files actually USE these bridges?

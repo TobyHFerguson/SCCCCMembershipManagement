@@ -64,7 +64,7 @@ npm run prod:deploy-live    # Production deploy with git versioning
 
 **DO NOT (SCCCCMembershipManagement-specific)**:
 - Access spreadsheets directly via `SpreadsheetApp.getActiveSpreadsheet()` - **always use Fiddler**
-- Use `Common.Logger.*` in Layer 0 modules (SpreadsheetManager.js, Properties.js, Logger.js) - creates circular dependency
+- Use `AppLogger` in Layer 0 modules (SpreadsheetManager.js, Properties.js, Logger.js) - creates circular dependency
 - Throw exceptions from Manager methods - **return errors as data** instead (allows partial success handling)
 - Skip tests when modifying Manager class business logic
 - Open a PR without running `npm test` and ensuring all tests pass
@@ -168,26 +168,26 @@ fiddler.setData(newData).dumpValues();   // Write back to sheet
 
 **Layered Architecture** (enforced by tests in `__tests__/circular-dependency.test.js`):
 
-**Layer 0: Foundation** (NO `Common.Logger.*` allowed):
+**Layer 0: Foundation** (NO `AppLogger` allowed):
 - `src/common/data/storage/SpreadsheetManager.js` - Low-level sheet access
 - `src/common/config/Properties.js` - Property management
-- `src/common/utils/Logger.js` - Structured logging
+- `src/common/utils/Logger.js` - Structured logging (defines AppLogger)
 
-Use `Logger.log()` (GAS built-in) only - no `Common.Logger.*` methods.
+Use `Logger.log()` (GAS built-in) only - no `AppLogger` methods.
 
-**Layer 1: Infrastructure** (`Common.Logger.*` safe):
+**Layer 1: Infrastructure** (`AppLogger` safe):
 - `src/common/data/data_access.js` - High-level data access
 - Other utility modules
 
 **Layer 2: Application Services**:
 - `MembershipManagement`, `VotingService`, etc.
-- Use `Common.Logger.*` for all logging
+- Use `AppLogger` for all logging
 
 **Logger Initialization**:
 ```javascript
 function onOpen() {
-  Common.Logger.configure();  // Loads config from Properties sheet
-  Common.Logger.info('App', 'Application initialized');
+  AppLogger.configure();  // Loads config from Properties sheet
+  AppLogger.info('App', 'Application initialized');
 }
 ```
 
@@ -324,7 +324,7 @@ const result = manager.processPaidTransactions(txns, members, schedule);
 - **Sheet access**: Never use `SpreadsheetApp.getActiveSpreadsheet()` - always use Fiddler
 - **Formula handling**: Use `convertLinks()` before `getDataWithFormulas()` for cells with rich text hyperlinks
 - **Environment switching**: Wrong clasp command deploys to wrong environment - always use `npm run {env}:*` scripts
-- **Circular dependencies**: Tests fail if Layer 0 modules use `Common.Logger.*`
+- **Circular dependencies**: Tests fail if Layer 0 modules use `AppLogger`
 - **Date serialization**: `google.script.run` cannot serialize Date objects - convert to strings first
 
 **For universal GAS gotchas** (module exports, namespace declarations, type annotations), 

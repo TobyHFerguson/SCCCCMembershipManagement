@@ -126,13 +126,13 @@ Audit.Persistence = Audit.Persistence || {};  // ReferenceError in Jest
 
 ### Removed (Backward Compatibility Only)
 
-These were removed in Issue #346 and are no longer used:
+These were removed in Issue #346 and Issue #362:
 - **`Common.*`** - Fully migrated to flat classes (ApiResponse, TokenManager, FeatureFlags, etc.)
 - **`Audit.*`** - Migrated to AuditLogEntry, AuditLogger, AuditPersistence
+- **`Common.Logger`** - Bridge removed in Issue #362 (all code uses AppLogger directly)
+- **`Common.Utils`** - Bridge removed in Issue #362 (wrapMenuFunction moved to Menu.js, extractSpreadsheetId kept in Utils.js)
 
-**Exception**: Three `Common.*` namespaces remain ACTIVE (not backward compat):
-- **`Common.Logger`** - Bridge to AppLogger (11 method aliases in Logger.js, but 0 actual usages in codebase - all code uses AppLogger directly)
-- **`Common.Utils`** - Active utilities (wrapMenuFunction, extractSpreadsheetId) - 5 usages in Menu.js
+**Exception**: One `Common.*` namespace remains ACTIVE:
 - **`Common.HomePage.Manager`** - Active home page manager class - 1 usage in webapp_endpoints.js
 
 ### Active (Organizational Structure)
@@ -346,23 +346,17 @@ MembershipManagement.Utils.calculateExpirationDate = function(referenceDate, exp
 - `MembershipManagement.Utils` (54 usages) ✅ KEEP
 - Service-specific namespaces (VotingService.*, etc.) ✅ KEEP
 
-### Remaining Common.* Namespaces (Active, Not Backward Compat)
+### Remaining Common.* Namespace (Active, Not Backward Compat)
 
-Three `Common.*` namespaces remain because they're actively used:
+One `Common.*` namespace remains because it's actively used:
 
-1. **`Common.Logger`** (Logger.js) - Bridge to AppLogger
-   - 11 method aliases defined
-   - 0 actual usages found in codebase (all code uses AppLogger directly)
-   - **Status**: Could be removed in future if confirmed unused
-
-2. **`Common.Utils`** (Utils.js) - Active utilities
-   - 5 usages in Menu.js (wrapMenuFunction)
-   - Methods: wrapMenuFunction(), extractSpreadsheetId()
-   - **Status**: KEEP - actively used
-
-3. **`Common.HomePage.Manager`** (HomePageManager.js) - Active manager
+1. **`Common.HomePage.Manager`** (HomePageManager.js) - Active manager
    - 1 usage in webapp_endpoints.js (getAvailableServices)
    - **Status**: KEEP - actively used
+
+**Removed in Issue #362**:
+- **`Common.Logger`** - Bridge removed (all code uses AppLogger directly)
+- **`Common.Utils`** - Bridge removed (wrapMenuFunction moved to Menu.js, extractSpreadsheetId kept in Utils.js as standalone function)
 
 ---
 

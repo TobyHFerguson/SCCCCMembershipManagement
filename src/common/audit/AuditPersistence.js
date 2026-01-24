@@ -13,7 +13,7 @@
  * 4. Deduplicates by unique ID if present to avoid double-writes
  * 5. Returns number of rows written for verification
  * 
- * Layer: Layer 1 Infrastructure (can use Common.Logger)
+ * Layer: Layer 1 Infrastructure (can use AppLogger)
  * 
  * Usage:
  *   const numWritten = AuditPersistence.persistAuditEntries(result.auditEntries);
