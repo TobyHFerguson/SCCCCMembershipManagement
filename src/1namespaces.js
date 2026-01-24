@@ -14,6 +14,7 @@
  * - Common.Data.MemberPersistence → MemberPersistence
  * - Common.Data.Access → DataAccess
  * - Common.Data.Storage.SpreadsheetManager → SpreadsheetManager
+ * - SheetAccess - Abstraction layer for spreadsheet operations (wraps SpreadsheetManager/Fiddler)
  * - Common.Logging.ServiceLogger → ServiceLogger
  * - Common.Logging.ServiceExecutionLogger → ServiceExecutionLogger
  * - Common.Config.FeatureFlags → FeatureFlags, FeatureFlagsManager

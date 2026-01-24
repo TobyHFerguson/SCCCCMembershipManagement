@@ -496,6 +496,68 @@ declare class SpreadsheetManager {
 }
 
 /**
+ * SheetAccess - Abstraction over spreadsheet operations
+ * Provides consistent interface for sheet access, hiding Fiddler implementation details
+ */
+declare class SheetAccess {
+    /**
+     * Get data from a sheet as array of row objects
+     */
+    static getData(sheetName: string): any[];
+    
+    /**
+     * Get data as 2D array (headers + rows)
+     */
+    static getDataAsArrays(sheetName: string): any[][];
+    
+    /**
+     * Get data with formulas preserved (for rich text hyperlinks)
+     * IMPORTANT: Call convertLinks() first for cells with rich text hyperlinks
+     */
+    static getDataWithFormulas(sheetName: string): any[];
+    
+    /**
+     * Write data to a sheet (replaces all data)
+     * Note: This clears the cache after writing to ensure fresh reads
+     */
+    static setData(sheetName: string, data: any[]): void;
+    
+    /**
+     * Append rows to end of sheet
+     */
+    static appendRows(sheetName: string, rows: any[][]): void;
+    
+    /**
+     * Update specific rows in a sheet
+     */
+    static updateRows(sheetName: string, rows: any[][], startRow: number): void;
+    
+    /**
+     * Convert rich text links to hyperlink formulas
+     * IMPORTANT: Call this BEFORE getDataWithFormulas() for sheets with rich text links
+     */
+    static convertLinks(sheetName: string): void;
+    
+    /**
+     * Clear cached data for a sheet
+     * Call when external code may have modified the sheet
+     */
+    static clearCache(sheetName?: string): void;
+    
+    /**
+     * Get raw Sheet object for advanced operations
+     * Note: Prefer using higher-level methods when possible
+     */
+    static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
+    
+    /**
+     * Get a Fiddler instance for a sheet (for advanced use)
+     * Note: This is provided for backward compatibility
+     */
+    static getFiddler(sheetName: string): Fiddler;
+}
+
+/**
  * Plain object shape of ValidatedMember data (without class methods)
  * Use this for functions that return/accept member data as plain objects
  * rather than ValidatedMember class instances
