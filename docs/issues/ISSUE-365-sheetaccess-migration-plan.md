@@ -23,15 +23,13 @@ The following have been migrated:
 | TokenStorage | TokenStorage.js | 4 | Tokens | LOW |
 | Logger | Logger.js | 1 | SystemLogs | LOW (Layer 0 constraint) |
 | Properties | Properties.js | 1 | Properties | LOW (Layer 0 constraint) |
-| GroupSettings | GroupSettings.js | 3 | GroupsByType, GroupSettings | LOW |
 
-**Total: ~30 usages across 7 modules**
+**Total: ~27 usages across 6 modules**
 
 ### Migration Order (Risk-Based)
 
-1. **Phase 1: Low-Risk Infrastructure** (3-4 hours)
+1. **Phase 1: Low-Risk Infrastructure** (2-3 hours)
    - TokenStorage (Tokens)
-   - GroupSettings (GroupsByType, GroupSettings)
    
 2. **Phase 2: VotingService** (2-3 hours)
    - VotingService.js (ElectionConfiguration)
@@ -89,7 +87,6 @@ Some usages require special handling:
 - Issue #369: Migrate EmailChangeService to SheetAccess
 - Issue #370: Migrate MembershipManagement to SheetAccess
 - Issue #371: Migrate GroupSettings to SheetAccess
-
 ## Success Criteria (Per Migration)
 
 - ✅ All `SpreadsheetManager.getFiddler()` calls replaced with `SheetAccess` equivalents

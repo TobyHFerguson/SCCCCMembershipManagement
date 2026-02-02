@@ -734,20 +734,6 @@ interface GroupByType {
     type: string;
 }
 
-interface GroupSettings {
-    email: string;
-    type: string;
-    [key: string]: any;
-}
-
-// Google Apps Script Advanced Services
-declare namespace GroupsSettings {
-    namespace Groups {
-        function get(groupEmail: string): any;
-        function update(group: any, groupEmail: string): any;
-    }
-}
-
 // WebService type - defines service metadata structure
 // Additional service-specific properties like WebApp, Data, etc. are typed as object
 interface WebServiceDefinition {

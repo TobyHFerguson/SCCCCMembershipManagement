@@ -86,8 +86,6 @@ Markdown
 | PublicGroups |  | Public Groups | FALSE |
 | MigratingMembers | 1a6DFHGv8NcnkKOCpcA_aukubdEt_sLjy_XE5IfuGCEo | Conditioned CEMembers | FALSE |
 | ExpiredMembers |  | Expired Members | TRUE |
-| GroupSettings |  | Group Settings | FALSE |
-| GroupsByType |  | Groups By Type | FALSE |
 | Tokens |  | MagicLinkTokens | TRUE |
 | EmailChange |  | Email Change Log | TRUE |
 | Elections | https://docs.google.com/spreadsheets/d/1SpFU7uTPRcoHyjD5AH6Pf1RbjBmU_kd9Is6aKNJ9xiE/edit?usp=drive_link | Elections | FALSE |
@@ -110,8 +108,6 @@ ActionSpecs,,Action Specs,FALSE
 PublicGroups,,Public Groups,FALSE
 MigratingMembers,1a6DFHGv8NcnkKOCpcA_aukubdEt_sLjy_XE5IfuGCEo,Conditioned CEMembers,FALSE
 ExpiredMembers,,Expired Members,TRUE
-GroupSettings,,Group Settings,FALSE
-GroupsByType,,Groups By Type,FALSE
 Tokens,,MagicLinkTokens,TRUE
 EmailChange,,Email Change Log,TRUE
 Elections,https://docs.google.com/spreadsheets/d/1SpFU7uTPRcoHyjD5AH6Pf1RbjBmU_kd9Is6aKNJ9xiE/edit?usp=drive_link,Elections,FALSE
