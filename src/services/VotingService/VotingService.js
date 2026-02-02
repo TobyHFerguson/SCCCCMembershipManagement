@@ -13,10 +13,8 @@
  */
 VotingService.getBallotFolderId = function () {
     try {
-        // @ts-ignore - Common namespace is available at runtime
-        const configFiddler = SpreadsheetManager.getFiddler('ElectionConfiguration');
         /** @type {any[]} */
-        const config = configFiddler.getData();
+        const config = SheetAccess.getData('ElectionConfiguration');
         
         // Look for a ballot folder URL configuration
         /** @type {any} */

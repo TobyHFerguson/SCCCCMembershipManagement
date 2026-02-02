@@ -1,7 +1,6 @@
 /// <reference path="./VotingService.d.ts" />
 /// <reference path="./Auth.d.ts" />
 /// <reference path
-/// <reference path="../../common/data/storage/SpreadsheetManager.d.ts" />
 /// <reference path="../../types/global.d.ts" />
 //@ts-check
 VotingService.Data = {
@@ -9,7 +8,7 @@ VotingService.Data = {
      * @returns {Fiddler<VotingService.Election>} Fiddler instance for the Elections sheet.
      */
     getFiddler_: function () {
-        return SpreadsheetManager.getFiddler('Elections');
+        return SheetAccess.getFiddler('Elections');
     },
 
     /**
