@@ -637,14 +637,14 @@ EmailChangeService.Api.sendVerificationEmail = function(email, content) {
 EmailChangeService.Api.changeEmailInSpreadsheets = function(oldEmail, newEmail) {
     for (const ref of EMAIL_CHANGE_SHEET_REFS) {
       try {
-        const fiddler = SpreadsheetManager.getFiddler(ref);
-        fiddler.mapRows(/** @param {any} row */ (row) => {
+        const data = SheetAccess.getData(ref);
+        const updated = data.map((row) => {
           if (row.Email && row.Email.toLowerCase() === oldEmail) {
             row.Email = newEmail;
           }
           return row;
         });
-        fiddler.dumpValues();
+        SheetAccess.setData(ref, updated);
       } catch (error) {
         Logger.log('[EmailChangeService.Api] Error updating ' + ref + ': ' + error);
       }
@@ -662,10 +662,9 @@ EmailChangeService.Api.logEmailChange = function(oldEmail, newEmail) {
     const entry = EmailChangeService.Manager.createChangeLogEntry(oldEmail, newEmail);
     
     // GAS: Append to log sheet
-    const fiddler = SpreadsheetManager.getFiddler('EmailChange');
-    const data = fiddler.getData();
+    const data = SheetAccess.getData('EmailChange');
     data.push(entry);
-    fiddler.setData(data).dumpValues();
+    SheetAccess.setData('EmailChange', data);
   } catch (error) {
     Logger.log('[EmailChangeService.Api] Error logging email change: ' + error);
   }
