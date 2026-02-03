@@ -342,7 +342,6 @@ VotingService.createBallotForm = function (formId, electionOfficers) {
     // Ensure the copied form has the source form's title
     // (Google Forms makeCopy may not preserve the internal form title immediately)
     if (sourceTitle && (!form.getTitle() || form.getTitle().trim() === '')) {
-        AppLogger.info('VotingService', `Setting form title from source: '${sourceTitle}'`);
         form.setTitle(sourceTitle);
     }
 
@@ -432,12 +431,7 @@ VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFo
         const formTitle = sourceForm.getTitle();
         const sourceTitle = (formTitle && formTitle.trim() !== '') ? formTitle : sourceFileName;
         
-        // @ts-ignore - Logger is implemented in separate file
-        AppLogger.info('VotingService', `Retrieved source form ID: ${sourceFormId}`, {
-            formTitle: formTitle,
-            fileName: sourceFileName,
-            effectiveTitle: sourceTitle
-        });
+
 
         // 2. Create the form copy in the destination folder.
         const destination = DriveApp.getFolderById(destinationFolderId);
