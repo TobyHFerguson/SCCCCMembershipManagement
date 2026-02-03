@@ -53,6 +53,20 @@ beforeEach(() => {
     getFiddler: jest.fn()
   };
 
+  // Mock SheetAccess (abstraction layer)
+  global.SheetAccess = {
+    getData: jest.fn(),
+    setData: jest.fn(),
+    getDataAsArrays: jest.fn(),
+    getDataWithFormulas: jest.fn(),
+    appendRows: jest.fn(),
+    updateRows: jest.fn(),
+    convertLinks: jest.fn(),
+    clearCache: jest.fn(),
+    getSheet: jest.fn(),
+    getFiddler: jest.fn()
+  };
+
   // Mock ApiClient (flat class pattern)
   global.ApiClient = {
     registerHandler: jest.fn(),
@@ -91,6 +105,7 @@ afterEach(() => {
   delete global.MailApp;
   delete global.GroupSubscription;
   delete global.Common;
+  delete global.SheetAccess;
 });
 
 // Test data factories
@@ -408,13 +423,11 @@ describe('EmailChangeService.Api', () => {
   // ==================== handleChangeEmail Tests ====================
   
   describe('handleChangeEmail', () => {
-    let mockFiddler;
-
     beforeEach(() => {
-      mockFiddler = TestData.createMockFiddler([
+      const mockData = [
         { Email: 'old@example.com', First: 'John' }
-      ]);
-      SpreadsheetManager.getFiddler.mockReturnValue(mockFiddler);
+      ];
+      SheetAccess.getData.mockReturnValue(mockData);
     });
 
     test('changes email in groups successfully', () => {
@@ -500,27 +513,21 @@ describe('EmailChangeService.Api', () => {
 
       expect(result.success).toBe(true);
       // Should be called for ActiveMembers, ExpirySchedule, and EmailChange log
-      expect(SpreadsheetManager.getFiddler).toHaveBeenCalled();
+      expect(SheetAccess.getData).toHaveBeenCalled();
+      expect(SheetAccess.setData).toHaveBeenCalled();
     });
 
     test('logs email change', () => {
-      const logData = [];
-      const logFiddler = TestData.createMockFiddler(logData);
-      
-      SpreadsheetManager.getFiddler.mockImplementation((ref) => {
-        if (ref === 'EmailChange') {
-          return logFiddler;
-        }
-        return mockFiddler;
-      });
-
       EmailChangeService.Api.handleChangeEmail({
         _authenticatedEmail: 'old@example.com',
         newEmail: 'new@example.com',
         groups: []
       });
 
-      expect(logFiddler.setData).toHaveBeenCalled();
+      // Verify setData was called for EmailChange sheet
+      const setDataCalls = SheetAccess.setData.mock.calls;
+      const emailChangeCall = setDataCalls.find(call => call[0] === 'EmailChange');
+      expect(emailChangeCall).toBeDefined();
     });
 
     test('handles empty groups array', () => {
@@ -664,23 +671,30 @@ describe('EmailChangeService.Api', () => {
 
   describe('changeEmailInSpreadsheets', () => {
     test('updates email in all sheet refs', () => {
-      const mockFiddler = {
-        mapRows: jest.fn(),
-        dumpValues: jest.fn()
-      };
-      SpreadsheetManager.getFiddler.mockReturnValue(mockFiddler);
+      const mockData = [
+        { Email: 'old@example.com', First: 'John' },
+        { Email: 'other@example.com', First: 'Jane' }
+      ];
+      SheetAccess.getData.mockReturnValue(mockData);
 
       EmailChangeService.Api.changeEmailInSpreadsheets('old@example.com', 'new@example.com');
 
       // Should be called for ActiveMembers and ExpirySchedule
-      expect(SpreadsheetManager.getFiddler).toHaveBeenCalledWith('ActiveMembers');
-      expect(SpreadsheetManager.getFiddler).toHaveBeenCalledWith('ExpirySchedule');
-      expect(mockFiddler.mapRows).toHaveBeenCalledTimes(2);
-      expect(mockFiddler.dumpValues).toHaveBeenCalledTimes(2);
+      expect(SheetAccess.getData).toHaveBeenCalledWith('ActiveMembers');
+      expect(SheetAccess.getData).toHaveBeenCalledWith('ExpirySchedule');
+      expect(SheetAccess.setData).toHaveBeenCalledTimes(2);
+      
+      // Verify the data was transformed correctly
+      expect(SheetAccess.setData).toHaveBeenCalledWith(
+        'ActiveMembers',
+        expect.arrayContaining([
+          expect.objectContaining({ Email: 'new@example.com', First: 'John' })
+        ])
+      );
     });
 
     test('handles errors gracefully', () => {
-      SpreadsheetManager.getFiddler.mockImplementation(() => {
+      SheetAccess.getData.mockImplementation(() => {
         throw new Error('Sheet not found');
       });
 
@@ -693,18 +707,27 @@ describe('EmailChangeService.Api', () => {
 
   describe('logEmailChange', () => {
     test('appends log entry to EmailChange sheet', () => {
-      const logFiddler = TestData.createMockFiddler([]);
-      SpreadsheetManager.getFiddler.mockReturnValue(logFiddler);
+      const existingData = [];
+      SheetAccess.getData.mockReturnValue(existingData);
 
       EmailChangeService.Api.logEmailChange('old@example.com', 'new@example.com');
 
-      expect(SpreadsheetManager.getFiddler).toHaveBeenCalledWith('EmailChange');
-      expect(logFiddler.setData).toHaveBeenCalled();
-      expect(logFiddler.dumpValues).toHaveBeenCalled();
+      expect(SheetAccess.getData).toHaveBeenCalledWith('EmailChange');
+      expect(SheetAccess.setData).toHaveBeenCalled();
+      
+      // Verify setData was called with data that includes the new entry
+      const setDataCall = SheetAccess.setData.mock.calls[0];
+      expect(setDataCall[0]).toBe('EmailChange');
+      expect(setDataCall[1]).toHaveLength(1);
+      expect(setDataCall[1][0]).toMatchObject({
+        from: 'old@example.com',
+        to: 'new@example.com'
+      });
+      expect(setDataCall[1][0].date).toBeDefined();
     });
 
     test('handles errors gracefully', () => {
-      SpreadsheetManager.getFiddler.mockImplementation(() => {
+      SheetAccess.getData.mockImplementation(() => {
         throw new Error('Sheet not found');
       });
 
