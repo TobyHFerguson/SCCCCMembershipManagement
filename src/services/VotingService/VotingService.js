@@ -13,10 +13,8 @@
  */
 VotingService.getBallotFolderId = function () {
     try {
-        // @ts-ignore - Common namespace is available at runtime
-        const configFiddler = SpreadsheetManager.getFiddler('ElectionConfiguration');
         /** @type {any[]} */
-        const config = configFiddler.getData();
+        const config = SheetAccess.getData('ElectionConfiguration');
         
         // Look for a ballot folder URL configuration
         /** @type {any} */
@@ -193,10 +191,11 @@ VotingService.openElection_ = function (ballot, election) {
  * @param {VotingService.Ballot} ballot
  */
 VotingService.emailElectionOfficersAboutOpening_ = function (electionOfficers, ballot) {
+    const ballotTitle = ballot.getTitle() || 'Untitled Ballot';
     const message = {
         to: electionOfficers,
-        subject: `Election '${ballot.getTitle()}' is now open`,
-        body: `The ${ballot.getTitle()} election is now open and accepting responses. You can view the form at: ${ballot.getEditUrl()}`
+        subject: `Election '${ballotTitle}' is now open`,
+        body: `The ${ballotTitle} election is now open and accepting responses. You can view the form at: ${ballot.getEditUrl()}`
     };
     MailApp.sendEmail(message)
 }
@@ -335,10 +334,16 @@ VotingService.removeOnSubmitTrigger_ = function (triggerId) {
  * @returns {BallotFormResult} Object containing the ballot title and edit URL
  */
 VotingService.createBallotForm = function (formId, electionOfficers) {
-    const { url, isSharedDrive } = VotingService.makePublishedCopyOfFormInFolder_(formId, VotingService.getBallotFolderIdSafe());
+    const { url, isSharedDrive, sourceTitle } = VotingService.makePublishedCopyOfFormInFolder_(formId, VotingService.getBallotFolderIdSafe());
 
     /** @type {GoogleAppsScript.Forms.Form} */
     const form = FormApp.openByUrl(url);
+    
+    // Ensure the copied form has the source form's title
+    // (Google Forms makeCopy may not preserve the internal form title immediately)
+    if (sourceTitle && (!form.getTitle() || form.getTitle().trim() === '')) {
+        form.setTitle(sourceTitle);
+    }
 
     // Not a quiz
     form.setIsQuiz(false);
@@ -408,28 +413,32 @@ VotingService.getBallot = function (id) {
  *
  * @param {string} formId The ID of the Google Form to copy (ID or URL)
  * @param {string} destinationFolderId The ID of the folder to place the copy in.
- * @return {{url: string, isSharedDrive: boolean}} Object containing the published URL of the new form and whether it's in a Shared Drive.
+ * @return {{url: string, isSharedDrive: boolean, sourceTitle: string}} Object containing the published URL of the new form, whether it's in a Shared Drive, and the source form's title.
  */
 VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFolderId) {
     try {
         // @ts-ignore - Logger is implemented in separate file
         AppLogger.info('VotingService', `Starting ballot copy creation from form: ${formId} to folder: ${destinationFolderId}`);
         
-        // 1. Get the source form file from Drive.
-        const sourceFormId = VotingService.getBallot(formId).getId();
-        // @ts-ignore - Logger is implemented in separate file
-        AppLogger.info('VotingService', `Retrieved source form ID: ${sourceFormId}`);
-
+        // 1. Get the source form and its title (for ensuring the copy has the correct title)
+        const sourceForm = VotingService.getBallot(formId);
+        const sourceFormId = sourceForm.getId();
         const sourceFile = DriveApp.getFileById(sourceFormId);
-        // @ts-ignore - Logger is implemented in separate file
-        AppLogger.info('VotingService', `Accessed source file: ${sourceFile.getName()}`);
+        const sourceFileName = sourceFile.getName();
+        
+        // Use form title if available, otherwise fall back to Drive file name
+        // (Google Forms can have empty internal title even with a file name)
+        const formTitle = sourceForm.getTitle();
+        const sourceTitle = (formTitle && formTitle.trim() !== '') ? formTitle : sourceFileName;
+        
+
 
         // 2. Create the form copy in the destination folder.
         const destination = DriveApp.getFolderById(destinationFolderId);
         // @ts-ignore - Logger is implemented in separate file
         AppLogger.info('VotingService', `Accessed destination folder: ${destination.getName()}`);
         
-        const copiedFileId = sourceFile.makeCopy(sourceFile.getName(), destination).getId();
+        const copiedFileId = sourceFile.makeCopy(sourceFileName, destination).getId();
         // @ts-ignore - Logger is implemented in separate file
         AppLogger.info('VotingService', `Created copy with ID: ${copiedFileId}`);
     
@@ -459,10 +468,12 @@ VotingService.makePublishedCopyOfFormInFolder_ = function (formId, destinationFo
         AppLogger.info('VotingService', `Ballot copy creation completed successfully`, {
             copiedFileId: copiedFileId,
             editUrl: newForm.getEditUrl(),
-            isSharedDrive: isSharedDrive
+            isSharedDrive: isSharedDrive,
+            sourceTitle: sourceTitle,
+            copiedFormTitle: newForm.getTitle()
         });
         
-        return { url: newForm.getEditUrl(), isSharedDrive };
+        return { url: newForm.getEditUrl(), isSharedDrive, sourceTitle };
         
     } catch (error) {
         /** @type {Error} */
@@ -567,7 +578,16 @@ VotingService.setElectionOfficers = function (editUrl, electionOfficers = [], is
 
     // Get here with election officers to actually share with!
     // election Officers are given editor rights to the form
-    const formTitle = form.getTitle();
+    const formTitle = form.getTitle() || 'Untitled Ballot';
+    
+    // Warn if form has empty title (seed ballot issue)
+    if (!form.getTitle() || form.getTitle().trim() === '') {
+        AppLogger.warn('VotingService', `Form has empty title. Using fallback 'Untitled Ballot'`, {
+            editUrl: editUrl,
+            formId: form.getId()
+        });
+    }
+    
     add.forEach(email => {
         try {
             form.addEditor(email);

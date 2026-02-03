@@ -49,8 +49,19 @@ VotingService.WebApp._renderVotingOptions = function (userEmail, htmlTemplate) {
 VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
     const elections = VotingService.Data.getElectionData();
     console.log(`Raw elections data retrieved for user ${userEmail}:`, elections);
+    
+    // Filter out empty/invalid election rows (rows with empty Title, Start, or End)
+    const validElections = elections.filter(election => {
+        return election.Title && 
+               election.Title.trim() !== '' && 
+               election.Start && 
+               election.End;
+    });
+    
+    console.log(`Filtered to ${validElections.length} valid elections (from ${elections.length} total rows)`);
+    
     /** @type {VotingService.ProcessedElection[]} */
-    const processedElections = elections.map(election => {
+    const processedElections = validElections.map(election => {
         const result = {};
         try {
             result.title = election.Title;
