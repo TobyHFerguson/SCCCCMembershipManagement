@@ -7,6 +7,9 @@ applyTo: '**'
 > **📚 Universal GAS Patterns**: For Google Apps Script development best practices (type safety, testing,
 > TDD workflow, architecture patterns, Core/Adapter separation, Fiddler usage), see [`gas-best-practices.md`](./gas-best-practices.md).
 >
+> **📝 Writing Issues for Agents**: When creating GitHub issues for automated coding agents,
+> follow [`agent-issue-guidelines.md`](./agent-issue-guidelines.md).
+>
 > This file contains **SCCCCMembershipManagement-specific** guidelines only.
 
 ---
