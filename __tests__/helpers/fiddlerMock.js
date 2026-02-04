@@ -27,9 +27,19 @@ module.exports = function createFiddlerMock(initialFifo = [], initialDead = []) 
           dumpValues: () => { }
         };
       }
+      if (name === 'ExpirySchedule') {
+        return {
+          getData: () => [],
+          setData: (d) => ({ dumpValues: () => { } }),
+          dumpValues: () => { }
+        };
+      }
       // default simple fiddler for other sheets
       return { getData: () => [], setData: () => ({ dumpValues: () => { } }), dumpValues: () => { } };
     };
+    
+    // Add clearFiddlerCache method for SheetAccess compatibility
+    global.SpreadsheetManager.clearFiddlerCache = () => { };
   }
 
   function restore() {

@@ -25,6 +25,10 @@ global.Common.Logger.warn = jest.fn();
 global.Common.Logger.error = jest.fn();
 global.Common.Logger.debug = jest.fn();
 
+// Load SheetAccess before MembershipManagement
+const { SheetAccess } = require('../src/common/data/SheetAccess.js');
+global.SheetAccess = SheetAccess;
+
 // Load ValidatedMember and MemberPersistence before MembershipManagement
 const { ValidatedMember } = require('../src/common/data/ValidatedMember.js');
 const { MemberPersistence } = require('../src/common/data/MemberPersistence.js');
