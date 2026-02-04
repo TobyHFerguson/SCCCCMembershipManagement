@@ -1,12 +1,7 @@
-/// <reference path="../../types/global.d.ts" />
-
 /**
  * SheetAccess - Abstraction layer for spreadsheet operations
  * 
- * Purpose: Provide consistent interface for sheet access, hiding Fiddler implementation
- * 
- * Current: Uses Fiddler under the hood
- * Future: Can be swapped to native SpreadsheetApp without changing call sites
+ * Purpose: Provide consistent interface for sheet access using native SpreadsheetApp
  * 
  * Layer: Layer 1 Infrastructure (can use AppLogger)
  * 
@@ -40,8 +35,14 @@ var SheetAccess = (function() {
      */
     static getData(sheetName) {
       const manager = getSpreadsheetManager();
-      const fiddler = manager.getFiddler(sheetName);
-      return fiddler.getData();
+      const sheet = manager.getSheet(sheetName);
+      const values = sheet.getDataRange().getValues();
+      const headers = values[0];
+      return values.slice(1).map(row => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = row[i]);
+        return obj;
+      });
     }
     
     /**
@@ -56,32 +57,70 @@ var SheetAccess = (function() {
     }
     
     /**
-     * Get data with formulas preserved (for rich text hyperlinks)
+     * Get data from sheet with RichText preserved for link columns
+     * Returns objects where link columns have {text, url} structure
      * 
-     * IMPORTANT: Call convertLinks() first for cells with rich text hyperlinks
-     * 
-     * @param {string} sheetName - Name of the sheet from Bootstrap
-     * @returns {Object[]} Array of row objects with formulas merged in
+     * @param {string} sheetName - Bootstrap sheet name
+     * @param {string[]} [richTextColumns=[]] - Column names to extract RichText from
+     * @returns {Object[]} Array of row objects with RichText data
      */
-    static getDataWithFormulas(sheetName) {
+    static getDataWithRichText(sheetName, richTextColumns = []) {
       const manager = getSpreadsheetManager();
-      const fiddler = manager.getFiddler(sheetName);
-      return manager.getDataWithFormulas(fiddler);
+      const sheet = manager.getSheet(sheetName);
+      const range = sheet.getDataRange();
+      const values = range.getValues();
+      const richTextValues = range.getRichTextValues();
+      const headers = values[0];
+      
+      const richTextColIndices = richTextColumns.map(col => headers.indexOf(col));
+      
+      return values.slice(1).map((row, rowIndex) => {
+        const obj = {};
+        headers.forEach((header, colIndex) => {
+          if (richTextColIndices.includes(colIndex)) {
+            const rtv = richTextValues[rowIndex + 1][colIndex];
+            const url = rtv ? rtv.getLinkUrl() : null;
+            obj[header] = url ? { text: rtv.getText(), url: url } : row[colIndex];
+          } else {
+            obj[header] = row[colIndex];
+          }
+        });
+        return obj;
+      });
     }
     
     /**
      * Write data to a sheet (replaces all data)
-     * 
-     * Note: This clears the cache after writing to ensure fresh reads
      * 
      * @param {string} sheetName - Name of the sheet from Bootstrap
      * @param {Object[]} data - Array of row objects
      */
     static setData(sheetName, data) {
       const manager = getSpreadsheetManager();
-      const fiddler = manager.getFiddler(sheetName);
-      fiddler.setData(data).dumpValues();
-      manager.clearFiddlerCache(sheetName);
+      const sheet = manager.getSheet(sheetName);
+      
+      if (!data || data.length === 0) {
+        // Clear all data except header
+        if (sheet.getLastRow() > 1) {
+          sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+        }
+        return;
+      }
+      
+      const headers = Object.keys(data[0] || {});
+      const existingHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      
+      // Use existing header order if available and non-empty
+      const orderedHeaders = existingHeaders.length && existingHeaders[0] ? existingHeaders : headers;
+      const rows = data.map(obj => orderedHeaders.map(h => obj[h] ?? ''));
+      
+      // Clear existing data (except headers) and write new
+      if (sheet.getLastRow() > 1) {
+        sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+      }
+      if (rows.length > 0) {
+        sheet.getRange(2, 1, rows.length, orderedHeaders.length).setValues(rows);
+      }
     }
     
     /**
@@ -117,29 +156,6 @@ var SheetAccess = (function() {
     }
     
     /**
-     * Convert rich text links to hyperlink formulas
-     * 
-     * IMPORTANT: Call this BEFORE getDataWithFormulas() for sheets with rich text links
-     * 
-     * @param {string} sheetName - Name of the sheet from Bootstrap
-     */
-    static convertLinks(sheetName) {
-      const manager = getSpreadsheetManager();
-      manager.convertLinks(sheetName);
-    }
-    
-    /**
-     * Clear cached data for a sheet
-     * Call when external code may have modified the sheet
-     * 
-     * @param {string} [sheetName] - Specific sheet to clear, or omit to clear all
-     */
-    static clearCache(sheetName) {
-      const manager = getSpreadsheetManager();
-      manager.clearFiddlerCache(sheetName);
-    }
-    
-    /**
      * Get raw Sheet object for advanced operations
      * 
      * Note: Prefer using higher-level methods when possible
@@ -151,20 +167,6 @@ var SheetAccess = (function() {
     static getSheet(sheetName) {
       const manager = getSpreadsheetManager();
       return manager.getSheet(sheetName);
-    }
-    
-    /**
-     * Get a Fiddler instance for a sheet (for advanced use)
-     * 
-     * Note: This is provided for backward compatibility
-     * Prefer using higher-level methods when possible
-     * 
-     * @param {string} sheetName - Name of the sheet from Bootstrap
-     * @returns {Fiddler} Fiddler instance with per-execution caching
-     */
-    static getFiddler(sheetName) {
-      const manager = getSpreadsheetManager();
-      return manager.getFiddler(sheetName);
     }
   }
   
