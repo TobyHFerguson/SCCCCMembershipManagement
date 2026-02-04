@@ -497,7 +497,7 @@ declare class SpreadsheetManager {
 
 /**
  * SheetAccess - Abstraction over spreadsheet operations
- * Provides consistent interface for sheet access, hiding Fiddler implementation details
+ * Provides consistent interface using native SpreadsheetApp API
  */
 declare class SheetAccess {
     /**
@@ -511,14 +511,13 @@ declare class SheetAccess {
     static getDataAsArrays(sheetName: string): any[][];
     
     /**
-     * Get data with formulas preserved (for rich text hyperlinks)
-     * IMPORTANT: Call convertLinks() first for cells with rich text hyperlinks
+     * Get data from sheet with RichText preserved for link columns
+     * Returns objects where link columns have {text, url} structure
      */
-    static getDataWithFormulas(sheetName: string): any[];
+    static getDataWithRichText(sheetName: string, richTextColumns?: string[]): any[];
     
     /**
      * Write data to a sheet (replaces all data)
-     * Note: This clears the cache after writing to ensure fresh reads
      */
     static setData(sheetName: string, data: any[]): void;
     
@@ -533,28 +532,10 @@ declare class SheetAccess {
     static updateRows(sheetName: string, rows: any[][], startRow: number): void;
     
     /**
-     * Convert rich text links to hyperlink formulas
-     * IMPORTANT: Call this BEFORE getDataWithFormulas() for sheets with rich text links
-     */
-    static convertLinks(sheetName: string): void;
-    
-    /**
-     * Clear cached data for a sheet
-     * Call when external code may have modified the sheet
-     */
-    static clearCache(sheetName?: string): void;
-    
-    /**
      * Get raw Sheet object for advanced operations
      * Note: Prefer using higher-level methods when possible
      */
     static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
-    
-    /**
-     * Get a Fiddler instance for a sheet (for advanced use)
-     * Note: This is provided for backward compatibility
-     */
-    static getFiddler(sheetName: string): Fiddler;
 }
 
 /**
