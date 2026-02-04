@@ -1,3 +1,5 @@
+/// <reference path="../../types/global.d.ts" />
+
 /**
  * VotingService namespace for election and ballot management.
 */
@@ -6,9 +8,9 @@ declare namespace VotingService {
      * Creates a published copy of a Google Form in the given folder with Shared Drive detection.
      * @param {string} formId
      * @param {string} destinationFolderId
-     * @returns {{url: string, isSharedDrive: boolean}} Object containing the edit URL and Shared Drive status.
+     * @returns {{url: string, isSharedDrive: boolean, sourceTitle: string}} Object containing the edit URL, Shared Drive status, and source form title.
      */
-    function makePublishedCopyOfFormInFolder_(formId: string, destinationFolderId: string): {url: string, isSharedDrive: boolean};
+    function makePublishedCopyOfFormInFolder_(formId: string, destinationFolderId: string): {url: string, isSharedDrive: boolean, sourceTitle: string};
 
     /**
      * Sets the editors for the ballot and its results spreadsheet.
