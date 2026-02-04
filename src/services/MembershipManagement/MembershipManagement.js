@@ -50,8 +50,8 @@ MembershipManagement.convertJoinToRenew = function (rowAIndex, rowBIndex) {
 }
 
 MembershipManagement.processTransactions = function () {
-  SheetAccess.convertLinks('Transactions');
-  const transactions = SheetAccess.getDataWithFormulas('Transactions');
+  // Use getDataWithRichText to read native RichText links directly
+  const transactions = SheetAccess.getDataWithRichText('Transactions', ['Payable Order ID']);
   if (transactions.length === 0) { 
     AppLogger.info('MembershipManagement', 'No transactions to process');
     return { processed: 0, joins: 0, renewals: 0, hasPendingPayments: false, errors: [] }; 
@@ -114,8 +114,9 @@ MembershipManagement.processTransactions = function () {
 }
 
 MembershipManagement.processMigrations = function () {
-  SheetAccess.convertLinks('MigratingMembers');
-  const migratingMembers = SheetAccess.getDataWithFormulas('MigratingMembers');
+  // Use getDataWithRichText if MigratingMembers has link columns, otherwise use getData
+  // For now, assuming no link columns in MigratingMembers
+  const migratingMembers = SheetAccess.getData('MigratingMembers');
   if (migratingMembers.length === 0) { return; }
 
   // Use SpreadsheetApp + ValidatedMember for ActiveMembers
@@ -568,36 +569,6 @@ MembershipManagement.Internal.initializeManagerDataWithSpreadsheetApp_ = functio
     originalMembershipRows,
     membershipHeaders
   };
-}
-
-/**
- * Legacy function - delegates to fiddler-based implementation
- * @deprecated Use initializeManagerDataWithSpreadsheetApp_ for new code
- */
-MembershipManagement.Internal.initializeManagerData_ = function (membershipFiddler, expiryScheduleFiddler,) {
-  const membershipData = membershipFiddler.getData();
-  const expiryScheduleData = expiryScheduleFiddler.getData();
-  //@ts-ignore
-  const autoGroups = DataAccess.getPublicGroups().filter(group => group.Subscription.toLowerCase() === 'auto');
-  const groupManager = {
-    groupAddFun: MembershipManagement.Internal.getGroupAdder_(),
-    groupRemoveFun: MembershipManagement.Internal.getGroupRemover_(),
-    groupEmailReplaceFun: MembershipManagement.Internal.getGroupEmailReplacer_()
-  }
-  
-  // Create audit logger if AuditLogger is available
-  const auditLogger = typeof AuditLogger !== 'undefined' ? new AuditLogger() : null;
-  
-  const manager = new MembershipManagement.Manager(
-    DataAccess.getActionSpecs(), 
-    autoGroups, 
-    groupManager, 
-    MembershipManagement.Internal.getEmailSender_(),
-    undefined,  // today (uses default)
-    auditLogger
-  );
-
-  return { manager, membershipData, expiryScheduleData };
 }
 
 MembershipManagement.Internal.getGroupAdder_ = function () {

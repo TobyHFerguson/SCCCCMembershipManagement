@@ -223,19 +223,19 @@ VotingService.Trigger = {
 
         const token = vote[VotingService.Constants.TOKEN_ENTRY_FIELD_TITLE];
         const tokenData = VotingService.Auth.consumeToken(token, spreadsheetId);
-        const fiddler = VotingService.Data.getFiddlerForValidResults(spreadsheetId)
+        const validatedResultsSheet = VotingService.Data.getValidatedResultsSheet(spreadsheetId);
 
         if (!tokenData) {
             console.warn('Invalid vote: ', vote, ' - token not found');
-            VotingService.Trigger.addInvalidVote_(vote, fiddler.getSheet().getParent());
+            VotingService.Trigger.addInvalidVote_(vote, validatedResultsSheet.getParent());
             return;
         }
         // We have a tokenData object 
         const email = tokenData.Email;
         if (tokenData.Used) {
             console.warn('Invalid vote: ', vote, ' - token already used');
-            VotingService.Trigger.addInvalidVote_(vote, fiddler.getSheet().getParent());
-            VotingService.Trigger.sendInvalidVoteEmail_(email, VotingService.Trigger.getElectionTitle_(fiddler.getSheet().getParent()));
+            VotingService.Trigger.addInvalidVote_(vote, validatedResultsSheet.getParent());
+            VotingService.Trigger.sendInvalidVoteEmail_(email, VotingService.Trigger.getElectionTitle_(validatedResultsSheet.getParent()));
             return;
         }
 
@@ -243,17 +243,33 @@ VotingService.Trigger = {
         const duplicates = allTokenData.filter(td => td.Token !== token).some(td => td.Email === email);
         if (duplicates) {
             console.warn(`Duplicate vote detected for email: ${email}. Vote will not be recorded.`);
-            VotingService.Trigger.addInvalidVote_(vote, fiddler.getSheet().getParent());
-            VotingService.Trigger.sendInvalidVoteEmail_(email, VotingService.Trigger.getElectionTitle_(fiddler.getSheet().getParent()));
+            VotingService.Trigger.addInvalidVote_(vote, validatedResultsSheet.getParent());
+            VotingService.Trigger.sendInvalidVoteEmail_(email, VotingService.Trigger.getElectionTitle_(validatedResultsSheet.getParent()));
             return;
         }
 
         // console.log('recording valid vote', vote);
-        const votes = fiddler.getData();
+        const values = validatedResultsSheet.getDataRange().getValues();
+        const headers = values[0];
+        const votes = values.slice(1).map(row => {
+            const obj = {};
+            headers.forEach((h, i) => obj[h] = row[i]);
+            return obj;
+        });
         // @ts-ignore - vote has required 'Voter Email' field added during processing
         votes.push(vote);
-        fiddler.setData(votes).dumpValues();
-        VotingService.Trigger.sendValidVoteEmail_(email, VotingService.Trigger.getElectionTitle_(fiddler.getSheet().getParent()));
+        
+        // Write back to sheet
+        const orderedHeaders = headers;
+        const rows = votes.map(obj => orderedHeaders.map(h => obj[h] ?? ''));
+        if (validatedResultsSheet.getLastRow() > 1) {
+            validatedResultsSheet.getRange(2, 1, validatedResultsSheet.getLastRow() - 1, validatedResultsSheet.getLastColumn()).clearContent();
+        }
+        if (rows.length > 0) {
+            validatedResultsSheet.getRange(2, 1, rows.length, orderedHeaders.length).setValues(rows);
+        }
+        
+        VotingService.Trigger.sendValidVoteEmail_(email, VotingService.Trigger.getElectionTitle_(validatedResultsSheet.getParent()));
         return;
 
     },
@@ -309,17 +325,45 @@ VotingService.Trigger = {
         console.log('Invalid Vote email sent:', message);
     },
     /**
-     * 
-     * @param {Vote} vote the invalid vote to be recorded
-     * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} spreadsheet 
+     * Record an invalid vote to the Invalid Results sheet
+     * @param {Vote} vote - The invalid vote to be recorded
+     * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} spreadsheet - The election results spreadsheet
      */
     addInvalidVote_: function (vote, spreadsheet) {
         try {
-            //@ts-ignore
-            const invalidFiddler = bmPreFiddler.PreFiddler().getFiddler({ id: spreadsheet.getId(), sheetName: VotingService.Constants.INVALID_RESULTS_SHEET_NAME, createIfMissing: true });
-            const votes = invalidFiddler.getData()
+            // Get or create Invalid Results sheet
+            let invalidSheet = spreadsheet.getSheetByName(VotingService.Constants.INVALID_RESULTS_SHEET_NAME);
+            if (!invalidSheet) {
+                invalidSheet = spreadsheet.insertSheet(VotingService.Constants.INVALID_RESULTS_SHEET_NAME);
+            }
+            
+            // Read existing data
+            const values = invalidSheet.getDataRange().getValues();
+            const headers = values.length > 0 ? values[0] : Object.keys(vote);
+            const votes = values.length > 1 ? values.slice(1).map(row => {
+                const obj = {};
+                headers.forEach((h, i) => obj[h] = row[i]);
+                return obj;
+            }) : [];
+            
             votes.push(vote);
-            invalidFiddler.setData(votes).dumpValues();
+            
+            // Write back to sheet
+            const orderedHeaders = headers;
+            const rows = votes.map(obj => orderedHeaders.map(h => obj[h] ?? ''));
+            
+            // Ensure headers are written
+            if (invalidSheet.getLastRow() === 0) {
+                invalidSheet.appendRow(orderedHeaders);
+            }
+            
+            if (invalidSheet.getLastRow() > 1) {
+                invalidSheet.getRange(2, 1, invalidSheet.getLastRow() - 1, invalidSheet.getLastColumn()).clearContent();
+            }
+            if (rows.length > 0) {
+                invalidSheet.getRange(2, 1, rows.length, orderedHeaders.length).setValues(rows);
+            }
+            
             VotingService.Trigger.setAllSheetsBackgroundToLightRed_(spreadsheet)
             const electionTitle = VotingService.Trigger.getElectionTitle_(spreadsheet)
             VotingService.Trigger.sendManualCountNeededEmail_(VotingService.Trigger.getSpreadsheetUsers_(spreadsheet).join(','), vote, electionTitle);

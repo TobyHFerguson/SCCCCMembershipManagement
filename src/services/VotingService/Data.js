@@ -5,13 +5,6 @@
 //@ts-check
 VotingService.Data = {
     /**
-     * @returns {Fiddler<VotingService.Election>} Fiddler instance for the Elections sheet.
-     */
-    getFiddler_: function () {
-        return SheetAccess.getFiddler('Elections');
-    },
-
-    /**
      * @returns {VotingService.Election[]} - Returns an array of Election objects.
      * Each object contains properties like Title, Form ID, Organizers, Start Date, End Date, and Voters.
      * The data is retrieved from the Elections sheet.
@@ -21,7 +14,7 @@ VotingService.Data = {
      * It fetches the data from the sheet and returns it as an array of Election objects.
      */
     getElectionData: function () {
-        const electionData = VotingService.Data.getFiddler_().getData();
+        const electionData = SheetAccess.getData('Elections');
         return electionData;
     },
     /**
@@ -32,7 +25,7 @@ VotingService.Data = {
      * Each object should have properties like Title, Form ID, Managers, Start Date, End Date, and Voters.
      */
     storeElectionData: function (elections) {
-        VotingService.Data.getFiddler_().setData(elections).dumpValues();
+        SheetAccess.setData('Elections', elections);
     },
     /**
      * Checks if a user has already voted in a specific election.
@@ -52,16 +45,26 @@ VotingService.Data = {
 
     
     /**
-     * 
-     * @param {string} spreadsheetId the spreadsheetId to be used
-     * @returns A fiddler attached to the valid results sheet, or undefined
+     * Get the Validated Results sheet for an election results spreadsheet
+     * @param {string} spreadsheetId - The spreadsheet ID to access
+     * @returns {GoogleAppsScript.Spreadsheet.Sheet|undefined} The Validated Results sheet, or undefined
      */
-    getFiddlerForValidResults: function (spreadsheetId) {
+    getValidatedResultsSheet: function (spreadsheetId) {
         if (!spreadsheetId) {
-            return undefined
+            return undefined;
         }
-        const fiddler = bmPreFiddler.PreFiddler().getFiddler({ id: spreadsheetId, sheetName: 'Validated Results', createIfMissing: true })
-        return fiddler
+        try {
+            const ss = SpreadsheetApp.openById(spreadsheetId);
+            let sheet = ss.getSheetByName('Validated Results');
+            if (!sheet) {
+                // Create the sheet if it doesn't exist
+                sheet = ss.insertSheet('Validated Results');
+            }
+            return sheet;
+        } catch (error) {
+            AppLogger.error('VotingService.Data', `Failed to get Validated Results sheet for ${spreadsheetId}: ${error.message}`);
+            return undefined;
+        }
     }
 
 }
