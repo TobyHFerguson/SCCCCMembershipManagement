@@ -65,18 +65,31 @@ MembershipManagement.processTransactions = function () {
 
   const { recordsChanged, hasPendingPayments, errors, auditEntries } = manager.processPaidTransactions(transactions, membershipData, expiryScheduleData);
   if (recordsChanged) {
-    transactionsFiddler.setData(transactions).dumpValues();
+    // CRITICAL: Persist member data FIRST, before marking transactions as processed.
+    // If member write fails, transactions should NOT be marked as processed.
     
-    // Write ActiveMembers using selective cell updates
-    const changeCount = MemberPersistence.writeChangedCells(
-      membershipSheet,
-      originalMembershipRows,
-      membershipData,
-      membershipHeaders
-    );
-    AppLogger.info('MembershipManagement', `processTransactions: Updated ${changeCount} cells in ActiveMembers`);
+    // Check if row count changed (e.g., due to convertJoinToRenew merging records)
+    if (membershipData.length !== originalMembershipRows.length) {
+      // Row count changed - rewrite entire sheet
+      const allRows = membershipData.map(m => m.toArray());
+      // Use ValidatedMember.HEADERS.length to match toArray() output, not sheet headers
+      membershipSheet.getRange(2, 1, allRows.length, ValidatedMember.HEADERS.length).setValues(allRows);
+      AppLogger.info('MembershipManagement', `processTransactions: Rewrote ${allRows.length} rows in ActiveMembers (row count changed from ${originalMembershipRows.length})`);
+    } else {
+      // Row count unchanged - use selective cell updates for better version history
+      const changeCount = MemberPersistence.writeChangedCells(
+        membershipSheet,
+        originalMembershipRows,
+        membershipData,
+        membershipHeaders
+      );
+      AppLogger.info('MembershipManagement', `processTransactions: Updated ${changeCount} cells in ActiveMembers`);
+    }
     
     expiryScheduleFiddler.setData(expiryScheduleData).dumpValues();
+    
+    // Only mark transactions as processed AFTER member data is successfully persisted
+    transactionsFiddler.setData(transactions).dumpValues();
   }
   
   // Count operation types from audit entries
@@ -141,7 +154,8 @@ MembershipManagement.processMigrations = function () {
     const newMembers = membershipData.slice(originalMembershipRows.length);
     const newRows = newMembers.map(m => m.toArray());
     const startRow = membershipSheet.getLastRow() + 1;
-    membershipSheet.getRange(startRow, 1, newRows.length, membershipHeaders.length).setValues(newRows);
+    // Use ValidatedMember.HEADERS.length to match toArray() output, not sheet headers
+    membershipSheet.getRange(startRow, 1, newRows.length, ValidatedMember.HEADERS.length).setValues(newRows);
     AppLogger.info('MembershipManagement', `processMigrations: Appended ${newRows.length} new members to ActiveMembers`);
     
     // Update existing rows with selective cell updates

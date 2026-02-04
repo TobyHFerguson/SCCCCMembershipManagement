@@ -604,7 +604,7 @@ declare class ValidatedMember {
         dirName: boolean,
         dirEmail: boolean,
         dirPhone: boolean,
-        renewedOn: Date | null
+        renewedOn: Date | null | string
     );
     
     /** Convert to array for sheet persistence */

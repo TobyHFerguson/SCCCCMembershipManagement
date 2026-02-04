@@ -17,31 +17,32 @@ The following have been migrated:
 
 | Service/Module | File | Usages | Sheets Accessed | Risk Level |
 |---------------|------|--------|-----------------|------------|
-| MembershipManagement | MembershipManagement.js | 11 | ActiveMembers, ExpirySchedule, Transactions, MigratingMembers, ExpirationFIFO, ExpirationDeadLetter | HIGH |
-| EmailChangeService | emailChangeService.js, Api.js | 4 | EmailChange, ActiveMembers, ExpirySchedule | MEDIUM |
-| VotingService | VotingService.js, Data.js | 2 | ElectionConfiguration, Elections | MEDIUM |
-| TokenStorage | TokenStorage.js | 4 | Tokens | LOW |
+| MembershipManagement | MembershipManagement.js | 14 | ActiveMembers, ExpirySchedule, Transactions, MigratingMembers, ExpirationFIFO, ExpirationDeadLetter | HIGH |
+| ~~EmailChangeService~~ | ~~emailChangeService.js, Api.js~~ | ~~4~~ | ~~EmailChange, ActiveMembers, ExpirySchedule~~ | ✅ DONE |
+| ~~VotingService~~ | ~~VotingService.js, Data.js~~ | ~~2~~ | ~~ElectionConfiguration, Elections~~ | ✅ DONE |
+| ~~TokenStorage~~ | ~~TokenStorage.js~~ | ~~4~~ | ~~Tokens~~ | ✅ DONE |
 | Logger | Logger.js | 1 | SystemLogs | LOW (Layer 0 constraint) |
 | Properties | Properties.js | 1 | Properties | LOW (Layer 0 constraint) |
 
-**Total: ~27 usages across 6 modules**
+**Remaining: 14 usages in MembershipManagement + 2 Layer 0 modules**
 
 ### Migration Order (Risk-Based)
 
-1. **Phase 1: Low-Risk Infrastructure** (2-3 hours)
-   - TokenStorage (Tokens)
+1. ✅ **Phase 1: Low-Risk Infrastructure** - COMPLETED
+   - ~~TokenStorage (Tokens)~~ - PR #372
    
-2. **Phase 2: VotingService** (2-3 hours)
-   - VotingService.js (ElectionConfiguration)
-   - Data.js (Elections)
+2. ✅ **Phase 2: VotingService** - COMPLETED
+   - ~~VotingService.js (ElectionConfiguration)~~ - PR #374
+   - ~~Data.js (Elections)~~ - PR #374
 
-3. **Phase 3: EmailChangeService** (3-4 hours)
-   - emailChangeService.js (EmailChange, ActiveMembers, ExpirySchedule)
-   - Api.js (EmailChange)
+3. ✅ **Phase 3: EmailChangeService** - COMPLETED
+   - ~~emailChangeService.js (EmailChange, ActiveMembers, ExpirySchedule)~~ - PR #376
+   - ~~Api.js (EmailChange)~~ - PR #376
 
-4. **Phase 4: MembershipManagement** (5-6 hours)
-   - MembershipManagement.js (all 11 usages)
-   - Complex Fiddler features: `.needFormulas()`, `.mapRows()`
+4. **Phase 4: MembershipManagement** (4-5 hours) - Issue #370
+   - MembershipManagement.js (all 14 usages)
+   - Key decision: Use **Option B** (data-based injection) for `opts.fiddlers` pattern
+   - This enables Issue #358 by eliminating Fiddler references from tests
 
 ### Special Considerations
 
@@ -82,11 +83,12 @@ Some usages require special handling:
 ## Issues Created
 
 - Issue #366: Migrate Remaining Services to SheetAccess (Tracking Issue)
-- Issue #367: Migrate TokenStorage to SheetAccess
-- Issue #368: Migrate VotingService to SheetAccess
-- Issue #369: Migrate EmailChangeService to SheetAccess
-- Issue #370: Migrate MembershipManagement to SheetAccess
-- Issue #371: Migrate GroupSettings to SheetAccess
+- ✅ Issue #367: Migrate TokenStorage to SheetAccess - CLOSED (PR #372)
+- ✅ Issue #368: Migrate VotingService to SheetAccess - CLOSED (PR #374)
+- ✅ Issue #369: Migrate EmailChangeService to SheetAccess - CLOSED (PR #376)
+- Issue #370: Migrate MembershipManagement to SheetAccess - **UPDATED**: Use Option B, 4-5 hours
+- ~~Issue #371: Migrate GroupSettings to SheetAccess~~ - OBSOLETE (dead code removed)
+
 ## Success Criteria (Per Migration)
 
 - ✅ All `SpreadsheetManager.getFiddler()` calls replaced with `SheetAccess` equivalents
@@ -97,7 +99,10 @@ Some usages require special handling:
 
 ## Final Goal (Issue #358)
 
-After all migrations complete:
-1. Remove Fiddler dependency from `appsscript.json`
-2. Remove `getFiddler()` from `SpreadsheetManager`
-3. Simplify `SheetAccess` to use native SpreadsheetApp only
+After MembershipManagement migration (Issue #370) completes:
+1. Only Layer 0 modules (Logger.js, Properties.js) will still use SpreadsheetManager directly
+2. Remove Fiddler dependency from `appsscript.json`
+3. Remove `getFiddler()` from `SpreadsheetManager`
+4. Simplify `SheetAccess` to use native SpreadsheetApp only
+
+**Key Insight**: Using Option B (data-based injection) in Issue #370 means no test code will reference Fiddler, making Issue #358 a purely internal SheetAccess refactor.

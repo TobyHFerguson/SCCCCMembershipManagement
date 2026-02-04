@@ -2,6 +2,8 @@ const { MembershipManagement } = require('../src/services/MembershipManagement/M
 // Import flat classes (no namespace nesting)
 const AuditLogEntry = require('../src/common/audit/AuditLogEntry');
 const AuditLogger = require('../src/common/audit/AuditLogger');
+const { ValidatedMember } = require('../src/common/data/ValidatedMember');
+const { MemberPersistence } = require('../src/common/data/MemberPersistence');
 const utils = MembershipManagement.Utils;
 
 // @ts-check
@@ -824,9 +826,9 @@ describe('Manager tests', () => {
       it('should create the new members', () => {
         const txns = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": "", Status: "Active", "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false },
-          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '(123) 456-7890', Joined: today, Expires: utils.addYearsToDate(today, 2), "Renewed On": "", Status: "Active", "Directory Share Name": true, "Directory Share Email": false, "Directory Share Phone": true },
-          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '(098) 765-4321', Joined: today, Expires: utils.addYearsToDate(today, 3), "Renewed On": "", Status: "Active", "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false }]
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": null, Status: "Active", "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false },
+          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '(123) 456-7890', Joined: today, Expires: utils.addYearsToDate(today, 2), "Renewed On": null, Status: "Active", "Directory Share Name": true, "Directory Share Email": false, "Directory Share Phone": true },
+          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '(098) 765-4321', Joined: today, Expires: utils.addYearsToDate(today, 3), "Renewed On": null, Status: "Active", "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false }]
 
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(activeMembers.length).toEqual(3)
@@ -876,7 +878,7 @@ describe('Manager tests', () => {
         const members = [TestData.activeMember({ Email: "test1@example.com", First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", Status: "Expired", Phone: '(123) 456-7890' })]
         const expectedMembers = [
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired", Phone: '(123) 456-7890', "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false },
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": "", Status: "Active", Phone: '(123) 456-7890', "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": null, Status: "Active", Phone: '(123) 456-7890', "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false },
         ]
         manager.processPaidTransactions(txns, members, expirySchedule,);
         expect(members).toEqual(expectedMembers);
@@ -1093,7 +1095,7 @@ describe('Manager tests', () => {
             Phone: '(408) 386-9343',
             Joined: manager.today(),
             Expires: utils.addYearsToDate(manager.today(), 1),
-            "Renewed On": '',
+            "Renewed On": null,
             Status: "Active",
             "Directory Share Name": false,
             "Directory Share Email": false,
@@ -1431,7 +1433,7 @@ describe('Manager tests', () => {
         expect(members[1].Last).toBe("Automation");
         expect(members[1].Joined).toEqual(today);
         expect(members[1].Expires).toEqual(utils.addYearsToDate(today, 1));
-        expect(members[1]["Renewed On"]).toBe("");
+        expect(members[1]["Renewed On"]).toBe(null);
         
         // Should send join email
         expect(sendEmailFun).toHaveBeenCalledWith({
@@ -1659,6 +1661,80 @@ describe('Manager tests', () => {
       expect(result.message).toContain('not a valid possible renewal pair');
       // No mutation should have occurred
       expect(membershipData.length).toBe(2);
+    });
+
+    it('should preserve ValidatedMember instance type after conversion', () => {
+      // This test ensures that convertJoinToRenew doesn't accidentally replace
+      // ValidatedMember instances with plain objects (which would break .toArray())
+      const member1 = new ValidatedMember(
+        'old@example.com', 'Active', 'Test', 'User', '555-1111',
+        new Date('2020-01-01'), new Date('2021-01-01'), 1,
+        true, false, true, null
+      );
+      const member2 = new ValidatedMember(
+        'old@example.com', 'Active', 'Test', 'User', '555-1111',
+        new Date('2020-06-01'), new Date('2022-06-01'), 2,
+        true, true, true, null
+      );
+
+      const membershipData = [member1, member2];
+      const expirySchedule = [];
+
+      const result = manager.convertJoinToRenew(0, 1, membershipData, expirySchedule);
+
+      expect(result.success).toBe(true);
+      expect(membershipData.length).toBe(1);
+      
+      // Critical assertions: verify instance type is preserved
+      expect(membershipData[0]).toBeInstanceOf(ValidatedMember);
+      expect(membershipData[0].toArray).toBeDefined();
+      expect(typeof membershipData[0].toArray).toBe('function');
+      
+      // Verify .toArray() actually works (doesn't throw)
+      expect(() => membershipData[0].toArray()).not.toThrow();
+      
+      // Verify the result is an array with proper structure
+      const arr = membershipData[0].toArray();
+      expect(Array.isArray(arr)).toBe(true);
+      expect(arr.length).toBe(12); // ValidatedMember.HEADERS.length
+    });
+
+    it('should work with MemberPersistence.writeChangedCells after conversion', () => {
+      // Integration test: verify that convertJoinToRenew results can be written
+      // to spreadsheet using MemberPersistence (which requires ValidatedMember instances)
+      const member1 = new ValidatedMember(
+        'test@example.com', 'Active', 'Test', 'User', '555-1111',
+        new Date('2020-01-01'), new Date('2021-01-01'), 1,
+        true, false, true, null
+      );
+      const member2 = new ValidatedMember(
+        'test@example.com', 'Active', 'Test', 'User', '555-1111',
+        new Date('2020-06-01'), new Date('2022-06-01'), 2,
+        true, true, true, null
+      );
+
+      const membershipData = [member1, member2];
+      const originalRows = membershipData.map(m => m.toArray());
+      const expirySchedule = [];
+
+      const result = manager.convertJoinToRenew(0, 1, membershipData, expirySchedule);
+      expect(result.success).toBe(true);
+
+      // Mock sheet for MemberPersistence
+      const mockRange = { setValue: jest.fn() };
+      const mockSheet = {
+        getRange: jest.fn().mockReturnValue(mockRange)
+      };
+
+      // This should NOT throw "toArray is not a function"
+      expect(() => {
+        MemberPersistence.writeChangedCells(
+          mockSheet,
+          [originalRows[0]], // Only first row remains after merge
+          membershipData,
+          ValidatedMember.HEADERS
+        );
+      }).not.toThrow();
     });
   });
 
@@ -2031,6 +2107,46 @@ describe('Manager tests', () => {
 
         expect(newMember.Email).toBe('user@example.com');
         expect(membershipData[0].Email).toBe('user@example.com');
+      });
+
+      it('returns ValidatedMember instance with toArray method', () => {
+        const manager = new MembershipManagement.Manager(
+          { Join: { Subject: 'Welcome', Body: 'Thanks for joining' } },
+          [{ Email: 'test@sc3.club', Subscription: 'auto' }],
+          { groupAddFun: jest.fn(), groupRemoveFun: jest.fn(), groupEmailReplaceFun: jest.fn() },
+          jest.fn(),
+          new Date('2025-03-01')
+        );
+
+        const txn = {
+          "Email Address": "newmember@example.com",
+          "First Name": "John",
+          "Last Name": "Doe",
+          Phone: "555-1234",
+          Period: 1,
+          Directory: "Share Email"
+        };
+        const membershipData = [];
+        const expirySchedule = [];
+
+        const newMember = manager.addNewMember_(txn, expirySchedule, membershipData);
+
+        // Should be ValidatedMember instance
+        expect(newMember).toBeInstanceOf(ValidatedMember);
+        
+        // Should have toArray method
+        expect(typeof newMember.toArray).toBe('function');
+        
+        // toArray should work
+        const arr = newMember.toArray();
+        expect(Array.isArray(arr)).toBe(true);
+        expect(arr[0]).toBe('Active'); // Status
+        expect(arr[1]).toBe('newmember@example.com'); // Email (normalized)
+        
+        // Should be in membershipData array
+        expect(membershipData.length).toBe(1);
+        expect(membershipData[0]).toBeInstanceOf(ValidatedMember);
+        expect(membershipData[0].toArray).toBeDefined();
       });
     });
 

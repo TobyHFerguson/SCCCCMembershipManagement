@@ -1,5 +1,10 @@
 if (typeof require !== 'undefined') {
   (MembershipManagement = require('./utils.js'));
+  // Load ValidatedMember for addNewMember_ method
+  const { ValidatedMember: ValidatedMemberClass } = require('../../common/data/ValidatedMember.js');
+  // Make it globally available for Jest tests
+  // @ts-expect-error - this is just for Jest testing. It has no runtime consequence.
+  global.ValidatedMember = ValidatedMemberClass;
 }
 
 // @ts-check
@@ -25,7 +30,7 @@ MembershipManagement.Manager = class {
    * This is a pure generator function that prepares work but does NOT cause business events.
    * Business events (email send, group removal) happen in processExpiredMembers (the consumer).
    * 
-   * @param {Member[]} activeMembers 
+   * @param {ValidatedMember[]} activeMembers - array of ValidatedMember instances
    * @param {MembershipManagement.ExpirySchedule[]} expirySchedule 
    * @param {string} prefillFormTemplate 
    * @returns {{messages: MembershipManagement.ExpiredMembersQueue, scheduleEntriesProcessed: number}} array of messages to be sent and count of schedule entries processed
@@ -509,7 +514,11 @@ MembershipManagement.Manager = class {
     }
   }
 
-
+  /**
+   * Extract directory sharing preferences from transaction data
+   * @param {Record<string, any>} txn - Transaction record
+   * @returns {{"Directory Share Name": boolean, "Directory Share Email": boolean, "Directory Share Phone": boolean}} Object with 3 boolean directory sharing flags
+   */
   static extractDirectorySharing_(txn) {
     return {
       "Directory Share Name": txn.Directory ? txn.Directory.toLowerCase().includes('share name') : false,
@@ -570,19 +579,31 @@ MembershipManagement.Manager = class {
 
     return { success: true, indices: [idxA, idxB], shareIdentity, message: shareIdentity ? 'Resolved and share identity' : 'Resolved but do not share identity' };
   }
+  
+  /**
+   * Add a new member to the membership data and expiry schedule
+   * @param {Record<string, any>} txn - Transaction record from payment processor
+   * @param {Array<Record<string, any>>} expirySchedule - Expiry schedule array (modified in place)
+   * @param {ValidatedMember[]} membershipData - Array of ValidatedMember instances (modified in place)
+   * @returns {ValidatedMember} The newly created ValidatedMember instance
+   */
   addNewMember_(txn, expirySchedule, membershipData) {
-    const newMember = {
-      Email: MembershipManagement.Manager.normalizeEmail(txn["Email Address"]),
-      First: txn["First Name"],
-      Last: txn["Last Name"],
-      Phone: txn.Phone || '',
-      Joined: this._today,
-      Period: MembershipManagement.Manager.getPeriod_(txn),
-      Expires: MembershipManagement.Utils.calculateExpirationDate(this._today, this._today, MembershipManagement.Manager.getPeriod_(txn)),
-      "Renewed On": '',
-      Status: "Active",
-      ...MembershipManagement.Manager.extractDirectorySharing_(txn)
-    };
+    // Create ValidatedMember instance (not plain object) to preserve .toArray() method
+    const dirSharing = MembershipManagement.Manager.extractDirectorySharing_(txn);
+    const newMember = new ValidatedMember(
+      MembershipManagement.Manager.normalizeEmail(txn["Email Address"]),
+      "Active",
+      txn["First Name"],
+      txn["Last Name"],
+      txn.Phone || '',
+      this._today,  // Joined
+      MembershipManagement.Utils.calculateExpirationDate(this._today, this._today, MembershipManagement.Manager.getPeriod_(txn)),
+      MembershipManagement.Manager.getPeriod_(txn),
+      dirSharing["Directory Share Name"],
+      dirSharing["Directory Share Email"],
+      dirSharing["Directory Share Phone"],
+      ''  // Renewed On - empty string, not null
+    );
     membershipData.push(newMember);
     this.addNewMemberToActionSchedule_(newMember, expirySchedule);
     return newMember;
@@ -740,9 +761,9 @@ MembershipManagement.Manager = class {
    *
    * @param {number} idxA - index for first selected row
    * @param {number} idxB - index for second selected row
-   * @param {Array<Object>} membershipData - the array of member rows (modified in place)
-   * @param {Array<Object>} expirySchedule - the expiry schedule array (modified in place)
-   * @returns {Object} - { success: boolean, message: string }
+   * @param {ValidatedMember[]} membershipData - array of ValidatedMember instances (modified in place, preserves instance types)
+   * @param {Array<MembershipManagement.ExpirySchedule>} expirySchedule - the expiry schedule array (modified in place)
+   * @returns {{success: boolean, message: string, initialEmail?: string, latestEmail?: string, mergeDetails?: {initialMember: any, latestMember: any, mergedMember: any, removedRow: number, resultRow: number}}} - result object
    */
   convertJoinToRenew(idxA, idxB, membershipData, expirySchedule) {
     if (!(0 <= idxA && idxA < membershipData.length) || !(0 <= idxB && idxB < membershipData.length)) {
@@ -802,21 +823,23 @@ MembershipManagement.Manager = class {
         LATEST['Renewed On'] = MembershipManagement.Utils.dateOnly(LATEST.Joined);
         LATEST.Joined = MembershipManagement.Utils.dateOnly(INITIAL.Joined); // Preserve original join date
 
-        // Write LATEST back into membershipData at latestIdx
-        membershipData[latestIdx] = { ...membershipData[latestIdx], ...LATEST };
+        // Write LATEST properties back into the ValidatedMember instance (preserve instance, don't replace with plain object)
+        Object.assign(membershipData[latestIdx], LATEST);
 
         // Handle email change if emails differ (expiry schedule, groups, member record)
         // Note: We need to handle BOTH emails since we're merging two records
         if (INITIAL.Email !== LATEST.Email) {
           // Use unified email change handler for consistency
-          this.changeMemberEmail_(INITIAL.Email, LATEST.Email, LATEST, expirySchedule);
+          // Pass the actual ValidatedMember instance from the array (after Object.assign)
+          this.changeMemberEmail_(INITIAL.Email, LATEST.Email, membershipData[latestIdx], expirySchedule);
         } else {
           // Same email - just update expiry schedule for that email
           this.removeMemberFromExpirySchedule_(LATEST.Email, expirySchedule);
         }
         
         // Add new expiry schedule entries
-        this.addRenewedMemberToActionSchedule_(LATEST, expirySchedule);
+        // Pass the actual ValidatedMember instance from the array (after Object.assign)
+        this.addRenewedMemberToActionSchedule_(membershipData[latestIdx], expirySchedule);
 
 
         // Remove INITIAL entry

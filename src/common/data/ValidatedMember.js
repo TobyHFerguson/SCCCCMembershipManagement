@@ -31,7 +31,7 @@ var ValidatedMember = (function() {
    * @param {boolean} dirName - Directory share name (optional, coerced to boolean)
    * @param {boolean} dirEmail - Directory share email (optional, coerced to boolean)
    * @param {boolean} dirPhone - Directory share phone (optional, coerced to boolean)
-   * @param {Date} renewedOn - Renewed date (optional, may be null/empty)
+   * @param {Date | null | string} renewedOn - Renewed date (optional, may be Date, null, or empty string)
    */
   class ValidatedMember {
     constructor(email, status, first, last, phone, joined, expires, period, dirName, dirEmail, dirPhone, renewedOn) {
