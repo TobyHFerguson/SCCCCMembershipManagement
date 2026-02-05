@@ -23,6 +23,9 @@
   "scripts": {
     "test": "jest",
     "typecheck": "tsc --noEmit",
+    "typecheck:src": "tsc --noEmit --project tsconfig.src.json",
+    "verify-rules": "bash verify-gas-rules.sh && bash verify-project-rules.sh",
+    "validate-all": "npm run typecheck:src && npm run verify-rules && npm test",
     "postinstall": "echo '.clasp.json' >> .gitignore",
     "set-dev-env": "npx clasp-env --scriptId \"${npm_package_config_CLASP_DEV_SCRIPT_ID}\" --folder .",
     "set-prod-env": "npx clasp-env --scriptId \"${npm_package_config_CLASP_PROD_SCRIPT_ID}\" --folder .",

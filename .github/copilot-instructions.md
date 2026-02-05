@@ -42,6 +42,12 @@ npm test                    # Run all Jest tests
 npm test Manager.test.js    # Run specific test file
 ```
 
+**Validation (run before every commit):**
+```bash
+npm run verify-rules        # Check all code rules (universal + project-specific)
+npm run validate-all        # Full pipeline: typecheck + verify-rules + tests
+```
+
 **Linting:**
 ```bash
 # Prettier auto-formats on save (config in .prettierrc.js)
@@ -80,6 +86,39 @@ npm run prod:deploy-live    # Production deploy with git versioning
 - Use SheetAccess for ALL spreadsheet operations (wraps SpreadsheetManager/Fiddler)
 - Extract business logic into testable Manager classes
 - Follow the SPA architecture for web services (see below)
+
+### Automated Rule Verification
+
+Project-specific rules are enforced by `verify-project-rules.sh`. Universal GAS rules are enforced by `verify-gas-rules.sh` (shared via symlink from `_shared/`).
+
+**Run all checks:**
+```bash
+npm run verify-rules        # Runs both scripts
+npm run validate-all        # Full pipeline: typecheck:src + verify-rules + tests
+```
+
+**What gets checked automatically:**
+
+| Rule | Script | Check Type |
+|------|--------|------------|
+| No direct SpreadsheetManager in services | `verify-project-rules.sh` | ❌ Error |
+| No `getActiveSpreadsheet()` in services | `verify-project-rules.sh` | ⚠️ Warning |
+| No AppLogger in Layer 0 modules | `verify-project-rules.sh` | ❌ Error |
+| No `@param {Object}` | `verify-gas-rules.sh` | ❌ Error |
+| No unjustified `@param {any}` | `verify-gas-rules.sh` | ❌ Error |
+| No forbidden GAS APIs | `verify-gas-rules.sh` | ❌ Error |
+| No static class fields | `verify-gas-rules.sh` | ❌ Error |
+| No bare class declarations | `verify-gas-rules.sh` | ❌ Error |
+| `Record<string, any>` audit | `verify-gas-rules.sh` | ⚠️ Warning |
+
+**Justification pattern**: Rules that allow exceptions require `JUSTIFIED:` on the same line:
+```javascript
+// ✅ Passes verification
+@param {any} data - Debug payload (JUSTIFIED: arbitrary debugging data, JSON-serialized)
+
+// ❌ Fails verification
+@param {any} data - The data
+```
 
 ---
 
