@@ -1,0 +1,1 @@
+../_shared/verify-gas-rules.sh

@@ -17,8 +17,8 @@ VotingService.getBallotFolderId = function () {
         const config = SheetAccess.getData('ElectionConfiguration');
         
         // Look for a ballot folder URL configuration
-        /** @type {any} */
-        const ballotFolderConfig = config.find(/** @param {any} row */ row => row.Key === 'BALLOT_FOLDER_URL' || row.Setting === 'BALLOT_FOLDER_URL');
+        /** @type {{Key?: string, Setting?: string, Value?: string}} */
+        const ballotFolderConfig = config.find(/** @param {{Key?: string, Setting?: string, Value?: string}} row */ row => row.Key === 'BALLOT_FOLDER_URL' || row.Setting === 'BALLOT_FOLDER_URL');
         
         if (ballotFolderConfig && ballotFolderConfig.Value) {
             // Extract folder ID from Google Drive folder URL
