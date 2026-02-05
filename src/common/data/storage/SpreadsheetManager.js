@@ -141,9 +141,21 @@ var SpreadsheetManager = (function() {
         }
       }
 
-      // Return the actual sheet object from the spreadsheet
+      // Get or create the sheet based on createIfMissing flag
       const ss = SpreadsheetApp.openById(spreadsheetId);
-      return ss.getSheetByName(sheet.sheetName);
+      let sheetObj = ss.getSheetByName(sheet.sheetName);
+      
+      if (!sheetObj) {
+        // Sheet doesn't exist - check createIfMissing flag
+        if (sheet.createIfMissing === true || sheet.createIfMissing === 'TRUE' || sheet.createIfMissing === 'true') {
+          console.log(`[SpreadsheetManager.getSheet] Creating missing sheet: ${sheet.sheetName}`);
+          sheetObj = ss.insertSheet(sheet.sheetName);
+        } else {
+          throw new Error(`Sheet '${sheet.sheetName}' not found in spreadsheet and createIfMissing is false for Bootstrap reference '${sheetName}'`);
+        }
+      }
+      
+      return sheetObj;
     }
   }
 
