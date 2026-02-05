@@ -169,6 +169,11 @@ var RichTextMigration = (function() {
   return RichTextMigration;
 })();
 
+function runRichTextMigration() {
+  const results = RichTextMigration.runFullMigration();
+  Logger.log('RichText Migration Results: %s', JSON.stringify(results, null, 2));
+}
+
 // Node.js module export for testing
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { RichTextMigration };
