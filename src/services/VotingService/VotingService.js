@@ -292,7 +292,7 @@ VotingService.getClosureMessage_ = function (ballot) {
  * @returns {boolean}
  */
 VotingService.manualCountingRequired_ = function (ballot) {
-    const spreadsheet = SpreadsheetApp.openById(ballot.getDestinationId());
+    const spreadsheet = SheetAccess.getSpreadsheetById(ballot.getDestinationId());
     const sheets = spreadsheet.getSheets();
     return sheets.find(sheet => sheet.getName() === VotingService.Constants.INVALID_RESULTS_SHEET_NAME) !== undefined;
 }
@@ -558,7 +558,7 @@ VotingService.setElectionOfficers = function (editUrl, electionOfficers = [], is
     }
     const newElectionOfficers = new Set(electionOfficers.filter(m => m)); //newElectionOfficers only contains non-empty email addresses
     const form = VotingService.getBallot(editUrl);
-    const resultsSpreadsheet = SpreadsheetApp.openById(form.getDestinationId())
+    const resultsSpreadsheet = SheetAccess.getSpreadsheetById(form.getDestinationId());
     
     if (isSharedDrive) {
         console.log(`Working with Shared Drive files. Election Officer permissions will be limited to what's allowed by the Shared Drive settings.`);
@@ -699,7 +699,7 @@ VotingService.collectResponses = function (formId, active = true) {
  */
 VotingService.getElectionOfficerManagementInfo = function (editUrl) {
     const form = VotingService.getBallot(editUrl);
-    const resultsSpreadsheet = SpreadsheetApp.openById(form.getDestinationId());
+    const resultsSpreadsheet = SheetAccess.getSpreadsheetById(form.getDestinationId());
     
     // Try to detect Shared Drive by attempting to set shareableByEditors
     let isSharedDrive = false;

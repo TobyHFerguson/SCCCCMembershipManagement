@@ -433,9 +433,17 @@ declare class SpreadsheetManager {
     static convertLinks(sheetName: string): void;
 
     /**
-     * Get a sheet directly by name
+     * Get a sheet directly by name from Bootstrap
      */
     static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
+
+    /**
+     * Get a sheet by spreadsheet ID and sheet name (for dynamic/external spreadsheets not in Bootstrap)
+     * @param spreadsheetId - The spreadsheet ID to open
+     * @param sheetName - The name of the sheet tab within the spreadsheet
+     * @param createIfMissing - Whether to create the sheet if it doesn't exist (default: false)
+     */
+    static getSheetById(spreadsheetId: string, sheetName: string, createIfMissing?: boolean): GoogleAppsScript.Spreadsheet.Sheet;
 }
 
 /**
@@ -479,6 +487,48 @@ declare class SheetAccess {
      * Note: Prefer using higher-level methods when possible
      */
     static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
+
+    // ========================================================================
+    // *ById Methods - For dynamic/external spreadsheets not in Bootstrap
+    // ========================================================================
+
+    /**
+     * Get a sheet by spreadsheet ID and sheet name (for dynamic spreadsheets not in Bootstrap)
+     * @param spreadsheetId - The spreadsheet ID to open
+     * @param sheetName - The name of the sheet tab within the spreadsheet
+     * @param createIfMissing - Whether to create the sheet if it doesn't exist (default: false)
+     */
+    static getSheetById(spreadsheetId: string, sheetName: string, createIfMissing?: boolean): GoogleAppsScript.Spreadsheet.Sheet;
+
+    /**
+     * Get data as 2D array from a spreadsheet by ID (for dynamic spreadsheets not in Bootstrap)
+     * @param spreadsheetId - The spreadsheet ID to open
+     * @param sheetName - The name of the sheet tab within the spreadsheet
+     */
+    static getDataAsArraysById(spreadsheetId: string, sheetName: string): any[][];
+
+    /**
+     * Get data from a spreadsheet by ID as array of row objects (for dynamic spreadsheets not in Bootstrap)
+     * @param spreadsheetId - The spreadsheet ID to open
+     * @param sheetName - The name of the sheet tab within the spreadsheet
+     */
+    static getDataById(spreadsheetId: string, sheetName: string): any[];
+
+    /**
+     * Write data to a sheet by spreadsheet ID (for dynamic spreadsheets not in Bootstrap)
+     * @param spreadsheetId - The spreadsheet ID to open
+     * @param sheetName - The name of the sheet tab within the spreadsheet
+     * @param data - Array of row objects
+     * @param createIfMissing - Whether to create the sheet if it doesn't exist (default: false)
+     */
+    static setDataById(spreadsheetId: string, sheetName: string, data: any[], createIfMissing?: boolean): void;
+
+    /**
+     * Open a spreadsheet by ID and return it (for operations needing the full spreadsheet object)
+     * Use sparingly - prefer specific *ById methods
+     * @param spreadsheetId - The spreadsheet ID to open
+     */
+    static getSpreadsheetById(spreadsheetId: string): GoogleAppsScript.Spreadsheet.Spreadsheet;
 }
 
 /**

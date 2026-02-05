@@ -139,4 +139,124 @@ describe('SheetAccess', () => {
       expect(result).toBe(sheet);
     });
   });
+
+  // ========================================================================
+  // *ById Methods - For dynamic/external spreadsheets not in Bootstrap
+  // ========================================================================
+
+  describe('getSheetById', () => {
+    it('should delegate to SpreadsheetManager.getSheetById', () => {
+      const { sheet } = createMockSheet();
+      SpreadsheetManager.getSheetById = jest.fn().mockReturnValue(sheet);
+
+      const result = SheetAccess.getSheetById('spreadsheet-id-123', 'SheetName');
+
+      expect(SpreadsheetManager.getSheetById).toHaveBeenCalledWith('spreadsheet-id-123', 'SheetName', false);
+      expect(result).toBe(sheet);
+    });
+
+    it('should pass createIfMissing flag to SpreadsheetManager', () => {
+      const { sheet } = createMockSheet();
+      SpreadsheetManager.getSheetById = jest.fn().mockReturnValue(sheet);
+
+      SheetAccess.getSheetById('spreadsheet-id-123', 'SheetName', true);
+
+      expect(SpreadsheetManager.getSheetById).toHaveBeenCalledWith('spreadsheet-id-123', 'SheetName', true);
+    });
+  });
+
+  describe('getDataAsArraysById', () => {
+    it('should get data as 2D array from external spreadsheet', () => {
+      const values = [
+        ['First', 'Last', 'Email'],
+        ['John', 'Doe', 'john@example.com']
+      ];
+      const { sheet } = createMockSheet(values);
+      SpreadsheetManager.getSheetById = jest.fn().mockReturnValue(sheet);
+
+      const result = SheetAccess.getDataAsArraysById('external-spreadsheet-id', 'Results');
+
+      expect(SpreadsheetManager.getSheetById).toHaveBeenCalledWith('external-spreadsheet-id', 'Results', false);
+      expect(result).toEqual(values);
+    });
+  });
+
+  describe('getDataById', () => {
+    it('should get data as array of objects from external spreadsheet', () => {
+      const values = [
+        ['First', 'Last', 'Email'],
+        ['John', 'Doe', 'john@example.com'],
+        ['Jane', 'Smith', 'jane@example.com']
+      ];
+      const { sheet } = createMockSheet(values);
+      SpreadsheetManager.getSheetById = jest.fn().mockReturnValue(sheet);
+
+      const result = SheetAccess.getDataById('external-spreadsheet-id', 'Results');
+
+      expect(result).toEqual([
+        { First: 'John', Last: 'Doe', Email: 'john@example.com' },
+        { First: 'Jane', Last: 'Smith', Email: 'jane@example.com' }
+      ]);
+    });
+
+    it('should return empty array for empty sheet', () => {
+      const { sheet } = createMockSheet([]);
+      SpreadsheetManager.getSheetById = jest.fn().mockReturnValue(sheet);
+
+      const result = SheetAccess.getDataById('external-spreadsheet-id', 'Empty');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('setDataById', () => {
+    it('should write data to external spreadsheet', () => {
+      const mockData = [
+        { First: 'John', Last: 'Doe' }
+      ];
+      const values = [['First', 'Last']];
+      const { sheet, mockRange } = createMockSheet(values);
+      SpreadsheetManager.getSheetById = jest.fn().mockReturnValue(sheet);
+
+      SheetAccess.setDataById('external-spreadsheet-id', 'Results', mockData);
+
+      expect(SpreadsheetManager.getSheetById).toHaveBeenCalledWith('external-spreadsheet-id', 'Results', false);
+      expect(mockRange.setValues).toHaveBeenCalled();
+    });
+
+    it('should pass createIfMissing flag', () => {
+      const mockData = [{ First: 'John' }];
+      const values = [['First']];
+      const { sheet } = createMockSheet(values);
+      SpreadsheetManager.getSheetById = jest.fn().mockReturnValue(sheet);
+
+      SheetAccess.setDataById('external-spreadsheet-id', 'NewSheet', mockData, true);
+
+      expect(SpreadsheetManager.getSheetById).toHaveBeenCalledWith('external-spreadsheet-id', 'NewSheet', true);
+    });
+
+    it('should clear content for empty data array', () => {
+      const values = [['First', 'Last'], ['Old', 'Data']];
+      const { sheet, mockRange } = createMockSheet(values);
+      SpreadsheetManager.getSheetById = jest.fn().mockReturnValue(sheet);
+
+      SheetAccess.setDataById('external-spreadsheet-id', 'Results', []);
+
+      expect(mockRange.clearContent).toHaveBeenCalled();
+    });
+  });
+
+  describe('getSpreadsheetById', () => {
+    it('should open spreadsheet by ID using SpreadsheetApp', () => {
+      const mockSpreadsheet = { getId: jest.fn(() => 'test-id') };
+      global.SpreadsheetApp = {
+        openById: jest.fn().mockReturnValue(mockSpreadsheet)
+      };
+
+      const result = SheetAccess.getSpreadsheetById('test-spreadsheet-id');
+
+      expect(global.SpreadsheetApp.openById).toHaveBeenCalledWith('test-spreadsheet-id');
+      expect(result).toBe(mockSpreadsheet);
+    });
+  });
 });

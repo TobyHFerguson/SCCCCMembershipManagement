@@ -177,6 +177,115 @@ var SheetAccess = (function() {
       const manager = getSpreadsheetManager();
       return manager.getSheet(sheetName);
     }
+
+    // ========================================================================
+    // *ById Methods - For dynamic/external spreadsheets not in Bootstrap
+    // ========================================================================
+
+    /**
+     * Get a sheet by spreadsheet ID and sheet name (for dynamic spreadsheets not in Bootstrap)
+     * 
+     * Use this for sheets that are configured dynamically (e.g., VotingService election results
+     * where the spreadsheet ID comes from form.getDestinationId()).
+     * 
+     * @param {string} spreadsheetId - The spreadsheet ID to open
+     * @param {string} sheetName - The name of the sheet tab within the spreadsheet
+     * @param {boolean} [createIfMissing=false] - Whether to create the sheet if it doesn't exist
+     * @returns {GoogleAppsScript.Spreadsheet.Sheet} The sheet instance
+     * @throws {Error} If sheet not found and createIfMissing is false
+     */
+    static getSheetById(spreadsheetId, sheetName, createIfMissing = false) {
+      const manager = getSpreadsheetManager();
+      return manager.getSheetById(spreadsheetId, sheetName, createIfMissing);
+    }
+
+    /**
+     * Get data as 2D array from a spreadsheet by ID (for dynamic spreadsheets not in Bootstrap)
+     * 
+     * @param {string} spreadsheetId - The spreadsheet ID to open
+     * @param {string} sheetName - The name of the sheet tab within the spreadsheet
+     * @returns {any[][]} 2D array with headers in first row
+     * @throws {Error} If sheet not found
+     */
+    static getDataAsArraysById(spreadsheetId, sheetName) {
+      const sheet = this.getSheetById(spreadsheetId, sheetName, false);
+      return sheet.getDataRange().getValues();
+    }
+
+    /**
+     * Get data from a spreadsheet by ID as array of row objects (for dynamic spreadsheets not in Bootstrap)
+     * 
+     * @param {string} spreadsheetId - The spreadsheet ID to open
+     * @param {string} sheetName - The name of the sheet tab within the spreadsheet
+     * @returns {Object[]} Array of row objects with column names as keys
+     * @throws {Error} If sheet not found
+     */
+    static getDataById(spreadsheetId, sheetName) {
+      const values = this.getDataAsArraysById(spreadsheetId, sheetName);
+      if (values.length === 0) return [];
+      const headers = values[0];
+      return values.slice(1).map(row => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = row[i]);
+        return obj;
+      });
+    }
+
+    /**
+     * Write data to a sheet by spreadsheet ID (for dynamic spreadsheets not in Bootstrap)
+     * 
+     * @param {string} spreadsheetId - The spreadsheet ID to open
+     * @param {string} sheetName - The name of the sheet tab within the spreadsheet
+     * @param {Object[]} data - Array of row objects
+     * @param {boolean} [createIfMissing=false] - Whether to create the sheet if it doesn't exist
+     */
+    static setDataById(spreadsheetId, sheetName, data, createIfMissing = false) {
+      const sheet = this.getSheetById(spreadsheetId, sheetName, createIfMissing);
+      
+      if (!data || data.length === 0) {
+        // Clear all data except header (only if sheet has columns)
+        if (sheet.getLastRow() > 1 && sheet.getLastColumn() > 0) {
+          sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+        }
+        return;
+      }
+      
+      const headers = Object.keys(data[0] || {});
+      const lastColumn = sheet.getLastColumn();
+      const existingHeaders = lastColumn > 0 
+        ? sheet.getRange(1, 1, 1, lastColumn).getValues()[0]
+        : [];
+      
+      // Use existing header order if available and non-empty, otherwise use data's keys
+      const orderedHeaders = existingHeaders.length && existingHeaders[0] ? existingHeaders : headers;
+      
+      // Write headers if sheet is empty
+      if (lastColumn === 0 && orderedHeaders.length > 0) {
+        sheet.getRange(1, 1, 1, orderedHeaders.length).setValues([orderedHeaders]);
+      }
+      
+      const rows = data.map(obj => orderedHeaders.map(h => obj[h] ?? ''));
+      
+      // Clear existing data (except headers) and write new
+      if (sheet.getLastRow() > 1 && sheet.getLastColumn() > 0) {
+        sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+      }
+      if (rows.length > 0) {
+        sheet.getRange(2, 1, rows.length, orderedHeaders.length).setValues(rows);
+      }
+    }
+
+    /**
+     * Open a spreadsheet by ID and return it (for operations needing the full spreadsheet object)
+     * 
+     * Use sparingly - prefer specific *ById methods. This exposes the raw SpreadsheetApp API.
+     * 
+     * @param {string} spreadsheetId - The spreadsheet ID to open
+     * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet} The spreadsheet instance
+     */
+    static getSpreadsheetById(spreadsheetId) {
+      return SpreadsheetApp.openById(spreadsheetId);
+    }
   }
   
   return SheetAccess;

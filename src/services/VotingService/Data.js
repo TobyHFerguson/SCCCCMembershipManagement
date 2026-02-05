@@ -54,13 +54,8 @@ VotingService.Data = {
             return undefined;
         }
         try {
-            const ss = SpreadsheetApp.openById(spreadsheetId);
-            let sheet = ss.getSheetByName('Validated Results');
-            if (!sheet) {
-                // Create the sheet if it doesn't exist
-                sheet = ss.insertSheet('Validated Results');
-            }
-            return sheet;
+            // Use SheetAccess.getSheetById with createIfMissing=true to get or create the sheet
+            return SheetAccess.getSheetById(spreadsheetId, 'Validated Results', true);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             AppLogger.error('VotingService.Data', `Failed to get Validated Results sheet for ${spreadsheetId}: ${errorMessage}`);

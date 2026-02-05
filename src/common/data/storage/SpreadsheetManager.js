@@ -157,6 +157,40 @@ var SpreadsheetManager = (function() {
       
       return sheetObj;
     }
+
+    /**
+     * Get a sheet by spreadsheet ID and sheet name (for dynamic/external spreadsheets not in Bootstrap)
+     * 
+     * CRITICAL: This is a Layer 0 method - NO AppLogger allowed!
+     * 
+     * @param {string} spreadsheetId - The spreadsheet ID to open
+     * @param {string} sheetName - The name of the sheet tab within the spreadsheet
+     * @param {boolean} [createIfMissing=false] - Whether to create the sheet if it doesn't exist
+     * @returns {GoogleAppsScript.Spreadsheet.Sheet} The sheet instance
+     * @throws {Error} If sheet not found and createIfMissing is false
+     */
+    static getSheetById(spreadsheetId, sheetName, createIfMissing = false) {
+      if (!spreadsheetId || typeof spreadsheetId !== 'string') {
+        throw new Error(`SpreadsheetManager.getSheetById: spreadsheetId is required, got: ${spreadsheetId}`);
+      }
+      if (!sheetName || typeof sheetName !== 'string') {
+        throw new Error(`SpreadsheetManager.getSheetById: sheetName is required, got: ${sheetName}`);
+      }
+
+      const ss = SpreadsheetApp.openById(spreadsheetId);
+      let sheetObj = ss.getSheetByName(sheetName);
+      
+      if (!sheetObj) {
+        if (createIfMissing) {
+          console.log(`[SpreadsheetManager.getSheetById] Creating missing sheet: ${sheetName} in spreadsheet ${spreadsheetId}`);
+          sheetObj = ss.insertSheet(sheetName);
+        } else {
+          throw new Error(`Sheet '${sheetName}' not found in spreadsheet '${spreadsheetId}'`);
+        }
+      }
+      
+      return sheetObj;
+    }
   }
 
   return SpreadsheetManager;
