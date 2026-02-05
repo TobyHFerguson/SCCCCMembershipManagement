@@ -458,7 +458,7 @@ MembershipManagement.Manager = class {
   /**
    * Renew a member with optional email change handling
    * If oldEmail is provided and different from member.Email, handles email change first
-   * @param {Record<string, any>} txn - Transaction data with Email Address, Phone, and other fields
+   * @param {Record<string, any>} txn - Transaction data containing member information from payment processor
    * @param {ValidatedMember} member - Member object to renew
    * @param {MembershipManagement.ExpirySchedule[]} expirySchedule - Expiry schedule array
    * @param {string|null} oldEmail - Optional old email address for email change handling
