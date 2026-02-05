@@ -150,6 +150,7 @@ var RichTextMigration = (function() {
       }
       
       AppLogger.info('RichTextMigration', `Full migration completed. Results: ${JSON.stringify(results)}`);
+      // @ts-ignore - results object has specific keys, not a generic index signature
       return results;
     }
     

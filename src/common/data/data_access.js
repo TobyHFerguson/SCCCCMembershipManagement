@@ -47,13 +47,19 @@ var DataAccess = {
         const actionSpecs = Object.fromEntries(actionSpecsAsArray.map(spec => [spec.Type, spec]));
         for (const actionSpec of Object.values(actionSpecs)) {
             // Check if Body is a RichText object {text, url}
-            if (actionSpec.Body && typeof actionSpec.Body === 'object' && actionSpec.Body.url) {
-                // If it's a Google Docs URL, convert to HTML
-                if (actionSpec.Body.url.includes('docs.google.com/document/d/')) {
-                    actionSpec.Body = DocsService.convertDocToHtml(actionSpec.Body.url);
-                } else {
-                    // For other links, just use the text
-                    actionSpec.Body = actionSpec.Body.text;
+            const body = actionSpec.Body;
+            // @ts-ignore - TypeScript doesn't understand that body !== null before 'in' operator
+            if (body && typeof body === 'object' && body !== null && 'url' in body) {
+                /** @type {{text: string, url: string}} */
+                const bodyObj = body; // Explicit type assertion
+                if (bodyObj.url) {
+                    // If it's a Google Docs URL, convert to HTML
+                    if (bodyObj.url.includes('docs.google.com/document/d/')) {
+                        actionSpec.Body = DocsService.convertDocToHtml(bodyObj.url);
+                    } else {
+                        // For other links, just use the text
+                        actionSpec.Body = bodyObj.text;
+                    }
                 }
             }
             // If Body is still a string and contains hyperlink formula, parse it (backward compatibility)

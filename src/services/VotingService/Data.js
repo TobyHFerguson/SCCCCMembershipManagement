@@ -62,7 +62,8 @@ VotingService.Data = {
             }
             return sheet;
         } catch (error) {
-            AppLogger.error('VotingService.Data', `Failed to get Validated Results sheet for ${spreadsheetId}: ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            AppLogger.error('VotingService.Data', `Failed to get Validated Results sheet for ${spreadsheetId}: ${errorMessage}`);
             return undefined;
         }
     }
