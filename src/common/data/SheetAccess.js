@@ -100,22 +100,31 @@ var SheetAccess = (function() {
       const sheet = manager.getSheet(sheetName);
       
       if (!data || data.length === 0) {
-        // Clear all data except header
-        if (sheet.getLastRow() > 1) {
+        // Clear all data except header (only if sheet has columns)
+        if (sheet.getLastRow() > 1 && sheet.getLastColumn() > 0) {
           sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
         }
         return;
       }
       
       const headers = Object.keys(data[0] || {});
-      const existingHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      const lastColumn = sheet.getLastColumn();
+      const existingHeaders = lastColumn > 0 
+        ? sheet.getRange(1, 1, 1, lastColumn).getValues()[0]
+        : [];
       
-      // Use existing header order if available and non-empty
+      // Use existing header order if available and non-empty, otherwise use data's keys
       const orderedHeaders = existingHeaders.length && existingHeaders[0] ? existingHeaders : headers;
+      
+      // Write headers if sheet is empty
+      if (lastColumn === 0 && orderedHeaders.length > 0) {
+        sheet.getRange(1, 1, 1, orderedHeaders.length).setValues([orderedHeaders]);
+      }
+      
       const rows = data.map(obj => orderedHeaders.map(h => obj[h] ?? ''));
       
       // Clear existing data (except headers) and write new
-      if (sheet.getLastRow() > 1) {
+      if (sheet.getLastRow() > 1 && sheet.getLastColumn() > 0) {
         sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
       }
       if (rows.length > 0) {
