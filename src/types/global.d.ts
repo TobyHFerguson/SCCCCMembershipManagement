@@ -551,6 +551,22 @@ interface ValidatedMemberData {
     'Renewed On': Date | null;
 }
 
+/**
+ * Transaction data from payment processor (e.g., JotForm, Square)
+ * Used for processing new memberships and renewals
+ */
+interface TransactionData {
+    'Email Address': string;
+    'First Name': string;
+    'Last Name': string;
+    Phone?: string;
+    Payment?: string;  // e.g., "1 year", "2 years"
+    Directory?: string;  // e.g., "Share Name, Share Email, Share Phone"
+    'Payable Status'?: string;  // e.g., "Paid", "Pending"
+    Processed?: Date | string | null;  // Date when transaction was processed
+    Timestamp?: Date | string | null;  // Transaction timestamp
+}
+
 // Flat ValidatedMember class (new pattern - replaces Common.Data.ValidatedMember)
 declare class ValidatedMember {
     Email: string;
