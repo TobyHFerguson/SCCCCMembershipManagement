@@ -113,7 +113,7 @@ var SpreadsheetManager = (function() {
 
   class SpreadsheetManager {
     /**
-     * Get a sheet directly by name (replaces Fiddler for simpler access)
+     * Get a sheet directly by name
      * @param {string} sheetName - Name of the sheet from Bootstrap
      * @returns {GoogleAppsScript.Spreadsheet.Sheet} The sheet instance
      */

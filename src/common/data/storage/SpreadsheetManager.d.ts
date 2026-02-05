@@ -5,29 +5,9 @@
  */
 
 /**
- * SpreadsheetManager class - Low-level spreadsheet access via bmPreFiddler
+ * SpreadsheetManager class - Low-level spreadsheet access
  */
 declare class SpreadsheetManager {
-    /**
-     * Gets a fiddler based on the sheet name.
-     * @param sheetName - the name of the sheet from Bootstrap
-     * @returns The fiddler instance
-     */
-    static getFiddler(sheetName: string): Fiddler<any>;
-
-    /**
-     * Clear cached fiddler(s). Call when external code may have modified the sheet.
-     * @param sheetName - Specific sheet to clear, or omit to clear all
-     */
-    static clearFiddlerCache(sheetName?: string): void;
-
-    /**
-     * Returns the data from a fiddler with formulas merged into it.
-     * @param fiddler - The fiddler to get data from
-     * @returns The merged data
-     */
-    static getDataWithFormulas<T>(fiddler: Fiddler<T>): T[];
-
     /**
      * Converts links in a sheet to hyperlinks.
      * @param sheetName - The name of the sheet
@@ -35,7 +15,7 @@ declare class SpreadsheetManager {
     static convertLinks(sheetName: string): void;
 
     /**
-     * Get a sheet directly by name (replaces fiddler for simpler access)
+     * Get a sheet directly by name
      * @param sheetName - Name of the sheet from Bootstrap
      * @returns The sheet instance
      */

@@ -163,7 +163,7 @@ var ServiceExecutionLogger = {
         }
         
         try {
-            // Persist entries directly (AuditPersistence handles fiddler internally)
+            // Persist entries directly
             const numWritten = AuditPersistence.persistAuditEntries(auditEntries);
             
             AppLogger.debug('ServiceExecutionLogger', `Persisted ${numWritten} audit entries`);
