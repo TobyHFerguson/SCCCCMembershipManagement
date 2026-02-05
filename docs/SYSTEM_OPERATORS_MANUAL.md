@@ -39,7 +39,7 @@
 │  - No GAS dependencies                  │
 ├─────────────────────────────────────────┤
 │     Data Access Layer                   │
-│  - SpreadsheetManager (Fiddler)         │
+│  - SpreadsheetManager (SheetAccess)      │
 │  - Properties, Logger                   │
 ├─────────────────────────────────────────┤
 │     Google Sheets (Data Storage)        │
@@ -101,10 +101,9 @@ interface Member {
 - Expires > Joined
 - Period >= 1
 
-**Fiddler Access:**
+**SheetAccess:**
 ```javascript
-const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
-const members = fiddler.getData();
+const members = SheetAccess.getData('ActiveMembers');
 ```
 
 ---
@@ -133,10 +132,10 @@ interface Transaction {
 2. Payment gateway → Status='Paid'
 3. Trigger → `processTransactions()` → Processed=today
 
-**Fiddler Access:**
+**SheetAccess:**
 ```javascript
-const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('Transactions').needFormulas();
-const txns = Common.Data.Storage.SpreadsheetManager.getDataWithFormulas(fiddler);
+SheetAccess.convertLinks('Transactions');
+const txns = SheetAccess.getDataWithRichText('Transactions');
 ```
 
 ---
@@ -159,10 +158,9 @@ interface ExpirySchedule {
 3. Entries removed as processed
 4. Updated when member renews (old entries deleted, new entries created)
 
-**Fiddler Access:**
+**SheetAccess:**
 ```javascript
-const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirySchedule');
-const schedule = fiddler.getData();
+const schedule = SheetAccess.getData('ExpirySchedule');
 ```
 
 ---
@@ -207,10 +205,9 @@ interface FIFOItem {
 - Attempt 5 → wait 6 hours
 - After attempt 5 → move to Dead Letter
 
-**Fiddler Access:**
+**SheetAccess:**
 ```javascript
-const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationFIFO');
-const queue = fiddler.getData();
+const queue = SheetAccess.getData('ExpirationFIFO');
 ```
 
 ---
@@ -235,10 +232,9 @@ const queue = fiddler.getData();
 | "Resource Not Found" | Member already removed | No action needed (expected) |
 | "Network timeout" | Transient GAS issue | Manually retry or wait for resolution |
 
-**Fiddler Access:**
+**SheetAccess:**
 ```javascript
-const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationDeadLetter');
-const deadItems = fiddler.getData();
+const deadItems = SheetAccess.getData('ExpirationDeadLetter');
 ```
 
 ---
@@ -272,10 +268,9 @@ interface SystemLogEntry {
 - Max 1000 entries (oldest deleted when limit exceeded)
 - Automatic rotation handled by `Common.Logger` module
 
-**Fiddler Access:**
+**SheetAccess:**
 ```javascript
-const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('SystemLogs');
-const logs = fiddler.getData();
+const logs = SheetAccess.getData('SystemLogs');
 ```
 
 **Manual Logging:**
@@ -415,8 +410,8 @@ Elections      | 1SpF... | Elections   | FALSE
 
 **Access:**
 ```javascript
-// Fiddler uses Bootstrap automatically
-const fiddler = Common.Data.Storage.SpreadsheetManager.getFiddler('ActiveMembers');
+// SheetAccess uses Bootstrap automatically
+const members = SheetAccess.getData('ActiveMembers');
 // This looks up 'ActiveMembers' in Bootstrap, opens 'Members' sheet
 ```
 
@@ -1630,13 +1625,16 @@ namespace Common.Config.Properties {
 }
 ```
 
-### Common.Data.Storage.SpreadsheetManager
+### SheetAccess
 
 ```typescript
-namespace Common.Data.Storage.SpreadsheetManager {
-  function getFiddler(sheetName: string): Fiddler;
-  function getDataWithFormulas(fiddler: Fiddler): any[];
-  function clearFiddlerCache(sheetName?: string): void;
+class SheetAccess {
+  static getData(sheetName: string): any[];
+  static getDataAsArrays(sheetName: string): any[][];
+  static getDataWithRichText(sheetName: string): any[];
+  static setData(sheetName: string, data: any[]): void;
+  static convertLinks(sheetName: string): void;
+  static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
 }
 ```
 
@@ -1653,15 +1651,15 @@ ScriptApp.getProjectTriggers().forEach(t =>
 );
 
 // Check queue health
-const queue = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationFIFO').getData();
+const queue = SheetAccess.getData('ExpirationFIFO');
 console.log(`Queue length: ${queue.length}`);
 
 // Check dead letter
-const dead = Common.Data.Storage.SpreadsheetManager.getFiddler('ExpirationDeadLetter').getData();
+const dead = SheetAccess.getData('ExpirationDeadLetter');
 console.log(`Dead letter items: ${dead.length}`);
 
 // Check recent errors in System Logs
-const logs = Common.Data.Storage.SpreadsheetManager.getFiddler('SystemLogs').getData();
+const logs = SheetAccess.getData('SystemLogs');
 const errors = logs.filter(l => l.Level === 'ERROR' && 
   l.Timestamp > new Date(Date.now() - 24*60*60*1000)
 );
