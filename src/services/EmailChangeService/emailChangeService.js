@@ -88,10 +88,9 @@ EmailChangeService.handleChangeEmailInGroupsUI = function (oldEmail, newEmail, g
   EmailChangeService.Internal.changeEmailInSpreadsheets(oldEmail, newEmail, sheetRefs)
 
   // Log the change
-  const fiddler = SheetAccess.getFiddler('EmailChange');
-  const data = fiddler.getData();
+  const data = SheetAccess.getData('EmailChange');
   data.push({ date: new Date(), from: oldEmail, to: newEmail })
-  fiddler.setData(data).dumpValues();
+  SheetAccess.setData('EmailChange', data);
 
   return results;
 }
@@ -181,14 +180,14 @@ EmailChangeService.Internal = {
 
   changeEmailInSpreadsheets: function (oldEmail, newEmail, sheetRefs) {
     for (const ref of sheetRefs) {
-      const fiddler = SheetAccess.getFiddler(ref);
-      fiddler.mapRows((row) => {
-        if (row.Email.toLowerCase() === oldEmail.toLowerCase()) {
-          row.Email = newEmail.toLowerCase()
+      const data = SheetAccess.getData(ref);
+      const updatedData = data.map((row) => {
+        if (row.Email && row.Email.toLowerCase() === oldEmail.toLowerCase()) {
+          return { ...row, Email: newEmail.toLowerCase() };
         }
         return row;
-      })
-      fiddler.dumpValues()
+      });
+      SheetAccess.setData(ref, updatedData);
     }
   }
 }

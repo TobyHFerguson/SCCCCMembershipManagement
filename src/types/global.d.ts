@@ -261,7 +261,6 @@ interface SystemLogEntry {
     Data: string;
 }
 
-// Fiddler-related types (used across multiple services)
 interface FormResponse {
     timestamp: Date;
     'VOTING TOKEN': string;
@@ -287,35 +286,6 @@ interface SystemLogEntry {
     Service: string;
     Message: string;
     Data: string;
-}
-
-/**
- * Represents a data management utility for a spreadsheet.
- * @template T The type of data objects managed by the Fiddler.
- */
-interface Fiddler<T = any> {
-    getData(): T[];
-    setData(data: T[]): Fiddler<T>;
-    dumpValues(): void;
-    getSheet(): GoogleAppsScript.Spreadsheet.Sheet;
-    getSpreadsheet(): GoogleAppsScript.Spreadsheet.Spreadsheet;
-    findRow(criteria: Partial<T>): T | null;
-    findRows(criteria: Partial<T>): T[];
-    addRow(row: T): Fiddler<T>;
-    updateRow(criteria: Partial<T>, updates: Partial<T>): boolean;
-    removeRows(criteria: Partial<T>): number;
-    getRowCount(): number;
-    clearData(): Fiddler<T>;
-    mapRows(mapper: (row: T) => T): Fiddler<T>;
-    needFormulas(): Fiddler<T>;
-    getFormulaData(): T[];
-}
-
-// Fiddler options interfaces
-interface FiddlerOptions {
-    id?: string;
-    sheetName?: string;
-    createIfMissing?: boolean;
 }
 
 interface FormResponsesOptions {
@@ -454,50 +424,23 @@ declare class AuditPersistence {
 // ============================================================================
 
 /**
- * SpreadsheetManager class - Low-level spreadsheet access via bmPreFiddler
+ * SpreadsheetManager class - Low-level spreadsheet access
  */
 declare class SpreadsheetManager {
-    /**
-     * Gets a fiddler based on the sheet name.
-     */
-    static getFiddler(sheetName: 'Tokens'): Fiddler<TokenDataType>;
-    static getFiddler(sheetName: 'Elections'): Fiddler<VotingService.Election>;
-    static getFiddler(sheetName: 'Form Responses 1'): Fiddler<FormResponse>;
-    static getFiddler(sheetName: 'Validated Results'): Fiddler<Result>;
-    static getFiddler(sheetName: 'Invalid Results'): Fiddler<Result>;
-    static getFiddler(sheetName: 'Bootstrap'): Fiddler<BootstrapData>;
-    static getFiddler(sheetName: 'SystemLogs'): Fiddler<SystemLogEntry>;
-    static getFiddler(sheetName: 'ActiveMembers'): Fiddler<Member>;
-    static getFiddler(sheetName: 'ActionSpecs'): Fiddler<MembershipManagement.ActionSpec>;
-    static getFiddler(sheetName: 'ExpirySchedule'): Fiddler<MembershipManagement.ExpirySchedule>;
-    static getFiddler(sheetName: 'ExpirationFIFO'): Fiddler<ExpiredMember>;
-    static getFiddler(sheetName: 'Audit'): Fiddler<AuditLogEntry>;
-    static getFiddler(sheetName: string): Fiddler<any>;
-
-    /**
-     * Clear cached fiddler(s). Call when external code may have modified the sheet.
-     */
-    static clearFiddlerCache(sheetName?: string): void;
-
-    /**
-     * Returns the data from a fiddler with formulas merged into it.
-     */
-    static getDataWithFormulas<T>(fiddler: Fiddler<T>): T[];
-
     /**
      * Converts links in a sheet to hyperlinks.
      */
     static convertLinks(sheetName: string): void;
 
     /**
-     * Get a sheet directly by name (replaces fiddler for simpler access)
+     * Get a sheet directly by name
      */
     static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
 }
 
 /**
  * SheetAccess - Abstraction over spreadsheet operations
- * Provides consistent interface for sheet access, hiding Fiddler implementation details
+ * Provides consistent interface using native SpreadsheetApp API
  */
 declare class SheetAccess {
     /**
@@ -511,14 +454,13 @@ declare class SheetAccess {
     static getDataAsArrays(sheetName: string): any[][];
     
     /**
-     * Get data with formulas preserved (for rich text hyperlinks)
-     * IMPORTANT: Call convertLinks() first for cells with rich text hyperlinks
+     * Get data from sheet with RichText preserved for link columns
+     * Returns objects where link columns have {text, url} structure
      */
-    static getDataWithFormulas(sheetName: string): any[];
+    static getDataWithRichText(sheetName: string, richTextColumns?: string[]): any[];
     
     /**
      * Write data to a sheet (replaces all data)
-     * Note: This clears the cache after writing to ensure fresh reads
      */
     static setData(sheetName: string, data: any[]): void;
     
@@ -533,28 +475,10 @@ declare class SheetAccess {
     static updateRows(sheetName: string, rows: any[][], startRow: number): void;
     
     /**
-     * Convert rich text links to hyperlink formulas
-     * IMPORTANT: Call this BEFORE getDataWithFormulas() for sheets with rich text links
-     */
-    static convertLinks(sheetName: string): void;
-    
-    /**
-     * Clear cached data for a sheet
-     * Call when external code may have modified the sheet
-     */
-    static clearCache(sheetName?: string): void;
-    
-    /**
      * Get raw Sheet object for advanced operations
      * Note: Prefer using higher-level methods when possible
      */
     static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
-    
-    /**
-     * Get a Fiddler instance for a sheet (for advanced use)
-     * Note: This is provided for backward compatibility
-     */
-    static getFiddler(sheetName: string): Fiddler;
 }
 
 /**
@@ -758,23 +682,6 @@ declare const WebServices: {
     VotingService: WebServiceDefinition;
     [key: string]: WebServiceDefinition;
 };
-
-// bmPreFiddler namespace - consolidated from fiddler.d.ts
-declare namespace bmPreFiddler {
-    class PreFiddlerService {
-        // Specific overloads
-        getFiddler(options: FormResponsesOptions): Fiddler<FormResponse>;
-        getFiddler(options: BootStrapOptions): Fiddler<BootstrapData>;
-        getFiddler(options: ValidResultsOptions): Fiddler<Result>;
-        getFiddler(options: InvalidResultsOptions): Fiddler<Result>;
-        getFiddler(options: ActiveMembersOptions): Fiddler<Member>;
-        
-        // Generic fallback
-        getFiddler(options: FiddlerOptions): Fiddler<any>;
-    }
-
-    function PreFiddler(): PreFiddlerService;
-}
 
 /**
  * GroupManagementService types

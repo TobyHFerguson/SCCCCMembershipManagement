@@ -197,11 +197,7 @@ declare namespace VotingService {
     function getSpreadsheetIdFromElection(election: Election): string;
 
     type DataType = {
-        /**
-         * Gets the fiddler for the Elections sheet.
-         * @returns {any} Fiddler instance for the Elections sheet.
-         */
-        getFiddler_(): any;
+
 
         /**
          * Retrieves the election data from the Elections sheet.
@@ -231,12 +227,7 @@ declare namespace VotingService {
          */
         getVoters_(election: Election): string[];
 
-        /**
-         * Gets a fiddler attached to the valid results sheet for the given trigger ID.
-         * @param {string} triggerId Trigger ID.
-         * @returns {any | undefined} Fiddler instance or undefined.
-         */
-        getFiddlerForValidResults(triggerId: string): any | undefined;
+
     }
 
 }

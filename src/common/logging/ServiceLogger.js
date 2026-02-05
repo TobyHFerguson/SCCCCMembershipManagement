@@ -17,7 +17,6 @@
  *   const logger = new ServiceLogger('GroupManagementService', 'user@example.com');
  *   logger.logServiceAccess('getData'); // Logs both audit + system
  *   const auditEntry = logger.createAuditEntry('ProfileUpdate', 'success', 'Updated phone number');
- *   // Later: AuditPersistence.persistAuditEntries(fiddler, [auditEntry]);
  * 
  * Layer: Layer 1 Infrastructure (can use AppLogger)
  * Pattern: Flat IIFE-wrapped class (per gas-best-practices.md)

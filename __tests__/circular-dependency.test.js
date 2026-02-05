@@ -93,13 +93,13 @@ describe('Circular Dependency Guards', () => {
       expect(loggerSource).toContain('NAMESPACES');
     });
     
-    it('should use SpreadsheetManager.getFiddler for SystemLogs', () => {
+    it('should use SpreadsheetManager.getSheet for SystemLogs', () => {
       const loggerPath = path.join(__dirname, '../src/common/utils/Logger.js');
       const loggerSource = fs.readFileSync(loggerPath, 'utf8');
       
-      // Should have getLogFiddler function that uses SpreadsheetManager
-      expect(loggerSource).toContain('getLogFiddler');
-      expect(loggerSource).toContain("getFiddler('SystemLogs')");
+      // Should have getLogSheet function that uses SpreadsheetManager
+      expect(loggerSource).toContain('getLogSheet');
+      expect(loggerSource).toContain("getSheet('SystemLogs')");
     });
     
     it('should have fallback for when SpreadsheetManager is not available', () => {

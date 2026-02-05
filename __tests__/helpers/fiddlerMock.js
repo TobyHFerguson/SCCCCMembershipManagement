@@ -1,8 +1,9 @@
-// Helper to install in-memory fiddler mocks for tests
+// Helper to install in-memory sheet access mocks for tests
 module.exports = function createFiddlerMock(initialFifo = [], initialDead = []) {
   let fifoData = Array.isArray(initialFifo) ? initialFifo.slice() : [];
   let deadData = Array.isArray(initialDead) ? initialDead.slice() : [];
-  let originalGetFiddler = null;
+  let originalGetData = null;
+  let originalSetData = null;
 
   function install() {
     // Ensure global Common exists, preserving existing properties
@@ -10,40 +11,40 @@ module.exports = function createFiddlerMock(initialFifo = [], initialDead = []) 
     global.Common.Data = global.Common.Data || {};
     global.Common.Data.Storage = global.Common.Data.Storage || {};
     global.SpreadsheetManager = global.SpreadsheetManager || {};
+    global.SheetAccess = global.SheetAccess || {};
     
-    originalGetFiddler = global.SpreadsheetManager.getFiddler;
-    global.SpreadsheetManager.getFiddler = (name) => {
+    // Mock SheetAccess getData/setData methods
+    originalGetData = global.SheetAccess.getData;
+    originalSetData = global.SheetAccess.setData;
+    
+    global.SheetAccess.getData = (name) => {
       if (name === 'ExpirationFIFO') {
-        return {
-          getData: () => fifoData.slice(),
-          setData: (d) => { fifoData = Array.isArray(d) ? d.slice() : []; return global.SpreadsheetManager.getFiddler('ExpirationFIFO'); },
-          dumpValues: () => { }
-        };
+        return fifoData.slice();
       }
       if (name === 'ExpirationDeadLetter') {
-        return {
-          getData: () => deadData.slice(),
-          setData: (d) => { deadData = Array.isArray(d) ? d.slice() : []; return global.SpreadsheetManager.getFiddler('ExpirationDeadLetter'); },
-          dumpValues: () => { }
-        };
+        return deadData.slice();
       }
       if (name === 'ExpirySchedule') {
-        return {
-          getData: () => [],
-          setData: (d) => ({ dumpValues: () => { } }),
-          dumpValues: () => { }
-        };
+        return [];
       }
-      // default simple fiddler for other sheets
-      return { getData: () => [], setData: () => ({ dumpValues: () => { } }), dumpValues: () => { } };
+      // default empty data for other sheets
+      return [];
     };
     
-    // Add clearFiddlerCache method for SheetAccess compatibility
-    global.SpreadsheetManager.clearFiddlerCache = () => { };
+    global.SheetAccess.setData = (name, data) => {
+      if (name === 'ExpirationFIFO') {
+        fifoData = Array.isArray(data) ? data.slice() : [];
+      }
+      if (name === 'ExpirationDeadLetter') {
+        deadData = Array.isArray(data) ? data.slice() : [];
+      }
+      // For other sheets, do nothing
+    };
   }
 
   function restore() {
-    if (originalGetFiddler) global.SpreadsheetManager.getFiddler = originalGetFiddler;
+    if (originalGetData) global.SheetAccess.getData = originalGetData;
+    if (originalSetData) global.SheetAccess.setData = originalSetData;
   }
 
   function getFifo() { return fifoData.slice(); }

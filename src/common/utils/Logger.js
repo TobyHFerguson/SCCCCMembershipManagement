@@ -112,24 +112,24 @@ var AppLogger = (function() {
   }
   
   /**
-   * Gets the SystemLogs fiddler from SpreadsheetManager
-   * @returns {Fiddler<SystemLogEntry>|null} The SystemLogs fiddler or null if unavailable
+   * Gets the SystemLogs sheet from SpreadsheetManager
+   * @returns {GoogleAppsScript.Spreadsheet.Sheet|null} The SystemLogs sheet or null if unavailable
    * @private
    */
-  function getLogFiddler() {
+  function getLogSheet() {
     try {
       // Check if SpreadsheetManager is available (flat class pattern)
       if (typeof SpreadsheetManager === 'undefined') {
-        console.log('[AppLogger.getLogFiddler] SpreadsheetManager not available yet, using fallback');
+        console.log('[AppLogger.getLogSheet] SpreadsheetManager not available yet, using fallback');
         return null;
       }
       
-      // Get the fiddler for SystemLogs from Bootstrap configuration
-      const fiddler = SpreadsheetManager.getFiddler('SystemLogs');
-      return fiddler;
+      // Get the sheet for SystemLogs from Bootstrap configuration
+      const sheet = SpreadsheetManager.getSheet('SystemLogs');
+      return sheet;
     } catch (error) {
       // If SystemLogs is not configured in Bootstrap or any other error, log and return null
-      console.log('[AppLogger.getLogFiddler] Failed to get SystemLogs fiddler: ' + (error && error.message ? error.message : String(error)));
+      console.log('[AppLogger.getLogSheet] Failed to get SystemLogs sheet: ' + (error && error.message ? error.message : String(error)));
       return null;
     }
   }
@@ -218,61 +218,10 @@ var AppLogger = (function() {
    */
   function logToSheet(level, service, message, data) {
     try {
-      // Try to use the fiddler-based approach first
-      const fiddler = getLogFiddler();
+      // Try to use the sheet-based approach
+      const logSheet = getLogSheet();
       
-      if (fiddler) {
-        const timestamp = new Date();
-        
-        let dataStr = '';
-        if (data !== undefined && data !== null) {
-          // If data has error-like properties prefer a compact object with message/stack (and name if present)
-          if (typeof data === 'object' && (data.message || data.stack)) {
-            const errPart = {};
-            if (data.name) errPart.name = data.name;
-            if (data.message) errPart.message = data.message;
-            if (data.stack) errPart.stack = data.stack;
-            try {
-              dataStr = JSON.stringify(errPart);
-            } catch (e) {
-              dataStr = String(errPart);
-            }
-          } else {
-            try {
-              dataStr = JSON.stringify(data);
-            } catch (e) {
-              dataStr = String(data);
-            }
-          }
-        }
-        
-        // Get current log data
-        const logData = fiddler.getData();
-        
-        // Add new log entry
-        const newEntry = {
-          Timestamp: timestamp,
-          Level: level,
-          Service: service,
-          Message: message,
-          Data: dataStr
-        };
-        
-        logData.push(newEntry);
-        
-        // Auto-rotate logs if they get too long (keep last 1000 entries)
-        if (logData.length > 1000) {
-          logData.splice(0, logData.length - 1000);
-        }
-        
-        // Write back to sheet
-        fiddler.setData(logData).dumpValues();
-        
-      } else {
-        // Fallback to legacy sheet-based approach if fiddler not available
-        const logSheet = getLogSheetFallback();
-        if (!logSheet) return;
-        
+      if (logSheet) {
         const timestamp = new Date();
         
         let dataStr = '';
@@ -303,6 +252,43 @@ var AppLogger = (function() {
         const lastRow = logSheet.getLastRow();
         if (lastRow > 1001) { // Header + 1000 data rows
           logSheet.deleteRows(2, lastRow - 1001);
+        }
+        
+      } else {
+        // Fallback to legacy sheet-based approach if sheet not available
+        const fallbackSheet = getLogSheetFallback();
+        if (!fallbackSheet) return;
+        
+        const timestamp = new Date();
+        
+        let dataStr = '';
+        if (data !== undefined && data !== null) {
+          // If data has error-like properties prefer a compact object with message/stack (and name if present)
+          if (typeof data === 'object' && (data.message || data.stack)) {
+            const errPart = {};
+            if (data.name) errPart.name = data.name;
+            if (data.message) errPart.message = data.message;
+            if (data.stack) errPart.stack = data.stack;
+            try {
+              dataStr = JSON.stringify(errPart);
+            } catch (e) {
+              dataStr = String(errPart);
+            }
+          } else {
+            try {
+              dataStr = JSON.stringify(data);
+            } catch (e) {
+              dataStr = String(data);
+            }
+          }
+        }
+
+        fallbackSheet.appendRow([timestamp, level, service, message, dataStr]);
+        
+        // Auto-rotate logs if they get too long (keep last 1000 entries)
+        const lastRow = fallbackSheet.getLastRow();
+        if (lastRow > 1001) { // Header + 1000 data rows
+          fallbackSheet.deleteRows(2, lastRow - 1001);
         }
       }
     } catch (error) {
@@ -487,27 +473,22 @@ var AppLogger = (function() {
      */
     static getLogs() {
       try {
-        const fiddler = getLogFiddler();
-        if (fiddler) {
-          // Use fiddler to get log data
-          const logData = fiddler.getData();
-          // Convert to array format matching legacy interface: [Timestamp, Level, Service, Message, Data]
-          return logData.map(entry => [
-            entry.Timestamp,
-            entry.Level,
-            entry.Service,
-            entry.Message,
-            entry.Data
-          ]);
-        } else {
-          // Fallback to legacy approach
-          const logSheet = getLogSheetFallback();
-          if (!logSheet) return [];
-          
+        const logSheet = getLogSheet();
+        if (logSheet) {
+          // Use sheet to get log data
           const lastRow = logSheet.getLastRow();
           if (lastRow <= 1) return [];
           
           return logSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+        } else {
+          // Fallback to legacy approach
+          const fallbackSheet = getLogSheetFallback();
+          if (!fallbackSheet) return [];
+          
+          const lastRow = fallbackSheet.getLastRow();
+          if (lastRow <= 1) return [];
+          
+          return fallbackSheet.getRange(2, 1, lastRow - 1, 5).getValues();
         }
       } catch (error) {
         console.log('[AppLogger.getLogs] Failed: ' + (error && error.message ? error.message : String(error)));
@@ -520,15 +501,17 @@ var AppLogger = (function() {
      */
     static clearLogs() {
       try {
-        const fiddler = getLogFiddler();
-        if (fiddler) {
-          // Use fiddler to clear log data
-          fiddler.setData([]).dumpValues();
+        const logSheet = getLogSheet();
+        if (logSheet) {
+          // Use sheet to clear log data
+          if (logSheet.getLastRow() > 1) {
+            logSheet.getRange(2, 1, logSheet.getLastRow() - 1, 5).clearContent();
+          }
         } else {
           // Fallback to legacy approach
-          const logSheet = getLogSheetFallback();
-          if (logSheet && logSheet.getLastRow() > 1) {
-            logSheet.getRange(2, 1, logSheet.getLastRow() - 1, 5).clearContent();
+          const fallbackSheet = getLogSheetFallback();
+          if (fallbackSheet && fallbackSheet.getLastRow() > 1) {
+            fallbackSheet.getRange(2, 1, fallbackSheet.getLastRow() - 1, 5).clearContent();
           }
         }
       } catch (error) {

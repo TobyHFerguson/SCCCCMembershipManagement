@@ -60,18 +60,27 @@ var Properties = (function() {
     _isLoadingProperties = true;
     
     try {
-      const fiddler = SpreadsheetManager.getFiddler('Properties');
-      const data = fiddler.getData() || [];
+      const sheet = SpreadsheetManager.getSheet('Properties');
+      const values = sheet.getDataRange().getValues();
+      const headers = values[0];
+      
+      // Convert to array of objects
+      const data = values.slice(1).map(row => {
+        const obj = {};
+        headers.forEach((header, index) => {
+          obj[header] = row[index];
+        });
+        return obj;
+      });
       
       _propertyCache = {};
       
       // Expected sheet structure: [Property, Value, Description, Service]
-      // Row 0 is header, skip it
-      for (let i = 1; i < data.length; i++) {
+      for (let i = 0; i < data.length; i++) {
         const row = data[i];
         if (!row) continue; // Skip empty rows
         
-        // bmPreFiddler returns objects with property names, not arrays
+        // Native SpreadsheetApp returns objects with property names
         const propertyName = row.Property ? String(row.Property).trim() : '';
         const value = row.Value !== undefined && row.Value !== null ? String(row.Value) : '';
         

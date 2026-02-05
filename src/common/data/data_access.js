@@ -16,27 +16,6 @@
  */
 
 /**
- * @returns {Fiddler<VotingService.Election>}
- */
-function getElectionsFiddler() {
-    return SheetAccess.getFiddler('Elections');
-}
-
-/**
- * @returns {Fiddler<TokenDataType>}
- */
-function getTokensFiddler() {
-    return SheetAccess.getFiddler('Tokens');
-}
-
-/**
- * @returns {Fiddler<SystemLogEntry>}
- */
-function getSystemLogsFiddler() {
-    return SheetAccess.getFiddler('SystemLogs');
-}
-
-/**
  * DataAccess object - provides high-level data access functions
  */
 // @ts-ignore - TypeScript sees identical types as different due to ActionSpec resolution order
@@ -62,15 +41,34 @@ var DataAccess = {
         return members;
     },
     getActionSpecs: () => {
-        SheetAccess.convertLinks('Action Specs');
-        // We use getDataWithFormulas because the Body of an ActionSpec may contain formulas with a URL.
-        const actionSpecsAsArray = /** @type {MembershipManagement.ActionSpec[]} */ (SheetAccess.getDataWithFormulas('ActionSpecs'))
+        // Use getDataWithRichText to read native RichText links directly
+        // IMPORTANT: Body column contains RichText links, not formulas
+        const actionSpecsAsArray = /** @type {MembershipManagement.ActionSpec[]} */ (SheetAccess.getDataWithRichText('ActionSpecs', ['Body']))
         const actionSpecs = Object.fromEntries(actionSpecsAsArray.map(spec => [spec.Type, spec]));
         for (const actionSpec of Object.values(actionSpecs)) {
-            let match = actionSpec.Body.match(/=hyperlink\("(https:\/\/docs.google.com\/document\/d\/[^"]+)"/);
-            if (match) {
-                let url = match[1];
-                actionSpec.Body = DocsService.convertDocToHtml(url);
+            // Check if Body is a RichText object {text, url}
+            const body = actionSpec.Body;
+            // @ts-ignore - TypeScript doesn't understand that body !== null before 'in' operator
+            if (body && typeof body === 'object' && body !== null && 'url' in body) {
+                /** @type {{text: string, url: string}} */
+                const bodyObj = body; // Explicit type assertion
+                if (bodyObj.url) {
+                    // If it's a Google Docs URL, convert to HTML
+                    if (bodyObj.url.includes('docs.google.com/document/d/')) {
+                        actionSpec.Body = DocsService.convertDocToHtml(bodyObj.url);
+                    } else {
+                        // For other links, just use the text
+                        actionSpec.Body = bodyObj.text;
+                    }
+                }
+            }
+            // If Body is still a string and contains hyperlink formula, parse it (backward compatibility)
+            else if (typeof actionSpec.Body === 'string' && actionSpec.Body.includes('=hyperlink(')) {
+                let match = actionSpec.Body.match(/=hyperlink\("(https:\/\/docs.google.com\/document\/d\/[^"]+)"/);
+                if (match) {
+                    let url = match[1];
+                    actionSpec.Body = DocsService.convertDocToHtml(url);
+                }
             }
         }
         return actionSpecs;
@@ -132,8 +130,6 @@ var DataAccess = {
         
         AppLogger.info('data_access', `updateMember: Updated ${changeCount} cells for ${email}`);
         
-        // Clear cache so subsequent reads get fresh data
-        SheetAccess.clearCache('ActiveMembers');
         return true;
     },
     isMember:(email) => {

@@ -1,8 +1,8 @@
 /**
- * SpreadsheetManager - Low-level spreadsheet access via bmPreFiddler
+ * SpreadsheetManager - Low-level spreadsheet access using native SpreadsheetApp
  * 
  * CRITICAL: This module MUST NOT use AppLogger!
- * Reason: Creates infinite loop via Properties -> getFiddler -> _initializeSheets -> getContainerSpreadsheetId -> AppLogger -> Properties
+ * Reason: Creates infinite loop via Properties -> SpreadsheetManager -> _initializeSheets -> getContainerSpreadsheetId -> AppLogger -> Properties
  * Use console.log() only for tracing.
  * 
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
@@ -11,9 +11,6 @@
 var SpreadsheetManager = (function() {
   /** @type {Object.<string, any>|undefined} */
   let sheets;
-  
-  /** @type {Object.<string, any>} Per-execution cache for fiddler instances */
-  const __fiddlerCache = {};
 
   /**
    * Gets the container spreadsheet ID from script properties or current binding
@@ -58,7 +55,7 @@ var SpreadsheetManager = (function() {
   }
 
   /**
-   * Initialize sheets from Bootstrap
+   * Initialize sheets from Bootstrap using native SpreadsheetApp
    * @private
    */
   function _initializeSheets() {
@@ -66,12 +63,27 @@ var SpreadsheetManager = (function() {
       // Get the container spreadsheet ID to ensure we're accessing the correct spreadsheet
       const containerSpreadsheetId = getContainerSpreadsheetId();
 
-      // Use the container spreadsheet instead of current context
-      const fiddlerConfig = containerSpreadsheetId
-        ? { id: containerSpreadsheetId, sheetName: 'Bootstrap', createIfMissing: false }
-        : { sheetName: 'Bootstrap', createIfMissing: false };
-
-      const bootStrap = bmPreFiddler.PreFiddler().getFiddler(fiddlerConfig).getData();
+      // Open the container spreadsheet
+      const ss = SpreadsheetApp.openById(containerSpreadsheetId);
+      const bootstrapSheet = ss.getSheetByName('Bootstrap');
+      
+      if (!bootstrapSheet) {
+        throw new Error('Bootstrap sheet not found in container spreadsheet');
+      }
+      
+      // Read Bootstrap data
+      const dataRange = bootstrapSheet.getDataRange();
+      const values = dataRange.getValues();
+      const headers = values[0];
+      
+      // Convert to array of objects
+      const bootStrap = values.slice(1).map(row => {
+        const obj = {};
+        headers.forEach((header, index) => {
+          obj[header] = row[index];
+        });
+        return obj;
+      });
 
       // Process Bootstrap data to extract IDs from URLs
       // This allows users to paste Google Sheets URLs in the id column instead of just IDs
@@ -99,148 +111,9 @@ var SpreadsheetManager = (function() {
     }
   }
 
-  /**
-   * Combines two arrays of objects by merging the properties of objects at the same index.
-   * If a property in the first array's object is an empty string or undefined, the property from the second array's object is used.
-   * 
-   * @param {Array<Object>} arr1 - The first array of objects.
-   * @param {Array<Object>} arr2 - The second array of objects.
-   * @returns {Array<Object>} A new array of objects with combined properties.
-   * @throws {Error} If the lengths of the two arrays are not equal.
-   * @private
-   */
-  function _combineArrays(arr1, arr2) {
-    if (arr1.length !== arr2.length) {
-      throw new Error("Both arrays must have the same length");
-    }
-
-    return arr1.map((item, index) => {
-      const combinedItem = { ...arr2[index] };
-      for (const key in item) {
-        if (item[key] !== "" && item[key] !== undefined) {
-          combinedItem[key] = item[key];
-        }
-      }
-      return combinedItem;
-    });
-  }
-
   class SpreadsheetManager {
     /**
-     * Gets a fiddler based on the sheet name.
-     * @param {string} sheetName - the name of the sheet.
-     * @returns {Fiddler} - The fiddler.
-     */
-    static getFiddler(sheetName) {
-      try {
-        // Check cache first
-        const containerSpreadsheetId = getContainerSpreadsheetId();
-        const cacheKey = `${containerSpreadsheetId || 'default'}::${sheetName}`;
-
-        if (__fiddlerCache[cacheKey]) {
-          return __fiddlerCache[cacheKey];
-        }
-
-        if (!sheets) {
-          _initializeSheets();
-        }
-
-        const sheet = sheets[sheetName];
-        if (!sheet) {
-          const availableSheets = Object.keys(sheets);
-          let errorMsg = 'Sheet name ' + sheetName + ' not found in Bootstrap. Available: ' + availableSheets.join(', ');
-
-          // Check for common typos
-          if (sheetName === 'Properties' && availableSheets.includes('Propertes')) {
-            errorMsg += '\n\nDID YOU MEAN: "Propertes" is misspelled in Bootstrap - should be "Properties"';
-          }
-
-          console.log('[SpreadsheetManager.getFiddler] ERROR: ' + errorMsg);
-          throw new Error(errorMsg);
-        }
-
-        // Ensure we use the correct spreadsheet context
-        const sheetConfig = sheets[sheetName];
-        let fiddlerConfig;
-
-        if (sheetConfig.id) {
-          // If the sheet config has an ID, use it (external spreadsheet)
-          fiddlerConfig = sheetConfig;
-        } else {
-          // If no ID in config, add container spreadsheet ID (local sheet)
-          const containerIdForConfig = getContainerSpreadsheetId();
-          fiddlerConfig = containerIdForConfig
-            ? { ...sheetConfig, id: containerIdForConfig }
-            : sheetConfig;
-        }
-
-        const fiddler = bmPreFiddler.PreFiddler().getFiddler(fiddlerConfig).needFormulas();
-
-        // Cache the fiddler for reuse in this execution
-        __fiddlerCache[cacheKey] = fiddler;
-
-        return fiddler;
-      } catch (error) {
-        console.log('[SpreadsheetManager.getFiddler] Error getting fiddler for ' + sheetName + ': ' + error);
-        error.message = `SpreadsheetManager.getFiddler(${sheetName}) failed: ${error.message}`;
-        throw error;
-      }
-    }
-
-    /**
-     * Clear cached fiddler(s). Call when external code may have modified the sheet.
-     * @param {string} [sheetName] - Specific sheet to clear, or omit to clear all
-     */
-    static clearFiddlerCache(sheetName) {
-      if (!sheetName) {
-        for (const k in __fiddlerCache) delete __fiddlerCache[k];
-        return;
-      }
-
-      const containerSpreadsheetId = getContainerSpreadsheetId();
-      const cacheKey = `${containerSpreadsheetId || 'default'}::${sheetName}`;
-
-      if (__fiddlerCache[cacheKey]) {
-        delete __fiddlerCache[cacheKey];
-      }
-    }
-
-    /**
-     * Returns the data from a fiddler with formulas merged into it.
-     * @template T
-     * @param {Fiddler<T>} fiddler 
-     * @returns {T[]} - The merged data.
-     */
-    static getDataWithFormulas(fiddler) {
-      fiddler.needFormulas();
-      return _combineArrays(fiddler.getFormulaData(), fiddler.getData());
-    }
-
-    /**
-     * Converts links in a sheet to hyperlinks.
-     * @param {string} sheetName - The name of the sheet.
-     */
-    static convertLinks(sheetName) {
-      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-      if (!sheet) return;
-      const range = sheet.getDataRange();
-      const rtvs = range.getRichTextValues();
-      const values = range.getValues();
-      const newValues = rtvs.map((row, r) => {
-        return row.map((column, c) => {
-          if (!column) return null;
-          const v = column.getText() ? column.getText() : values[r][c];
-          return column.getLinkUrl()
-            ? '=hyperlink("'.concat(column.getLinkUrl(), '", "').concat(v, '")')
-            : v;
-        });
-      });
-      range.setValues(newValues);
-      SpreadsheetApp.flush();
-    }
-
-    /**
-     * Get a sheet directly by name (replaces fiddler for simpler access)
+     * Get a sheet directly by name
      * @param {string} sheetName - Name of the sheet from Bootstrap
      * @returns {GoogleAppsScript.Spreadsheet.Sheet} The sheet instance
      */
@@ -268,9 +141,21 @@ var SpreadsheetManager = (function() {
         }
       }
 
-      // Return the actual sheet object from the spreadsheet
+      // Get or create the sheet based on createIfMissing flag
       const ss = SpreadsheetApp.openById(spreadsheetId);
-      return ss.getSheetByName(sheet.sheetName);
+      let sheetObj = ss.getSheetByName(sheet.sheetName);
+      
+      if (!sheetObj) {
+        // Sheet doesn't exist - check createIfMissing flag
+        if (sheet.createIfMissing === true || sheet.createIfMissing === 'TRUE' || sheet.createIfMissing === 'true') {
+          console.log(`[SpreadsheetManager.getSheet] Creating missing sheet: ${sheet.sheetName}`);
+          sheetObj = ss.insertSheet(sheet.sheetName);
+        } else {
+          throw new Error(`Sheet '${sheet.sheetName}' not found in spreadsheet and createIfMissing is false for Bootstrap reference '${sheetName}'`);
+        }
+      }
+      
+      return sheetObj;
     }
   }
 
