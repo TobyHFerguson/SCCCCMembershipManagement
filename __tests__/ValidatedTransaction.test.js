@@ -32,7 +32,7 @@ describe('ValidatedTransaction Class', () => {
         'test@example.com',
         'John',
         'Doe',
-        '555-1234',
+        '(555) 555-1234',
         '1 year',
         'Share Name, Share Email, Share Phone',
         'Paid',
@@ -43,7 +43,7 @@ describe('ValidatedTransaction Class', () => {
       expect(txn['Email Address']).toBe('test@example.com');
       expect(txn['First Name']).toBe('John');
       expect(txn['Last Name']).toBe('Doe');
-      expect(txn.Phone).toBe('555-1234');
+      expect(txn.Phone).toBe('(555) 555-1234');
       expect(txn.Payment).toBe('1 year');
       expect(txn.Directory).toBe('Share Name, Share Email, Share Phone');
       expect(txn['Payable Status']).toBe('Paid');
@@ -56,7 +56,7 @@ describe('ValidatedTransaction Class', () => {
         'minimal@example.com',
         'Jane',
         'Smith',
-        '',
+        '(555) 555-1234',
         '',
         '',
         '',
@@ -67,7 +67,7 @@ describe('ValidatedTransaction Class', () => {
       expect(txn['Email Address']).toBe('minimal@example.com');
       expect(txn['First Name']).toBe('Jane');
       expect(txn['Last Name']).toBe('Smith');
-      expect(txn.Phone).toBe('');
+      expect(txn.Phone).toBe('(555) 555-1234');
       expect(txn.Payment).toBe('');
       expect(txn.Directory).toBe('');
       expect(txn['Payable Status']).toBe('');
@@ -80,7 +80,7 @@ describe('ValidatedTransaction Class', () => {
         '  test@example.com  ',
         '  John  ',
         '  Doe  ',
-        '  555-1234  ',
+        '  (555) 555-1234  ',
         '  1 year  ',
         '  Share Name  ',
         '  Paid  ',
@@ -91,7 +91,7 @@ describe('ValidatedTransaction Class', () => {
       expect(txn['Email Address']).toBe('test@example.com');
       expect(txn['First Name']).toBe('John');
       expect(txn['Last Name']).toBe('Doe');
-      expect(txn.Phone).toBe('555-1234');
+      expect(txn.Phone).toBe('(555) 555-1234');
       expect(txn.Payment).toBe('1 year');
       expect(txn.Directory).toBe('Share Name');
       expect(txn['Payable Status']).toBe('Paid');
@@ -111,13 +111,57 @@ describe('ValidatedTransaction Class', () => {
       )).toThrow('email address is required');
     });
     
+    test('should throw error for missing phone', () => {
+      expect(() => new ValidatedTransaction(
+        'test@example.com', 'John', 'Doe', null, '', '', '', null, null
+      )).toThrow('phone is required');
+      
+      expect(() => new ValidatedTransaction(
+        'test@example.com', 'John', 'Doe', '', '', '', '', null, null
+      )).toThrow('phone is required');
+      
+      expect(() => new ValidatedTransaction(
+        'test@example.com', 'John', 'Doe', '   ', '', '', '', null, null
+      )).toThrow('phone is required');
+    });
+    
+    test('should throw error for invalid phone format', () => {
+      expect(() => new ValidatedTransaction(
+        'test@example.com', 'John', 'Doe', '1234567890', '', '', '', null, null
+      )).toThrow('phone must be in format (NNN) NNN-NNNN');
+      
+      expect(() => new ValidatedTransaction(
+        'test@example.com', 'John', 'Doe', '555-1234', '', '', '', null, null
+      )).toThrow('phone must be in format (NNN) NNN-NNNN');
+      
+      expect(() => new ValidatedTransaction(
+        'test@example.com', 'John', 'Doe', '(555)555-5555', '', '', '', null, null
+      )).toThrow('phone must be in format (NNN) NNN-NNNN');
+      
+      expect(() => new ValidatedTransaction(
+        'test@example.com', 'John', 'Doe', '555 555 5555', '', '', '', null, null
+      )).toThrow('phone must be in format (NNN) NNN-NNNN');
+    });
+    
+    test('should accept valid phone format', () => {
+      const txn = new ValidatedTransaction(
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', null, null
+      );
+      expect(txn.Phone).toBe('(555) 555-5555');
+      
+      const txn2 = new ValidatedTransaction(
+        'test@example.com', 'Jane', 'Doe', '(123) 456-7890', '', '', '', null, null
+      );
+      expect(txn2.Phone).toBe('(123) 456-7890');
+    });
+    
     test('should throw error for missing first name', () => {
       expect(() => new ValidatedTransaction(
-        'test@example.com', null, 'Doe', '', '', '', '', null, null
+        'test@example.com', null, 'Doe', '(555) 555-5555', '', '', '', null, null
       )).toThrow('first name is required');
       
       expect(() => new ValidatedTransaction(
-        'test@example.com', '', 'Doe', '', '', '', '', null, null
+        'test@example.com', '', 'Doe', '(555) 555-5555', '', '', '', null, null
       )).toThrow('first name is required');
       
       expect(() => new ValidatedTransaction(
@@ -141,64 +185,65 @@ describe('ValidatedTransaction Class', () => {
     
     test('should throw error for invalid processed date if provided', () => {
       expect(() => new ValidatedTransaction(
-        'test@example.com', 'John', 'Doe', '', '', '', '', 'not-a-date', null
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', 'not-a-date', null
       )).toThrow('processed date must be valid Date if provided');
       
       expect(() => new ValidatedTransaction(
-        'test@example.com', 'John', 'Doe', '', '', '', '', new Date('invalid'), null
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', new Date('invalid'), null
       )).toThrow('processed date must be valid Date if provided');
     });
     
     test('should throw error for invalid timestamp if provided', () => {
       expect(() => new ValidatedTransaction(
-        'test@example.com', 'John', 'Doe', '', '', '', '', null, 'not-a-date'
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', null, 'not-a-date'
       )).toThrow('timestamp must be valid Date if provided');
       
       expect(() => new ValidatedTransaction(
-        'test@example.com', 'John', 'Doe', '', '', '', '', null, new Date('invalid')
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', null, new Date('invalid')
       )).toThrow('timestamp must be valid Date if provided');
     });
     
     test('should accept null/empty processed date', () => {
       const txn1 = new ValidatedTransaction(
-        'test@example.com', 'John', 'Doe', '', '', '', '', null, null
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', null, null
       );
       expect(txn1.Processed).toBe(null);
       
       const txn2 = new ValidatedTransaction(
-        'test@example.com', 'John', 'Doe', '', '', '', '', undefined, null
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', undefined, null
       );
       expect(txn2.Processed).toBe(null);
       
       const txn3 = new ValidatedTransaction(
-        'test@example.com', 'John', 'Doe', '', '', '', '', '', null
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', '', null
       );
       expect(txn3.Processed).toBe(null);
     });
     
     test('should accept null/empty timestamp', () => {
       const txn1 = new ValidatedTransaction(
-        'test@example.com', 'John', 'Doe', '', '', '', '', null, null
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', null, null
       );
       expect(txn1.Timestamp).toBe(null);
       
       const txn2 = new ValidatedTransaction(
-        'test@example.com', 'John', 'Doe', '', '', '', '', null, undefined
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', null, undefined
       );
       expect(txn2.Timestamp).toBe(null);
       
       const txn3 = new ValidatedTransaction(
-        'test@example.com', 'John', 'Doe', '', '', '', '', null, ''
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', null, ''
       );
       expect(txn3.Timestamp).toBe(null);
     });
     
     test('should handle optional string fields as empty strings when null/undefined', () => {
+      // Phone is now required, so test payment and directory only
       const txn = new ValidatedTransaction(
-        'test@example.com', 'John', 'Doe', null, undefined, '', null, null, null
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', undefined, '', null, null, null
       );
       
-      expect(txn.Phone).toBe('');
+      expect(txn.Phone).toBe('(555) 555-5555');
       expect(txn.Payment).toBe('');
       expect(txn.Directory).toBe('');
       expect(txn['Payable Status']).toBe('');
@@ -245,7 +290,7 @@ describe('ValidatedTransaction Class', () => {
         'test@example.com',
         'John',
         'Doe',
-        '555-1234',
+        '(555) 555-1234',
         '1 year',
         'Share Name, Share Email, Share Phone',
         'Paid',
@@ -259,7 +304,7 @@ describe('ValidatedTransaction Class', () => {
       expect(txn['Email Address']).toBe('test@example.com');
       expect(txn['First Name']).toBe('John');
       expect(txn['Last Name']).toBe('Doe');
-      expect(txn.Phone).toBe('555-1234');
+      expect(txn.Phone).toBe('(555) 555-1234');
       expect(txn.Payment).toBe('1 year');
       expect(txn['Payable Status']).toBe('Paid');
       expect(txn.Processed).toBe(processed);
@@ -271,7 +316,7 @@ describe('ValidatedTransaction Class', () => {
         '', // Missing email
         'John',
         'Doe',
-        '555-1234',
+        '(555) 555-1234',
         '1 year',
         'Share Name',
         'Paid',
@@ -293,7 +338,7 @@ describe('ValidatedTransaction Class', () => {
         'test@example.com',
         '', // Missing first name
         'Doe',
-        '555-1234',
+        '(555) 555-1234',
         '1 year',
         'Share Name',
         'Paid',
@@ -315,7 +360,7 @@ describe('ValidatedTransaction Class', () => {
         'test@example.com',
         'John',
         '', // Missing last name
-        '555-1234',
+        '(555) 555-1234',
         '1 year',
         'Share Name',
         'Paid',
@@ -337,7 +382,7 @@ describe('ValidatedTransaction Class', () => {
         '', // Missing email address
         'John',
         'Doe',
-        '555-1234',
+        '(555) 555-1234',
         '1 year',
         'Share Name',
         'Paid',
@@ -360,7 +405,7 @@ describe('ValidatedTransaction Class', () => {
         'test@example.com',
         'John',
         'Doe',
-        '', // Empty phone
+        '(555) 555-5555', // Phone now required
         '', // No payment
         '', // No directory
         '', // No payable status
@@ -371,7 +416,7 @@ describe('ValidatedTransaction Class', () => {
       const txn = ValidatedTransaction.fromRow(row, headers, 2, null);
       
       expect(txn).not.toBeNull();
-      expect(txn.Phone).toBe('');
+      expect(txn.Phone).toBe('(555) 555-5555');
       expect(txn.Payment).toBe('');
       expect(txn.Directory).toBe('');
       expect(txn['Payable Status']).toBe('');
@@ -419,9 +464,9 @@ describe('ValidatedTransaction Class', () => {
     
     test('should process all valid rows', () => {
       const rows = [
-        ['test1@example.com', 'John', 'Doe', '555-1111', '1 year', 'Share Name', 'Paid', null, new Date('2023-12-01')],
-        ['test2@example.com', 'Jane', 'Smith', '555-2222', '2 years', 'Share Email', 'Paid', null, new Date('2023-12-02')],
-        ['test3@example.com', 'Bob', 'Jones', '', '1 year', '', 'Pending', null, new Date('2023-12-03')]
+        ['test1@example.com', 'John', 'Doe', '(555) 111-1111', '1 year', 'Share Name', 'Paid', null, new Date('2023-12-01')],
+        ['test2@example.com', 'Jane', 'Smith', '(555) 222-2222', '2 years', 'Share Email', 'Paid', null, new Date('2023-12-02')],
+        ['test3@example.com', 'Bob', 'Jones', '(555) 333-3333', '1 year', '', 'Pending', null, new Date('2023-12-03')]
       ];
       
       const transactions = ValidatedTransaction.validateRows(rows, headers, 'test-context');
@@ -435,9 +480,9 @@ describe('ValidatedTransaction Class', () => {
     
     test('should skip invalid rows and continue processing', () => {
       const rows = [
-        ['test1@example.com', 'John', 'Doe', '555-1111', '1 year', 'Share Name', 'Paid', null, null],
-        ['', 'Jane', 'Smith', '555-2222', '2 years', 'Share Email', 'Paid', null, null], // Missing email
-        ['test3@example.com', 'Bob', 'Jones', '', '1 year', '', 'Pending', null, null]
+        ['test1@example.com', 'John', 'Doe', '(555) 111-1111', '1 year', 'Share Name', 'Paid', null, null],
+        ['', 'Jane', 'Smith', '(555) 222-2222', '2 years', 'Share Email', 'Paid', null, null], // Missing email
+        ['test3@example.com', 'Bob', 'Jones', '(555) 333-3333', '1 year', '', 'Pending', null, null]
       ];
       
       const transactions = ValidatedTransaction.validateRows(rows, headers, 'test-context');
@@ -449,9 +494,9 @@ describe('ValidatedTransaction Class', () => {
     
     test('should send consolidated email on validation errors', () => {
       const rows = [
-        ['test1@example.com', 'John', 'Doe', '555-1111', '1 year', 'Share Name', 'Paid', null, null],
-        ['', 'Jane', 'Smith', '555-2222', '2 years', 'Share Email', 'Paid', null, null], // Missing email
-        ['test3@example.com', '', 'Jones', '', '1 year', '', 'Pending', null, null] // Missing first name
+        ['test1@example.com', 'John', 'Doe', '(555) 111-1111', '1 year', 'Share Name', 'Paid', null, null],
+        ['', 'Jane', 'Smith', '(555) 222-2222', '2 years', 'Share Email', 'Paid', null, null], // Missing email
+        ['test3@example.com', '', 'Jones', '(555) 333-3333', '1 year', '', 'Pending', null, null] // Missing first name
       ];
       
       const transactions = ValidatedTransaction.validateRows(rows, headers, 'test-batch-context');
@@ -471,7 +516,7 @@ describe('ValidatedTransaction Class', () => {
     
     test('should not send email when all rows are valid', () => {
       const rows = [
-        ['test1@example.com', 'John', 'Doe', '555-1111', '1 year', 'Share Name', 'Paid', null, null]
+        ['test1@example.com', 'John', 'Doe', '(555) 111-1111', '1 year', 'Share Name', 'Paid', null, null]
       ];
       
       const transactions = ValidatedTransaction.validateRows(rows, headers, 'test-context');
@@ -489,7 +534,7 @@ describe('ValidatedTransaction Class', () => {
     
     test('should log warning when sending email', () => {
       const rows = [
-        ['', 'John', 'Doe', '', '', '', '', null, null] // Missing email
+        ['', 'John', 'Doe', '(555) 555-5555', '', '', '', null, null] // Missing email
       ];
       
       ValidatedTransaction.validateRows(rows, headers, 'test-email-context');
@@ -530,7 +575,7 @@ describe('ValidatedTransaction Class', () => {
         'test@example.com',
         'John',
         'Doe',
-        '555-1234',
+        '(555) 555-1234',
         '1 year',
         'Share Name, Share Email, Share Phone',
         'Paid',
@@ -544,7 +589,7 @@ describe('ValidatedTransaction Class', () => {
         'test@example.com',
         'John',
         'Doe',
-        '555-1234',
+        '(555) 555-1234',
         '1 year',
         'Share Name, Share Email, Share Phone',
         'Paid',
@@ -558,7 +603,7 @@ describe('ValidatedTransaction Class', () => {
         'test@example.com',
         'John',
         'Doe',
-        '',
+        '(555) 555-5555',
         '',
         '',
         '',
@@ -568,7 +613,7 @@ describe('ValidatedTransaction Class', () => {
       
       const array = txn.toArray();
       
-      expect(array[3]).toBe(''); // Phone
+      expect(array[3]).toBe('(555) 555-5555'); // Phone
       expect(array[4]).toBe(''); // Payment
       expect(array[5]).toBe(''); // Directory
       expect(array[6]).toBe(''); // Payable Status
@@ -589,7 +634,7 @@ describe('ValidatedTransaction Class', () => {
         'test@example.com',
         'John',
         'Doe',
-        '555-1234',
+        '(555) 555-1234',
         '1 year',
         'Share Name, Share Email, Share Phone',
         'Paid',
@@ -635,7 +680,7 @@ describe('ValidatedTransaction Class', () => {
         'test@example.com',
         'John',
         'Doe',
-        '',
+        '(555) 555-5555',
         '',
         '',
         '',
@@ -656,7 +701,7 @@ describe('ValidatedTransaction Class', () => {
         'test@example.com',
         'John',
         'Doe',
-        '',
+        '(555) 555-5555',
         '',
         '',
         '',
@@ -673,7 +718,7 @@ describe('ValidatedTransaction Class', () => {
         'test@example.com',
         'John',
         'Doe',
-        '555-1234',
+        '(555) 555-1234',
         '1 year',
         'Share Name',
         'Paid',

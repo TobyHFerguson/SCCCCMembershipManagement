@@ -23,7 +23,7 @@ var ValidatedTransaction = (function() {
    * @param {string} emailAddress - Member email (required)
    * @param {string} firstName - First name (required)
    * @param {string} lastName - Last name (required)
-   * @param {string} phone - Phone number (optional, may be empty)
+   * @param {string} phone - Phone number (required, must be in format (NNN) NNN-NNNN)
    * @param {string} payment - Payment type (optional, e.g., "1 year", "2 years")
    * @param {string} directory - Directory sharing preferences (optional, e.g., "Share Name, Share Email, Share Phone")
    * @param {string} payableStatus - Payment status (optional, e.g., "Paid", "Pending")
@@ -45,6 +45,16 @@ var ValidatedTransaction = (function() {
       // Validate last name (required)
       if (typeof lastName !== 'string' || lastName.trim() === '') {
         throw new Error(`ValidatedTransaction last name is required, got: ${typeof lastName} "${lastName}"`);
+      }
+      
+      // Validate phone (required, must be in format (NNN) NNN-NNNN)
+      if (typeof phone !== 'string' || phone.trim() === '') {
+        throw new Error(`ValidatedTransaction phone is required, got: ${typeof phone} "${phone}"`);
+      }
+      const phonePattern = /^\(\d{3}\) \d{3}-\d{4}$/;
+      const trimmedPhone = phone.trim();
+      if (!phonePattern.test(trimmedPhone)) {
+        throw new Error(`ValidatedTransaction phone must be in format (NNN) NNN-NNNN, got: "${trimmedPhone}"`);
       }
       
       // Validate processed date if present (optional, but must be valid Date if provided)
@@ -69,7 +79,7 @@ var ValidatedTransaction = (function() {
       /** @type {string} */
       this['Last Name'] = lastName.trim();
       /** @type {string} */
-      this.Phone = String(phone || '').trim();
+      this.Phone = trimmedPhone;
       /** @type {string} */
       this.Payment = String(payment || '').trim();
       /** @type {string} */
