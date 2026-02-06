@@ -20,6 +20,19 @@ var SheetAccess = (function() {
     }
     throw new Error('SpreadsheetManager not available');
   };
+  
+  // Get reference to ValidatedMember (available globally in GAS runtime, injected in tests)
+  const getValidatedMember = () => {
+    if (typeof ValidatedMember !== 'undefined') {
+      return ValidatedMember;
+    }
+    // In test environment, ValidatedMember is loaded via require
+    if (typeof require !== 'undefined') {
+      const module = require('./ValidatedMember.js');
+      return module.ValidatedMember;
+    }
+    throw new Error('ValidatedMember not available');
+  };
 
   /**
    * SheetAccess class - Abstraction over spreadsheet operations
@@ -176,6 +189,30 @@ var SheetAccess = (function() {
     static getSheet(sheetName) {
       const manager = getSpreadsheetManager();
       return manager.getSheet(sheetName);
+    }
+
+    // ========================================================================
+    // Typed Accessors - Returns validated, strongly-typed data
+    // ========================================================================
+
+    /**
+     * Get active members with validation
+     * 
+     * Returns validated member data with proper type safety.
+     * Invalid rows are filtered out and alert emails are sent to membership-automation@sc3.club.
+     * 
+     * @returns {ValidatedMember[]} Array of validated member objects
+     */
+    static getActiveMembers() {
+      const rawData = this.getDataAsArrays('ActiveMembers');
+      if (rawData.length === 0) return [];
+      
+      const headers = rawData[0];
+      const rows = rawData.slice(1);
+      
+      const ValidatedMemberClass = getValidatedMember();
+      // Use ValidatedMember.validateRows which handles validation and error alerting
+      return ValidatedMemberClass.validateRows(rows, headers, 'SheetAccess.getActiveMembers');
     }
 
     // ========================================================================

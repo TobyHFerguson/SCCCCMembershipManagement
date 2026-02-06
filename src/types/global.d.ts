@@ -489,6 +489,20 @@ declare class SheetAccess {
     static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
 
     // ========================================================================
+    // Typed Accessors - Returns validated, strongly-typed data
+    // ========================================================================
+
+    /**
+     * Get active members with validation
+     * 
+     * Returns validated member data with proper type safety.
+     * Invalid rows are filtered out and alert emails are sent to membership-automation@sc3.club.
+     * 
+     * @returns Array of validated member objects
+     */
+    static getActiveMembers(): ValidatedMember[];
+
+    // ========================================================================
     // *ById Methods - For dynamic/external spreadsheets not in Bootstrap
     // ========================================================================
 

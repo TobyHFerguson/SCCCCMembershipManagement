@@ -8,6 +8,14 @@
  * 2. getDataAsArrays - Get data as 2D arrays
  * 3. setData - Write data to sheet
  * 4. getSheet - Get raw Sheet object
+ * 5. *ById Methods - For dynamic/external spreadsheets not in Bootstrap
+ *    - getSheetById
+ *    - getDataAsArraysById
+ *    - getDataById
+ *    - setDataById
+ *    - getSpreadsheetById
+ * 6. Typed Accessors - Returns validated, strongly-typed data
+ *    - getActiveMembers
  */
 
 // Create mock sheet with all required methods
@@ -32,6 +40,23 @@ const createMockSheet = (values = [[]]) => {
 global.SpreadsheetManager = {
   getSheet: jest.fn()
 };
+
+// Mock MailApp for ValidatedMember tests
+global.MailApp = {
+  sendEmail: jest.fn()
+};
+
+// Mock AppLogger for ValidatedMember tests
+global.AppLogger = {
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn()
+};
+
+// Load ValidatedMember and make it global
+const { ValidatedMember } = require('../src/common/data/ValidatedMember.js');
+global.ValidatedMember = ValidatedMember;
 
 const { SheetAccess } = require('../src/common/data/SheetAccess.js');
 
@@ -257,6 +282,93 @@ describe('SheetAccess', () => {
 
       expect(global.SpreadsheetApp.openById).toHaveBeenCalledWith('test-spreadsheet-id');
       expect(result).toBe(mockSpreadsheet);
+    });
+  });
+
+  // ========================================================================
+  // Typed Accessors - Returns validated, strongly-typed data
+  // ========================================================================
+
+  describe('getActiveMembers', () => {
+    beforeEach(() => {
+      // Reset mocks for each test
+      jest.clearAllMocks();
+    });
+
+    it('should return validated members for valid data', () => {
+      const joined = new Date('2023-01-15');
+      const expires = new Date('2024-01-15');
+      
+      const values = [
+        ['Status', 'Email', 'First', 'Last', 'Phone', 'Joined', 'Expires', 'Period', 'Directory Share Name', 'Directory Share Email', 'Directory Share Phone', 'Renewed On'],
+        ['Active', 'john@example.com', 'John', 'Doe', '555-1234', joined, expires, 12, true, false, true, null],
+        ['Active', 'jane@example.com', 'Jane', 'Smith', '555-5678', joined, expires, 12, false, true, false, null]
+      ];
+      
+      const { sheet } = createMockSheet(values);
+      SpreadsheetManager.getSheet.mockReturnValue(sheet);
+
+      const result = SheetAccess.getActiveMembers();
+
+      expect(SpreadsheetManager.getSheet).toHaveBeenCalledWith('ActiveMembers');
+      expect(result).toHaveLength(2);
+      expect(result[0].Email).toBe('john@example.com');
+      expect(result[1].Email).toBe('jane@example.com');
+      expect(result[0]).toBeInstanceOf(ValidatedMember);
+      expect(result[1]).toBeInstanceOf(ValidatedMember);
+    });
+
+    it('should filter invalid rows and send alert email', () => {
+      const joined = new Date('2023-01-15');
+      const expires = new Date('2024-01-15');
+      
+      const values = [
+        ['Status', 'Email', 'First', 'Last', 'Phone', 'Joined', 'Expires', 'Period', 'Directory Share Name', 'Directory Share Email', 'Directory Share Phone', 'Renewed On'],
+        ['Active', 'john@example.com', 'John', 'Doe', '555-1234', joined, expires, 12, true, false, true, null],
+        ['Active', 'invalid-email', 'Jane', 'Smith', '555-5678', joined, expires, 12, false, true, false, null], // Invalid email
+        ['Active', 'bob@example.com', 'Bob', '', '555-9999', joined, expires, 12, false, false, false, null] // Missing last name
+      ];
+      
+      const { sheet } = createMockSheet(values);
+      SpreadsheetManager.getSheet.mockReturnValue(sheet);
+
+      const result = SheetAccess.getActiveMembers();
+
+      // Only valid member returned
+      expect(result).toHaveLength(1);
+      expect(result[0].Email).toBe('john@example.com');
+      
+      // Alert email should have been sent
+      expect(global.MailApp.sendEmail).toHaveBeenCalledTimes(1);
+      expect(global.MailApp.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'membership-automation@sc3.club',
+          subject: expect.stringContaining('ALERT: 2 Member Validation Error')
+        })
+      );
+    });
+
+    it('should return empty array for empty sheet', () => {
+      const values = [];
+      const { sheet } = createMockSheet(values);
+      SpreadsheetManager.getSheet.mockReturnValue(sheet);
+
+      const result = SheetAccess.getActiveMembers();
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array for sheet with only headers', () => {
+      const values = [
+        ['Status', 'Email', 'First', 'Last', 'Phone', 'Joined', 'Expires', 'Period', 'Directory Share Name', 'Directory Share Email', 'Directory Share Phone', 'Renewed On']
+      ];
+      const { sheet } = createMockSheet(values);
+      SpreadsheetManager.getSheet.mockReturnValue(sheet);
+
+      const result = SheetAccess.getActiveMembers();
+
+      expect(result).toEqual([]);
+      expect(global.MailApp.sendEmail).not.toHaveBeenCalled();
     });
   });
 });
