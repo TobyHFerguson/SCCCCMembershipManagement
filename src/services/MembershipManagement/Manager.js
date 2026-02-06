@@ -433,7 +433,7 @@ MembershipManagement.Manager = class {
    * @param {string} oldEmail - The old email address
    * @param {string} newEmail - The new email address
    * @param {ValidatedMember} member - The member object to update
-   * @param {Array} expirySchedule - The expiry schedule array
+   * @param {MembershipManagement.ExpirySchedule[]} expirySchedule - The expiry schedule array
    * @private
    */
   changeMemberEmail_(oldEmail, newEmail, member, expirySchedule) {
@@ -532,6 +532,15 @@ MembershipManagement.Manager = class {
     return scheduleEntries;
   }
 
+  /**
+   * Remove all expiry schedule entries for a member's email address
+   * Performs case-insensitive email matching
+   * Modifies the expirySchedule array in-place
+   * @param {string} email - Member email address to remove from schedule
+   * @param {MembershipManagement.ExpirySchedule[]} expirySchedule - Expiry schedule array to update
+   * @returns {void}
+   * @private
+   */
   removeMemberFromExpirySchedule_(email, expirySchedule) {
     const normalizedEmail = MembershipManagement.Manager.normalizeEmail(email);
     for (let i = expirySchedule.length - 1; i >= 0; i--) {
@@ -637,6 +646,14 @@ MembershipManagement.Manager = class {
     return newMember;
   }
 
+  /**
+   * Add a new member to the action schedule
+   * Creates schedule entries for the member's expiration date and adds them to the schedule
+   * @param {ValidatedMember} member - New member to add to schedule
+   * @param {MembershipManagement.ExpirySchedule[]} expirySchedule - Expiry schedule array to update
+   * @returns {void}
+   * @private
+   */
   addNewMemberToActionSchedule_(member, expirySchedule) {
     const scheduleEntries = this.createScheduleEntries_(member.Email, member.Expires);
     expirySchedule.push(...scheduleEntries);
