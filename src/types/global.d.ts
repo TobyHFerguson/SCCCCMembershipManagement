@@ -619,6 +619,52 @@ declare class ValidatedMember {
     static HEADERS: string[];
 }
 
+// Flat ValidatedTransaction class (new pattern for transaction validation)
+declare class ValidatedTransaction {
+    'Email Address': string;
+    'First Name': string;
+    'Last Name': string;
+    Phone: string;
+    Payment: string;
+    Directory: string;
+    'Payable Status': string;
+    Processed: Date | null;
+    Timestamp: Date | null;
+    
+    constructor(
+        emailAddress: string,
+        firstName: string,
+        lastName: string,
+        phone: string,
+        payment: string,
+        directory: string,
+        payableStatus: string,
+        processed: Date | string | null,
+        timestamp: Date | string | null
+    );
+    
+    /** Convert to array for sheet persistence */
+    toArray(): Array<string | Date | null>;
+    
+    /** Static factory - never throws, returns null on failure */
+    static fromRow(
+        rowArray: Array<any>,
+        headers: string[],
+        rowNumber: number,
+        errorCollector: { errors: string[], rowNumbers: number[] } | null
+    ): ValidatedTransaction | null;
+    
+    /** Batch validation with consolidated email alert */
+    static validateRows(
+        rows: Array<Array<any>>,
+        headers: string[],
+        context: string
+    ): ValidatedTransaction[];
+    
+    /** Column headers constant */
+    static HEADERS: string[];
+}
+
 // Flat MemberPersistence class (new pattern - replaces Common.Data.MemberPersistence)
 declare class MemberPersistence {
     /** Write only changed cells to minimize version history noise */
