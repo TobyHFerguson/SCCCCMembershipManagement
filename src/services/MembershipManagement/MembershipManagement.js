@@ -51,10 +51,20 @@ MembershipManagement.convertJoinToRenew = function (rowAIndex, rowBIndex) {
 
 MembershipManagement.processTransactions = function () {
   // Use getDataWithRichText to read native RichText links directly
-  const transactions = SheetAccess.getDataWithRichText('Transactions', ['Payable Order ID']);
-  if (transactions.length === 0) { 
+  const transactionRows = SheetAccess.getDataAsArrays('Transactions');
+  if (transactionRows.length === 0) { 
     AppLogger.info('MembershipManagement', 'No transactions to process');
     return { processed: 0, joins: 0, renewals: 0, hasPendingPayments: false, errors: [] }; 
+  }
+  
+  // Validate transactions using ValidatedTransaction class
+  const headers = transactionRows[0];
+  const dataRows = transactionRows.slice(1);
+  const transactions = ValidatedTransaction.validateRows(dataRows, headers, 'MembershipManagement.processTransactions');
+  
+  if (transactions.length === 0) {
+    AppLogger.info('MembershipManagement', 'No valid transactions to process after validation');
+    return { processed: 0, joins: 0, renewals: 0, hasPendingPayments: false, errors: [] };
   }
 
   // Use SpreadsheetApp + ValidatedMember for ActiveMembers
@@ -87,7 +97,11 @@ MembershipManagement.processTransactions = function () {
     SheetAccess.setData('ExpirySchedule', expiryScheduleData);
     
     // Only mark transactions as processed AFTER member data is successfully persisted
-    SheetAccess.setData('Transactions', transactions);
+    // Convert ValidatedTransaction instances back to arrays for persistence
+    const transactionArrays = transactions.map(txn => txn.toArray());
+    const transactionSheet = SheetAccess.getSheet('Transactions');
+    const transactionRange = transactionSheet.getRange(2, 1, transactionArrays.length, ValidatedTransaction.HEADERS.length);
+    transactionRange.setValues(transactionArrays);
   }
   
   // Count operation types from audit entries

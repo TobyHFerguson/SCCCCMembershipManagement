@@ -3,6 +3,7 @@ const { MembershipManagement } = require('../src/services/MembershipManagement/M
 const AuditLogEntry = require('../src/common/audit/AuditLogEntry');
 const AuditLogger = require('../src/common/audit/AuditLogger');
 const { ValidatedMember } = require('../src/common/data/ValidatedMember');
+const { ValidatedTransaction } = require('../src/common/data/ValidatedTransaction');
 const { MemberPersistence } = require('../src/common/data/MemberPersistence');
 const utils = MembershipManagement.Utils;
 
@@ -76,9 +77,10 @@ const TestData = {
   /**
    * Create a paid transaction with defaults
    * @param {object} overrides
+   * @returns {ValidatedTransaction}
    */
   paidTransaction(overrides = {}) {
-    return {
+    const defaults = {
       "Payable Status": "paid",
       "Email Address": "test@example.com",
       "First Name": "Test",
@@ -86,8 +88,26 @@ const TestData = {
       "Payment": "1 year",
       Phone: '(123) 456-7890',
       Directory: 'share name',
-      ...overrides
+      Processed: null,
+      Timestamp: null
     };
+    const data = { ...defaults, ...overrides };
+    
+    // Convert string dates to Date objects for ValidatedTransaction
+    const processed = data.Processed ? (typeof data.Processed === 'string' ? new Date(data.Processed) : data.Processed) : null;
+    const timestamp = data.Timestamp ? (typeof data.Timestamp === 'string' ? new Date(data.Timestamp) : data.Timestamp) : null;
+    
+    return new ValidatedTransaction(
+      data["Email Address"],
+      data["First Name"],
+      data["Last Name"],
+      data.Phone,
+      data.Payment,
+      data.Directory,
+      data["Payable Status"],
+      processed,
+      timestamp
+    );
   },
 
   /**
@@ -147,7 +167,7 @@ const TestData = {
   /**
    * Create multiple paid transactions with sensible defaults
    * @param {number} count - Number of transactions to create
-   * @returns {Array}
+   * @returns {ValidatedTransaction[]}
    */
   paidTransactions(count = 3) {
     const names = [
@@ -155,22 +175,23 @@ const TestData = {
       { "Email Address": "test2@example.com", "First Name": "Jane", "Last Name": "Smith", Phone: "" },
       { "Email Address": "test3@example.com", "First Name": "Not", "Last Name": "Member", Phone: "" }
     ];
-    return names.slice(0, count).map((name, i) => ({
-      "Payable Status": "paid",
-      "Payment": `${i + 1} year${i > 0 ? 's' : ''}`,
-      Directory: "",
-      ...name
-    }));
+    return names.slice(0, count).map((name, i) => 
+      TestData.paidTransaction({
+        ...name,
+        "Payment": `${i + 1} year${i > 0 ? 's' : ''}`,
+        Directory: ""
+      })
+    );
   }
 };
 
 const transactionsFixture = {
   unpaid: [
-    { "Payable Status": "unpaid", "Email Address": "test1@example.com" },
-    { "Payable Status": "pending", "Email Address": "test2@example.com" },
+    TestData.paidTransaction({ "Payable Status": "unpaid", "Email Address": "test1@example.com", "First Name": "Test", "Last Name": "User1" }),
+    TestData.paidTransaction({ "Payable Status": "pending", "Email Address": "test2@example.com", "First Name": "Test", "Last Name": "User2" }),
   ],
   paidAndProcessed: [
-    { "Payable Status": "paid", "Email Address": "test3@example.com", Processed: "2025-06-15" },
+    TestData.paidTransaction({ "Payable Status": "paid", "Email Address": "test3@example.com", "First Name": "Test", "Last Name": "User3", Processed: new Date("2025-06-15") }),
   ],
   get paid() { 
     return [

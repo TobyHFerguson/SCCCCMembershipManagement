@@ -305,6 +305,13 @@ MembershipManagement.Manager = class {
     return { numMigrations, auditEntries, errors };
   }
 
+  /**
+   * Process paid transactions and update membership data
+   * @param {ValidatedTransaction[]} transactions - Array of validated transaction instances
+   * @param {ValidatedMember[]} membershipData - Array of ValidatedMember instances
+   * @param {MembershipManagement.ExpirySchedule[]} expirySchedule - Expiry schedule array
+   * @returns {{recordsChanged: boolean, hasPendingPayments: boolean, errors: Array<*>, auditEntries: Array<*>}}
+   */
   processPaidTransactions(transactions, membershipData, expirySchedule) {
     const errors = [];
     const auditEntries = [];
@@ -458,7 +465,7 @@ MembershipManagement.Manager = class {
   /**
    * Renew a member with optional email change handling
    * If oldEmail is provided and different from member.Email, handles email change first
-   * @param {TransactionData} txn - Transaction data from payment processor
+   * @param {ValidatedTransaction} txn - Transaction data from payment processor
    * @param {ValidatedMember} member - Member object to renew
    * @param {MembershipManagement.ExpirySchedule[]} expirySchedule - Expiry schedule array
    * @param {string|null} oldEmail - Optional old email address for email change handling
@@ -485,7 +492,7 @@ MembershipManagement.Manager = class {
   /**
    * @deprecated Use renewMemberWithEmailChange_ instead for new code
    * Kept for backward compatibility - delegates to renewMemberWithEmailChange_
-   * @param {TransactionData} txn - Transaction data from payment processor
+   * @param {ValidatedTransaction} txn - Transaction data from payment processor
    * @param {ValidatedMember} member - Member object to renew
    * @param {MembershipManagement.ExpirySchedule[]} expirySchedule - Expiry schedule array
    * @returns {void}
@@ -552,7 +559,7 @@ MembershipManagement.Manager = class {
 
   /**
    * Extract directory sharing preferences from transaction data
-   * @param {TransactionData} txn - Transaction data from payment processor
+   * @param {ValidatedTransaction} txn - Transaction data from payment processor
    * @returns {{"Directory Share Name": boolean, "Directory Share Email": boolean, "Directory Share Phone": boolean}} Object with 3 boolean directory sharing flags
    */
   static extractDirectorySharing_(txn) {
@@ -618,7 +625,7 @@ MembershipManagement.Manager = class {
   
   /**
    * Add a new member to the membership data and expiry schedule
-   * @param {TransactionData} txn - Transaction data from payment processor
+   * @param {ValidatedTransaction} txn - Transaction data from payment processor
    * @param {MembershipManagement.ExpirySchedule[]} expirySchedule - Expiry schedule array (modified in place)
    * @param {ValidatedMember[]} membershipData - Array of ValidatedMember instances (modified in place)
    * @returns {ValidatedMember} The newly created ValidatedMember instance
