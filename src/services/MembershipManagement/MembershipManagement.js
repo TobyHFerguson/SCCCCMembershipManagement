@@ -79,9 +79,18 @@ MembershipManagement.processTransactions = function () {
     // Check if row count changed (e.g., due to convertJoinToRenew merging records)
     if (membershipData.length !== originalMembershipRows.length) {
       // Row count changed - rewrite entire sheet
-      const allRows = membershipData.map(m => m.toArray());
-      // Use ValidatedMember.HEADERS.length to match toArray() output, not sheet headers
-      membershipSheet.getRange(2, 1, allRows.length, ValidatedMember.HEADERS.length).setValues(allRows);
+      // Build rows in sheet column order using header-based property lookup
+      const allRows = membershipData.map(m => membershipHeaders.map(h => m[h]));
+      membershipSheet.getRange(2, 1, allRows.length, membershipHeaders.length).setValues(allRows);
+      
+      // Reset number format for Period column to prevent Google Sheets from
+      // interpreting integers as date serial numbers (the cell may have inherited
+      // Date formatting from previous column-order data corruption)
+      const periodColIdx = membershipHeaders.indexOf('Period');
+      if (periodColIdx >= 0) {
+        membershipSheet.getRange(2, periodColIdx + 1, allRows.length, 1).setNumberFormat('0');
+      }
+      
       AppLogger.info('MembershipManagement', `processTransactions: Rewrote ${allRows.length} rows in ActiveMembers (row count changed from ${originalMembershipRows.length})`);
     } else {
       // Row count unchanged - use selective cell updates for better version history
@@ -97,11 +106,11 @@ MembershipManagement.processTransactions = function () {
     SheetAccess.setData('ExpirySchedule', expiryScheduleData);
     
     // Only mark transactions as processed AFTER member data is successfully persisted
-    // Convert ValidatedTransaction instances back to arrays for persistence
-    const transactionArrays = transactions.map(txn => txn.toArray());
+    // Write back only changed cells using header-based column lookup and original row indices
+    // This avoids row-shift bugs (from filtered invalid rows) and column-order bugs
     const transactionSheet = SheetAccess.getSheet('Transactions');
-    const transactionRange = transactionSheet.getRange(2, 1, transactionArrays.length, ValidatedTransaction.HEADERS.length);
-    transactionRange.setValues(transactionArrays);
+    const txnChangeCount = ValidatedTransaction.writeChangedCells(transactionSheet, transactions, headers);
+    AppLogger.info('MembershipManagement', `processTransactions: Updated ${txnChangeCount} cells in Transactions`);
   }
   
   // Count operation types from audit entries
@@ -165,10 +174,17 @@ MembershipManagement.processMigrations = function () {
   if (membershipData.length > originalMembershipRows.length) {
     // New members added - need to append rows
     const newMembers = membershipData.slice(originalMembershipRows.length);
-    const newRows = newMembers.map(m => m.toArray());
+    // Build rows in sheet column order using header-based property lookup
+    const newRows = newMembers.map(m => membershipHeaders.map(h => m[h]));
     const startRow = membershipSheet.getLastRow() + 1;
-    // Use ValidatedMember.HEADERS.length to match toArray() output, not sheet headers
-    membershipSheet.getRange(startRow, 1, newRows.length, ValidatedMember.HEADERS.length).setValues(newRows);
+    membershipSheet.getRange(startRow, 1, newRows.length, membershipHeaders.length).setValues(newRows);
+    
+    // Reset number format for Period column on appended rows
+    const periodColIdx = membershipHeaders.indexOf('Period');
+    if (periodColIdx >= 0) {
+      membershipSheet.getRange(startRow, periodColIdx + 1, newRows.length, 1).setNumberFormat('0');
+    }
+    
     AppLogger.info('MembershipManagement', `processMigrations: Appended ${newRows.length} new members to ActiveMembers`);
     
     // Update existing rows with selective cell updates

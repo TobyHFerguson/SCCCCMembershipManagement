@@ -91,7 +91,8 @@ describe('MemberPersistence', () => {
     
     beforeEach(() => {
       mockRange = {
-        setValue: jest.fn()
+        setValue: jest.fn(),
+        setNumberFormat: jest.fn()
       };
       
       mockSheet = {
@@ -101,14 +102,15 @@ describe('MemberPersistence', () => {
     
     test('should write only changed cells', () => {
       const originalRows = [
-        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, true, false, true, null],
-        ['Active', 'test2@example.com', 'Jane', 'Smith', '555-2222', new Date('2023-02-20'), new Date('2024-02-20'), 12, false, true, false, null]
+        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, true, false, true, null],
+        ['Active', 'test2@example.com', 'Jane', 'Smith', '555-2222', new Date('2023-02-20'), new Date('2024-02-20'), 12, null, false, true, false, null]
       ];
       
       // Create members with one field changed
       const member1 = new ValidatedMember(
         'test1@example.com', 'Active', 'John', 'Doe', '555-9999', // Phone changed
         new Date('2023-01-15'), new Date('2024-01-15'), 12,
+        null,  // Migrated
         true, false, true, null
       );
       
@@ -116,6 +118,7 @@ describe('MemberPersistence', () => {
         'test2@example.com', 'Expired', // Status changed
         'Jane', 'Smith', '555-2222',
         new Date('2023-02-20'), new Date('2024-02-20'), 12,
+        null,  // Migrated
         false, true, false, null
       );
       
@@ -142,12 +145,13 @@ describe('MemberPersistence', () => {
     
     test('should return 0 when no cells changed', () => {
       const originalRows = [
-        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, true, false, true, null]
+        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, true, false, true, null]
       ];
       
       const member1 = new ValidatedMember(
         'test1@example.com', 'Active', 'John', 'Doe', '555-1111',
         new Date('2023-01-15'), new Date('2024-01-15'), 12,
+        null,  // Migrated
         true, false, true, null
       );
       
@@ -168,13 +172,14 @@ describe('MemberPersistence', () => {
       const newDate = new Date('2024-01-15');
       
       const originalRows = [
-        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', originalDate, new Date('2024-01-15'), 12, true, false, true, null]
+        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', originalDate, new Date('2024-01-15'), 12, null, true, false, true, null]
       ];
       
       const member1 = new ValidatedMember(
         'test1@example.com', 'Active', 'John', 'Doe', '555-1111',
         newDate, // Joined date changed
         new Date('2024-01-15'), 12,
+        null,  // Migrated
         true, false, true, null
       );
       
@@ -195,13 +200,14 @@ describe('MemberPersistence', () => {
       const sameDate = new Date('2023-01-15T00:00:00Z');
       
       const originalRows = [
-        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', sameDate, new Date('2024-01-15'), 12, true, false, true, null]
+        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', sameDate, new Date('2024-01-15'), 12, null, true, false, true, null]
       ];
       
       const member1 = new ValidatedMember(
         'test1@example.com', 'Active', 'John', 'Doe', '555-1111',
         sameDate, // Same Date object
         new Date('2024-01-15'), 12,
+        null,  // Migrated
         true, false, true, null
       );
       
@@ -218,12 +224,13 @@ describe('MemberPersistence', () => {
     
     test('should handle boolean changes', () => {
       const originalRows = [
-        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, true, false, true, null]
+        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, true, false, true, null]
       ];
       
       const member1 = new ValidatedMember(
         'test1@example.com', 'Active', 'John', 'Doe', '555-1111',
         new Date('2023-01-15'), new Date('2024-01-15'), 12,
+        null,  // Migrated
         false, // Directory Share Name changed from true to false
         true,  // Directory Share Email changed from false to true
         true,
@@ -239,18 +246,19 @@ describe('MemberPersistence', () => {
       );
       
       expect(changeCount).toBe(2);
-      expect(mockSheet.getRange).toHaveBeenCalledWith(2, 9); // Directory Share Name
-      expect(mockSheet.getRange).toHaveBeenCalledWith(2, 10); // Directory Share Email
+      expect(mockSheet.getRange).toHaveBeenCalledWith(2, 10); // Directory Share Name
+      expect(mockSheet.getRange).toHaveBeenCalledWith(2, 11); // Directory Share Email
     });
     
     test('should handle null to value changes', () => {
       const originalRows = [
-        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), null, true, false, true, null]
+        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), null, null, true, false, true, null]
       ];
       
       const member1 = new ValidatedMember(
         'test1@example.com', 'Active', 'John', 'Doe', '555-1111',
         new Date('2023-01-15'), new Date('2024-01-15'), 12, // Period changed from null to 12
+        null,  // Migrated
         true, false, true,
         new Date('2023-12-01') // Renewed On changed from null to date
       );
@@ -268,18 +276,20 @@ describe('MemberPersistence', () => {
     
     test('should throw error on row count mismatch', () => {
       const originalRows = [
-        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, true, false, true, null]
+        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, true, false, true, null]
       ];
       
       const member1 = new ValidatedMember(
         'test1@example.com', 'Active', 'John', 'Doe', '555-1111',
         new Date('2023-01-15'), new Date('2024-01-15'), 12,
+        null,  // Migrated
         true, false, true, null
       );
       
       const member2 = new ValidatedMember(
         'test2@example.com', 'Active', 'Jane', 'Smith', '555-2222',
         new Date('2023-02-20'), new Date('2024-02-20'), 12,
+        null,  // Migrated
         false, true, false, null
       );
       
@@ -302,27 +312,30 @@ describe('MemberPersistence', () => {
     
     test('should handle multiple row updates efficiently', () => {
       const originalRows = [
-        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, true, false, true, null],
-        ['Active', 'test2@example.com', 'Jane', 'Smith', '555-2222', new Date('2023-02-20'), new Date('2024-02-20'), 12, false, true, false, null],
-        ['Expired', 'test3@example.com', 'Bob', 'Jones', '555-3333', new Date('2022-01-10'), new Date('2023-01-10'), 12, true, true, true, null]
+        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, true, false, true, null],
+        ['Active', 'test2@example.com', 'Jane', 'Smith', '555-2222', new Date('2023-02-20'), new Date('2024-02-20'), 12, null, false, true, false, null],
+        ['Expired', 'test3@example.com', 'Bob', 'Jones', '555-3333', new Date('2022-01-10'), new Date('2023-01-10'), 12, null, true, true, true, null]
       ];
       
       // Modify different fields in each row
       const member1 = new ValidatedMember(
         'test1@example.com', 'Expired', 'John', 'Doe', '555-1111', // Status changed
         new Date('2023-01-15'), new Date('2024-01-15'), 12,
+        null,  // Migrated
         true, false, true, null
       );
       
       const member2 = new ValidatedMember(
         'test2@example.com', 'Active', 'Jane', 'Smith', '555-9999', // Phone changed
         new Date('2023-02-20'), new Date('2024-02-20'), 12,
+        null,  // Migrated
         false, true, false, null
       );
       
       const member3 = new ValidatedMember(
         'test3@example.com', 'Expired', 'Bob', 'Jones', '555-3333',
         new Date('2022-01-10'), new Date('2023-01-10'), 12,
+        null,  // Migrated
         false, true, true, null // Directory Share Name changed
       );
       
@@ -336,6 +349,128 @@ describe('MemberPersistence', () => {
       
       expect(changeCount).toBe(3);
       expect(mockSheet.getRange).toHaveBeenCalledTimes(3);
+    });
+    
+    test('should work correctly when sheet columns are in different order than HEADERS', () => {
+      // Sheet has columns in a different order than ValidatedMember.HEADERS
+      const sheetHeaders = [
+        'Email', 'Status', 'First', 'Last', 'Phone', 'Joined', 'Expires',
+        'Renewed On', 'Period', 'Migrated', 'Directory Share Name',
+        'Directory Share Email', 'Directory Share Phone'
+      ];
+      
+      // Original row data matches sheet column order (Email first, then Status, etc.)
+      const originalRows = [
+        ['test1@example.com', 'Active', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), null, 12, null, true, false, true]
+      ];
+      
+      // Create member with Phone changed
+      const member1 = new ValidatedMember(
+        'test1@example.com', 'Active', 'John', 'Doe', '555-9999', // Phone changed
+        new Date('2023-01-15'), new Date('2024-01-15'), 12,
+        null,  // Migrated
+        true, false, true, null
+      );
+      
+      const changeCount = MemberPersistence.writeChangedCells(
+        mockSheet,
+        originalRows,
+        [member1],
+        sheetHeaders  // Using sheet headers in different order
+      );
+      
+      // Should only detect Phone change at column 5 (1-based), not at wrong column
+      expect(changeCount).toBe(1);
+      expect(mockSheet.getRange).toHaveBeenCalledTimes(1);
+      // Phone is at index 4 in sheetHeaders → column 5 (1-based)
+      expect(mockSheet.getRange).toHaveBeenCalledWith(2, 5);
+      expect(mockRange.setValue).toHaveBeenCalledWith('555-9999');
+    });
+    
+    test('should reset cell number format when overwriting Date with number (Period corruption fix)', () => {
+      // Simulate corrupted sheet data where Period column has a Date 
+      // (from previous column-order bug writing Expires into Period)
+      const corruptedDate = new Date('1899-12-31'); // Serial number 1 displayed as date
+      
+      const originalRows = [
+        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), corruptedDate, null, true, false, true, null]
+      ];
+      
+      // After renewal, Period is correctly set to integer
+      const member1 = new ValidatedMember(
+        'test1@example.com', 'Active', 'John', 'Doe', '555-1111',
+        new Date('2023-01-15'), new Date('2024-01-15'), 1,
+        null, true, false, true, null
+      );
+      // Constructor converts Date period to null, override for this test scenario
+      // (simulating member.Period being set by getPeriod_ after construction)
+      member1.Period = 1;
+      
+      const headers = ValidatedMember.HEADERS;
+      const changeCount = MemberPersistence.writeChangedCells(
+        mockSheet,
+        originalRows,
+        [member1],
+        headers
+      );
+      
+      // Period changed from Date to number
+      expect(changeCount).toBe(1);
+      expect(mockRange.setValue).toHaveBeenCalledWith(1);
+      // Should reset number format to prevent Sheets from displaying as date
+      expect(mockRange.setNumberFormat).toHaveBeenCalledWith('0');
+    });
+    
+    test('should NOT reset format when overwriting Date with Date', () => {
+      const oldDate = new Date('2023-01-15');
+      const newDate = new Date('2023-06-15');
+      
+      const originalRows = [
+        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', oldDate, new Date('2024-01-15'), 12, null, true, false, true, null]
+      ];
+      
+      const member1 = new ValidatedMember(
+        'test1@example.com', 'Active', 'John', 'Doe', '555-1111',
+        newDate, // Joined changed (still before Expires)
+        new Date('2024-01-15'), 12,
+        null, true, false, true, null
+      );
+      
+      const headers = ValidatedMember.HEADERS;
+      MemberPersistence.writeChangedCells(
+        mockSheet,
+        originalRows,
+        [member1],
+        headers
+      );
+      
+      expect(mockRange.setValue).toHaveBeenCalledWith(newDate);
+      // Should NOT reset format when both values are Dates
+      expect(mockRange.setNumberFormat).not.toHaveBeenCalled();
+    });
+    
+    test('should NOT reset format when overwriting non-Date with non-Date', () => {
+      const originalRows = [
+        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, true, false, true, null]
+      ];
+      
+      const member1 = new ValidatedMember(
+        'test1@example.com', 'Expired', 'John', 'Doe', '555-1111', // Status changed
+        new Date('2023-01-15'), new Date('2024-01-15'), 12,
+        null, true, false, true, null
+      );
+      
+      const headers = ValidatedMember.HEADERS;
+      MemberPersistence.writeChangedCells(
+        mockSheet,
+        originalRows,
+        [member1],
+        headers
+      );
+      
+      expect(mockRange.setValue).toHaveBeenCalledWith('Expired');
+      // Should NOT reset format for string-to-string change
+      expect(mockRange.setNumberFormat).not.toHaveBeenCalled();
     });
     
   });

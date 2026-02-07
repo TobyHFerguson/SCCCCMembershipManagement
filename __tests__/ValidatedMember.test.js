@@ -30,7 +30,7 @@ describe('ValidatedMember Class', () => {
         '555-1234',
         joined,
         expires,
-        12,
+        12, null,
         true,
         false,
         true,
@@ -63,7 +63,7 @@ describe('ValidatedMember Class', () => {
         '',
         joined,
         expires,
-        null,
+        null, null,
         false,
         false,
         false,
@@ -89,7 +89,7 @@ describe('ValidatedMember Class', () => {
         '',
         new Date('2023-01-15'),
         new Date('2024-01-15'),
-        null,
+        null, null,
         false,
         false,
         false,
@@ -99,6 +99,56 @@ describe('ValidatedMember Class', () => {
       expect(member.Email).toBe('test@example.com');
     });
     
+    test('should handle Date object in Period by setting to null (cell formatting corruption)', () => {
+      // When a cell is formatted as Date in Google Sheets, getValues() returns a Date
+      // object even if the underlying value was an integer. This can happen when the 
+      // previous column-order bug wrote a Date (Expires) into the Period column.
+      // Number(Date) would produce milliseconds-since-epoch (a huge number), so we
+      // must detect Date and set Period to null instead.
+      const corruptedPeriod = new Date('1899-12-31'); // Serial number 1 as Date
+      
+      const member = new ValidatedMember(
+        'test@example.com',
+        'Active',
+        'John',
+        'Doe',
+        '555-1234',
+        new Date('2023-01-15'),
+        new Date('2024-01-15'),
+        corruptedPeriod, // Date instead of integer
+        null,
+        true,
+        false,
+        true,
+        null
+      );
+      
+      // Should be null, NOT Number(Date) which would be -2209161600000
+      expect(member.Period).toBe(null);
+      expect(member.Period).not.toBe(corruptedPeriod.getTime());
+    });
+    
+    test('should handle recent Date object in Period (post-epoch date corruption)', () => {
+      // A recent Date (e.g., member's Expires written to Period column) would produce
+      // a positive milliseconds value if we used Number(). Must still be null.
+      const corruptedPeriod = new Date('2025-01-15');
+      
+      const member = new ValidatedMember(
+        'test@example.com',
+        'Active',
+        'John',
+        'Doe',
+        '',
+        new Date('2023-01-15'),
+        new Date('2024-01-15'),
+        corruptedPeriod,
+        null,
+        false, false, false, null
+      );
+      
+      expect(member.Period).toBe(null);
+    });
+
     test('should trim whitespace from string fields', () => {
       const member = new ValidatedMember(
         '  test@example.com  ',
@@ -108,7 +158,7 @@ describe('ValidatedMember Class', () => {
         '  555-1234  ',
         new Date('2023-01-15'),
         new Date('2024-01-15'),
-        null,
+        null, null,
         false,
         false,
         false,
@@ -126,21 +176,21 @@ describe('ValidatedMember Class', () => {
       const member1 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, 'yes', false, false, null
+        null, null, 'yes', false, false, null
       );
       expect(member1['Directory Share Name']).toBe(true);
       
       const member2 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, 0, false, false, null
+        null, null, 0, false, false, null
       );
       expect(member2['Directory Share Name']).toBe(false);
       
       const member3 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, 1, false, false, null
+        null, null, 1, false, false, null
       );
       expect(member3['Directory Share Name']).toBe(true);
     });
@@ -149,14 +199,14 @@ describe('ValidatedMember Class', () => {
       const member1 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, 'true', false, null
+        null, null, false, 'true', false, null
       );
       expect(member1['Directory Share Email']).toBe(true);
       
       const member2 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, '', false, null
+        null, null, false, '', false, null
       );
       expect(member2['Directory Share Email']).toBe(false);
     });
@@ -165,14 +215,14 @@ describe('ValidatedMember Class', () => {
       const member1 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, 'yes', null
+        null, null, false, false, 'yes', null
       );
       expect(member1['Directory Share Phone']).toBe(true);
       
       const member2 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, null, null
+        null, null, false, false, null, null
       );
       expect(member2['Directory Share Phone']).toBe(false);
     });
@@ -181,19 +231,19 @@ describe('ValidatedMember Class', () => {
       expect(() => new ValidatedMember(
         null, 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('email is required');
       
       expect(() => new ValidatedMember(
         '', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('email is required');
       
       expect(() => new ValidatedMember(
         '   ', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('email is required');
     });
     
@@ -201,19 +251,19 @@ describe('ValidatedMember Class', () => {
       expect(() => new ValidatedMember(
         'not-an-email', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('email must be valid format');
       
       expect(() => new ValidatedMember(
         'missing-at-sign.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('email must be valid format');
       
       expect(() => new ValidatedMember(
         '@no-local-part.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('email must be valid format');
     });
     
@@ -221,13 +271,13 @@ describe('ValidatedMember Class', () => {
       expect(() => new ValidatedMember(
         'test@example.com', null, 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('status is required');
       
       expect(() => new ValidatedMember(
         'test@example.com', '', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('status is required');
     });
     
@@ -235,13 +285,13 @@ describe('ValidatedMember Class', () => {
       expect(() => new ValidatedMember(
         'test@example.com', 'Active', null, 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('first name is required');
       
       expect(() => new ValidatedMember(
         'test@example.com', 'Active', '', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('first name is required');
     });
     
@@ -249,13 +299,13 @@ describe('ValidatedMember Class', () => {
       expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', null, '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('last name is required');
       
       expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', '', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('last name is required');
     });
     
@@ -263,19 +313,19 @@ describe('ValidatedMember Class', () => {
       expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         'not-a-date', new Date('2024-01-15'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('joined date must be valid Date');
       
       expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('invalid'), new Date('2024-01-15'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('joined date must be valid Date');
       
       expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         null, new Date('2024-01-15'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('joined date must be valid Date');
     });
     
@@ -283,19 +333,19 @@ describe('ValidatedMember Class', () => {
       expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), 'not-a-date',
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('expires date must be valid Date');
       
       expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('invalid'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('expires date must be valid Date');
       
       expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), null,
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('expires date must be valid Date');
     });
     
@@ -306,7 +356,7 @@ describe('ValidatedMember Class', () => {
       expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         joined, expires,
-        null, false, false, false, null
+        null, null, false, false, false, null
       )).toThrow('expires date must be >= joined date');
     });
     
@@ -316,7 +366,7 @@ describe('ValidatedMember Class', () => {
       const member = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         sameDate, sameDate,
-        null, false, false, false, null
+        null, null, false, false, false, null
       );
       
       expect(member.Joined).toBe(sameDate);
@@ -327,13 +377,13 @@ describe('ValidatedMember Class', () => {
       expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, 'not-a-date'
+        null, null, false, false, false, 'not-a-date'
       )).toThrow('renewed date must be valid Date if provided');
       
       expect(() => new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, new Date('invalid')
+        null, null, false, false, false, new Date('invalid')
       )).toThrow('renewed date must be valid Date if provided');
     });
     
@@ -341,21 +391,21 @@ describe('ValidatedMember Class', () => {
       const member1 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, null
+        null, null, false, false, false, null
       );
       expect(member1['Renewed On']).toBe(null);
       
       const member2 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, undefined
+        null, null, false, false, false, undefined
       );
       expect(member2['Renewed On']).toBe(null);
       
       const member3 = new ValidatedMember(
         'test@example.com', 'Active', 'John', 'Doe', '',
         new Date('2023-01-15'), new Date('2024-01-15'),
-        null, false, false, false, ''
+        null, null, false, false, false, ''
       );
       expect(member3['Renewed On']).toBe(null);
     });
@@ -490,6 +540,31 @@ describe('ValidatedMember Class', () => {
       expect(member.Phone).toBe('');
       expect(member.Period).toBe(null);
       expect(member['Renewed On']).toBe(null);
+    });
+    
+    test('should handle Date object in Period column (cell formatting corruption)', () => {
+      // When the Period column has Date formatting in Google Sheets,
+      // getValues() returns a Date object. fromRow should handle this gracefully.
+      const row = [
+        'Active',
+        'test@example.com',
+        'John',
+        'Doe',
+        '555-1234',
+        new Date('2023-01-15'),
+        new Date('2024-01-15'),
+        new Date('1899-12-31'), // Period as Date (serial number 1 corrupted by cell format)
+        true,   // Directory Share Name
+        false,  // Directory Share Email
+        true,   // Directory Share Phone
+        null    // Renewed On
+      ];
+      
+      const member = ValidatedMember.fromRow(row, headers, 2, null);
+      
+      expect(member).not.toBeNull();
+      // Period should be null, NOT a huge number from Number(Date)
+      expect(member.Period).toBe(null);
     });
     
   });
@@ -648,6 +723,7 @@ describe('ValidatedMember Class', () => {
         joined,
         expires,
         12,
+        null,
         true,
         false,
         true,
@@ -665,6 +741,7 @@ describe('ValidatedMember Class', () => {
         joined,
         expires,
         12,
+        null,
         true,
         false,
         true,
@@ -682,6 +759,7 @@ describe('ValidatedMember Class', () => {
         new Date('2023-01-15'),
         new Date('2024-01-15'),
         null,
+        null,
         false,
         false,
         false,
@@ -692,7 +770,8 @@ describe('ValidatedMember Class', () => {
       
       expect(array[4]).toBe(''); // Phone
       expect(array[7]).toBe(null); // Period
-      expect(array[11]).toBe(null); // Renewed On
+      expect(array[8]).toBe(null); // Migrated
+      expect(array[12]).toBe(null); // Renewed On
     });
     
   });
@@ -710,6 +789,7 @@ describe('ValidatedMember Class', () => {
         new Date('2023-01-15'),
         new Date('2024-01-15'),
         12,
+        new Date('2023-06-01'),
         true,
         false,
         true,
@@ -728,8 +808,11 @@ describe('ValidatedMember Class', () => {
       expect(reconstructedRow[5]).toBe(originalRow[5]); // Joined
       expect(reconstructedRow[6]).toBe(originalRow[6]); // Expires
       expect(reconstructedRow[7]).toBe(originalRow[7]); // Period
-      expect(reconstructedRow[8]).toBe(originalRow[8]); // Directory Share Name
-      expect(reconstructedRow[9]).toBe(originalRow[9]); // Directory Share Email
+      expect(reconstructedRow[8]).toBe(originalRow[8]); // Migrated
+      expect(reconstructedRow[9]).toBe(originalRow[9]); // Directory Share Name
+      expect(reconstructedRow[10]).toBe(originalRow[10]); // Directory Share Email
+      expect(reconstructedRow[11]).toBe(originalRow[11]); // Directory Share Phone
+      expect(reconstructedRow[12]).toBe(originalRow[12]); // Renewed On
       expect(reconstructedRow[10]).toBe(originalRow[10]); // Directory Share Phone
       expect(reconstructedRow[11]).toBe(originalRow[11]); // Renewed On
     });
@@ -748,6 +831,7 @@ describe('ValidatedMember Class', () => {
         'Joined',
         'Expires',
         'Period',
+        'Migrated',
         'Directory Share Name',
         'Directory Share Email',
         'Directory Share Phone',
@@ -755,7 +839,7 @@ describe('ValidatedMember Class', () => {
       ]);
     });
     
-    test('should have 12 headers matching toArray() output length', () => {
+    test('should have 13 headers matching toArray() output length', () => {
       const member = new ValidatedMember(
         'test@example.com',
         'Active',
@@ -764,6 +848,7 @@ describe('ValidatedMember Class', () => {
         '',
         new Date('2023-01-15'),
         new Date('2024-01-15'),
+        null,
         null,
         false,
         false,
@@ -774,7 +859,7 @@ describe('ValidatedMember Class', () => {
       const array = member.toArray();
       expect(array.length).toBe(ValidatedMember.HEADERS.length);
     });
-    
+  
   });
   
 });

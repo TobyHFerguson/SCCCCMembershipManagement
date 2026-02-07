@@ -43,14 +43,27 @@ var MemberPersistence = (function() {
       
       for (let i = 0; i < modifiedMembers.length; i++) {
         const original = originalRows[i];
-        const modified = modifiedMembers[i].toArray();
+        const member = modifiedMembers[i];
         
-        for (let j = 0; j < modified.length; j++) {
-          if (!MemberPersistence.valuesEqual(original[j], modified[j])) {
+        // Use header-based property lookup (not toArray()) to handle any sheet column order
+        for (let j = 0; j < headers.length; j++) {
+          const currentValue = member[headers[j]];
+          if (!MemberPersistence.valuesEqual(original[j], currentValue)) {
             // Write single cell that changed
             // Row index: i + 2 (skip header row, 1-based indexing)
             // Column index: j + 1 (1-based indexing)
-            sheet.getRange(i + 2, j + 1).setValue(modified[j]);
+            const range = sheet.getRange(i + 2, j + 1);
+            range.setValue(currentValue);
+            
+            // When a Date cell is overwritten with a non-Date value, reset cell
+            // formatting to prevent Google Sheets from interpreting numbers as
+            // date serial numbers (fixes Period column corruption from column-order bug)
+            if (original[j] instanceof Date && !(currentValue instanceof Date)) {
+              if (typeof currentValue === 'number') {
+                range.setNumberFormat('0');
+              }
+            }
+            
             changeCount++;
           }
         }

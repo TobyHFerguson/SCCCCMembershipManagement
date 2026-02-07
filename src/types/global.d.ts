@@ -577,6 +577,7 @@ declare class ValidatedMember {
     Joined: Date;
     Expires: Date;
     Period: number | null;
+    Migrated: Date | null;
     'Directory Share Name': boolean;
     'Directory Share Email': boolean;
     'Directory Share Phone': boolean;
@@ -591,6 +592,7 @@ declare class ValidatedMember {
         joined: Date,
         expires: Date,
         period: number | null,
+        migrated: Date | null,
         dirName: boolean,
         dirEmail: boolean,
         dirPhone: boolean,
@@ -631,6 +633,11 @@ declare class ValidatedTransaction {
     Processed: Date | null;
     Timestamp: Date | null;
     
+    /** 1-based sheet row index, set by fromRow() for write-back targeting */
+    _sheetRowIndex?: number;
+    /** Header-keyed snapshot of original cell values, set by fromRow() for change detection */
+    _originalValues?: Record<string, any>;
+    
     constructor(
         emailAddress: string,
         firstName: string,
@@ -660,6 +667,16 @@ declare class ValidatedTransaction {
         headers: string[],
         context: string
     ): ValidatedTransaction[];
+    
+    /**
+     * Write back only changed cells using header-based column lookup.
+     * Avoids row-shift bugs and column-order assumptions.
+     */
+    static writeChangedCells(
+        sheet: GoogleAppsScript.Spreadsheet.Sheet,
+        transactions: ValidatedTransaction[],
+        sheetHeaders: string[]
+    ): number;
     
     /** Column headers constant */
     static HEADERS: string[];

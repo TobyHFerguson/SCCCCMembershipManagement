@@ -227,6 +227,17 @@ const data = fiddler.getData();
 
 **Sheets Configuration**: All sheet references configured in `Bootstrap` sheet. See `docs/BOOTSTRAP_CONFIGURATION.md`.
 
+### Column-Order Independence (CRITICAL for ValidatedXXX types)
+
+**ValidatedXXX classes** (`ValidatedMember`, `ValidatedTransaction`, `ValidatedElection`, etc.) are domain objects whose property keys correspond to sheet column names. **Sheet column order must NEVER be assumed** — columns can be reordered without breaking code.
+
+**Rules** (see `gas-best-practices.md` → Column-Order Independence for full details):
+- ✅ `fromRow()` MUST use header-based lookup (map `headers[i]` → `rowArray[i]`)
+- ✅ Writing to sheets MUST use `sheetHeaders.map(h => member[h])` — never `toArray()`
+- ✅ `MemberPersistence.writeChangedCells` compares `original[j]` vs `member[headers[j]]`
+- ✅ Every `ValidatedXXX` class MUST have a column-order independence test
+- ❌ **NEVER** use `toArray()` for sheet persistence — only for serialization/testing
+
 ---
 
 ## Circular Dependency Prevention

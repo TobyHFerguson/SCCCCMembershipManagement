@@ -385,7 +385,6 @@ MembershipManagement.Manager = class {
         }
         
         this._sendEmailFun(message);
-        txn.Timestamp = this._today;
         txn.Processed = this._today;
         recordsChanged = true;
         
@@ -643,6 +642,7 @@ MembershipManagement.Manager = class {
       this._today,  // Joined
       MembershipManagement.Utils.calculateExpirationDate(this._today, this._today, MembershipManagement.Manager.getPeriod_(txn)),
       MembershipManagement.Manager.getPeriod_(txn),
+      null,  // Migrated - new members are not migrated
       dirSharing["Directory Share Name"],
       dirSharing["Directory Share Email"],
       dirSharing["Directory Share Phone"],

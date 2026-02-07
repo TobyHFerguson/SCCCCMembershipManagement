@@ -309,6 +309,13 @@ describe('ValidatedTransaction Class', () => {
       expect(txn['Payable Status']).toBe('Paid');
       expect(txn.Processed).toBe(processed);
       expect(txn.Timestamp).toBe(timestamp);
+      
+      // Verify write-back metadata
+      expect(txn._sheetRowIndex).toBe(2);
+      expect(txn._originalValues).toBeDefined();
+      expect(txn._originalValues['Email Address']).toBe('test@example.com');
+      expect(txn._originalValues['Processed']).toBe(processed);
+      expect(txn._originalValues['Timestamp']).toBe(timestamp);
     });
     
     test('should return null for row with missing email address', () => {
@@ -586,15 +593,23 @@ describe('ValidatedTransaction Class', () => {
       const array = txn.toArray();
       
       expect(array).toEqual([
-        'test@example.com',
-        'John',
-        'Doe',
-        '(555) 555-1234',
-        '1 year',
-        'Share Name, Share Email, Share Phone',
-        'Paid',
-        processed,
-        timestamp
+        timestamp,                              // Timestamp
+        'test@example.com',                     // Email Address
+        '',                                     // Are you 18 years of age or older?
+        '',                                     // Privacy
+        '',                                     // Membership Agreement
+        'Share Name, Share Email, Share Phone',  // Directory
+        'John',                                 // First Name
+        'Doe',                                  // Last Name
+        '(555) 555-1234',                       // Phone
+        '1 year',                               // Payment
+        '',                                     // Payable Order ID
+        '',                                     // Payable Total
+        'Paid',                                 // Payable Status
+        '',                                     // Payable Payment Method
+        '',                                     // Payable Transaction ID
+        '',                                     // Payable Last Updated
+        processed                               // Processed
       ]);
     });
     
@@ -613,12 +628,16 @@ describe('ValidatedTransaction Class', () => {
       
       const array = txn.toArray();
       
-      expect(array[3]).toBe('(555) 555-5555'); // Phone
-      expect(array[4]).toBe(''); // Payment
-      expect(array[5]).toBe(''); // Directory
-      expect(array[6]).toBe(''); // Payable Status
-      expect(array[7]).toBe(null); // Processed
-      expect(array[8]).toBe(null); // Timestamp
+      expect(array.length).toBe(17);
+      expect(array[0]).toBe(null);              // Timestamp
+      expect(array[1]).toBe('test@example.com'); // Email Address
+      expect(array[5]).toBe('');                // Directory
+      expect(array[6]).toBe('John');            // First Name
+      expect(array[7]).toBe('Doe');             // Last Name
+      expect(array[8]).toBe('(555) 555-5555'); // Phone
+      expect(array[9]).toBe('');                // Payment
+      expect(array[12]).toBe('');               // Payable Status
+      expect(array[16]).toBe(null);             // Processed
     });
     
   });
@@ -631,30 +650,32 @@ describe('ValidatedTransaction Class', () => {
       const timestamp = new Date('2023-12-01');
       
       const originalRow = [
-        'test@example.com',
-        'John',
-        'Doe',
-        '(555) 555-1234',
-        '1 year',
-        'Share Name, Share Email, Share Phone',
-        'Paid',
-        processed,
-        timestamp
+        timestamp,                              // Timestamp
+        'test@example.com',                     // Email Address
+        'Yes',                                  // Are you 18 years of age or older?
+        'I have read the privacy policy',       // Privacy
+        'I Agree',                              // Membership Agreement
+        'Share Name, Share Email, Share Phone',  // Directory
+        'John',                                 // First Name
+        'Doe',                                  // Last Name
+        '(555) 555-1234',                       // Phone
+        '1 year',                               // Payment
+        'DK-TF-VZD2',                           // Payable Order ID
+        '$0.50',                                // Payable Total
+        'Paid',                                 // Payable Status
+        'Credit Card',                          // Payable Payment Method
+        'TXN-12345',                            // Payable Transaction ID
+        '2023-12-10',                           // Payable Last Updated
+        processed                               // Processed
       ];
       
       const txn = ValidatedTransaction.fromRow(originalRow, headers, 2, null);
       const reconstructedRow = txn.toArray();
       
       // Compare each field
-      expect(reconstructedRow[0]).toBe(originalRow[0]); // Email Address
-      expect(reconstructedRow[1]).toBe(originalRow[1]); // First Name
-      expect(reconstructedRow[2]).toBe(originalRow[2]); // Last Name
-      expect(reconstructedRow[3]).toBe(originalRow[3]); // Phone
-      expect(reconstructedRow[4]).toBe(originalRow[4]); // Payment
-      expect(reconstructedRow[5]).toBe(originalRow[5]); // Directory
-      expect(reconstructedRow[6]).toBe(originalRow[6]); // Payable Status
-      expect(reconstructedRow[7]).toBe(originalRow[7]); // Processed
-      expect(reconstructedRow[8]).toBe(originalRow[8]); // Timestamp
+      for (let i = 0; i < headers.length; i++) {
+        expect(reconstructedRow[i]).toBe(originalRow[i]); // column: headers[i]
+      }
     });
     
   });
@@ -663,19 +684,27 @@ describe('ValidatedTransaction Class', () => {
     
     test('should define all required headers in correct order', () => {
       expect(ValidatedTransaction.HEADERS).toEqual([
+        'Timestamp',
         'Email Address',
+        'Are you 18 years of age or older?',
+        'Privacy',
+        'Membership Agreement',
+        'Directory',
         'First Name',
         'Last Name',
         'Phone',
         'Payment',
-        'Directory',
+        'Payable Order ID',
+        'Payable Total',
         'Payable Status',
-        'Processed',
-        'Timestamp'
+        'Payable Payment Method',
+        'Payable Transaction ID',
+        'Payable Last Updated',
+        'Processed'
       ]);
     });
     
-    test('should have 9 headers matching toArray() output length', () => {
+    test('should have 17 headers matching toArray() output length', () => {
       const txn = new ValidatedTransaction(
         'test@example.com',
         'John',
@@ -690,6 +719,7 @@ describe('ValidatedTransaction Class', () => {
       
       const array = txn.toArray();
       expect(array.length).toBe(ValidatedTransaction.HEADERS.length);
+      expect(array.length).toBe(17);
     });
     
   });
@@ -715,15 +745,23 @@ describe('ValidatedTransaction Class', () => {
     test('should preserve instanceof after fromRow()', () => {
       const headers = ValidatedTransaction.HEADERS;
       const row = [
-        'test@example.com',
-        'John',
-        'Doe',
-        '(555) 555-1234',
-        '1 year',
-        'Share Name',
-        'Paid',
-        null,
-        null
+        new Date('2023-12-01'),                 // Timestamp
+        'test@example.com',                     // Email Address
+        'Yes',                                  // Are you 18 years of age or older?
+        'I have read the privacy policy',       // Privacy
+        'I Agree',                              // Membership Agreement
+        'Share Name',                           // Directory
+        'John',                                 // First Name
+        'Doe',                                  // Last Name
+        '(555) 555-1234',                       // Phone
+        '1 year',                               // Payment
+        'DK-TF-VZD2',                           // Payable Order ID
+        '$0.50',                                // Payable Total
+        'Paid',                                 // Payable Status
+        '',                                     // Payable Payment Method
+        '',                                     // Payable Transaction ID
+        '',                                     // Payable Last Updated
+        null                                    // Processed
       ];
       
       const txn = ValidatedTransaction.fromRow(row, headers, 2, null);
@@ -731,6 +769,170 @@ describe('ValidatedTransaction Class', () => {
       expect(txn instanceof ValidatedTransaction).toBe(true);
     });
     
+  });
+
+  describe('_valuesEqual()', () => {
+
+    test('should treat null and undefined as equal', () => {
+      expect(ValidatedTransaction._valuesEqual(null, null)).toBe(true);
+      expect(ValidatedTransaction._valuesEqual(undefined, undefined)).toBe(true);
+      expect(ValidatedTransaction._valuesEqual(null, undefined)).toBe(true);
+      expect(ValidatedTransaction._valuesEqual(undefined, null)).toBe(true);
+    });
+
+    test('should treat null/undefined as not equal to other values', () => {
+      expect(ValidatedTransaction._valuesEqual(null, '')).toBe(false);
+      expect(ValidatedTransaction._valuesEqual(null, 0)).toBe(false);
+      expect(ValidatedTransaction._valuesEqual('', null)).toBe(false);
+      expect(ValidatedTransaction._valuesEqual(undefined, '')).toBe(false);
+    });
+
+    test('should compare Date objects by timestamp', () => {
+      const d1 = new Date('2024-01-15T10:00:00Z');
+      const d2 = new Date('2024-01-15T10:00:00Z');
+      const d3 = new Date('2024-01-16T10:00:00Z');
+      expect(ValidatedTransaction._valuesEqual(d1, d2)).toBe(true);
+      expect(ValidatedTransaction._valuesEqual(d1, d3)).toBe(false);
+    });
+
+    test('should not consider Date equal to non-Date', () => {
+      const d = new Date('2024-01-15');
+      expect(ValidatedTransaction._valuesEqual(d, '2024-01-15')).toBe(false);
+      expect(ValidatedTransaction._valuesEqual('2024-01-15', d)).toBe(false);
+    });
+
+    test('should compare primitives with strict equality', () => {
+      expect(ValidatedTransaction._valuesEqual('abc', 'abc')).toBe(true);
+      expect(ValidatedTransaction._valuesEqual('abc', 'def')).toBe(false);
+      expect(ValidatedTransaction._valuesEqual(42, 42)).toBe(true);
+      expect(ValidatedTransaction._valuesEqual(42, 43)).toBe(false);
+      expect(ValidatedTransaction._valuesEqual(true, true)).toBe(true);
+      expect(ValidatedTransaction._valuesEqual(true, false)).toBe(false);
+    });
+  });
+
+  describe('writeChangedCells()', () => {
+
+    let mockSheet;
+    let mockRange;
+
+    beforeEach(() => {
+      mockRange = { setValue: jest.fn() };
+      mockSheet = { getRange: jest.fn().mockReturnValue(mockRange) };
+
+      global.AppLogger = {
+        error: jest.fn(),
+        warn: jest.fn(),
+        info: jest.fn(),
+        debug: jest.fn()
+      };
+      global.Logger = { log: jest.fn(), clear: jest.fn(), getLog: jest.fn(() => '') };
+    });
+
+    test('should write only changed cells to the correct row and column', () => {
+      // Sheet has columns in a specific order
+      const sheetHeaders = ['Timestamp', 'Email Address', 'First Name', 'Last Name', 'Phone', 'Payable Status', 'Processed'];
+      const timestamp = new Date('2023-12-01');
+
+      // Simulate a transaction read from sheet row 6 (1-based)
+      const originalRow = [timestamp, 'test@example.com', 'John', 'Doe', '(555) 555-1234', 'Paid', null];
+      const txn = ValidatedTransaction.fromRow(originalRow, sheetHeaders, 6, null);
+
+      // Manager sets Processed on this transaction
+      const processedDate = new Date('2024-01-20');
+      txn.Processed = processedDate;
+
+      const changeCount = ValidatedTransaction.writeChangedCells(mockSheet, [txn], sheetHeaders);
+
+      expect(changeCount).toBe(1);
+      // 'Processed' is column 7 in sheetHeaders (1-based), row 6
+      expect(mockSheet.getRange).toHaveBeenCalledWith(6, 7);
+      expect(mockRange.setValue).toHaveBeenCalledWith(processedDate);
+    });
+
+    test('should handle columns in any order (not depend on HEADERS order)', () => {
+      // Sheet columns in DIFFERENT order than ValidatedTransaction.HEADERS
+      const sheetHeaders = ['Processed', 'Phone', 'First Name', 'Last Name', 'Email Address', 'Timestamp', 'Payable Status'];
+      const originalRow = [null, '(555) 555-1234', 'John', 'Doe', 'test@example.com', new Date('2023-12-01'), 'Paid'];
+      const txn = ValidatedTransaction.fromRow(originalRow, sheetHeaders, 4, null);
+
+      const processedDate = new Date('2024-01-20');
+      txn.Processed = processedDate;
+
+      const changeCount = ValidatedTransaction.writeChangedCells(mockSheet, [txn], sheetHeaders);
+
+      expect(changeCount).toBe(1);
+      // 'Processed' is column 1 in this reordered sheet (1-based), row 4
+      expect(mockSheet.getRange).toHaveBeenCalledWith(4, 1);
+      expect(mockRange.setValue).toHaveBeenCalledWith(processedDate);
+    });
+
+    test('should NOT write unchanged cells', () => {
+      const sheetHeaders = ['Email Address', 'First Name', 'Last Name', 'Phone', 'Payable Status', 'Processed'];
+      const originalRow = ['test@example.com', 'John', 'Doe', '(555) 555-1234', 'Paid', null];
+      const txn = ValidatedTransaction.fromRow(originalRow, sheetHeaders, 3, null);
+
+      // Don't change anything
+      const changeCount = ValidatedTransaction.writeChangedCells(mockSheet, [txn], sheetHeaders);
+
+      expect(changeCount).toBe(0);
+      expect(mockSheet.getRange).not.toHaveBeenCalled();
+    });
+
+    test('should write to correct row for each transaction (no row shift)', () => {
+      // Simulate: rows 2, 3, 5 are valid (row 4 was invalid and filtered out)
+      const sheetHeaders = ['Email Address', 'First Name', 'Last Name', 'Phone', 'Payable Status', 'Processed'];
+
+      const row2 = ['a@test.com', 'A', 'Test', '(555) 111-1111', 'Paid', null];
+      const row3 = ['b@test.com', 'B', 'Test', '(555) 222-2222', 'Paid', null];
+      const row5 = ['c@test.com', 'C', 'Test', '(555) 333-3333', 'Paid', null];
+
+      const txn2 = ValidatedTransaction.fromRow(row2, sheetHeaders, 2, null);
+      const txn3 = ValidatedTransaction.fromRow(row3, sheetHeaders, 3, null);
+      const txn5 = ValidatedTransaction.fromRow(row5, sheetHeaders, 5, null);
+
+      // Only txn5 gets processed (others are already processed or unpaid in real scenario)
+      const processedDate = new Date('2024-01-20');
+      txn5.Processed = processedDate;
+
+      const changeCount = ValidatedTransaction.writeChangedCells(
+        mockSheet, [txn2, txn3, txn5], sheetHeaders
+      );
+
+      expect(changeCount).toBe(1);
+      // Must write to ROW 5, not row 4 (which would happen with old bulk write)
+      expect(mockSheet.getRange).toHaveBeenCalledWith(5, 6); // row 5, col 6 (Processed)
+      expect(mockRange.setValue).toHaveBeenCalledWith(processedDate);
+    });
+
+    test('should skip transactions without _sheetRowIndex', () => {
+      const sheetHeaders = ['Email Address', 'Phone', 'Payable Status', 'Processed'];
+
+      // Manually create a transaction without metadata
+      const txn = new ValidatedTransaction('test@example.com', 'A', 'B', '(555) 555-1234', '', '', 'Paid', null, null);
+      txn.Processed = new Date('2024-01-20');
+
+      const changeCount = ValidatedTransaction.writeChangedCells(mockSheet, [txn], sheetHeaders);
+
+      expect(changeCount).toBe(0);
+      expect(mockSheet.getRange).not.toHaveBeenCalled();
+    });
+
+    test('should handle multiple changed fields in one transaction', () => {
+      const sheetHeaders = ['Email Address', 'First Name', 'Last Name', 'Phone', 'Payable Status', 'Processed', 'Timestamp'];
+      const originalRow = ['test@example.com', 'John', 'Doe', '(555) 555-1234', 'Paid', null, null];
+      const txn = ValidatedTransaction.fromRow(originalRow, sheetHeaders, 7, null);
+
+      const now = new Date('2024-01-20');
+      txn.Processed = now;
+      txn.Timestamp = now;
+
+      const changeCount = ValidatedTransaction.writeChangedCells(mockSheet, [txn], sheetHeaders);
+
+      expect(changeCount).toBe(2);
+      expect(mockSheet.getRange).toHaveBeenCalledWith(7, 6); // Processed col
+      expect(mockSheet.getRange).toHaveBeenCalledWith(7, 7); // Timestamp col
+    });
   });
   
 });

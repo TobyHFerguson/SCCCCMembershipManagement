@@ -29,9 +29,10 @@ var ValidatedTransaction = (function() {
    * @param {string} payableStatus - Payment status (optional, e.g., "Paid", "Pending")
    * @param {Date | string | null} processed - Date when transaction was processed (optional)
    * @param {Date | string | null} timestamp - Transaction timestamp (optional)
+   * @param {{'Are you 18 years of age or older?'?: *, Privacy?: *, 'Membership Agreement'?: *, 'Payable Order ID'?: *, 'Payable Total'?: *, 'Payable Payment Method'?: *, 'Payable Transaction ID'?: *, 'Payable Last Updated'?: *}} [passthrough] - Additional sheet columns stored as-is for round-trip persistence
    */
   class ValidatedTransaction {
-    constructor(emailAddress, firstName, lastName, phone, payment, directory, payableStatus, processed, timestamp) {
+    constructor(emailAddress, firstName, lastName, phone, payment, directory, payableStatus, processed, timestamp, passthrough = {}) {
       // Validate email address (required)
       if (typeof emailAddress !== 'string' || emailAddress.trim() === '') {
         throw new Error(`ValidatedTransaction email address is required, got: ${typeof emailAddress} "${emailAddress}"`);
@@ -102,25 +103,49 @@ var ValidatedTransaction = (function() {
       } else {
         this.Timestamp = timestamp;
       }
+
+      // Passthrough fields — stored as-is for round-trip persistence to sheet
+      this['Are you 18 years of age or older?'] = passthrough['Are you 18 years of age or older?'] ?? '';
+      this.Privacy = passthrough.Privacy ?? '';
+      this['Membership Agreement'] = passthrough['Membership Agreement'] ?? '';
+      this['Payable Order ID'] = passthrough['Payable Order ID'] ?? '';
+      this['Payable Total'] = passthrough['Payable Total'] ?? '';
+      this['Payable Payment Method'] = passthrough['Payable Payment Method'] ?? '';
+      this['Payable Transaction ID'] = passthrough['Payable Transaction ID'] ?? '';
+      this['Payable Last Updated'] = passthrough['Payable Last Updated'] ?? '';
+
+      // Write-back metadata — set by fromRow(), not by direct constructor calls
+      /** @type {number|undefined} 1-based sheet row index for targeted write-back */
+      this._sheetRowIndex = undefined;
+      /** @type {Record<string, *>|undefined} Header-keyed snapshot of original cell values */
+      this._originalValues = undefined;
     }
 
     /**
      * Convert ValidatedTransaction to array format for spreadsheet persistence
-     * Column order matches HEADERS constant
+     * Column order matches HEADERS constant (all 17 sheet columns)
      * 
-     * @returns {Array<string|Date|null>} Array with 9 elements matching sheet columns
+     * @returns {Array<string|Date|number|null>} Array with 17 elements matching sheet columns
      */
     toArray() {
       return [
+        this.Timestamp,
         this['Email Address'],
+        this['Are you 18 years of age or older?'],
+        this.Privacy,
+        this['Membership Agreement'],
+        this.Directory,
         this['First Name'],
         this['Last Name'],
         this.Phone,
         this.Payment,
-        this.Directory,
+        this['Payable Order ID'],
+        this['Payable Total'],
         this['Payable Status'],
-        this.Processed,
-        this.Timestamp
+        this['Payable Payment Method'],
+        this['Payable Transaction ID'],
+        this['Payable Last Updated'],
+        this.Processed
       ];
     }
 
@@ -130,15 +155,23 @@ var ValidatedTransaction = (function() {
      */
     static get HEADERS() {
       return [
+        'Timestamp',
         'Email Address',
+        'Are you 18 years of age or older?',
+        'Privacy',
+        'Membership Agreement',
+        'Directory',
         'First Name',
         'Last Name',
         'Phone',
         'Payment',
-        'Directory',
+        'Payable Order ID',
+        'Payable Total',
         'Payable Status',
-        'Processed',
-        'Timestamp'
+        'Payable Payment Method',
+        'Payable Transaction ID',
+        'Payable Last Updated',
+        'Processed'
       ];
     }
 
@@ -161,7 +194,7 @@ var ValidatedTransaction = (function() {
           rowObj[headers[i]] = rowArray[i];
         }
         
-        // Extract fields
+        // Extract validated fields
         const emailAddress = rowObj['Email Address'];
         const firstName = rowObj['First Name'];
         const lastName = rowObj['Last Name'];
@@ -172,11 +205,36 @@ var ValidatedTransaction = (function() {
         const processed = rowObj['Processed'];
         const timestamp = rowObj['Timestamp'];
         
+        // Passthrough fields — stored as-is for round-trip persistence
+        const passthrough = {
+          'Are you 18 years of age or older?': rowObj['Are you 18 years of age or older?'],
+          'Privacy': rowObj['Privacy'],
+          'Membership Agreement': rowObj['Membership Agreement'],
+          'Payable Order ID': rowObj['Payable Order ID'],
+          'Payable Total': rowObj['Payable Total'],
+          'Payable Payment Method': rowObj['Payable Payment Method'],
+          'Payable Transaction ID': rowObj['Payable Transaction ID'],
+          'Payable Last Updated': rowObj['Payable Last Updated']
+        };
+        
         // Construct ValidatedTransaction (throws on validation failure)
-        return new ValidatedTransaction(
+        const txn = new ValidatedTransaction(
           emailAddress, firstName, lastName, phone, payment,
-          directory, payableStatus, processed, timestamp
+          directory, payableStatus, processed, timestamp,
+          passthrough
         );
+
+        // Store original row metadata for selective write-back
+        // _sheetRowIndex: 1-based sheet row (same as rowNumber param, which accounts for header row)
+        // _originalValues: header-keyed snapshot of original cell values for change detection
+        txn._sheetRowIndex = rowNumber;
+        /** @type {Record<string, *>} */
+        txn._originalValues = {};
+        for (let i = 0; i < headers.length; i++) {
+          txn._originalValues[headers[i]] = rowArray[i];
+        }
+
+        return txn;
         
       } catch (validationError) {
         // Log error
@@ -246,6 +304,70 @@ Review the Transactions sheet for data quality issues.`
       }
       
       return validTransactions;
+    }
+
+    /**
+     * Compare two values for equality, handling Date objects and null/undefined.
+     * Used internally by writeChangedCells for change detection.
+     *
+     * @param {*} a - First value
+     * @param {*} b - Second value
+     * @returns {boolean} True if values are considered equal
+     * @private
+     */
+    static _valuesEqual(a, b) {
+      // null/undefined are equal to each other
+      if ((a === null || a === undefined) && (b === null || b === undefined)) {
+        return true;
+      }
+      // One null, one not
+      if (a === null || a === undefined || b === null || b === undefined) {
+        return false;
+      }
+      // Both Dates — compare timestamps
+      if (a instanceof Date && b instanceof Date) {
+        return a.getTime() === b.getTime();
+      }
+      // Mixed Date/non-Date — not equal
+      if (a instanceof Date || b instanceof Date) {
+        return false;
+      }
+      return a === b;
+    }
+
+    /**
+     * Write back only changed cells to the sheet using header-based column lookup.
+     * Each transaction's _sheetRowIndex tells us which row to write to,
+     * and the sheetHeaders tell us which column each field maps to.
+     * This avoids both row-shift bugs (from filtered invalid rows) and
+     * column-order bugs (from assuming sheet matches HEADERS order).
+     *
+     * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The Transactions sheet
+     * @param {ValidatedTransaction[]} transactions - Transactions with _sheetRowIndex metadata
+     * @param {string[]} sheetHeaders - Actual column headers from the sheet (in sheet order)
+     * @returns {number} Number of cells written
+     */
+    static writeChangedCells(sheet, transactions, sheetHeaders) {
+      let changeCount = 0;
+
+      for (const txn of transactions) {
+        if (!txn._sheetRowIndex || !txn._originalValues) continue;
+
+        // Build a map of current field values from the transaction's named properties
+        // We iterate over sheetHeaders so we only touch columns that exist in the sheet
+        for (let col = 0; col < sheetHeaders.length; col++) {
+          const fieldName = sheetHeaders[col];
+          const currentValue = txn[fieldName];
+          const originalValue = txn._originalValues[fieldName];
+
+          if (!ValidatedTransaction._valuesEqual(currentValue, originalValue)) {
+            sheet.getRange(txn._sheetRowIndex, col + 1).setValue(currentValue);
+            changeCount++;
+          }
+        }
+      }
+
+      return changeCount;
     }
   }
 

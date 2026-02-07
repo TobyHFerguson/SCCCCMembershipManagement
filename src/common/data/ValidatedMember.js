@@ -28,13 +28,14 @@ var ValidatedMember = (function() {
    * @param {Date} joined - Join date (required, must be valid Date)
    * @param {Date} expires - Expiration date (required, must be >= joined)
    * @param {number} period - Membership period (optional)
+   * @param {Date | null | string} migrated - Migration date (optional, may be Date, null, or empty string)
    * @param {boolean} dirName - Directory share name (optional, coerced to boolean)
    * @param {boolean} dirEmail - Directory share email (optional, coerced to boolean)
    * @param {boolean} dirPhone - Directory share phone (optional, coerced to boolean)
    * @param {Date | null | string} renewedOn - Renewed date (optional, may be Date, null, or empty string)
    */
   class ValidatedMember {
-    constructor(email, status, first, last, phone, joined, expires, period, dirName, dirEmail, dirPhone, renewedOn) {
+    constructor(email, status, first, last, phone, joined, expires, period, migrated, dirName, dirEmail, dirPhone, renewedOn) {
       // Validate email (required, must be valid format)
       if (typeof email !== 'string' || email.trim() === '') {
         throw new Error(`ValidatedMember email is required, got: ${typeof email} "${email}"`);
@@ -99,7 +100,22 @@ var ValidatedMember = (function() {
       /** @type {Date} */
       this.Expires = expires;
       /** @type {number|null} */
-      this.Period = (period === null || period === undefined || period === '') ? null : Number(period);
+      // Handle corrupted Period data: if Period is a Date object (from cell formatting
+      // issues where the column inherited Date format), discard it rather than converting
+      // via Number(Date) which produces milliseconds-since-epoch (a huge number).
+      if (period instanceof Date) {
+        this.Period = null;
+      } else {
+        this.Period = (period === null || period === undefined || period === '') ? null : Number(period);
+      }
+      
+      // Handle optional migrated date
+      /** @type {Date|null} */
+      if (migrated === null || migrated === undefined || migrated === '') {
+        this.Migrated = null;
+      } else {
+        this.Migrated = migrated;
+      }
       
       // Coerce directory share fields to boolean
       /** @type {boolean} */
@@ -122,7 +138,7 @@ var ValidatedMember = (function() {
      * Convert ValidatedMember to array format for spreadsheet persistence
      * Column order matches HEADERS constant
      * 
-     * @returns {Array<string|Date|number|boolean|null>} Array with 12 elements matching sheet columns
+     * @returns {Array<string|Date|number|boolean|null>} Array with 13 elements matching sheet columns
      */
     toArray() {
       return [
@@ -134,6 +150,7 @@ var ValidatedMember = (function() {
         this.Joined,
         this.Expires,
         this.Period,
+        this.Migrated,
         this['Directory Share Name'],
         this['Directory Share Email'],
         this['Directory Share Phone'],
@@ -155,6 +172,7 @@ var ValidatedMember = (function() {
         'Joined',
         'Expires',
         'Period',
+        'Migrated',
         'Directory Share Name',
         'Directory Share Email',
         'Directory Share Phone',
@@ -190,6 +208,7 @@ var ValidatedMember = (function() {
         const joined = rowObj['Joined'];
         const expires = rowObj['Expires'];
         const period = rowObj['Period'];
+        const migrated = rowObj['Migrated'];
         const dirName = rowObj['Directory Share Name'];
         const dirEmail = rowObj['Directory Share Email'];
         const dirPhone = rowObj['Directory Share Phone'];
@@ -198,7 +217,7 @@ var ValidatedMember = (function() {
         // Construct ValidatedMember (throws on validation failure)
         return new ValidatedMember(
           email, status, first, last, phone, 
-          joined, expires, period,
+          joined, expires, period, migrated,
           dirName, dirEmail, dirPhone, renewedOn
         );
         
