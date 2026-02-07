@@ -1,15 +1,9 @@
 
 MembershipManagement.convertJoinToRenew = function (rowAIndex, rowBIndex) {
-  // Use SpreadsheetApp + ValidatedMember for ActiveMembers
-  const membershipSheet = SheetAccess.getSheet('ActiveMembers');
-  const allMembershipData = membershipSheet.getDataRange().getValues();
-  const membershipHeaders = allMembershipData[0];
-  const originalMembershipRows = allMembershipData.slice(1);
-  const membershipData = ValidatedMember.validateRows(
-    originalMembershipRows,
-    membershipHeaders,
-    'MembershipManagement.convertJoinToRenew'
-  );
+  // Use DataAccess for ActiveMembers with write-context
+  const { members: membershipData, sheet: membershipSheet, 
+          originalRows: originalMembershipRows, 
+          headers: membershipHeaders } = DataAccess.getActiveMembersForUpdate();
   
   const expiryScheduleData = SheetAccess.getData('ExpirySchedule');
   
@@ -345,17 +339,26 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     AppLogger.info('MembershipManagement', 'Starting Expiration FIFO consumer...');
     const batchSize = opts.batchSize || Properties.getNumberProperty('expirationBatchSize', 50);
 
-    // Load or use pre-loaded membership data using SpreadsheetApp
-    let membershipSheet, originalMembershipRows, membershipHeaders;
+    // Load or use pre-loaded membership data
+    let membershipSheet, originalMembershipRows, membershipHeaders, membershipData;
     if (opts.membershipData) {
+      // Testing path: use pre-loaded raw data
       membershipSheet = opts.membershipData.sheet;
       originalMembershipRows = opts.membershipData.originalRows;
       membershipHeaders = opts.membershipData.headers;
+      // Validate the pre-loaded data
+      membershipData = ValidatedMember.validateRows(
+        originalMembershipRows,
+        membershipHeaders,
+        'MembershipManagement.processExpirationFIFO'
+      );
     } else {
-      membershipSheet = SheetAccess.getSheet('ActiveMembers');
-      const allMembershipData = membershipSheet.getDataRange().getValues();
-      membershipHeaders = allMembershipData[0];
-      originalMembershipRows = allMembershipData.slice(1);
+      // Production path: use DataAccess for write-context
+      const result = DataAccess.getActiveMembersForUpdate();
+      membershipData = result.members;
+      membershipSheet = result.sheet;
+      originalMembershipRows = result.originalRows;
+      membershipHeaders = result.headers;
     }
     
     // GAS: Get queue and convert spreadsheet Date objects to ISO strings for pure function processing
@@ -379,18 +382,12 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       return { processed: 0, failed: 0, remaining: queue.length };
     }
 
-    // GAS: Get configuration and initialize manager with SpreadsheetApp data
+    // GAS: Get configuration and initialize manager
     const scriptMaxAttempts = Properties.getNumberProperty('expirationMaxAttempts', 0)
                           || Properties.getNumberProperty('expirationMaxRetries', 0)
                           || Properties.getNumberProperty('maxAttempts', 0)
                           || Properties.getNumberProperty('maxRetries', 5);
     
-    // Load membership data using SpreadsheetApp + ValidatedMember (if not already loaded)
-    const membershipData = ValidatedMember.validateRows(
-      originalMembershipRows,
-      membershipHeaders,
-      'MembershipManagement.processExpirationFIFO'
-    );
     const expiryScheduleData = opts.data?.expirySchedule || SheetAccess.getData('ExpirySchedule');
     
     //@ts-ignore
@@ -546,20 +543,14 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
 function processExpirationFIFOTrigger() { return MembershipManagement.processExpirationFIFO(); }
 
 /**
- * Initialize Manager with data loaded via SpreadsheetApp + ValidatedMember
+ * Initialize Manager with data loaded via DataAccess + ValidatedMember
  * @returns {{manager: MembershipManagement.Manager, membershipData: ValidatedMember[], expiryScheduleData: any[], membershipSheet: GoogleAppsScript.Spreadsheet.Sheet, originalMembershipRows: any[][], membershipHeaders: any[]}}
  */
 MembershipManagement.Internal.initializeManagerDataWithSpreadsheetApp_ = function () {
-  // Load ActiveMembers using SpreadsheetApp + ValidatedMember
-  const membershipSheet = SheetAccess.getSheet('ActiveMembers');
-  const allMembershipData = membershipSheet.getDataRange().getValues();
-  const membershipHeaders = allMembershipData[0];
-  const originalMembershipRows = allMembershipData.slice(1);
-  const membershipData = ValidatedMember.validateRows(
-    originalMembershipRows,
-    membershipHeaders,
-    'MembershipManagement.initializeManagerData'
-  );
+  // Load ActiveMembers using DataAccess for write-context
+  const { members: membershipData, sheet: membershipSheet, 
+          originalRows: originalMembershipRows, 
+          headers: membershipHeaders } = DataAccess.getActiveMembersForUpdate();
   
   // Load ExpirySchedule using SheetAccess
   const expiryScheduleData = SheetAccess.getData('ExpirySchedule');
