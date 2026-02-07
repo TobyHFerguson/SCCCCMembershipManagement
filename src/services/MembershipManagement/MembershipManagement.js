@@ -50,20 +50,14 @@ MembershipManagement.convertJoinToRenew = function (rowAIndex, rowBIndex) {
 }
 
 MembershipManagement.processTransactions = function () {
-  // Use getDataWithRichText to read native RichText links directly
-  const transactionRows = SheetAccess.getDataAsArrays('Transactions');
-  if (transactionRows.length === 0) { 
-    AppLogger.info('MembershipManagement', 'No transactions to process');
-    return { processed: 0, joins: 0, renewals: 0, hasPendingPayments: false, errors: [] }; 
-  }
-  
-  // Validate transactions using ValidatedTransaction class
-  const headers = transactionRows[0];
-  const dataRows = transactionRows.slice(1);
-  const transactions = ValidatedTransaction.validateRows(dataRows, headers, 'MembershipManagement.processTransactions');
+  // Use DataAccess typed domain boundary for transaction data
+  const txnContext = DataAccess.getTransactionsForUpdate();
+  const transactions = txnContext.transactions;
+  const headers = txnContext.headers;
+  const transactionSheet = txnContext.sheet;
   
   if (transactions.length === 0) {
-    AppLogger.info('MembershipManagement', 'No valid transactions to process after validation');
+    AppLogger.info('MembershipManagement', 'No valid transactions to process');
     return { processed: 0, joins: 0, renewals: 0, hasPendingPayments: false, errors: [] };
   }
 
@@ -108,7 +102,6 @@ MembershipManagement.processTransactions = function () {
     // Only mark transactions as processed AFTER member data is successfully persisted
     // Write back only changed cells using header-based column lookup and original row indices
     // This avoids row-shift bugs (from filtered invalid rows) and column-order bugs
-    const transactionSheet = SheetAccess.getSheet('Transactions');
     const txnChangeCount = ValidatedTransaction.writeChangedCells(transactionSheet, transactions, headers);
     AppLogger.info('MembershipManagement', `processTransactions: Updated ${txnChangeCount} cells in Transactions`);
   }

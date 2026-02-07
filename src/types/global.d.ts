@@ -727,6 +727,20 @@ declare var DataAccess: {
     
     /** Gets system logs */
     getSystemLogs: () => SystemLogEntry[];
+
+    /** Gets all transactions as validated objects (read-only) */
+    getTransactions: () => ValidatedTransaction[];
+
+    /**
+     * Gets transactions with write-context for selective cell writes.
+     * Returns validated transactions plus the sheet and headers needed
+     * for ValidatedTransaction.writeChangedCells().
+     */
+    getTransactionsForUpdate: () => {
+        transactions: ValidatedTransaction[];
+        headers: string[];
+        sheet: GoogleAppsScript.Spreadsheet.Sheet;
+    };
 };
 
 // Flat ServiceLogger class (new pattern - replaces Common.Logging.ServiceLogger)

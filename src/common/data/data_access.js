@@ -147,5 +147,46 @@ var DataAccess = {
     },
     getSystemLogs: () => {
         return SheetAccess.getData('SystemLogs');
+    },
+    /**
+     * Get all transactions as validated objects (read-only accessor).
+     * Wraps SheetAccess + ValidatedTransaction.validateRows at the typed domain boundary.
+     *
+     * @returns {ValidatedTransaction[]} Array of valid ValidatedTransaction instances
+     */
+    getTransactions: () => {
+        const allData = SheetAccess.getDataAsArrays('Transactions');
+        if (allData.length === 0) { return []; }
+        const headers = allData[0];
+        const rows = allData.slice(1);
+        if (rows.length === 0) { return []; }
+        return ValidatedTransaction.validateRows(rows, headers, 'DataAccess.getTransactions');
+    },
+    /**
+     * Get transactions with write-context for selective cell writes.
+     * Returns validated transactions plus the sheet and headers needed
+     * for ValidatedTransaction.writeChangedCells().
+     *
+     * Usage:
+     *   const { transactions, headers, sheet } = DataAccess.getTransactionsForUpdate();
+     *   // ... Manager modifies transactions in place ...
+     *   ValidatedTransaction.writeChangedCells(sheet, transactions, headers);
+     *
+     * @returns {{transactions: ValidatedTransaction[], headers: string[], sheet: GoogleAppsScript.Spreadsheet.Sheet}}
+     */
+    getTransactionsForUpdate: () => {
+        const sheet = SheetAccess.getSheet('Transactions');
+        const allData = sheet.getDataRange().getValues();
+        const headers = allData.length > 0 ? allData[0] : [];
+        const rows = allData.length > 1 ? allData.slice(1) : [];
+        const transactions = rows.length > 0
+            ? ValidatedTransaction.validateRows(rows, headers, 'DataAccess.getTransactionsForUpdate')
+            : [];
+        return { transactions, headers, sheet };
     }
 };
+
+// Node.js module export for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { DataAccess };
+}
