@@ -23,22 +23,34 @@ var DataAccess = {
     getBootstrapData: () => {
         return SheetAccess.getData('Bootstrap');
     },
-    getEmailAddresses: function () {
-        // Use SheetAccess with ValidatedMember
-        const allData = SheetAccess.getDataAsArrays('ActiveMembers');
+    /**
+     * Get active members with write-context for selective cell writes.
+     * Returns validated members plus the sheet, originalRows, and headers needed
+     * for MemberPersistence.writeChangedCells().
+     *
+     * Usage:
+     *   const { members, sheet, originalRows, headers } = DataAccess.getActiveMembersForUpdate();
+     *   // ... Manager modifies members in place ...
+     *   MemberPersistence.writeChangedCells(sheet, originalRows, members, headers);
+     *
+     * @returns {{members: ValidatedMember[], sheet: GoogleAppsScript.Spreadsheet.Sheet, originalRows: any[][], headers: string[]}}
+     */
+    getActiveMembersForUpdate: function() {
+        const sheet = SheetAccess.getSheet('ActiveMembers');
+        const allData = sheet.getDataRange().getValues();
         const headers = allData[0];
-        const rows = allData.slice(1);
-        const members = ValidatedMember.validateRows(rows, headers, 'data_access.getEmailAddresses');
-        const emails = members.map(member => member.Email.toLowerCase());
-        return emails;
+        const originalRows = allData.slice(1);
+        const members = ValidatedMember.validateRows(
+            originalRows, headers, 'DataAccess.getActiveMembersForUpdate');
+        return { members, sheet, originalRows, headers };
+    },
+    getEmailAddresses: function () {
+        // Delegate to getMembers for consistency
+        return DataAccess.getMembers().map(member => member.Email.toLowerCase());
     },
     getMembers: () => {
-        // Use SheetAccess with ValidatedMember
-        const allData = SheetAccess.getDataAsArrays('ActiveMembers');
-        const headers = allData[0];
-        const rows = allData.slice(1);
-        const members = ValidatedMember.validateRows(rows, headers, 'data_access.getMembers');
-        return members;
+        // Delegate to getActiveMembersForUpdate for single validation path
+        return DataAccess.getActiveMembersForUpdate().members;
     },
     getActionSpecs: () => {
         // Use getDataWithRichText to read native RichText links directly
