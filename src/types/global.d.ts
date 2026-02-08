@@ -682,7 +682,46 @@ declare class ValidatedTransaction {
     static HEADERS: string[];
 }
 
-// Flat MemberPersistence class (new pattern - replaces Common.Data.MemberPersistence)
+// Flat ValidatedElection class (new pattern for election validation)
+declare class ValidatedElection {
+    Title: string;
+    Start: Date | null;
+    End: Date | null;
+    'Form Edit URL': string;
+    'Election Officers': string;
+    TriggerId: string;
+    
+    constructor(
+        title: string,
+        start: Date | string | null,
+        end: Date | string | null,
+        formEditUrl: string,
+        electionOfficers: string,
+        triggerId: string
+    );
+    
+    /** Convert to array for serialization/testing (NOT for sheet persistence) */
+    toArray(): Array<string | Date | null>;
+    
+    /** Static factory - never throws, returns null on failure */
+    static fromRow(
+        rowArray: Array<any>,
+        headers: string[],
+        rowNumber: number,
+        errorCollector?: { errors: string[], rowNumbers: number[] }
+    ): ValidatedElection | null;
+    
+    /** Batch validation with consolidated email alert */
+    static validateRows(
+        rows: Array<Array<any>>,
+        headers: string[],
+        context: string
+    ): ValidatedElection[];
+    
+    /** Column headers constant */
+    static HEADERS: string[];
+}
+
 declare class MemberPersistence {
     /** Write only changed cells to minimize version history noise */
     static writeChangedCells(
@@ -735,7 +774,11 @@ declare var DataAccess: {
     isMember: (email: string) => boolean;
     
     /** Gets all elections data */
-    getElections: () => VotingService.Election[];
+    /**
+     * Get all elections as validated objects (read-only accessor).
+     * Wraps SheetAccess + ValidatedElection.validateRows at the typed domain boundary.
+     */
+    getElections: () => ValidatedElection[];
     
     /** Gets system logs */
     getSystemLogs: () => SystemLogEntry[];

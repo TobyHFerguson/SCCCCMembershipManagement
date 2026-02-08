@@ -203,7 +203,11 @@ declare namespace VotingService {
          * Retrieves the election data from the Elections sheet.
          * @returns {Election[]} Array of Election objects.
          */
-        getElectionData(): Election[];
+        /**
+         * Retrieves the election data from the Elections sheet as validated objects.
+         * Delegates to DataAccess.getElections() which returns typed ValidatedElection instances.
+         */
+        getElectionData(): ValidatedElection[];
 
         /**
          * Stores the election data in the Elections sheet.
