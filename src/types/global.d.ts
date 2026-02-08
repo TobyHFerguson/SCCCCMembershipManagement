@@ -19,10 +19,10 @@ type ExpiredMembersQueue = MembershipManagement.ExpiredMembersQueue;
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
  */
 declare class AppLogger {
-    static debug(service: string, message: string, data?: any): void;
-    static info(service: string, message: string, data?: any): void;
-    static warn(service: string, message: string, data?: any): void;
-    static error(service: string, message: string, data?: any): void;
+    static debug(service: string, message: string, data?: any /* JUSTIFIED: arbitrary debug payload, JSON-serialized */): void;
+    static info(service: string, message: string, data?: any /* JUSTIFIED: arbitrary debug payload, JSON-serialized */): void;
+    static warn(service: string, message: string, data?: any /* JUSTIFIED: arbitrary debug payload, JSON-serialized */): void;
+    static error(service: string, message: string, data?: any /* JUSTIFIED: arbitrary debug payload, JSON-serialized */): void;
     static configure(): void;
     static setLevel(level: string): void;
     static getLogs(): Array<[Date | string, string, string, string, string]>;
@@ -265,12 +265,12 @@ interface SystemLogEntry {
 interface FormResponse {
     timestamp: Date;
     'VOTING TOKEN': string;
-    [key: string]: any;
+    [key: string]: any; // JUSTIFIED: dynamic ballot question columns, schema varies per election
 }
 
 interface Result {
     'Voter Email': string;
-    [key: string]: any;
+    [key: string]: any; // JUSTIFIED: dynamic ballot question columns, schema varies per election
 }
 
 interface BootstrapData {
@@ -401,7 +401,7 @@ interface AuditLogParams {
     outcome: 'success' | 'fail';
     note?: string;
     error?: string;
-    jsonData?: any;
+    jsonData?: Record<string, unknown>;
 }
 
 /**
@@ -454,34 +454,40 @@ declare class SpreadsheetManager {
 declare class SheetAccess {
     /**
      * Get data from a sheet as array of row objects
+     * JUSTIFIED: SheetAccess is raw I/O layer; domain typing happens at DataAccess boundary
      */
-    static getData(sheetName: string): any[];
+    static getData(sheetName: string): any[]; // JUSTIFIED: raw I/O layer, domain typing at DataAccess
     
     /**
      * Get data as 2D array (headers + rows)
+     * JUSTIFIED: raw spreadsheet arrays; domain typing happens at DataAccess boundary
      */
-    static getDataAsArrays(sheetName: string): any[][];
+    static getDataAsArrays(sheetName: string): any[][]; // JUSTIFIED: raw spreadsheet arrays
     
     /**
      * Get data from sheet with RichText preserved for link columns
      * Returns objects where link columns have {text, url} structure
+     * JUSTIFIED: SheetAccess is raw I/O layer; domain typing happens at DataAccess boundary
      */
-    static getDataWithRichText(sheetName: string, richTextColumns?: string[]): any[];
+    static getDataWithRichText(sheetName: string, richTextColumns?: string[]): any[]; // JUSTIFIED: raw I/O layer
     
     /**
      * Write data to a sheet (replaces all data)
+     * JUSTIFIED: accepts any domain type for write; raw I/O layer
      */
-    static setData(sheetName: string, data: any[]): void;
+    static setData(sheetName: string, data: any[]): void; // JUSTIFIED: accepts any domain type
     
     /**
      * Append rows to end of sheet
+     * JUSTIFIED: raw spreadsheet arrays; accepts any domain type for write
      */
-    static appendRows(sheetName: string, rows: any[][]): void;
+    static appendRows(sheetName: string, rows: any[][]): void; // JUSTIFIED: raw spreadsheet arrays
     
     /**
      * Update specific rows in a sheet
+     * JUSTIFIED: raw spreadsheet arrays; accepts any domain type for write
      */
-    static updateRows(sheetName: string, rows: any[][], startRow: number): void;
+    static updateRows(sheetName: string, rows: any[][], startRow: number): void; // JUSTIFIED: raw spreadsheet arrays
     
     /**
      * Get raw Sheet object for advanced operations
@@ -505,15 +511,17 @@ declare class SheetAccess {
      * Get data as 2D array from a spreadsheet by ID (for dynamic spreadsheets not in Bootstrap)
      * @param spreadsheetId - The spreadsheet ID to open
      * @param sheetName - The name of the sheet tab within the spreadsheet
+     * JUSTIFIED: raw spreadsheet arrays; domain typing happens at DataAccess boundary
      */
-    static getDataAsArraysById(spreadsheetId: string, sheetName: string): any[][];
+    static getDataAsArraysById(spreadsheetId: string, sheetName: string): any[][]; // JUSTIFIED: raw spreadsheet arrays
 
     /**
      * Get data from a spreadsheet by ID as array of row objects (for dynamic spreadsheets not in Bootstrap)
      * @param spreadsheetId - The spreadsheet ID to open
      * @param sheetName - The name of the sheet tab within the spreadsheet
+     * JUSTIFIED: SheetAccess is raw I/O layer; domain typing happens at DataAccess boundary
      */
-    static getDataById(spreadsheetId: string, sheetName: string): any[];
+    static getDataById(spreadsheetId: string, sheetName: string): any[]; // JUSTIFIED: raw I/O layer
 
     /**
      * Write data to a sheet by spreadsheet ID (for dynamic spreadsheets not in Bootstrap)
@@ -521,8 +529,9 @@ declare class SheetAccess {
      * @param sheetName - The name of the sheet tab within the spreadsheet
      * @param data - Array of row objects
      * @param createIfMissing - Whether to create the sheet if it doesn't exist (default: false)
+     * JUSTIFIED: accepts any domain type for write; raw I/O layer
      */
-    static setDataById(spreadsheetId: string, sheetName: string, data: any[], createIfMissing?: boolean): void;
+    static setDataById(spreadsheetId: string, sheetName: string, data: any[], createIfMissing?: boolean): void; // JUSTIFIED: accepts any domain type
 
     /**
      * Open a spreadsheet by ID and return it (for operations needing the full spreadsheet object)
@@ -879,7 +888,7 @@ declare class MemberPersistence {
     ): number;
     
     /** Value equality that handles Dates and primitives */
-    static valuesEqual(a: any, b: any): boolean;
+    static valuesEqual(a: unknown, b: unknown): boolean;
 }
 
 // Flat DataAccess object (new pattern - replaces Common.Data.Access)
@@ -901,7 +910,7 @@ declare var DataAccess: {
     getActiveMembersForUpdate: () => {
         members: ValidatedMember[];
         sheet: GoogleAppsScript.Spreadsheet.Sheet;
-        originalRows: any[][];
+        originalRows: any[][]; // JUSTIFIED: raw spreadsheet arrays from SheetAccess I/O layer
         headers: string[];
     };
     
@@ -966,11 +975,11 @@ declare class ServiceLogger {
         outcome: 'success' | 'fail',
         note: string,
         error?: string,
-        jsonData?: any
+        jsonData?: Record<string, unknown>
     ): AuditLogEntry;
     
     /** Log service error (unexpected failures during execution) */
-    logError(operation: string, error: Error | string, additionalData?: any): AuditLogEntry;
+    logError(operation: string, error: Error | string, additionalData?: Record<string, unknown>): AuditLogEntry;
     
     /** Create a custom audit entry without system logging */
     createAuditEntry(
@@ -978,23 +987,23 @@ declare class ServiceLogger {
         outcome: 'success' | 'fail',
         note: string,
         error?: string,
-        jsonData?: any
+        jsonData?: Record<string, unknown>
     ): AuditLogEntry;
 }
 
 // Flat ServiceExecutionLogger object (new pattern - replaces Common.Logging.ServiceExecutionLogger)
 declare const ServiceExecutionLogger: {
     /** Wrap a getData function with logging */
-    wrapGetData(serviceName: string, email: string, getDataFn: () => any): any;
+    wrapGetData(serviceName: string, email: string, getDataFn: () => any /* JUSTIFIED: generic wrapper, returns whatever wrapped function returns */): any; // JUSTIFIED: returns whatever wrapped function returns
     
     /** Wrap an API handler function with logging */
     wrapApiHandler(
         serviceName: string,
         operationName: string,
         email: string,
-        handlerFn: () => any,
-        params?: any
-    ): any;
+        handlerFn: () => any /* JUSTIFIED: generic wrapper, returns whatever wrapped function returns */,
+        params?: Record<string, unknown>
+    ): any; // JUSTIFIED: returns whatever wrapped function returns
     
     /** Persist audit entries to the Audit sheet (private) */
     _persistAuditEntries(auditEntries: AuditLogEntry[]): void;
@@ -1102,7 +1111,7 @@ declare namespace GroupManagementService {
 
     // WebApp namespace - doGet handler
     namespace WebApp {
-        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: any): GoogleAppsScript.HTML.HtmlOutput;
+        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: GoogleAppsScript.HTML.HtmlTemplate): GoogleAppsScript.HTML.HtmlOutput;
         function updateUserSubscriptions(updatedSubscriptions: SubscriptionUpdate[], userToken: string): { success: boolean; message?: string };
     }
 
@@ -1172,7 +1181,7 @@ declare namespace ProfileManagementService {
 
     // WebApp namespace - doGet handler
     namespace WebApp {
-        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: any): GoogleAppsScript.HTML.HtmlOutput;
+        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: GoogleAppsScript.HTML.HtmlTemplate): GoogleAppsScript.HTML.HtmlOutput;
     }
 
     // Legacy function (for backward compatibility)
@@ -1232,7 +1241,7 @@ declare namespace DirectoryService {
 
     // WebApp namespace - doGet handler
     namespace WebApp {
-        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: any): GoogleAppsScript.HTML.HtmlOutput;
+        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: GoogleAppsScript.HTML.HtmlTemplate): GoogleAppsScript.HTML.HtmlOutput;
     }
 
     // Functions
@@ -1302,7 +1311,7 @@ declare namespace EmailChangeService {
         static formatSendCodeResult(success: boolean, email: string, error?: string): {success: boolean, message: string, error?: string, errorCode?: string};
         static calculateBackoff(attempt: number, initialBackoffMs?: number): number;
         static getRetryAction(params: {attempt: number, maxRetries: number, error?: Error}): {action: 'retry'|'fail'|'initial', backoffMs?: number, errorMessage?: string};
-        static createGroupUpdateResult(group: any, success: boolean, error?: string): {groupEmail: string, groupName: string, success: boolean, error: string | null};
+        static createGroupUpdateResult(group: {email: string, name?: string}, success: boolean, error?: string): {groupEmail: string, groupName: string, success: boolean, error: string | null};
         static aggregateGroupResults(results: Array<{success: boolean, error?: string}>): {successCount: number, failedCount: number, overallSuccess: boolean};
         static formatEmailChangeMessage(overallSuccess: boolean, oldEmail: string, newEmail: string, successCount: number, failedCount: number): string;
     }
@@ -1322,7 +1331,7 @@ declare namespace EmailChangeService {
 
     // WebApp namespace - doGet handler
     namespace WebApp {
-        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: any): GoogleAppsScript.HTML.HtmlOutput;
+        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: GoogleAppsScript.HTML.HtmlTemplate): GoogleAppsScript.HTML.HtmlOutput;
     }
 
     // Internal namespace - Legacy functions
@@ -1430,4 +1439,4 @@ declare namespace VotingService {
 // ============================================================================
 
 // Properties Management (not a class, just a namespace object)
-declare const Properties: any; // TODO: Add proper Properties type
+declare const Properties: any; // JUSTIFIED: legacy global, properties-based configuration (to be typed in future work)
