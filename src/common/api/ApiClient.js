@@ -22,24 +22,27 @@
  */
 
 /**
- * @typedef {Object} ApiResponse
+ * @typedef {{success: boolean, data?: unknown, error?: string, errorCode?: string, meta?: {requestId: string, duration: number, action: string}}} ApiResponse
+ * Standard API response format
  * @property {boolean} success - Whether the operation succeeded
- * @property {*} [data] - Response data (if success)
+ * @property {unknown} [data] - Response data (if success)
  * @property {string} [error] - Error message (if failed)
  * @property {string} [errorCode] - Machine-readable error code
  * @property {{requestId: string, duration: number, action: string}} [meta] - Optional metadata with request tracking
  */
 
 /**
- * @typedef {Object} ApiRequest
+ * @typedef {{action: string, params?: Record<string, unknown>, token?: string}} ApiRequest
+ * Standard API request format
  * @property {string} action - The API action to perform
- * @property {Record<string, any>} [params] - Action parameters (key-value pairs)
+ * @property {Record<string, unknown>} [params] - Action parameters (key-value pairs, params are truly dynamic API data - JUSTIFIED: arbitrary API data from diverse service endpoints)
  * @property {string} [token] - Authentication token
  */
 
 /**
- * @typedef {Object} ActionHandler
- * @property {function(Record<string, any>, string): ApiResponse} handler - The handler function (params, token) => ApiResponse
+ * @typedef {{handler: function(Record<string, unknown>, string): ApiResponse, requiresAuth?: boolean, description?: string}} ActionHandler
+ * Action handler configuration
+ * @property {function(Record<string, unknown>, string): ApiResponse} handler - The handler function (params, token) => ApiResponse - params are truly dynamic API data - JUSTIFIED: arbitrary API data from diverse service endpoints
  * @property {boolean} [requiresAuth] - Whether authentication is required
  * @property {string} [description] - Action description
  */
@@ -54,8 +57,8 @@ var ApiClientManager = (function () {
     class ApiClientManager {
         /**
          * Create a successful response
-         * @param {*} data - Response data
-         * @param {Record<string, any>} [meta] - Optional metadata (key-value pairs)
+         * @param {unknown} data - Response data
+         * @param {Record<string, unknown>} [meta] - Optional metadata (key-value pairs - JUSTIFIED: arbitrary metadata from diverse contexts)
          * @returns {ApiResponse}
          */
         static successResponse(data, meta) {
@@ -73,7 +76,7 @@ var ApiClientManager = (function () {
          * Create an error response
          * @param {string} error - Error message
          * @param {string} [errorCode] - Machine-readable error code
-         * @param {Record<string, any>} [meta] - Optional metadata (key-value pairs)
+         * @param {Record<string, unknown>} [meta] - Optional metadata (key-value pairs - JUSTIFIED: arbitrary metadata from diverse contexts)
          * @returns {ApiResponse}
          */
         static errorResponse(error, errorCode, meta) {
@@ -90,17 +93,20 @@ var ApiClientManager = (function () {
 
         /**
          * Validate an API request format
-         * @param {*} request - The request to validate
+         * @param {unknown} request - The request to validate
          * @returns {{valid: boolean, error?: string}}
          */
         static validateRequest(request) {
             if (!request || typeof request !== 'object') {
                 return { valid: false, error: 'Request must be an object' };
             }
-            if (!request.action || typeof request.action !== 'string') {
+            // Type guard: check if request has action property
+            var req = /** @type {Record<string, unknown>} */ (request);
+            if (!req.action || typeof req.action !== 'string') {
                 return { valid: false, error: 'Request must have an action string' };
             }
-            if (request.action.trim() !== request.action) {
+            var action = /** @type {string} */ (req.action);
+            if (action.trim() !== action) {
                 return { valid: false, error: 'Action cannot have leading/trailing whitespace' };
             }
             return { valid: true };
@@ -108,7 +114,7 @@ var ApiClientManager = (function () {
 
         /**
          * Validate that required parameters are present
-         * @param {Record<string, any>} params - Request parameters (key-value pairs)
+         * @param {Record<string, unknown>} params - Request parameters (key-value pairs - JUSTIFIED: arbitrary API data from diverse service endpoints)
          * @param {string[]} required - Required parameter names
          * @returns {{valid: boolean, missing?: string[]}}
          */
@@ -131,7 +137,7 @@ var ApiClientManager = (function () {
 
         /**
          * Sanitize a string parameter (trim and limit length)
-         * @param {*} value - Value to sanitize
+         * @param {unknown} value - Value to sanitize
          * @param {number} [maxLength=1000] - Maximum length
          * @returns {string}
          */
@@ -149,12 +155,13 @@ var ApiClientManager = (function () {
 
         /**
          * Sanitize request parameters
-         * @param {Record<string, any>} params - Parameters to sanitize (key-value pairs)
-         * @param {Record<string, number | Record<string, any>>} schema - Schema defining max lengths per field
-         * @returns {Record<string, any>}
+         * @param {Record<string, unknown>} params - Parameters to sanitize (key-value pairs - JUSTIFIED: arbitrary API data from diverse service endpoints)
+         * @param {Record<string, number | Record<string, unknown>>} schema - Schema defining max lengths per field (JUSTIFIED: recursive schema structure with arbitrary nested data)
+         * @returns {Record<string, unknown>} Sanitized parameters (JUSTIFIED: mirrors input parameter structure)
          */
         static sanitizeParams(params, schema) {
             if (schema === undefined) schema = {};
+            /** @type {Record<string, unknown>} */
             var result = {};
 
             var entries = Object.entries(params || {});
@@ -168,8 +175,8 @@ var ApiClientManager = (function () {
                     result[key] = ApiClientManager.sanitizeString(value, maxLength);
                 } else if (typeof value === 'object' && value !== null) {
                     // Recursively sanitize nested objects
-                    var nestedSchema = typeof schemaValue === 'object' ? schemaValue : {};
-                    result[key] = ApiClientManager.sanitizeParams(value, nestedSchema);
+                    var nestedSchema = typeof schemaValue === 'object' && schemaValue !== null ? /** @type {Record<string, unknown>} */ (schemaValue) : {};
+                    result[key] = ApiClientManager.sanitizeParams(/** @type {Record<string, unknown>} */ (value), /** @type {Record<string, number | Record<string, unknown>>} */ (nestedSchema));
                 } else {
                     result[key] = value;
                 }
@@ -270,7 +277,7 @@ var ApiClientManager = (function () {
         /**
          * Format an error for logging (hide sensitive data)
          * @param {Error|string} error - The error
-         * @param {{action?: string, params?: Record<string, any>, token?: string}} [request] - The request (optional, will be sanitized, params are truly dynamic API data)
+         * @param {{action?: string, params?: Record<string, unknown>, token?: string}} [request] - The request (optional, will be sanitized, params are truly dynamic API data - JUSTIFIED: arbitrary API data from diverse service endpoints)
          * @returns {{message: string, stack?: string, action?: string, hasParams?: boolean, hasToken?: boolean}}
          */
         static formatErrorForLogging(error, request) {
@@ -312,7 +319,7 @@ var ApiClient = (function () {
         /**
          * Register an action handler
          * @param {string} action - Action name
-         * @param {function(Record<string, any>, string): ApiResponse} handler - Handler function
+         * @param {function(Record<string, unknown>, string): ApiResponse} handler - Handler function (params are truly dynamic API data - JUSTIFIED: arbitrary API data from diverse service endpoints)
          * @param {{requiresAuth?: boolean, description?: string}} [options] - Handler options (requiresAuth defaults to true, description is optional)
          */
         static registerHandler(action, handler, options) {

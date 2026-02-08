@@ -84,9 +84,9 @@ MembershipManagement.Manager = class {
           expiredMember.groups = this._groups.map(g => g.Email).join(',');
           expired.add(member.Email);
         }
-    const mc = MembershipManagement.Utils.addPrefillForm(member, prefillFormTemplate);
-    expiredMember.subject = MembershipManagement.Utils.expandTemplate(spec.Subject, mc);
-    expiredMember.htmlBody = MembershipManagement.Utils.expandTemplate(spec.Body, mc);
+    const mc = /** @type {unknown} */ (MembershipManagement.Utils.addPrefillForm(member, prefillFormTemplate));
+    expiredMember.subject = MembershipManagement.Utils.expandTemplate(spec.Subject, /** @type {ValidatedMember | Record<string, unknown>} */ (mc));
+    expiredMember.htmlBody = MembershipManagement.Utils.expandTemplate(spec.Body, /** @type {ValidatedMember | Record<string, unknown>} */ (mc));
         // collect messages for the consumer to send
         messages.push(expiredMember);
       }
