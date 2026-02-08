@@ -154,8 +154,19 @@ var DataAccess = {
         
         return rows.some(row => row[emailCol]?.toString().toLowerCase() === email);
     },
+    /**
+     * Get all elections as validated objects (read-only accessor).
+     * Wraps SheetAccess + ValidatedElection.validateRows at the typed domain boundary.
+     *
+     * @returns {ValidatedElection[]} Array of valid ValidatedElection instances
+     */
     getElections: () => {
-        return SheetAccess.getData('Elections');
+        const allData = SheetAccess.getDataAsArrays('Elections');
+        if (allData.length === 0) { return []; }
+        const headers = allData[0];
+        const rows = allData.slice(1);
+        if (rows.length === 0) { return []; }
+        return ValidatedElection.validateRows(rows, headers, 'DataAccess.getElections');
     },
     getSystemLogs: () => {
         return SheetAccess.getData('SystemLogs');

@@ -5,17 +5,16 @@
 //@ts-check
 VotingService.Data = {
     /**
-     * @returns {VotingService.Election[]} - Returns an array of Election objects.
-     * Each object contains properties like Title, Form ID, Organizers, Start Date, End Date, and Voters.
-     * The data is retrieved from the Elections sheet.
+     * @returns {ValidatedElection[]} - Returns an array of ValidatedElection objects.
+     * Each object contains properties like Title, Start, End, Form Edit URL, Election Officers, and TriggerId.
+     * The data is retrieved from the Elections sheet via DataAccess.
      * 
      * @description Retrieves the election data from the Elections sheet.
-     * This method abstracts the underlying storage mechanism, allowing for flexibility in implementation.
-     * It fetches the data from the sheet and returns it as an array of Election objects.
+     * This method delegates to DataAccess.getElections() which returns typed ValidatedElection instances.
+     * It abstracts the underlying storage mechanism, allowing for flexibility in implementation.
      */
     getElectionData: function () {
-        const electionData = SheetAccess.getData('Elections');
-        return electionData;
+        return DataAccess.getElections();
     },
     /**
      * Sets the election data in the Elections sheet.
