@@ -16,7 +16,8 @@ EmailService.sendTestEmail = function (form) {
       const message = {
         to: sendToEmail,
         subject: MembershipManagement.Utils.expandTemplate(spec.Subject, member),
-        htmlBody: MembershipManagement.Utils.expandTemplate(spec.Body, member)
+        // Body is converted to string during DataAccess.getActionSpecs() processing
+        htmlBody: MembershipManagement.Utils.expandTemplate(/** @type {string} */ (spec.Body), member)
       };
       console.log(message);
       MailApp.sendEmail(message);

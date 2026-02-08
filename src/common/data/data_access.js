@@ -55,8 +55,20 @@ var DataAccess = {
     getActionSpecs: () => {
         // Use getDataWithRichText to read native RichText links directly
         // IMPORTANT: Body column contains RichText links, not formulas
-        const actionSpecsAsArray = /** @type {MembershipManagement.ActionSpec[]} */ (SheetAccess.getDataWithRichText('ActionSpecs', ['Body']))
-        const actionSpecs = Object.fromEntries(actionSpecsAsArray.map(spec => [spec.Type, spec]));
+        const allData = SheetAccess.getDataWithRichText('ActionSpecs', ['Body']);
+        if (allData.length === 0) { return {}; }
+        
+        // Extract headers and rows
+        const headers = Object.keys(allData[0]);
+        const rows = allData.map(obj => headers.map(h => obj[h]));
+        
+        // Validate rows using ValidatedActionSpec
+        const validatedSpecs = ValidatedActionSpec.validateRows(rows, headers, 'DataAccess.getActionSpecs');
+        
+        // Convert validated specs array to object keyed by Type
+        const actionSpecs = Object.fromEntries(validatedSpecs.map(spec => [spec.Type, spec]));
+        
+        // Process Body field: convert Google Docs URLs to HTML
         for (const actionSpec of Object.values(actionSpecs)) {
             // Check if Body is a RichText object {text, url}
             const body = actionSpec.Body;
