@@ -8,7 +8,7 @@
  * Layer: Layer 1 Infrastructure (can use AppLogger)
  * 
  * Usage:
- *   const spec = new ValidatedActionSpec(type, subject, body, offset, groupsToAdd, groupsToRemove);
+ *   const spec = new ValidatedActionSpec(type, subject, body, offset);
  *   const specs = ValidatedActionSpec.validateRows(rows, headers, 'DataAccess.getActionSpecs');
  * 
  * Pattern: Flat IIFE-wrapped class (per gas-best-practices.md)
@@ -29,11 +29,9 @@ var ValidatedActionSpec = (function() {
    * @param {string} subject - Email subject line (required)
    * @param {string | {text: string, url: string}} body - Email body (required, may be string or RichText object)
    * @param {number | null | undefined | string} offset - Days offset for expiry actions (optional)
-   * @param {string | null | undefined} groupsToAdd - Comma-separated group names to add (optional)
-   * @param {string | null | undefined} groupsToRemove - Comma-separated group names to remove (optional)
    */
   class ValidatedActionSpec {
-    constructor(type, subject, body, offset, groupsToAdd, groupsToRemove) {
+    constructor(type, subject, body, offset) {
       // Validate Type (required, must be valid ActionType)
       if (typeof type !== 'string' || type.trim() === '') {
         throw new Error(`ValidatedActionSpec Type is required, got: ${typeof type} "${type}"`);
@@ -90,34 +88,20 @@ var ValidatedActionSpec = (function() {
         }
         this.Offset = offsetNum;
       }
-      
-      /** @type {string | null} */
-      // Handle optional GroupsToAdd (comma-separated group names)
-      this.GroupsToAdd = (groupsToAdd === null || groupsToAdd === undefined || groupsToAdd === '') 
-        ? null 
-        : String(groupsToAdd).trim();
-      
-      /** @type {string | null} */
-      // Handle optional GroupsToRemove (comma-separated group names)
-      this.GroupsToRemove = (groupsToRemove === null || groupsToRemove === undefined || groupsToRemove === '') 
-        ? null 
-        : String(groupsToRemove).trim();
     }
 
     /**
      * Convert ValidatedActionSpec to array format for spreadsheet persistence
      * Column order matches HEADERS constant
      * 
-     * @returns {Array<string | number | null | {text: string, url: string}>} Array with 6 elements matching sheet columns
+     * @returns {Array<string | number | null | {text: string, url: string}>} Array with 4 elements matching sheet columns
      */
     toArray() {
       return [
         this.Type,
         this.Offset,
         this.Subject,
-        this.Body,
-        this.GroupsToAdd,
-        this.GroupsToRemove
+        this.Body
       ];
     }
 
@@ -130,9 +114,7 @@ var ValidatedActionSpec = (function() {
         'Type',
         'Offset',
         'Subject',
-        'Body',
-        'GroupsToAdd',
-        'GroupsToRemove'
+        'Body'
       ];
     }
 
@@ -160,12 +142,10 @@ var ValidatedActionSpec = (function() {
         const subject = rowObj['Subject'];
         const body = rowObj['Body'];
         const offset = rowObj['Offset'];
-        const groupsToAdd = rowObj['GroupsToAdd'];
-        const groupsToRemove = rowObj['GroupsToRemove'];
         
         // Construct ValidatedActionSpec (throws on validation failure)
         return new ValidatedActionSpec(
-          type, subject, body, offset, groupsToAdd, groupsToRemove
+          type, subject, body, offset
         );
         
       } catch (validationError) {

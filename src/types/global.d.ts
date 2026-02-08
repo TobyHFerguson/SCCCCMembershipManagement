@@ -736,28 +736,18 @@ declare class ValidatedActionSpec {
     /** Days offset for expiry actions (optional) */
     Offset: number | null;
     
-    /** Comma-separated group names to add (optional) */
-    GroupsToAdd: string | null;
-    
-    /** Comma-separated group names to remove (optional) */
-    GroupsToRemove: string | null;
-    
     /**
      * Constructor
      * @param type - Action type (required, must be one of known ActionTypes)
      * @param subject - Email subject line (required)
      * @param body - Email body (required, may be string or RichText object)
      * @param offset - Days offset for expiry actions (optional)
-     * @param groupsToAdd - Comma-separated group names to add (optional)
-     * @param groupsToRemove - Comma-separated group names to remove (optional)
      */
     constructor(
         type: string,
         subject: string,
         body: string | { text: string; url: string },
-        offset?: number | null,
-        groupsToAdd?: string | null,
-        groupsToRemove?: string | null
+        offset?: number | null
     );
     
     /** Convert to array format for spreadsheet persistence */

@@ -48,17 +48,13 @@ describe('ValidatedActionSpec Class', () => {
         'Join',
         'Welcome to SCCCC!',
         '<p>Welcome to our club</p>',
-        0,
-        'members@sc3.club,new-members@sc3.club',
-        null
+        0
       );
       
       expect(spec.Type).toBe('Join');
       expect(spec.Subject).toBe('Welcome to SCCCC!');
       expect(spec.Body).toBe('<p>Welcome to our club</p>');
       expect(spec.Offset).toBe(0);
-      expect(spec.GroupsToAdd).toBe('members@sc3.club,new-members@sc3.club');
-      expect(spec.GroupsToRemove).toBe(null);
     });
     
     test('should create valid action spec with minimal required fields', () => {
@@ -66,8 +62,6 @@ describe('ValidatedActionSpec Class', () => {
         'Renew',
         'Time to renew',
         '<p>Please renew your membership</p>',
-        null,
-        null,
         null
       );
       
@@ -75,8 +69,6 @@ describe('ValidatedActionSpec Class', () => {
       expect(spec.Subject).toBe('Time to renew');
       expect(spec.Body).toBe('<p>Please renew your membership</p>');
       expect(spec.Offset).toBe(null);
-      expect(spec.GroupsToAdd).toBe(null);
-      expect(spec.GroupsToRemove).toBe(null);
     });
     
     test('should accept Body with RichText link objects', () => {
@@ -89,9 +81,7 @@ describe('ValidatedActionSpec Class', () => {
         'Expiry1',
         'Reminder',
         richTextBody,
-        -30,
-        null,
-        null
+        -30
       );
       
       expect(spec.Type).toBe('Expiry1');
@@ -104,8 +94,6 @@ describe('ValidatedActionSpec Class', () => {
         '  Migrate  ',
         '  Migration Notice  ',
         '<p>Migrating...</p>',
-        null,
-        null,
         null
       );
       
@@ -119,8 +107,6 @@ describe('ValidatedActionSpec Class', () => {
           '',
           'Subject',
           'Body',
-          null,
-          null,
           null
         );
       }).toThrow('ValidatedActionSpec Type is required');
@@ -132,8 +118,6 @@ describe('ValidatedActionSpec Class', () => {
           'InvalidType',
           'Subject',
           'Body',
-          null,
-          null,
           null
         );
       }).toThrow('ValidatedActionSpec Type must be one of');
@@ -147,8 +131,6 @@ describe('ValidatedActionSpec Class', () => {
           type,
           'Subject',
           'Body',
-          null,
-          null,
           null
         );
         expect(spec.Type).toBe(type);
@@ -161,8 +143,6 @@ describe('ValidatedActionSpec Class', () => {
           'Join',
           '',
           'Body',
-          null,
-          null,
           null
         );
       }).toThrow('ValidatedActionSpec Subject is required');
@@ -174,8 +154,6 @@ describe('ValidatedActionSpec Class', () => {
           'Join',
           'Subject',
           '',
-          null,
-          null,
           null
         );
       }).toThrow('ValidatedActionSpec Body is required');
@@ -184,8 +162,6 @@ describe('ValidatedActionSpec Class', () => {
         new ValidatedActionSpec(
           'Join',
           'Subject',
-          null,
-          null,
           null,
           null
         );
@@ -198,8 +174,6 @@ describe('ValidatedActionSpec Class', () => {
           'Join',
           'Subject',
           { url: 'http://example.com' }, // Missing 'text' property
-          null,
-          null,
           null
         );
       }).toThrow("ValidatedActionSpec Body object must have 'text' property");
@@ -210,9 +184,7 @@ describe('ValidatedActionSpec Class', () => {
         'Expiry2',
         'Subject',
         'Body',
-        '-15', // String representation
-        null,
-        null
+        '-15' // String representation
       );
       
       expect(spec.Offset).toBe(-15);
@@ -225,40 +197,9 @@ describe('ValidatedActionSpec Class', () => {
           'Expiry3',
           'Subject',
           'Body',
-          'not-a-number',
-          null,
-          null
+          'not-a-number'
         );
       }).toThrow('ValidatedActionSpec Offset must be a valid number');
-    });
-    
-    test('should handle empty string for optional fields as null', () => {
-      const spec = new ValidatedActionSpec(
-        'Join',
-        'Subject',
-        'Body',
-        '',
-        '',
-        ''
-      );
-      
-      expect(spec.Offset).toBe(null);
-      expect(spec.GroupsToAdd).toBe(null);
-      expect(spec.GroupsToRemove).toBe(null);
-    });
-    
-    test('should trim GroupsToAdd and GroupsToRemove', () => {
-      const spec = new ValidatedActionSpec(
-        'Join',
-        'Subject',
-        'Body',
-        null,
-        '  group1@sc3.club  ',
-        '  group2@sc3.club  '
-      );
-      
-      expect(spec.GroupsToAdd).toBe('group1@sc3.club');
-      expect(spec.GroupsToRemove).toBe('group2@sc3.club');
     });
   });
   
@@ -270,9 +211,7 @@ describe('ValidatedActionSpec Class', () => {
         'Join',           // Type
         0,                // Offset
         'Welcome!',       // Subject
-        '<p>Body</p>',    // Body
-        'group1@sc3.club', // GroupsToAdd
-        null              // GroupsToRemove
+        '<p>Body</p>'     // Body
       ];
       
       const spec = ValidatedActionSpec.fromRow(rowData, headers, 2, null);
@@ -281,7 +220,6 @@ describe('ValidatedActionSpec Class', () => {
       expect(spec.Type).toBe('Join');
       expect(spec.Subject).toBe('Welcome!');
       expect(spec.Offset).toBe(0);
-      expect(spec.GroupsToAdd).toBe('group1@sc3.club');
     });
     
     test('should work correctly when sheet columns are in different order than HEADERS', () => {
@@ -291,9 +229,7 @@ describe('ValidatedActionSpec Class', () => {
         Type: 'Renew',
         Offset: -10,
         Subject: 'Renewal Time',
-        Body: '<p>Renew now</p>',
-        GroupsToAdd: null,
-        GroupsToRemove: null
+        Body: '<p>Renew now</p>'
       };
       const rowData = shuffledHeaders.map(h => testObj[h]);
       
@@ -314,9 +250,7 @@ describe('ValidatedActionSpec Class', () => {
         '',               // Type (missing)
         0,
         'Subject',
-        'Body',
-        null,
-        null
+        'Body'
       ];
       
       const errorCollector = { errors: [], rowNumbers: [] };
@@ -334,9 +268,7 @@ describe('ValidatedActionSpec Class', () => {
         'InvalidType',
         0,
         'Subject',
-        'Body',
-        null,
-        null
+        'Body'
       ];
       
       const errorCollector = { errors: [], rowNumbers: [] };
@@ -354,9 +286,7 @@ describe('ValidatedActionSpec Class', () => {
         'Join',
         0,
         '',               // Subject (missing)
-        'Body',
-        null,
-        null
+        'Body'
       ];
       
       const errorCollector = { errors: [], rowNumbers: [] };
@@ -373,9 +303,7 @@ describe('ValidatedActionSpec Class', () => {
         'Join',
         0,
         'Subject',
-        '',               // Body (missing)
-        null,
-        null
+        ''                // Body (missing)
       ];
       
       const errorCollector = { errors: [], rowNumbers: [] };
@@ -396,9 +324,7 @@ describe('ValidatedActionSpec Class', () => {
         'Expiry1',
         -30,
         'Expiring Soon',
-        richTextBody,     // Body as RichText object
-        null,
-        null
+        richTextBody      // Body as RichText object
       ];
       
       const spec = ValidatedActionSpec.fromRow(rowData, headers, 2, null);
@@ -426,9 +352,9 @@ describe('ValidatedActionSpec Class', () => {
     test('should validate multiple valid rows', () => {
       const headers = ValidatedActionSpec.HEADERS;
       const rows = [
-        ['Join', 0, 'Welcome!', '<p>Welcome</p>', 'group1', null],
-        ['Renew', null, 'Time to Renew', '<p>Renew</p>', null, null],
-        ['Expiry1', -30, 'Expiring Soon', '<p>Expiring</p>', null, 'expired-group']
+        ['Join', 0, 'Welcome!', '<p>Welcome</p>'],
+        ['Renew', null, 'Time to Renew', '<p>Renew</p>'],
+        ['Expiry1', -30, 'Expiring Soon', '<p>Expiring</p>']
       ];
       
       const validSpecs = ValidatedActionSpec.validateRows(rows, headers, 'test context');
@@ -443,10 +369,10 @@ describe('ValidatedActionSpec Class', () => {
     test('should filter invalid rows and collect errors', () => {
       const headers = ValidatedActionSpec.HEADERS;
       const rows = [
-        ['Join', 0, 'Welcome!', '<p>Welcome</p>', null, null],           // Valid
-        ['InvalidType', 0, 'Subject', 'Body', null, null],                 // Invalid Type
-        ['Renew', null, '', 'Body', null, null],                           // Missing Subject
-        ['Expiry1', -30, 'Subject', '<p>Body</p>', null, null]            // Valid
+        ['Join', 0, 'Welcome!', '<p>Welcome</p>'],                         // Valid
+        ['InvalidType', 0, 'Subject', 'Body'],                             // Invalid Type
+        ['Renew', null, '', 'Body'],                                        // Missing Subject
+        ['Expiry1', -30, 'Subject', '<p>Body</p>']                         // Valid
       ];
       
       const validSpecs = ValidatedActionSpec.validateRows(rows, headers, 'test context');
@@ -461,8 +387,8 @@ describe('ValidatedActionSpec Class', () => {
     test('should send consolidated email alert on validation errors', () => {
       const headers = ValidatedActionSpec.HEADERS;
       const rows = [
-        ['', 0, 'Subject', 'Body', null, null],                    // Missing Type
-        ['Join', 0, '', 'Body', null, null]                        // Missing Subject
+        ['', 0, 'Subject', 'Body'],                                         // Missing Type
+        ['Join', 0, '', 'Body']                                             // Missing Subject
       ];
       
       ValidatedActionSpec.validateRows(rows, headers, 'DataAccess.getActionSpecs');
@@ -490,7 +416,7 @@ describe('ValidatedActionSpec Class', () => {
     test('should continue processing on email send failure', () => {
       const headers = ValidatedActionSpec.HEADERS;
       const rows = [
-        ['', 0, 'Subject', 'Body', null, null]  // Invalid - missing Type
+        ['', 0, 'Subject', 'Body']  // Invalid - missing Type
       ];
       
       global.MailApp.sendEmail.mockImplementation(() => {
@@ -514,9 +440,7 @@ describe('ValidatedActionSpec Class', () => {
         'Join',
         'Welcome!',
         '<p>Body</p>',
-        0,
-        'group1',
-        null
+        0
       );
       
       const array = spec.toArray();
@@ -525,9 +449,7 @@ describe('ValidatedActionSpec Class', () => {
         'Join',
         0,
         'Welcome!',
-        '<p>Body</p>',
-        'group1',
-        null
+        '<p>Body</p>'
       ]);
       expect(array.length).toBe(ValidatedActionSpec.HEADERS.length);
     });
@@ -537,16 +459,12 @@ describe('ValidatedActionSpec Class', () => {
         'Renew',
         'Renewal',
         '<p>Renew</p>',
-        null,
-        null,
         null
       );
       
       const array = spec.toArray();
       
       expect(array[1]).toBe(null);  // Offset
-      expect(array[4]).toBe(null);  // GroupsToAdd
-      expect(array[5]).toBe(null);  // GroupsToRemove
     });
     
     test('should round-trip through toArray and fromRow', () => {
@@ -554,9 +472,7 @@ describe('ValidatedActionSpec Class', () => {
         'Expiry2',
         'Second Notice',
         '<p>Please renew</p>',
-        -15,
-        'members@sc3.club',
-        'pending@sc3.club'
+        -15
       );
       
       const array = original.toArray();
@@ -572,8 +488,6 @@ describe('ValidatedActionSpec Class', () => {
       expect(reconstructed.Subject).toBe(original.Subject);
       expect(reconstructed.Body).toBe(original.Body);
       expect(reconstructed.Offset).toBe(original.Offset);
-      expect(reconstructed.GroupsToAdd).toBe(original.GroupsToAdd);
-      expect(reconstructed.GroupsToRemove).toBe(original.GroupsToRemove);
     });
     
     test('should preserve RichText Body object in toArray', () => {
@@ -586,8 +500,6 @@ describe('ValidatedActionSpec Class', () => {
         'Join',
         'Welcome',
         richTextBody,
-        null,
-        null,
         null
       );
       
@@ -600,7 +512,7 @@ describe('ValidatedActionSpec Class', () => {
   describe('HEADERS Static Property', () => {
     
     test('should have correct column count', () => {
-      expect(ValidatedActionSpec.HEADERS.length).toBe(6);
+      expect(ValidatedActionSpec.HEADERS.length).toBe(4);
     });
     
     test('should have expected column names', () => {
@@ -609,8 +521,6 @@ describe('ValidatedActionSpec Class', () => {
       expect(headers).toContain('Offset');
       expect(headers).toContain('Subject');
       expect(headers).toContain('Body');
-      expect(headers).toContain('GroupsToAdd');
-      expect(headers).toContain('GroupsToRemove');
     });
     
     test('should match toArray output order', () => {
@@ -618,9 +528,7 @@ describe('ValidatedActionSpec Class', () => {
         'Join',
         'Subject',
         'Body',
-        0,
-        'group1',
-        'group2'
+        0
       );
       
       const array = spec.toArray();
@@ -636,8 +544,6 @@ describe('ValidatedActionSpec Class', () => {
       expect(reconstructed.Subject).toBe(spec.Subject);
       expect(reconstructed.Body).toBe(spec.Body);
       expect(reconstructed.Offset).toBe(spec.Offset);
-      expect(reconstructed.GroupsToAdd).toBe(spec.GroupsToAdd);
-      expect(reconstructed.GroupsToRemove).toBe(spec.GroupsToRemove);
     });
   });
 });
