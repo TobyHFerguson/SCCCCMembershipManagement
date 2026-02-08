@@ -218,6 +218,20 @@ var DataAccess = {
             ? ValidatedTransaction.validateRows(rows, headers, 'DataAccess.getTransactionsForUpdate')
             : [];
         return { transactions, headers, sheet };
+    },
+    /**
+     * Get ExpirationFIFO items as validated objects (read-only accessor).
+     * Wraps SheetAccess + ValidatedFIFOItem.validateRows at the typed domain boundary.
+     *
+     * @returns {ValidatedFIFOItem[]} Array of valid ValidatedFIFOItem instances
+     */
+    getExpirationFIFO: () => {
+        const allData = SheetAccess.getDataAsArrays('ExpirationFIFO');
+        if (allData.length === 0) { return []; }
+        const headers = allData[0];
+        const rows = allData.slice(1);
+        if (rows.length === 0) { return []; }
+        return ValidatedFIFOItem.validateRows(rows, headers, 'DataAccess.getExpirationFIFO');
     }
 };
 

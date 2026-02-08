@@ -205,8 +205,8 @@ MembershipManagement.generateExpiringMembersList = function () {
     const init = MembershipManagement.Internal.initializeManagerDataWithSpreadsheetApp_();
     const { manager, membershipData, expiryScheduleData, membershipSheet, originalMembershipRows, membershipHeaders } = init;
     
-    // Get ExpirationFIFO data
-    const expirationQueue = SheetAccess.getData('ExpirationFIFO') || [];
+    // Get ExpirationFIFO data via DataAccess (typed domain boundary)
+    const expirationQueue = DataAccess.getExpirationFIFO() || [];
     const initialQueueLength = expirationQueue.length;
 
     const prefillFormTemplate = Properties.getProperty('PREFILL_FORM_TEMPLATE');
@@ -228,20 +228,20 @@ MembershipManagement.generateExpiringMembersList = function () {
     const expiryTypeCounts = {};
 
     for (const msg of result.messages) {
-      /** @type {MembershipManagement.FIFOItem} */
-      const item = {
-        id: makeId(),
-        email: msg.email,
-        subject: msg.subject,
-        htmlBody: msg.htmlBody,
-        groups: msg.groups || '',
-        attempts: 0,
-        lastAttemptAt: '',
-        lastError: '',
-        nextAttemptAt: '',
-        maxAttempts: undefined,
-        dead: false
-      };
+      // Create ValidatedFIFOItem instance
+      const item = new ValidatedFIFOItem(
+        makeId(),
+        msg.email,
+        msg.subject,
+        msg.htmlBody,
+        msg.groups || '',
+        0,
+        '',
+        '',
+        '',
+        null,
+        false
+      );
 
       expirationQueue.push(item);
       
@@ -361,8 +361,8 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       membershipHeaders = result.headers;
     }
     
-    // GAS: Get queue and convert spreadsheet Date objects to ISO strings for pure function processing
-    const rawQueue = opts.data?.expirationFIFO || SheetAccess.getData('ExpirationFIFO') || [];
+    // GAS: Get queue via DataAccess (typed domain boundary) and convert spreadsheet Date objects to ISO strings for pure function processing
+    const rawQueue = opts.data?.expirationFIFO || DataAccess.getExpirationFIFO() || [];
     /** @type {MembershipManagement.FIFOItem[]} */
     const queue = MembershipManagement.Utils.convertFIFOItemsFromSpreadsheet(rawQueue);
     

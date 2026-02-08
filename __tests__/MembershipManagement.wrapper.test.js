@@ -29,11 +29,17 @@ global.Common.Logger.debug = jest.fn();
 const { SheetAccess } = require('../src/common/data/SheetAccess.js');
 global.SheetAccess = SheetAccess;
 
-// Load ValidatedMember and MemberPersistence before MembershipManagement
+// Load ValidatedMember, ValidatedFIFOItem, and MemberPersistence before MembershipManagement
 const { ValidatedMember } = require('../src/common/data/ValidatedMember.js');
+const { ValidatedFIFOItem } = require('../src/services/MembershipManagement/ValidatedFIFOItem.js');
 const { MemberPersistence } = require('../src/common/data/MemberPersistence.js');
 global.ValidatedMember = ValidatedMember;
+global.ValidatedFIFOItem = ValidatedFIFOItem;
 global.MemberPersistence = MemberPersistence;
+
+// Load DataAccess before MembershipManagement
+const { DataAccess } = require('../src/common/data/data_access.js');
+global.DataAccess = DataAccess;
 
 // Load utilities and manager so MembershipManagement namespace is populated
 require('../src/services/MembershipManagement/utils.js');
@@ -53,10 +59,11 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
 
     beforeEach(() => {
         // Prepare in-memory fiddlers via helper
+        // Use FIFOItem interface field names (email, subject, htmlBody) not spreadsheet column names
         fifoData = [
-            { id: 'r1', createdAt: '', status: 'pending', memberEmail: 's1@example.com', memberName: '', expiryDate: '', actionType: 'notify-only', groups: '', emailTo: 's1@example.com', emailSubject: 's1', emailBody: 'b', attempts: 0, lastAttemptAt: '', lastError: '', nextAttemptAt: '', maxAttempts: '', note: '' },
-            { id: 'r2', createdAt: '', status: 'pending', memberEmail: 's2@example.com', memberName: '', expiryDate: '', actionType: 'notify-only', groups: '', emailTo: 's2@example.com', emailSubject: 's2', emailBody: 'b', attempts: 0, lastAttemptAt: '', lastError: '', nextAttemptAt: '', maxAttempts: '', note: '' },
-            { id: 'r3', createdAt: '', status: 'pending', memberEmail: 's3@example.com', memberName: '', expiryDate: '', actionType: 'notify-only', groups: '', emailTo: 's3@example.com', emailSubject: 's3', emailBody: 'b', attempts: 0, lastAttemptAt: '', lastError: '', nextAttemptAt: '', maxAttempts: '', note: '' }
+            { id: 'r1', email: 's1@example.com', subject: 's1', htmlBody: 'b', groups: '', attempts: 0, lastAttemptAt: '', lastError: '', nextAttemptAt: '', maxAttempts: null, dead: false },
+            { id: 'r2', email: 's2@example.com', subject: 's2', htmlBody: 'b', groups: '', attempts: 0, lastAttemptAt: '', lastError: '', nextAttemptAt: '', maxAttempts: null, dead: false },
+            { id: 'r3', email: 's3@example.com', subject: 's3', htmlBody: 'b', groups: '', attempts: 0, lastAttemptAt: '', lastError: '', nextAttemptAt: '', maxAttempts: null, dead: false }
         ];
         deadData = [];
 

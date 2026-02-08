@@ -4,6 +4,7 @@ module.exports = function createFiddlerMock(initialFifo = [], initialDead = []) 
   let deadData = Array.isArray(initialDead) ? initialDead.slice() : [];
   let originalGetData = null;
   let originalSetData = null;
+  let originalGetDataAsArrays = null;
 
   function install() {
     // Ensure global Common exists, preserving existing properties
@@ -13,9 +14,10 @@ module.exports = function createFiddlerMock(initialFifo = [], initialDead = []) 
     global.SpreadsheetManager = global.SpreadsheetManager || {};
     global.SheetAccess = global.SheetAccess || {};
     
-    // Mock SheetAccess getData/setData methods
+    // Mock SheetAccess getData/setData/getDataAsArrays methods
     originalGetData = global.SheetAccess.getData;
     originalSetData = global.SheetAccess.setData;
+    originalGetDataAsArrays = global.SheetAccess.getDataAsArrays;
     
     global.SheetAccess.getData = (name) => {
       if (name === 'ExpirationFIFO') {
@@ -26,6 +28,24 @@ module.exports = function createFiddlerMock(initialFifo = [], initialDead = []) 
       }
       if (name === 'ExpirySchedule') {
         return [];
+      }
+      // default empty data for other sheets
+      return [];
+    };
+    
+    global.SheetAccess.getDataAsArrays = (name) => {
+      if (name === 'ExpirationFIFO') {
+        if (fifoData.length === 0) return [];
+        // Convert objects to arrays with headers
+        const headers = Object.keys(fifoData[0]);
+        const rows = fifoData.map(obj => headers.map(h => obj[h]));
+        return [headers, ...rows];
+      }
+      if (name === 'ExpirationDeadLetter') {
+        if (deadData.length === 0) return [];
+        const headers = Object.keys(deadData[0]);
+        const rows = deadData.map(obj => headers.map(h => obj[h]));
+        return [headers, ...rows];
       }
       // default empty data for other sheets
       return [];
@@ -45,6 +65,7 @@ module.exports = function createFiddlerMock(initialFifo = [], initialDead = []) 
   function restore() {
     if (originalGetData) global.SheetAccess.getData = originalGetData;
     if (originalSetData) global.SheetAccess.setData = originalSetData;
+    if (originalGetDataAsArrays) global.SheetAccess.getDataAsArrays = originalGetDataAsArrays;
   }
 
   function getFifo() { return fifoData.slice(); }
