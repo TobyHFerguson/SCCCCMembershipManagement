@@ -52,7 +52,7 @@ ProfileManagementService.updateProfile = function (userToken, updatedProfile) {
   if (!originalProfile) {
     throw new Error(`Profile not found for email: ${userEmail}`);
   }
-  ProfileManagementService._checkForForbiddenUpdates(originalProfile, updatedProfile, forbiddenFields);
+  ProfileManagementService._checkForForbiddenUpdates(/** @type {Record<string, unknown>} */ (/** @type {unknown} */ (originalProfile)), updatedProfile, forbiddenFields);
   console.log('originalProfile', originalProfile);
   console.log('updatedProfile', updatedProfile);
   updatedProfile = {...originalProfile, ...updatedProfile}; // Merge original and updated profiles

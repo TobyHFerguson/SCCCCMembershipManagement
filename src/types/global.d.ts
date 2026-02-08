@@ -193,18 +193,19 @@ declare const VERIFICATION_CONFIG: {
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
  */
 declare class ApiClientManager {
-    static successResponse(data: any, meta?: any): ApiResponse;
-    static errorResponse(error: string, errorCode?: string, meta?: any): ApiResponse;
-    static validateRequest(request: any): { valid: boolean; error?: string };
-    static validateRequiredParams(params: Record<string, any>, required: string[]): { valid: boolean; missing?: string[] };
-    static sanitizeString(value: any, maxLength?: number): string;
+    static successResponse(data: unknown, meta?: Record<string, unknown>): ApiResponse;
+    static errorResponse(error: string, errorCode?: string, meta?: Record<string, unknown>): ApiResponse;
+    static validateRequest(request: unknown): { valid: boolean; error?: string };
+    static validateRequiredParams(params: Record<string, unknown>, required: string[]): { valid: boolean; missing?: string[] };
+    static sanitizeString(value: unknown, maxLength?: number): string;
+    static sanitizeParams(params: Record<string, unknown>, schema?: Record<string, number | Record<string, unknown>>): Record<string, unknown>;
     static createRequestId(): string;
     static createRequestContext(action: string | undefined, requestId: string | undefined): { action: string; requestId: string; startTime: number };
     static getRequestDuration(context: { startTime: number }): number;
-    static createMetaFromContext(context: { action: string; requestId: string; startTime: number }): Record<string, any>;
+    static createMetaFromContext(context: { action: string; requestId: string; startTime: number }): { requestId: string; duration: number; action: string };
     static actionRequiresAuth(action: string, handlers: Record<string, ActionHandler>): boolean;
     static listActions(handlers: Record<string, ActionHandler>, includePrivate?: boolean): Array<{ action: string; requiresAuth: boolean; description?: string }>;
-    static formatErrorForLogging(error: Error | string, request?: any): Record<string, any>;
+    static formatErrorForLogging(error: Error | string, request?: { action?: string; params?: Record<string, unknown>; token?: string }): { message: string; stack?: string; action?: string; hasParams?: boolean; hasToken?: boolean };
 }
 
 /**
@@ -212,7 +213,7 @@ declare class ApiClientManager {
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
  */
 declare class ApiClient {
-    static registerHandler(action: string, handler: (params: Record<string, any>, token?: string) => ApiResponse, options?: { requiresAuth?: boolean; description?: string }): void;
+    static registerHandler(action: string, handler: (params: Record<string, unknown>, token?: string) => ApiResponse, options?: { requiresAuth?: boolean; description?: string }): void;
     static handleRequest(request: ApiRequest): string;
     static listActions(): string;
     static getHandler(action: string): ActionHandler | undefined;
@@ -221,7 +222,7 @@ declare class ApiClient {
 // API types
 interface ApiResponse {
     success: boolean;
-    data?: any;
+    data?: unknown;
     error?: string;
     errorCode?: string;
     meta?: {
@@ -233,12 +234,12 @@ interface ApiResponse {
 
 interface ApiRequest {
     action: string;
-    params?: Record<string, any>;
+    params?: Record<string, unknown>;
     token?: string;
 }
 
 interface ActionHandler {
-    handler: (params: Record<string, any>, token?: string) => ApiResponse;
+    handler: (params: Record<string, unknown>, token?: string) => ApiResponse;
     requiresAuth: boolean;
     description?: string;
 }
@@ -636,7 +637,7 @@ declare class ValidatedTransaction {
     /** 1-based sheet row index, set by fromRow() for write-back targeting */
     _sheetRowIndex?: number;
     /** Header-keyed snapshot of original cell values, set by fromRow() for change detection */
-    _originalValues?: Record<string, any>;
+    _originalValues?: Record<string, unknown>;
     
     constructor(
         emailAddress: string,
@@ -1133,7 +1134,7 @@ declare namespace ProfileManagementService {
     interface ProfileUpdateResult {
         success: boolean;
         message: string;
-        mergedProfile?: ValidatedMemberData;
+        mergedProfile?: Record<string, unknown> | ValidatedMemberData;
     }
 
     // Profile field schema
@@ -1152,12 +1153,12 @@ declare namespace ProfileManagementService {
         static validateEmail(email: string): ValidationResult;
         static validateName(name: string, fieldName?: string): ValidationResult;
         static validatePhone(phone: string): ValidationResult;
-        static checkForForbiddenUpdates(originalProfile: Record<string, any>, updatedProfile: Record<string, any>, forbiddenFields?: string[]): ForbiddenFieldCheckResult;
-        static validateProfileUpdate(updatedProfile: Record<string, any>): ValidationResult;
-        static mergeProfiles(originalProfile: Record<string, any>, updates: Record<string, any>): Record<string, any>;
-        static processProfileUpdate(originalProfile: Record<string, any>, updatedProfile: Record<string, any>, forbiddenFields?: string[]): ProfileUpdateResult;
-        static formatProfileForDisplay(profile: Record<string, any>): Record<string, any> | null;
-        static getEditableFields(profile: Record<string, any>): Record<string, any> | null;
+        static checkForForbiddenUpdates(originalProfile: Record<string, unknown> | ValidatedMember, updatedProfile: Record<string, unknown> | ValidatedMember, forbiddenFields?: string[]): ForbiddenFieldCheckResult;
+        static validateProfileUpdate(updatedProfile: Record<string, unknown> | ValidatedMember): ValidationResult;
+        static mergeProfiles(originalProfile: Record<string, unknown> | ValidatedMember, updates: Record<string, unknown>): Record<string, unknown>;
+        static processProfileUpdate(originalProfile: Record<string, unknown> | ValidatedMember, updatedProfile: Record<string, unknown> | ValidatedMember, forbiddenFields?: string[]): ProfileUpdateResult;
+        static formatProfileForDisplay(profile: Record<string, unknown> | ValidatedMember): Record<string, unknown> | null;
+        static getEditableFields(profile: Record<string, unknown> | ValidatedMember): Record<string, unknown> | null;
         static normalizeEmail(email: string): string;
         static formatUpdateResult(success: boolean, message: string): { success: boolean; message: string };
     }
@@ -1166,7 +1167,7 @@ declare namespace ProfileManagementService {
     namespace Api {
         function handleGetProfile(params: { _authenticatedEmail?: string }): ApiResponse;
         function handleGetEditableFields(params: { _authenticatedEmail?: string }): ApiResponse;
-        function handleUpdateProfile(params: { _authenticatedEmail?: string; updates?: Record<string, any> }): ApiResponse;
+        function handleUpdateProfile(params: { _authenticatedEmail?: string; updates?: Record<string, unknown> }): ApiResponse;
     }
 
     // WebApp namespace - doGet handler
@@ -1175,8 +1176,8 @@ declare namespace ProfileManagementService {
     }
 
     // Legacy function (for backward compatibility)
-    function updateProfile(userToken: string, updatedProfile: Record<string, any>): { success: boolean; message: string };
-    function _checkForForbiddenUpdates(originalObject: Record<string, any>, updatedObject: Record<string, any>, forbiddenFields: string[]): void;
+    function updateProfile(userToken: string, updatedProfile: Record<string, unknown>): { success: boolean; message: string };
+    function _checkForForbiddenUpdates(originalObject: Record<string, unknown>, updatedObject: Record<string, unknown>, forbiddenFields: string[]): void;
     function initApi(): void;
 }
 
@@ -1294,9 +1295,9 @@ declare namespace EmailChangeService {
         static transformGroupsToMembershipInfo(groups: Array<{email: string}>, oldEmail: string, newEmail: string): GroupMembershipInfo[];
         static updateMembershipResult(membership: GroupMembershipInfo, success: boolean, error?: string): GroupMembershipInfo;
         static aggregateResults(results: GroupMembershipInfo[]): EmailUpdateResult;
-        static createUpdatedMemberRecord(originalMember: Record<string, any>, newEmail: string): Record<string, any> | null;
+        static createUpdatedMemberRecord(originalMember: Record<string, unknown>, newEmail: string): Record<string, unknown> | null;
         static createChangeLogEntry(oldEmail: string, newEmail: string, date?: Date): {date: Date, from: string, to: string};
-        static normalizeEmail(email: any): string;
+        static normalizeEmail(email: unknown): string;
         static buildVerificationEmailContent(code: string): {subject: string, body: string, htmlBody: string};
         static formatSendCodeResult(success: boolean, email: string, error?: string): {success: boolean, message: string, error?: string, errorCode?: string};
         static calculateBackoff(attempt: number, initialBackoffMs?: number): number;
@@ -1398,7 +1399,7 @@ declare namespace VotingService {
         static validateVote(tokenData: object | null, currentToken: string, allTokens: Array<{ Email: string; Token: string }>): VoteValidationResult;
         static buildElectionStatusMessage(state: string, hasVoted: boolean, ballotAccepting?: boolean): string;
         static processElectionForDisplay(election: object, userEmail: string, voters: Array<{ Email: string }>, ballotPublished?: boolean, ballotAccepting?: boolean, now?: Date): ProcessedElection;
-        static extractFirstValues(namedValues: Record<string, any[] | any>): Record<string, any>;
+        static extractFirstValues(namedValues: Record<string, unknown[] | unknown>): Record<string, unknown>;
         static extractElectionTitle(spreadsheetName: string, resultsSuffix?: string): string;
         static buildValidVoteEmailContent(electionTitle: string): { subject: string; body: string };
         static buildInvalidVoteEmailContent(electionTitle: string): { subject: string; body: string };

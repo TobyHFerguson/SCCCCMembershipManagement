@@ -221,7 +221,7 @@ VotingService.Trigger = {
         const spreadsheetId = e.source.getId();
         const vote = VotingService.Trigger.firstValues_(e.namedValues)
 
-        const token = vote[VotingService.Constants.TOKEN_ENTRY_FIELD_TITLE];
+        const token = /** @type {string} */ (vote[VotingService.Constants.TOKEN_ENTRY_FIELD_TITLE]);
         const tokenData = VotingService.Auth.consumeToken(token, spreadsheetId);
         const validatedResultsSheet = VotingService.Data.getValidatedResultsSheet(spreadsheetId);
 
@@ -428,10 +428,11 @@ VotingService.Trigger = {
     /**
     * Takes an object whose values are arrays and returns an object with the same keys,
      * but each value is the first element of the original array.
-     * @param {Record<string, any[]>} obj - Object with array values
-     * @returns {Record<string, any>} Object with first array element as value
+     * @param {Record<string, unknown[]>} obj - Object with array values (JUSTIFIED: arbitrary form response data from Google Forms)
+     * @returns {Record<string, unknown>} Object with first array element as value (JUSTIFIED: mirrors input object structure)
      */
     firstValues_: function (obj) {
+        /** @type {Record<string, unknown>} */
         const result = {};
         for (const key in obj) {
             if (Array.isArray(obj[key])) {

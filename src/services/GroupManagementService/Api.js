@@ -123,15 +123,15 @@ GroupManagementService.Api.handleGetSubscriptions = function(params) {
 
       // GAS: Get public groups
       /** @type {Array<{Name: string, Email: string}>} */
-      const groups = /** @type {any} */ (DataAccess.getPublicGroups());
+      const groups = DataAccess.getPublicGroups();
       
       // GAS: Get member data for each group
-      /** @type {Record<string, any>} */
+      /** @type {Record<string, GroupManagementService.GroupMember|null>} */
       const membersByGroup = {};
       for (const group of groups) {
         try {
           const member = GroupSubscription.getMember(group.Email, normalizedEmail);
-          membersByGroup[group.Email] = member;
+          membersByGroup[group.Email] = /** @type {GroupManagementService.GroupMember} */ (member);
         } catch (error) {
           // Log but continue - missing group membership is not fatal
           Logger.log('[GroupManagementService.Api] Error getting member for ' + group.Email + ': ' + error);
@@ -214,12 +214,12 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
 
       // GAS: Get current member status for each group being updated
       AppLogger.debug('GroupManagementService', `Fetching current member status for ${updates.length} groups`);
-      /** @type {Record<string, any>} */
+      /** @type {Record<string, GroupManagementService.GroupMember|null>} */
       const currentMembersByGroup = {};
       for (const update of updates) {
         try {
           const member = GroupSubscription.getMember(update.groupEmail, normalizedEmail);
-          currentMembersByGroup[update.groupEmail] = member;
+          currentMembersByGroup[update.groupEmail] = /** @type {GroupManagementService.GroupMember} */ (member);
         } catch (error) {
           AppLogger.warn('GroupManagementService', `Error getting member for ${update.groupEmail}`, error);
           currentMembersByGroup[update.groupEmail] = null;

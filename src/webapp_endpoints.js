@@ -393,7 +393,7 @@ function updateProfile(userToken, updatedProfile ) {
  * Handle API requests for SPA services.
  * This is the main entry point for google.script.run API calls.
  * 
- * @param {{action: string, params?: Record<string, any>, token?: string}} request - The API request object with action, optional params, and optional auth token
+ * @param {{action: string, params?: Record<string, unknown>, token?: string}} request - The API request object with action, optional params, and optional auth token (JUSTIFIED: arbitrary API data from diverse service endpoints)
  * @returns {string} JSON-encoded API response
  */
 function handleApiRequest(request) {
