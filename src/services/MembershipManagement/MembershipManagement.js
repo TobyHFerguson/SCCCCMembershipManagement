@@ -205,8 +205,8 @@ MembershipManagement.generateExpiringMembersList = function () {
     const init = MembershipManagement.Internal.initializeManagerDataWithSpreadsheetApp_();
     const { manager, membershipData, expiryScheduleData, membershipSheet, originalMembershipRows, membershipHeaders } = init;
     
-    // Get ExpirationFIFO data
-    const expirationQueue = SheetAccess.getData('ExpirationFIFO') || [];
+    // Get ExpirationFIFO data via DataAccess (typed domain boundary)
+    const expirationQueue = DataAccess.getExpirationFIFO() || [];
     const initialQueueLength = expirationQueue.length;
 
     const prefillFormTemplate = Properties.getProperty('PREFILL_FORM_TEMPLATE');
@@ -361,8 +361,8 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       membershipHeaders = result.headers;
     }
     
-    // GAS: Get queue and convert spreadsheet Date objects to ISO strings for pure function processing
-    const rawQueue = opts.data?.expirationFIFO || SheetAccess.getData('ExpirationFIFO') || [];
+    // GAS: Get queue via DataAccess (typed domain boundary) and convert spreadsheet Date objects to ISO strings for pure function processing
+    const rawQueue = opts.data?.expirationFIFO || DataAccess.getExpirationFIFO() || [];
     /** @type {MembershipManagement.FIFOItem[]} */
     const queue = MembershipManagement.Utils.convertFIFOItemsFromSpreadsheet(rawQueue);
     

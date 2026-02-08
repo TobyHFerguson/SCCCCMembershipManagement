@@ -777,6 +777,97 @@ declare class ValidatedActionSpec {
     static HEADERS: string[];
 }
 
+// Flat ValidatedFIFOItem class (new pattern for FIFO item validation)
+declare class ValidatedFIFOItem {
+    /** Unique identifier */
+    id: string;
+    
+    /** Member email */
+    email: string;
+    
+    /** Email subject */
+    subject: string;
+    
+    /** Email HTML body */
+    htmlBody: string;
+    
+    /** Comma-separated group emails (optional) */
+    groups: string;
+    
+    /** Number of attempts */
+    attempts: number;
+    
+    /** Last attempt timestamp ISO string */
+    lastAttemptAt: string;
+    
+    /** Last error message */
+    lastError: string;
+    
+    /** Next attempt timestamp ISO string */
+    nextAttemptAt: string;
+    
+    /** Max attempts override (optional) */
+    maxAttempts: number | null;
+    
+    /** Dead letter flag */
+    dead: boolean;
+    
+    /**
+     * Constructor
+     * @param id - Unique identifier (required)
+     * @param email - Member email (required, validated format)
+     * @param subject - Email subject (required, non-empty)
+     * @param htmlBody - Email HTML body (required, non-empty)
+     * @param groups - Comma-separated group emails (optional)
+     * @param attempts - Number of attempts (required, >= 0)
+     * @param lastAttemptAt - Last attempt timestamp ISO string (optional)
+     * @param lastError - Last error message (optional)
+     * @param nextAttemptAt - Next attempt timestamp ISO string (optional)
+     * @param maxAttempts - Max attempts override (optional)
+     * @param dead - Dead letter flag (optional, defaults to false)
+     */
+    constructor(
+        id: string,
+        email: string,
+        subject: string,
+        htmlBody: string,
+        groups: string,
+        attempts: number,
+        lastAttemptAt: string,
+        lastError: string,
+        nextAttemptAt: string,
+        maxAttempts?: number | null,
+        dead?: boolean
+    );
+    
+    /** Convert to array format for serialization/testing (NOT for sheet persistence) */
+    toArray(): Array<string | number | boolean | null>;
+    
+    /**
+     * Static factory method - creates ValidatedFIFOItem from row data
+     * Never throws - returns null on validation failure
+     * Uses header-based lookup for column-order independence
+     */
+    static fromRow(
+        rowArray: Array<any>,
+        headers: Array<string>,
+        rowNumber: number,
+        errorCollector?: { errors: string[]; rowNumbers: number[] }
+    ): ValidatedFIFOItem | null;
+    
+    /**
+     * Batch validation with consolidated error reporting
+     */
+    static validateRows(
+        rows: Array<Array<any>>,
+        headers: Array<string>,
+        context: string
+    ): ValidatedFIFOItem[];
+    
+    /** Column headers constant */
+    static HEADERS: string[];
+}
+
 declare class MemberPersistence {
     /** Write only changed cells to minimize version history noise */
     static writeChangedCells(
@@ -851,6 +942,9 @@ declare var DataAccess: {
         headers: string[];
         sheet: GoogleAppsScript.Spreadsheet.Sheet;
     };
+    
+    /** Gets ExpirationFIFO items as validated objects (read-only) */
+    getExpirationFIFO: () => ValidatedFIFOItem[];
 };
 
 // Flat ServiceLogger class (new pattern - replaces Common.Logging.ServiceLogger)
