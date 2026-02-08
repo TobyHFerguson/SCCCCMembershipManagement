@@ -228,20 +228,20 @@ MembershipManagement.generateExpiringMembersList = function () {
     const expiryTypeCounts = {};
 
     for (const msg of result.messages) {
-      /** @type {MembershipManagement.FIFOItem} */
-      const item = {
-        id: makeId(),
-        email: msg.email,
-        subject: msg.subject,
-        htmlBody: msg.htmlBody,
-        groups: msg.groups || '',
-        attempts: 0,
-        lastAttemptAt: '',
-        lastError: '',
-        nextAttemptAt: '',
-        maxAttempts: undefined,
-        dead: false
-      };
+      // Create ValidatedFIFOItem instance
+      const item = new ValidatedFIFOItem(
+        makeId(),
+        msg.email,
+        msg.subject,
+        msg.htmlBody,
+        msg.groups || '',
+        0,
+        '',
+        '',
+        '',
+        null,
+        false
+      );
 
       expirationQueue.push(item);
       
