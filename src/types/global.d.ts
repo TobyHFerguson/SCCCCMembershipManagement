@@ -707,6 +707,18 @@ declare var DataAccess: {
     /** Gets all members */
     getMembers: () => ValidatedMember[];
     
+    /**
+     * Gets active members with write-context for selective cell writes.
+     * Returns validated members plus the sheet, originalRows, and headers needed
+     * for MemberPersistence.writeChangedCells().
+     */
+    getActiveMembersForUpdate: () => {
+        members: ValidatedMember[];
+        sheet: GoogleAppsScript.Spreadsheet.Sheet;
+        originalRows: any[][];
+        headers: string[];
+    };
+    
     /** Gets action specifications with processed body content */
     getActionSpecs: () => {[k: string]: MembershipManagement.ActionSpec};
     

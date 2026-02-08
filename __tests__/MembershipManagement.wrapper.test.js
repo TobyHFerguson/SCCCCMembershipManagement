@@ -65,10 +65,10 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
 
         // Mock getSheet for ActiveMembers (processExpirationFIFO loads membership data)
         const mockActiveMembersData = [
-            ['Status', 'Email', 'First', 'Last', 'Phone', 'Joined', 'Expires', 'Period', 'Directory Share Name', 'Directory Share Email', 'Directory Share Phone', 'Renewed On'],
-            ['Active', 's1@example.com', 'User', 'One', '555-1111', new Date('2023-01-01'), new Date('2024-01-01'), 12, true, false, false, null],
-            ['Active', 's2@example.com', 'User', 'Two', '555-2222', new Date('2023-01-01'), new Date('2024-01-01'), 12, true, false, false, null],
-            ['Active', 's3@example.com', 'User', 'Three', '555-3333', new Date('2023-01-01'), new Date('2024-01-01'), 12, true, false, false, null]
+            ['Status', 'Email', 'First', 'Last', 'Phone', 'Joined', 'Expires', 'Period', 'Migrated', 'Directory Share Name', 'Directory Share Email', 'Directory Share Phone', 'Renewed On'],
+            ['Active', 's1@example.com', 'User', 'One', '555-1111', new Date('2023-01-01'), new Date('2024-01-01'), 12, '', true, false, false, null],
+            ['Active', 's2@example.com', 'User', 'Two', '555-2222', new Date('2023-01-01'), new Date('2024-01-01'), 12, '', true, false, false, null],
+            ['Active', 's3@example.com', 'User', 'Three', '555-3333', new Date('2023-01-01'), new Date('2024-01-01'), 12, '', true, false, false, null]
         ];
         
         global.SpreadsheetManager.getSheet = jest.fn((sheetName) => {
@@ -99,6 +99,16 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
         global.DataAccess.getPublicGroups = jest.fn(() => [
             { Name: 'Test Group', Email: 'test@example.com', Subscription: 'auto' }
         ]);
+        
+        // Mock getActiveMembersForUpdate for processExpirationFIFO
+        global.DataAccess.getActiveMembersForUpdate = jest.fn(() => {
+            const sheet = global.SpreadsheetManager.getSheet('ActiveMembers');
+            const allData = sheet.getDataRange().getValues();
+            const headers = allData[0];
+            const originalRows = allData.slice(1);
+            const members = ValidatedMember.validateRows(originalRows, headers, 'test');
+            return { members, sheet, originalRows, headers };
+        });
         
         // Backward compatibility alias
         global.Common.Data.Access = global.DataAccess;
