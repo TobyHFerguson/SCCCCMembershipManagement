@@ -20,8 +20,8 @@ VotingService.Data = {
      * Sets the election data in the Elections sheet.
      * This will overwrite the existing data in the sheet.
      * 
-     * @param {Array<VotingService.Election>} elections - Array of election objects to be stored in the Elections sheet.
-     * Each object should have properties like Title, Form ID, Managers, Start Date, End Date, and Voters.
+     * @param {ValidatedElection[]} elections - Array of validated election objects to be stored in the Elections sheet.
+     * Each object should have properties like Title, Form Edit URL, Election Officers, Start Date, End Date, and TriggerId.
      */
     storeElectionData: function (elections) {
         SheetAccess.setData('Elections', elections);
@@ -29,7 +29,7 @@ VotingService.Data = {
     /**
      * Checks if a user has already voted in a specific election.
      * @param {string} email - The email of the user to check.
-     * @param {VotingService.Election} election - The election to check against.
+     * @param {ValidatedElection} election - The validated election to check against.
      * @returns {boolean} - True if the user has voted, false otherwise.
      */
     hasVotedAlreadyInThisElection: function (email, election) {

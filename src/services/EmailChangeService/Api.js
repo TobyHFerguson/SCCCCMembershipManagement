@@ -472,7 +472,7 @@ EmailChangeService.Api.handleVerifyAndGetGroups = function(params) {
  * @param {{_authenticatedEmail: string, newEmail: string, groups: Array<{name: string, email: string, isMember: boolean, delivery?: string}>}} params - Request parameters
  * @param {string} params._authenticatedEmail - Authenticated user's email (original email)
  * @param {string} params.newEmail - The new email address
- * @param {Array} params.groups - Array of group membership info
+ * @param {Array<{name: string, email: string, isMember: boolean, delivery?: string}>} params.groups - Array of group membership info
  * @returns {ApiResponse}
  */
 EmailChangeService.Api.handleChangeEmail = function(params) {
@@ -575,7 +575,7 @@ EmailChangeService.Api.storeVerificationData = function(code, data) {
 /**
  * Retrieve verification data from Script Properties
  * @param {string} code - The verification code (used as key suffix)
- * @returns {Object|null} The verification data or null if not found/expired
+ * @returns {EmailChangeService.VerificationData|null} The verification data or null if not found/expired
  */
 EmailChangeService.Api.getVerificationData = function(code) {
     const key = VERIFICATION_KEY_PREFIX + code;

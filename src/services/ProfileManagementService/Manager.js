@@ -236,7 +236,7 @@ ProfileManagementService.Manager = class {
   /**
    * Check if a profile update contains forbidden field modifications
    * @param {ValidatedMember} originalProfile - The original profile
-   * @param {ValidatedMember} updatedProfile - The updated profile
+   * @param {Partial<ValidatedMemberData>} updatedProfile - The updated profile (partial fields)
    * @param {string[]} [forbiddenFields] - List of forbidden fields
    * @returns {ForbiddenFieldCheckResult}
    */
@@ -269,7 +269,7 @@ ProfileManagementService.Manager = class {
 
   /**
    * Validate an entire profile update
-   * @param {Record<string, unknown> | ValidatedMember} updatedProfile - The profile data to validate (can be partial ValidatedMember - JUSTIFIED: arbitrary profile field updates from diverse sources)
+   * @param {Partial<ValidatedMemberData>} updatedProfile - The profile data to validate (partial member fields)
    * @returns {ValidationResult}
    */
   static validateProfileUpdate(updatedProfile) {
@@ -283,7 +283,7 @@ ProfileManagementService.Manager = class {
 
     // Validate First Name if present
     if (Object.prototype.hasOwnProperty.call(updatedProfile, 'First')) {
-      const firstValidation = this.validateName(/** @type {string} */ (updatedProfile.First), 'First Name');
+      const firstValidation = this.validateName(updatedProfile.First, 'First Name');
       if (!firstValidation.valid) {
         return firstValidation;
       }
@@ -291,7 +291,7 @@ ProfileManagementService.Manager = class {
 
     // Validate Last Name if present
     if (Object.prototype.hasOwnProperty.call(updatedProfile, 'Last')) {
-      const lastValidation = this.validateName(/** @type {string} */ (updatedProfile.Last), 'Last Name');
+      const lastValidation = this.validateName(updatedProfile.Last, 'Last Name');
       if (!lastValidation.valid) {
         return lastValidation;
       }
@@ -299,7 +299,7 @@ ProfileManagementService.Manager = class {
 
     // Validate Phone if present
     if (Object.prototype.hasOwnProperty.call(updatedProfile, 'Phone')) {
-      const phoneValidation = this.validatePhone(/** @type {string} */ (updatedProfile.Phone));
+      const phoneValidation = this.validatePhone(updatedProfile.Phone);
       if (!phoneValidation.valid) {
         return phoneValidation;
       }
@@ -324,18 +324,18 @@ ProfileManagementService.Manager = class {
 
   /**
    * Merge original profile with updates
-   * @param {ValidatedMember | Record<string, unknown>} originalProfile - The original profile
-   * @param {Record<string, unknown>} updates - The updates to apply (field name to new value - JUSTIFIED: arbitrary profile field updates from diverse sources)
-   * @returns {Record<string, unknown>} The merged profile (plain object, not class instance)
+   * @param {ValidatedMember} originalProfile - The original profile
+   * @param {Partial<ValidatedMemberData>} updates - The updates to apply (field name to new value)
+   * @returns {ValidatedMemberData} The merged profile (plain object, not class instance)
    */
   static mergeProfiles(originalProfile, updates) {
-    return /** @type {Record<string, unknown>} */ ({ ...originalProfile, ...updates });
+    return { ...originalProfile, ...updates };
   }
 
   /**
    * Process a profile update (full validation and merge)
    * @param {ValidatedMember} originalProfile - The original profile
-   * @param {ValidatedMember} updatedProfile - The updated profile data
+   * @param {Partial<ValidatedMemberData>} updatedProfile - The updated profile data (partial fields)
    * @param {string[]} [forbiddenFields] - List of forbidden fields
    * @returns {ProfileUpdateResult}
    */
@@ -375,7 +375,7 @@ ProfileManagementService.Manager = class {
     }
 
     // Merge profiles
-    const mergedProfile = this.mergeProfiles(originalProfile, /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (updatedProfile)));
+    const mergedProfile = this.mergeProfiles(originalProfile, updatedProfile);
 
     return {
       success: true,
@@ -387,8 +387,8 @@ ProfileManagementService.Manager = class {
   /**
    * Format a profile for display (client-safe view)
    * Removes sensitive fields that shouldn't be exposed to the client
-   * @param {ValidatedMember | Record<string, unknown>} profile - The full profile
-   * @returns {Record<string, unknown>} The safe profile for display (JUSTIFIED: arbitrary profile fields for display)
+   * @param {ValidatedMember | ValidatedMemberData} profile - The full profile
+   * @returns {ProfileManagementService.ProfileDisplayData | null} The safe profile for display
    */
   static formatProfileForDisplay(profile) {
     if (!profile) {
@@ -420,8 +420,8 @@ ProfileManagementService.Manager = class {
 
   /**
    * Get editable fields from a profile
-   * @param {ValidatedMember | Record<string, unknown>} profile - The full profile
-   * @returns {Record<string, unknown>} Only the editable fields (JUSTIFIED: arbitrary profile fields for editing)
+   * @param {ValidatedMember | ValidatedMemberData} profile - The full profile
+   * @returns {ProfileManagementService.EditableProfileFields | null} Only the editable fields
    */
   static getEditableFields(profile) {
     if (!profile) {

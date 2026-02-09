@@ -30,7 +30,7 @@ GroupManagementService.Api = GroupManagementService.Api || {};
  * Note: Service access is logged by getServiceContent() wrapper in webapp_endpoints.js
  * 
  * @param {string} email - Authenticated user email
- * @returns {{serviceName: string, subscriptions: Array, deliveryOptions: Object, error?: string}} Service data
+ * @returns {{serviceName: string, subscriptions: GroupManagementService.GroupSubscription[], deliveryOptions: Record<string, string[]>, error?: string}} Service data
  */
 GroupManagementService.Api.getData = function(email) {
   AppLogger.info('GroupManagementService', `getData() started for user: ${email}`);
@@ -122,16 +122,15 @@ GroupManagementService.Api.handleGetSubscriptions = function(params) {
       const normalizedEmail = GroupManagementService.Manager.normalizeEmail(userEmail);
 
       // GAS: Get public groups
-      /** @type {Array<{Name: string, Email: string}>} */
       const groups = DataAccess.getPublicGroups();
       
       // GAS: Get member data for each group
-      /** @type {Record<string, GroupManagementService.GroupMember|null>} */
+      /** @type {Record<string, any>} JUSTIFIED: Google Groups API member objects have unknown/varying shape */
       const membersByGroup = {};
       for (const group of groups) {
         try {
           const member = GroupSubscription.getMember(group.Email, normalizedEmail);
-          membersByGroup[group.Email] = /** @type {GroupManagementService.GroupMember} */ (member);
+          membersByGroup[group.Email] = member;
         } catch (error) {
           // Log but continue - missing group membership is not fatal
           Logger.log('[GroupManagementService.Api] Error getting member for ' + group.Email + ': ' + error);
@@ -214,12 +213,12 @@ GroupManagementService.Api.handleUpdateSubscriptions = function(params) {
 
       // GAS: Get current member status for each group being updated
       AppLogger.debug('GroupManagementService', `Fetching current member status for ${updates.length} groups`);
-      /** @type {Record<string, GroupManagementService.GroupMember|null>} */
+      /** @type {Record<string, any>} JUSTIFIED: Google Groups API member objects have unknown/varying shape */
       const currentMembersByGroup = {};
       for (const update of updates) {
         try {
           const member = GroupSubscription.getMember(update.groupEmail, normalizedEmail);
-          currentMembersByGroup[update.groupEmail] = /** @type {GroupManagementService.GroupMember} */ (member);
+          currentMembersByGroup[update.groupEmail] = member;
         } catch (error) {
           AppLogger.warn('GroupManagementService', `Error getting member for ${update.groupEmail}`, error);
           currentMembersByGroup[update.groupEmail] = null;

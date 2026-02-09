@@ -1162,6 +1162,24 @@ describe('Manager tests', () => {
           expect(errors.length).toEqual(3);
           expect(errors[0].message).toEqual('This is a test error');
         })
+
+        it('should set txnNum and email on error objects for log consumers', () => {
+          const transactions = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
+          sendEmailFun = jest.fn(() => { throw new Error('Send failed') });
+          manager = new MembershipManagement.Manager(actionSpecs, groups, groupManager, sendEmailFun, today);
+          const { errors } = manager.processPaidTransactions(transactions, activeMembers, expirySchedule);
+          expect(errors.length).toBeGreaterThan(0);
+          errors.forEach(e => {
+            // txnNum is row number (i + 2, accounting for header and 0-index)
+            expect(e).toHaveProperty('txnNum');
+            expect(typeof e.txnNum).toBe('number');
+            // email is from the transaction
+            expect(e).toHaveProperty('email');
+            expect(typeof e.email).toBe('string');
+            // Verify txnNumber does NOT exist (bug: consumers were reading txnNumber)
+            expect(e).not.toHaveProperty('txnNumber');
+          });
+        })
       });
     })
   });

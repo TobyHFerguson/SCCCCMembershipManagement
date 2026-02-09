@@ -178,7 +178,7 @@ GroupManagementService.Manager = class {
 
   /**
    * Build a subscription object from group and member data
-   * @param {PublicGroup} group - The group
+   * @param {ValidatedPublicGroup} group - The group
    * @param {GroupMember|null} member - The member (null if not subscribed)
    * @param {Record<string, [string, string]>} [deliveryOptions] - Delivery options map
    * @returns {GroupSubscription}
@@ -207,7 +207,7 @@ GroupManagementService.Manager = class {
    * Build subscriptions for a user across all groups
    * This is a pure transformation of group and member data.
    * 
-   * @param {PublicGroup[]} groups - All public groups
+   * @param {ValidatedPublicGroup[]} groups - All public groups
    * @param {Record<string, GroupMember|null>} membersByGroup - Member data keyed by group email
    * @param {Record<string, [string, string]>} [deliveryOptions] - Delivery options map
    * @returns {GroupSubscription[]}

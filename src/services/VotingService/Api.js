@@ -125,7 +125,7 @@ VotingService.Api.handleGetActiveElections = function (params) {
 
       for (const election of elections) {
         try {
-          const formEditUrl = election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME];
+          const formEditUrl = election['Form Edit URL'];
 
           // Skip elections without form URLs
           if (!formEditUrl) {
@@ -207,6 +207,7 @@ VotingService.Api.handleGetElectionStats = function (params) {
 
     try {
       // GAS: Get election data from sheet
+      /** @type {ValidatedElection[]} */
       const elections = VotingService.Data.getElectionData();
 
       // PURE: Calculate stats
@@ -248,6 +249,7 @@ VotingService.Api.handleGenerateBallotToken = function (params) {
 
     try {
       // GAS: Get election data from sheet
+      /** @type {ValidatedElection[]} */
       const elections = VotingService.Data.getElectionData();
 
       // Find the election by title
@@ -257,7 +259,7 @@ VotingService.Api.handleGenerateBallotToken = function (params) {
         return ApiClientManager.errorResponse('Election not found', 'ELECTION_NOT_FOUND');
       }
 
-      const formEditUrl = election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME];
+      const formEditUrl = election['Form Edit URL'];
       if (!formEditUrl) {
         return ApiClientManager.errorResponse(
           'Election has no ballot form',

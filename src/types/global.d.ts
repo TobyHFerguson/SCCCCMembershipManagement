@@ -19,10 +19,10 @@ type ExpiredMembersQueue = MembershipManagement.ExpiredMembersQueue;
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
  */
 declare class AppLogger {
-    static debug(service: string, message: string, data?: any /* JUSTIFIED: arbitrary debug payload, JSON-serialized */): void;
-    static info(service: string, message: string, data?: any /* JUSTIFIED: arbitrary debug payload, JSON-serialized */): void;
-    static warn(service: string, message: string, data?: any /* JUSTIFIED: arbitrary debug payload, JSON-serialized */): void;
-    static error(service: string, message: string, data?: any /* JUSTIFIED: arbitrary debug payload, JSON-serialized */): void;
+    static debug(service: string, message: string, data?: any): void;
+    static info(service: string, message: string, data?: any): void;
+    static warn(service: string, message: string, data?: any): void;
+    static error(service: string, message: string, data?: any): void;
     static configure(): void;
     static setLevel(level: string): void;
     static getLogs(): Array<[Date | string, string, string, string, string]>;
@@ -193,19 +193,18 @@ declare const VERIFICATION_CONFIG: {
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
  */
 declare class ApiClientManager {
-    static successResponse(data: unknown, meta?: Record<string, unknown>): ApiResponse;
-    static errorResponse(error: string, errorCode?: string, meta?: Record<string, unknown>): ApiResponse;
-    static validateRequest(request: unknown): { valid: boolean; error?: string };
-    static validateRequiredParams(params: Record<string, unknown>, required: string[]): { valid: boolean; missing?: string[] };
-    static sanitizeString(value: unknown, maxLength?: number): string;
-    static sanitizeParams(params: Record<string, unknown>, schema?: Record<string, number | Record<string, unknown>>): Record<string, unknown>;
+    static successResponse(data: any, meta?: any): ApiResponse;
+    static errorResponse(error: string, errorCode?: string, meta?: any): ApiResponse;
+    static validateRequest(request: any): { valid: boolean; error?: string };
+    static validateRequiredParams(params: Record<string, any>, required: string[]): { valid: boolean; missing?: string[] };
+    static sanitizeString(value: any, maxLength?: number): string;
     static createRequestId(): string;
     static createRequestContext(action: string | undefined, requestId: string | undefined): { action: string; requestId: string; startTime: number };
     static getRequestDuration(context: { startTime: number }): number;
-    static createMetaFromContext(context: { action: string; requestId: string; startTime: number }): { requestId: string; duration: number; action: string };
+    static createMetaFromContext(context: { action: string; requestId: string; startTime: number }): Record<string, any>;
     static actionRequiresAuth(action: string, handlers: Record<string, ActionHandler>): boolean;
     static listActions(handlers: Record<string, ActionHandler>, includePrivate?: boolean): Array<{ action: string; requiresAuth: boolean; description?: string }>;
-    static formatErrorForLogging(error: Error | string, request?: { action?: string; params?: Record<string, unknown>; token?: string }): { message: string; stack?: string; action?: string; hasParams?: boolean; hasToken?: boolean };
+    static formatErrorForLogging(error: Error | string, request?: any): Record<string, any>;
 }
 
 /**
@@ -213,7 +212,7 @@ declare class ApiClientManager {
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
  */
 declare class ApiClient {
-    static registerHandler(action: string, handler: (params: Record<string, unknown>, token?: string) => ApiResponse, options?: { requiresAuth?: boolean; description?: string }): void;
+    static registerHandler(action: string, handler: (params: Record<string, any>, token?: string) => ApiResponse, options?: { requiresAuth?: boolean; description?: string }): void;
     static handleRequest(request: ApiRequest): string;
     static listActions(): string;
     static getHandler(action: string): ActionHandler | undefined;
@@ -222,7 +221,7 @@ declare class ApiClient {
 // API types
 interface ApiResponse {
     success: boolean;
-    data?: unknown;
+    data?: any;
     error?: string;
     errorCode?: string;
     meta?: {
@@ -234,12 +233,12 @@ interface ApiResponse {
 
 interface ApiRequest {
     action: string;
-    params?: Record<string, unknown>;
+    params?: Record<string, any>;
     token?: string;
 }
 
 interface ActionHandler {
-    handler: (params: Record<string, unknown>, token?: string) => ApiResponse;
+    handler: (params: Record<string, any>, token?: string) => ApiResponse;
     requiresAuth: boolean;
     description?: string;
 }
@@ -265,12 +264,12 @@ interface SystemLogEntry {
 interface FormResponse {
     timestamp: Date;
     'VOTING TOKEN': string;
-    [key: string]: any; // JUSTIFIED: dynamic ballot question columns, schema varies per election
+    [key: string]: any;
 }
 
 interface Result {
     'Voter Email': string;
-    [key: string]: any; // JUSTIFIED: dynamic ballot question columns, schema varies per election
+    [key: string]: any;
 }
 
 interface BootstrapData {
@@ -401,7 +400,7 @@ interface AuditLogParams {
     outcome: 'success' | 'fail';
     note?: string;
     error?: string;
-    jsonData?: Record<string, unknown>;
+    jsonData?: any;
 }
 
 /**
@@ -454,40 +453,34 @@ declare class SpreadsheetManager {
 declare class SheetAccess {
     /**
      * Get data from a sheet as array of row objects
-     * JUSTIFIED: SheetAccess is raw I/O layer; domain typing happens at DataAccess boundary
      */
-    static getData(sheetName: string): any[]; // JUSTIFIED: raw I/O layer, domain typing at DataAccess
+    static getData(sheetName: string): any[];
     
     /**
      * Get data as 2D array (headers + rows)
-     * JUSTIFIED: raw spreadsheet arrays; domain typing happens at DataAccess boundary
      */
-    static getDataAsArrays(sheetName: string): any[][]; // JUSTIFIED: raw spreadsheet arrays
+    static getDataAsArrays(sheetName: string): any[][];
     
     /**
      * Get data from sheet with RichText preserved for link columns
      * Returns objects where link columns have {text, url} structure
-     * JUSTIFIED: SheetAccess is raw I/O layer; domain typing happens at DataAccess boundary
      */
-    static getDataWithRichText(sheetName: string, richTextColumns?: string[]): any[]; // JUSTIFIED: raw I/O layer
+    static getDataWithRichText(sheetName: string, richTextColumns?: string[]): any[];
     
     /**
      * Write data to a sheet (replaces all data)
-     * JUSTIFIED: accepts any domain type for write; raw I/O layer
      */
-    static setData(sheetName: string, data: any[]): void; // JUSTIFIED: accepts any domain type
+    static setData(sheetName: string, data: any[]): void;
     
     /**
      * Append rows to end of sheet
-     * JUSTIFIED: raw spreadsheet arrays; accepts any domain type for write
      */
-    static appendRows(sheetName: string, rows: any[][]): void; // JUSTIFIED: raw spreadsheet arrays
+    static appendRows(sheetName: string, rows: any[][]): void;
     
     /**
      * Update specific rows in a sheet
-     * JUSTIFIED: raw spreadsheet arrays; accepts any domain type for write
      */
-    static updateRows(sheetName: string, rows: any[][], startRow: number): void; // JUSTIFIED: raw spreadsheet arrays
+    static updateRows(sheetName: string, rows: any[][], startRow: number): void;
     
     /**
      * Get raw Sheet object for advanced operations
@@ -511,17 +504,15 @@ declare class SheetAccess {
      * Get data as 2D array from a spreadsheet by ID (for dynamic spreadsheets not in Bootstrap)
      * @param spreadsheetId - The spreadsheet ID to open
      * @param sheetName - The name of the sheet tab within the spreadsheet
-     * JUSTIFIED: raw spreadsheet arrays; domain typing happens at DataAccess boundary
      */
-    static getDataAsArraysById(spreadsheetId: string, sheetName: string): any[][]; // JUSTIFIED: raw spreadsheet arrays
+    static getDataAsArraysById(spreadsheetId: string, sheetName: string): any[][];
 
     /**
      * Get data from a spreadsheet by ID as array of row objects (for dynamic spreadsheets not in Bootstrap)
      * @param spreadsheetId - The spreadsheet ID to open
      * @param sheetName - The name of the sheet tab within the spreadsheet
-     * JUSTIFIED: SheetAccess is raw I/O layer; domain typing happens at DataAccess boundary
      */
-    static getDataById(spreadsheetId: string, sheetName: string): any[]; // JUSTIFIED: raw I/O layer
+    static getDataById(spreadsheetId: string, sheetName: string): any[];
 
     /**
      * Write data to a sheet by spreadsheet ID (for dynamic spreadsheets not in Bootstrap)
@@ -529,9 +520,8 @@ declare class SheetAccess {
      * @param sheetName - The name of the sheet tab within the spreadsheet
      * @param data - Array of row objects
      * @param createIfMissing - Whether to create the sheet if it doesn't exist (default: false)
-     * JUSTIFIED: accepts any domain type for write; raw I/O layer
      */
-    static setDataById(spreadsheetId: string, sheetName: string, data: any[], createIfMissing?: boolean): void; // JUSTIFIED: accepts any domain type
+    static setDataById(spreadsheetId: string, sheetName: string, data: any[], createIfMissing?: boolean): void;
 
     /**
      * Open a spreadsheet by ID and return it (for operations needing the full spreadsheet object)
@@ -646,7 +636,7 @@ declare class ValidatedTransaction {
     /** 1-based sheet row index, set by fromRow() for write-back targeting */
     _sheetRowIndex?: number;
     /** Header-keyed snapshot of original cell values, set by fromRow() for change detection */
-    _originalValues?: Record<string, unknown>;
+    _originalValues?: Record<string, any>;
     
     constructor(
         emailAddress: string,
@@ -688,6 +678,97 @@ declare class ValidatedTransaction {
         sheetHeaders: string[]
     ): number;
     
+    /** Column headers constant */
+    static HEADERS: string[];
+}
+
+// Flat ValidatedBootstrap class (type-safe Bootstrap configuration rows)
+declare class ValidatedBootstrap {
+    Reference: string;
+    id: string;
+    sheetName: string;
+    createIfMissing: boolean;
+
+    constructor(reference: string, id: string | null | undefined, sheetName: string, createIfMissing: boolean | string);
+
+    /** Convert to array for serialization/testing (NOT for sheet persistence) */
+    toArray(): Array<string | boolean>;
+
+    /** Static factory - never throws, returns null on failure */
+    static fromRow(
+        rowArray: Array<any>,
+        headers: string[],
+        rowNumber: number,
+        errorCollector?: { errors: string[], rowNumbers: number[] }
+    ): ValidatedBootstrap | null;
+
+    /** Batch validation with consolidated email alert */
+    static validateRows(
+        rows: Array<Array<any>>,
+        headers: string[],
+        context: string
+    ): ValidatedBootstrap[];
+
+    /** Column headers constant */
+    static HEADERS: string[];
+}
+
+// Flat ValidatedPublicGroup class (type-safe PublicGroups rows)
+declare class ValidatedPublicGroup {
+    Name: string;
+    Email: string;
+    Subscription: string;
+
+    constructor(name: string, email: string, subscription: string);
+
+    /** Convert to array for serialization/testing (NOT for sheet persistence) */
+    toArray(): string[];
+
+    /** Static factory - never throws, returns null on failure */
+    static fromRow(
+        rowArray: Array<any>,
+        headers: string[],
+        rowNumber: number,
+        errorCollector?: { errors: string[], rowNumbers: number[] }
+    ): ValidatedPublicGroup | null;
+
+    /** Batch validation with consolidated email alert */
+    static validateRows(
+        rows: Array<Array<any>>,
+        headers: string[],
+        context: string
+    ): ValidatedPublicGroup[];
+
+    /** Column headers constant */
+    static HEADERS: string[];
+}
+
+// Flat ValidatedElectionConfig class (type-safe ElectionConfiguration rows)
+declare class ValidatedElectionConfig {
+    Key: string;
+    Setting: string;
+    Value: string;
+
+    constructor(key: string | null, setting: string | null, value: string);
+
+    /** Convert to array for serialization/testing (NOT for sheet persistence) */
+    toArray(): string[];
+
+    /** Static factory - never throws, returns null on failure */
+    static fromRow(
+        rowArray: Array<any>,
+        headers: string[],
+        rowNumber: number,
+        errorCollector?: { errors: string[], rowNumbers: number[] }
+    ): ValidatedElectionConfig | null;
+
+    /** Batch validation with consolidated email alert */
+    static validateRows(
+        rows: Array<Array<any>>,
+        headers: string[],
+        context: string
+    ): ValidatedElectionConfig[];
+
     /** Column headers constant */
     static HEADERS: string[];
 }
@@ -888,13 +969,13 @@ declare class MemberPersistence {
     ): number;
     
     /** Value equality that handles Dates and primitives */
-    static valuesEqual(a: unknown, b: unknown): boolean;
+    static valuesEqual(a: any, b: any): boolean;
 }
 
 // Flat DataAccess object (new pattern - replaces Common.Data.Access)
 declare var DataAccess: {
-    /** Gets Bootstrap configuration data */
-    getBootstrapData: () => BootstrapData[];
+    /** Gets Bootstrap configuration data as validated objects */
+    getBootstrapData: () => ValidatedBootstrap[];
     
     /** Gets all email addresses from active members */
     getEmailAddresses: () => string[];
@@ -910,15 +991,15 @@ declare var DataAccess: {
     getActiveMembersForUpdate: () => {
         members: ValidatedMember[];
         sheet: GoogleAppsScript.Spreadsheet.Sheet;
-        originalRows: any[][]; // JUSTIFIED: raw spreadsheet arrays from SheetAccess I/O layer
+        originalRows: any[][];
         headers: string[];
     };
     
     /** Gets action specifications with processed body content */
     getActionSpecs: () => {[k: string]: ValidatedActionSpec};
     
-    /** Gets public groups configuration */
-    getPublicGroups: () => Array<{Name: string, Email: string, Subscription: string}>;
+    /** Gets public groups configuration as validated objects */
+    getPublicGroups: () => ValidatedPublicGroup[];
     
     /** Gets a specific member by email address */
     getMember: (email: string) => ValidatedMember | undefined;
@@ -955,6 +1036,12 @@ declare var DataAccess: {
     
     /** Gets ExpirationFIFO items as validated objects (read-only) */
     getExpirationFIFO: () => ValidatedFIFOItem[];
+    
+    /** Gets expiry schedule data (read accessor) */
+    getExpirySchedule: () => MembershipManagement.ExpirySchedule[];
+
+    /** Gets election configuration entries as validated objects (read-only) */
+    getElectionConfiguration: () => ValidatedElectionConfig[];
 };
 
 // Flat ServiceLogger class (new pattern - replaces Common.Logging.ServiceLogger)
@@ -975,11 +1062,11 @@ declare class ServiceLogger {
         outcome: 'success' | 'fail',
         note: string,
         error?: string,
-        jsonData?: Record<string, unknown>
+        jsonData?: any
     ): AuditLogEntry;
     
     /** Log service error (unexpected failures during execution) */
-    logError(operation: string, error: Error | string, additionalData?: Record<string, unknown>): AuditLogEntry;
+    logError(operation: string, error: Error | string, additionalData?: any): AuditLogEntry;
     
     /** Create a custom audit entry without system logging */
     createAuditEntry(
@@ -987,23 +1074,23 @@ declare class ServiceLogger {
         outcome: 'success' | 'fail',
         note: string,
         error?: string,
-        jsonData?: Record<string, unknown>
+        jsonData?: any
     ): AuditLogEntry;
 }
 
 // Flat ServiceExecutionLogger object (new pattern - replaces Common.Logging.ServiceExecutionLogger)
 declare const ServiceExecutionLogger: {
     /** Wrap a getData function with logging */
-    wrapGetData(serviceName: string, email: string, getDataFn: () => any /* JUSTIFIED: generic wrapper, returns whatever wrapped function returns */): any; // JUSTIFIED: returns whatever wrapped function returns
+    wrapGetData(serviceName: string, email: string, getDataFn: () => any): any;
     
     /** Wrap an API handler function with logging */
     wrapApiHandler(
         serviceName: string,
         operationName: string,
         email: string,
-        handlerFn: () => any /* JUSTIFIED: generic wrapper, returns whatever wrapped function returns */,
-        params?: Record<string, unknown>
-    ): any; // JUSTIFIED: returns whatever wrapped function returns
+        handlerFn: () => any,
+        params?: any
+    ): any;
     
     /** Persist audit entries to the Audit sheet (private) */
     _persistAuditEntries(auditEntries: AuditLogEntry[]): void;
@@ -1048,6 +1135,7 @@ declare namespace GroupManagementService {
     interface PublicGroup {
         Name: string;
         Email: string;
+        Subscription: string;
     }
 
     interface GroupMember {
@@ -1111,7 +1199,7 @@ declare namespace GroupManagementService {
 
     // WebApp namespace - doGet handler
     namespace WebApp {
-        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: GoogleAppsScript.HTML.HtmlTemplate): GoogleAppsScript.HTML.HtmlOutput;
+        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: any): GoogleAppsScript.HTML.HtmlOutput;
         function updateUserSubscriptions(updatedSubscriptions: SubscriptionUpdate[], userToken: string): { success: boolean; message?: string };
     }
 
@@ -1143,7 +1231,7 @@ declare namespace ProfileManagementService {
     interface ProfileUpdateResult {
         success: boolean;
         message: string;
-        mergedProfile?: Record<string, unknown> | ValidatedMemberData;
+        mergedProfile?: ValidatedMemberData;
     }
 
     // Profile field schema
@@ -1155,6 +1243,37 @@ declare namespace ProfileManagementService {
         maxLength?: number;
     }
 
+    // Profile display data (returned by formatProfileForDisplay)
+    // The Api layer adds *Formatted string fields after calling formatProfileForDisplay()
+    interface ProfileDisplayData {
+        First: string;
+        Last: string;
+        Phone: string;
+        Email: string;
+        Status: string;
+        Joined: Date | null;
+        Expires: Date | null;
+        'Renewed On': Date | null;
+        Period: number | string;
+        'Directory Share Name': boolean;
+        'Directory Share Phone': boolean;
+        'Directory Share Email': boolean;
+        // Added by Api layer after date formatting (GAS Utilities.formatDate)
+        JoinedFormatted?: string;
+        ExpiresFormatted?: string;
+        RenewedOnFormatted?: string;
+    }
+
+    // Editable profile fields (returned by getEditableFields)
+    interface EditableProfileFields {
+        First: string;
+        Last: string;
+        Phone: string;
+        'Directory Share Name': boolean;
+        'Directory Share Phone': boolean;
+        'Directory Share Email': boolean;
+    }
+
     // Manager class - Pure business logic
     class Manager {
         static getForbiddenFields(): string[];
@@ -1162,12 +1281,12 @@ declare namespace ProfileManagementService {
         static validateEmail(email: string): ValidationResult;
         static validateName(name: string, fieldName?: string): ValidationResult;
         static validatePhone(phone: string): ValidationResult;
-        static checkForForbiddenUpdates(originalProfile: Record<string, unknown> | ValidatedMember, updatedProfile: Record<string, unknown> | ValidatedMember, forbiddenFields?: string[]): ForbiddenFieldCheckResult;
-        static validateProfileUpdate(updatedProfile: Record<string, unknown> | ValidatedMember): ValidationResult;
-        static mergeProfiles(originalProfile: Record<string, unknown> | ValidatedMember, updates: Record<string, unknown>): Record<string, unknown>;
-        static processProfileUpdate(originalProfile: Record<string, unknown> | ValidatedMember, updatedProfile: Record<string, unknown> | ValidatedMember, forbiddenFields?: string[]): ProfileUpdateResult;
-        static formatProfileForDisplay(profile: Record<string, unknown> | ValidatedMember): Record<string, unknown> | null;
-        static getEditableFields(profile: Record<string, unknown> | ValidatedMember): Record<string, unknown> | null;
+        static checkForForbiddenUpdates(originalProfile: ValidatedMember, updatedProfile: Partial<ValidatedMemberData>, forbiddenFields?: string[]): ForbiddenFieldCheckResult;
+        static validateProfileUpdate(updatedProfile: Partial<ValidatedMemberData>): ValidationResult;
+        static mergeProfiles(originalProfile: ValidatedMember, updates: Partial<ValidatedMemberData>): ValidatedMemberData;
+        static processProfileUpdate(originalProfile: ValidatedMember, updatedProfile: Partial<ValidatedMemberData>, forbiddenFields?: string[]): ProfileUpdateResult;
+        static formatProfileForDisplay(profile: ValidatedMember | ValidatedMemberData): ProfileDisplayData | null;
+        static getEditableFields(profile: ValidatedMember | ValidatedMemberData): EditableProfileFields | null;
         static normalizeEmail(email: string): string;
         static formatUpdateResult(success: boolean, message: string): { success: boolean; message: string };
     }
@@ -1176,17 +1295,17 @@ declare namespace ProfileManagementService {
     namespace Api {
         function handleGetProfile(params: { _authenticatedEmail?: string }): ApiResponse;
         function handleGetEditableFields(params: { _authenticatedEmail?: string }): ApiResponse;
-        function handleUpdateProfile(params: { _authenticatedEmail?: string; updates?: Record<string, unknown> }): ApiResponse;
+        function handleUpdateProfile(params: { _authenticatedEmail?: string; updates?: Partial<ValidatedMemberData> }): ApiResponse;
     }
 
     // WebApp namespace - doGet handler
     namespace WebApp {
-        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: GoogleAppsScript.HTML.HtmlTemplate): GoogleAppsScript.HTML.HtmlOutput;
+        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: any): GoogleAppsScript.HTML.HtmlOutput;
     }
 
     // Legacy function (for backward compatibility)
-    function updateProfile(userToken: string, updatedProfile: Record<string, unknown>): { success: boolean; message: string };
-    function _checkForForbiddenUpdates(originalObject: Record<string, unknown>, updatedObject: Record<string, unknown>, forbiddenFields: string[]): void;
+    function updateProfile(userToken: string, updatedProfile: Partial<ValidatedMemberData>): { success: boolean; message: string };
+    function _checkForForbiddenUpdates(originalObject: ValidatedMember, updatedObject: ValidatedMember, forbiddenFields: string[]): void;
     function initApi(): void;
 }
 
@@ -1241,7 +1360,7 @@ declare namespace DirectoryService {
 
     // WebApp namespace - doGet handler
     namespace WebApp {
-        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: GoogleAppsScript.HTML.HtmlTemplate): GoogleAppsScript.HTML.HtmlOutput;
+        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: any): GoogleAppsScript.HTML.HtmlOutput;
     }
 
     // Functions
@@ -1304,14 +1423,14 @@ declare namespace EmailChangeService {
         static transformGroupsToMembershipInfo(groups: Array<{email: string}>, oldEmail: string, newEmail: string): GroupMembershipInfo[];
         static updateMembershipResult(membership: GroupMembershipInfo, success: boolean, error?: string): GroupMembershipInfo;
         static aggregateResults(results: GroupMembershipInfo[]): EmailUpdateResult;
-        static createUpdatedMemberRecord(originalMember: Record<string, unknown>, newEmail: string): Record<string, unknown> | null;
+        static createUpdatedMemberRecord(originalMember: ValidatedMember, newEmail: string): ValidatedMemberData | null;
         static createChangeLogEntry(oldEmail: string, newEmail: string, date?: Date): {date: Date, from: string, to: string};
-        static normalizeEmail(email: unknown): string;
+        static normalizeEmail(email: string): string;
         static buildVerificationEmailContent(code: string): {subject: string, body: string, htmlBody: string};
         static formatSendCodeResult(success: boolean, email: string, error?: string): {success: boolean, message: string, error?: string, errorCode?: string};
         static calculateBackoff(attempt: number, initialBackoffMs?: number): number;
         static getRetryAction(params: {attempt: number, maxRetries: number, error?: Error}): {action: 'retry'|'fail'|'initial', backoffMs?: number, errorMessage?: string};
-        static createGroupUpdateResult(group: {email: string, name?: string}, success: boolean, error?: string): {groupEmail: string, groupName: string, success: boolean, error: string | null};
+        static createGroupUpdateResult(group: any, success: boolean, error?: string): {groupEmail: string, groupName: string, success: boolean, error: string | null};
         static aggregateGroupResults(results: Array<{success: boolean, error?: string}>): {successCount: number, failedCount: number, overallSuccess: boolean};
         static formatEmailChangeMessage(overallSuccess: boolean, oldEmail: string, newEmail: string, successCount: number, failedCount: number): string;
     }
@@ -1331,7 +1450,7 @@ declare namespace EmailChangeService {
 
     // WebApp namespace - doGet handler
     namespace WebApp {
-        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: GoogleAppsScript.HTML.HtmlTemplate): GoogleAppsScript.HTML.HtmlOutput;
+        function doGet(e: GoogleAppsScript.Events.DoGet, userEmail: string, template: any): GoogleAppsScript.HTML.HtmlOutput;
     }
 
     // Internal namespace - Legacy functions
@@ -1359,8 +1478,8 @@ declare namespace VotingService {
     // Data types for API
     interface ProcessedElection {
         title: string;
-        opens?: string;  // Formatted date string
-        closes?: string;  // Formatted date string
+        opens?: Date | string;  // Date from Manager.processElectionForDisplay, ISO string from deprecated webApp.js
+        closes?: Date | string;  // Date from Manager.processElectionForDisplay, ISO string from deprecated webApp.js
         status: string;
         url?: string;
     }
@@ -1401,23 +1520,23 @@ declare namespace VotingService {
         static validateEmail(email: string): ValidationResult;
         static normalizeEmail(email: string): string;
         static hasUserVoted(userEmail: string, voters: Array<{ Email: string }>): boolean;
-        static validateElection(election: object): ValidationResult;
+        static validateElection(election: { Title?: string }): ValidationResult;
         static validateToken(token: string): ValidationResult;
-        static validateTokenData(tokenData: object | null): TokenValidationResult;
+        static validateTokenData(tokenData: VotingTokenData | null): TokenValidationResult;
         static isDuplicateVote(email: string, currentToken: string, allTokens: Array<{ Email: string; Token: string }>): boolean;
-        static validateVote(tokenData: object | null, currentToken: string, allTokens: Array<{ Email: string; Token: string }>): VoteValidationResult;
+        static validateVote(tokenData: VotingTokenData | null, currentToken: string, allTokens: Array<{ Email: string; Token: string }>): VoteValidationResult;
         static buildElectionStatusMessage(state: string, hasVoted: boolean, ballotAccepting?: boolean): string;
-        static processElectionForDisplay(election: object, userEmail: string, voters: Array<{ Email: string }>, ballotPublished?: boolean, ballotAccepting?: boolean, now?: Date): ProcessedElection;
-        static extractFirstValues(namedValues: Record<string, unknown[] | unknown>): Record<string, unknown>;
+        static processElectionForDisplay(election: ValidatedElection, userEmail: string, voters: Array<{ Email: string }>, ballotPublished?: boolean, ballotAccepting?: boolean, now?: Date): ProcessedElection;
+        static extractFirstValues(namedValues: Record<string, any[] | any>): Record<string, any>;
         static extractElectionTitle(spreadsheetName: string, resultsSuffix?: string): string;
         static buildValidVoteEmailContent(electionTitle: string): { subject: string; body: string };
         static buildInvalidVoteEmailContent(electionTitle: string): { subject: string; body: string };
-        static buildManualCountEmailContent(electionTitle: string, vote: object, tokenFieldName?: string): { subject: string; body: string };
+        static buildManualCountEmailContent(electionTitle: string, vote: Record<string, any>, tokenFieldName?: string): { subject: string; body: string };
         static buildElectionOpeningEmailContent(ballotTitle: string, editUrl: string): { subject: string; body: string };
         static buildElectionClosureEmailContent(ballotTitle: string, editUrl: string, manualCountRequired?: boolean): { subject: string; body: string };
         static buildElectionOfficerAddedEmailContent(title: string, editUrl: string, isSharedDrive?: boolean): { subject: string; body: string };
         static buildElectionOfficerRemovedEmailContent(title: string, isSharedDrive?: boolean): { subject: string; body: string };
-        static calculateElectionStats(elections: Array<object>, now?: Date): ElectionStats;
+        static calculateElectionStats(elections: ValidatedElection[], now?: Date): ElectionStats;
         static formatActiveElectionsResponse(elections: ProcessedElection[], userEmail: string): { elections: ProcessedElection[]; userEmail: string; count: number };
         static calculateOfficerChanges(newOfficers: string[], currentOfficers: string[]): { toAdd: string[]; toRemove: string[] };
         static parseElectionOfficers(officersString: string): string[];
@@ -1439,4 +1558,4 @@ declare namespace VotingService {
 // ============================================================================
 
 // Properties Management (not a class, just a namespace object)
-declare const Properties: any; // JUSTIFIED: legacy global, properties-based configuration (to be typed in future work)
+declare const Properties: any; // TODO: Add proper Properties type

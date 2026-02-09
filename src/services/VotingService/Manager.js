@@ -199,7 +199,7 @@ VotingService.Manager = class {
 
   /**
    * Validate token data for vote processing
-   * @param {Object|null} tokenData - Token data from storage
+   * @param {VotingTokenData|null} tokenData - Token data from storage
    * @returns {TokenValidationResult}
    */
   static validateTokenData(tokenData) {
@@ -253,7 +253,7 @@ VotingService.Manager = class {
 
   /**
    * Validate a vote submission
-   * @param {Object|null} tokenData - Token data from storage
+   * @param {VotingTokenData|null} tokenData - Token data from storage
    * @param {string} currentToken - The token being used
    * @param {Array<{Email: string, Token: string}>} allTokens - All tokens for this election
    * @returns {VoteValidationResult}
@@ -322,7 +322,7 @@ VotingService.Manager = class {
 
   /**
    * Process election data for display
-   * @param {{Title: string, Start?: string, End?: string, 'Form Edit URL'?: string}} election - Raw election data from spreadsheet
+   * @param {ValidatedElection} election - Validated election from sheet data
    * @param {string} userEmail - Current user's email
    * @param {Array<{Email: string}>} voters - Voters who have voted
    * @param {boolean} [ballotPublished] - Whether ballot is published
@@ -368,14 +368,13 @@ VotingService.Manager = class {
   /**
    * Extract first values from form response named values
    * (Form responses come as arrays, we need the first element)
-   * @param {Record<string, unknown[]|unknown>} namedValues - Form response named values (JUSTIFIED: arbitrary form submission data from Google Forms)
-   * @returns {Record<string, unknown>} Object with first values (JUSTIFIED: mirrors input namedValues structure)
+   * @param {Record<string, any[]|any>} namedValues - Form response named values (JUSTIFIED: Google Form response keys are dynamic per form)
+   * @returns {Record<string, any>} Object with first values (JUSTIFIED: preserves dynamic form response structure)
    */
   static extractFirstValues(namedValues) {
     if (!namedValues || typeof namedValues !== 'object') {
       return {};
     }
-    /** @type {Record<string, unknown>} */
     const result = {};
     for (const key in namedValues) {
       if (Object.prototype.hasOwnProperty.call(namedValues, key)) {
@@ -432,7 +431,7 @@ VotingService.Manager = class {
   /**
    * Build manual count needed email content
    * @param {string} electionTitle - Election title
-   * @param {Record<string, unknown>} vote - The invalid vote data from form submission (JUSTIFIED: arbitrary vote data from Google Forms)
+   * @param {Record<string, any>} vote - The invalid vote data from form submission (JUSTIFIED: form response fields are dynamic per election ballot)
    * @param {string} tokenFieldName - Name of the token field
    * @returns {{subject: string, body: string}}
    */
@@ -517,7 +516,7 @@ VotingService.Manager = class {
 
   /**
    * Calculate election statistics
-   * @param {Array<Object>} elections - Array of elections
+   * @param {ValidatedElection[]} elections - Array of validated elections
    * @param {Date} [now] - Current time (for testing)
    * @returns {ElectionStats}
    */

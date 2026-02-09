@@ -105,7 +105,7 @@ MembershipManagement.Utils.spreadsheetDateToIso = function(dateValue) {
  * Convert FIFO items from ISO string dates (internal format) to spreadsheet Date objects.
  * Converts lastAttemptAt and nextAttemptAt fields.
  * @param {MembershipManagement.FIFOItem[]} items - Array of FIFO items with ISO string dates
- * @returns {Array<any>} Array of FIFO items with Date objects for spreadsheet
+ * @returns {Array<Record<string, any>>} Array of FIFO items with Date objects replacing ISO string timestamps for spreadsheet (JUSTIFIED: FIFOItem has string timestamps but spreadsheet version has Date objects; no SpreadsheetFIFOItem type exists)
  */
 MembershipManagement.Utils.convertFIFOItemsToSpreadsheet = function(items) {
   return items.map(item => ({
@@ -139,7 +139,7 @@ MembershipManagement.Utils.convertFIFOItemsFromSpreadsheet = function(items) {
      * Date fields specified in the dateFields array are converted to local date strings.
      *
      * @param {string} template - The template string containing placeholders.
-     * @param {ValidatedMember | Record<string, unknown>} row - Member or object containing values to replace placeholders (JUSTIFIED: arbitrary member fields for template expansion)
+     * @param {ValidatedMember | Record<string, any>} row - Member or object containing values to replace placeholders (JUSTIFIED: union needed for migration/legacy objects with dynamic columns)
      * @returns {string} - The expanded template string with placeholders replaced by corresponding values.
      */
 MembershipManagement.Utils.expandTemplate = function(template, row) {

@@ -73,7 +73,7 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
                 return result; // Skip further processing if user has already voted
             }
 
-            const ballot = VotingService.getBallot(election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME]);
+            const ballot = VotingService.getBallot(election['Form Edit URL']);
             console.log(`ballot ${ballot.getTitle()} is published: ${ballot.isPublished()}`);
             console.log(`ballot ${ballot.getTitle()} is accepting responses: ${ballot.isAcceptingResponses()}`);
             switch (VotingService.getElectionState(election)) {
@@ -109,7 +109,7 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
 /**
  * 
  * @param {string} userEmail - The email address of the user.
- * @param {VotingService.Election} election - The election object containing the form ID.
+ * @param {ValidatedElection} election - The election object containing the form ID.
  * @returns a prefilled ballot URL with a token field for the user.
  * 
  * @description Generates a prefilled URL for the voting form with a token field.
@@ -122,6 +122,6 @@ VotingService.WebApp._getElectionsForTemplate = function (userEmail) {
 VotingService.WebApp._getFormUrlWithTokenField = function (userEmail, election) {
     const spreadsheetId = VotingService.getSpreadsheetIdFromElection(election);
     const token = VotingService.Auth.generateAndStoreToken(userEmail,spreadsheetId).Token;
-    const preFilledUrl = VotingService.createPrefilledUrlWithTitle(election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME], VotingService.Constants.TOKEN_ENTRY_FIELD_TITLE, token);
+    const preFilledUrl = VotingService.createPrefilledUrlWithTitle(election['Form Edit URL'], VotingService.Constants.TOKEN_ENTRY_FIELD_TITLE, token);
     return preFilledUrl
 }

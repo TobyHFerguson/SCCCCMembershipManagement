@@ -119,7 +119,7 @@ MembershipManagement.processTransactions = function () {
     hasPendingPayments
   });
   
-  errors.forEach(e => AppLogger.error('MembershipManagement', `Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}`, { stack: e.stack }));
+  errors.forEach(e => AppLogger.error('MembershipManagement', `Transaction on row ${e.txnNum} ${e.email} had an error: ${e.message}`, { stack: e.stack }));
   return { processed, joins, renewals, hasPendingPayments, errors };
 }
 
@@ -141,7 +141,11 @@ MembershipManagement.processMigrations = function () {
   
   // Log any errors that occurred during migration
   if (result.errors && result.errors.length > 0) {
-    result.errors.forEach(e => AppLogger.error('MembershipManagement', `Migration error on row ${e.rowNum} ${e.email}: ${e.message}`, { stack: e.stack }));
+    result.errors.forEach(e => {
+      const errRowNum = e.rowNum;
+      const errEmail = e.email;
+      AppLogger.error('MembershipManagement', `Migration error on row ${errRowNum} ${errEmail}: ${e.message}`, { stack: e.stack });
+    });
   }
   
   if (PropertiesService.getScriptProperties().getProperty('MIGRATION_LOG_ONLY').toLowerCase() === 'true') {
@@ -332,7 +336,7 @@ MembershipManagement.generateExpiringMembersList = function () {
  * Consumer: process up to batchSize entries from the ExpirationFIFO sheet.
  * This function is intended to be called by a time-based trigger (minute-based) while work remains.
  * It will reschedule itself (create a 1-minute trigger) if more work remains after processing the batch.
- * @param {{batchSize?: number, dryRun?: boolean, data?: {expirationFIFO?: any[], expirySchedule?: any[], expirationDeadLetter?: any[]}, membershipData?: {sheet: GoogleAppsScript.Spreadsheet.Sheet, originalRows: any[][], headers: any[]}}} opts - Options with optional batchSize, dryRun flag, pre-fetched data arrays, and membership data
+ * @param {{batchSize?: number, dryRun?: boolean, data?: {expirationFIFO?: any[], expirySchedule?: MembershipManagement.ExpirySchedule[], expirationDeadLetter?: any[]}, membershipData?: {sheet: GoogleAppsScript.Spreadsheet.Sheet, originalRows: any[][], headers: string[]}}} opts - Options with optional batchSize, dryRun flag, pre-fetched data arrays, and membership data
  */
 MembershipManagement.processExpirationFIFO = function (opts = {}) {
   try {
@@ -390,7 +394,6 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     
     const expiryScheduleData = opts.data?.expirySchedule || SheetAccess.getData('ExpirySchedule');
     
-    //@ts-ignore
     const autoGroups = DataAccess.getPublicGroups().filter(group => group.Subscription.toLowerCase() === 'auto');
     const groupManager = {
       groupAddFun: MembershipManagement.Internal.getGroupAdder_(),
@@ -544,7 +547,7 @@ function processExpirationFIFOTrigger() { return MembershipManagement.processExp
 
 /**
  * Initialize Manager with data loaded via DataAccess + ValidatedMember
- * @returns {{manager: MembershipManagement.Manager, membershipData: ValidatedMember[], expiryScheduleData: any[], membershipSheet: GoogleAppsScript.Spreadsheet.Sheet, originalMembershipRows: any[][], membershipHeaders: any[]}}
+ * @returns {{manager: MembershipManagement.Manager, membershipData: ValidatedMember[], expiryScheduleData: MembershipManagement.ExpirySchedule[], membershipSheet: GoogleAppsScript.Spreadsheet.Sheet, originalMembershipRows: any[][], membershipHeaders: string[]}}
  */
 MembershipManagement.Internal.initializeManagerDataWithSpreadsheetApp_ = function () {
   // Load ActiveMembers using DataAccess for write-context
@@ -555,7 +558,6 @@ MembershipManagement.Internal.initializeManagerDataWithSpreadsheetApp_ = functio
   // Load ExpirySchedule using SheetAccess
   const expiryScheduleData = SheetAccess.getData('ExpirySchedule');
   
-  //@ts-ignore
   const autoGroups = DataAccess.getPublicGroups().filter(group => group.Subscription.toLowerCase() === 'auto');
   const groupManager = {
     groupAddFun: MembershipManagement.Internal.getGroupAdder_(),

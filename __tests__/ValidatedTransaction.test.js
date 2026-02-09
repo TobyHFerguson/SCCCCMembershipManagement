@@ -18,6 +18,7 @@ jest.mock('../src/common/utils/Logger.js', () => ({}));
 
 // Load the ValidatedTransaction class and assign to global
 const { ValidatedTransaction } = require('../src/common/data/ValidatedTransaction.js');
+// @ts-ignore - Test setup: add ValidatedTransaction to global for testing
 global.ValidatedTransaction = ValidatedTransaction;
 
 describe('ValidatedTransaction Class', () => {
@@ -430,6 +431,75 @@ describe('ValidatedTransaction Class', () => {
       expect(txn.Processed).toBe(null);
       expect(txn.Timestamp).toBe(null);
     });
+
+    test('should work correctly when sheet columns are in different order than HEADERS (column-order independence)', () => {
+      // Arrange: Use ALL 17 HEADERS columns in REVERSED order
+      const shuffledHeaders = [...ValidatedTransaction.HEADERS].reverse();
+      // shuffledHeaders = ['Processed', 'Payable Last Updated', ..., 'Timestamp']
+
+      const processed = new Date('2023-12-15');
+      const timestamp = new Date('2023-12-01');
+
+      // Build a lookup of column values keyed by header name
+      const testData = {
+        'Timestamp': timestamp,
+        'Email Address': 'shuffled@example.com',
+        'Are you 18 years of age or older?': 'Yes',
+        'Privacy': 'Accepted',
+        'Membership Agreement': 'Agreed',
+        'Directory': 'Share Name, Share Email',
+        'First Name': 'Alice',
+        'Last Name': 'Wonderland',
+        'Phone': '(831) 555-4321',
+        'Payment': '2 years',
+        'Payable Order ID': 'ORD-123',
+        'Payable Total': '$60.00',
+        'Payable Status': 'Paid',
+        'Payable Payment Method': 'Credit Card',
+        'Payable Transaction ID': 'TXN-456',
+        'Payable Last Updated': '2023-12-15',
+        'Processed': processed
+      };
+
+      // Build row array in shuffled header order
+      const rowData = shuffledHeaders.map(h => testData[h]);
+
+      // Act: fromRow must use header-based lookup, not positional indexing
+      const txn = ValidatedTransaction.fromRow(rowData, shuffledHeaders, 3, null);
+
+      // Assert: All properties must be correct regardless of column order
+      expect(txn).not.toBeNull();
+      expect(txn['Email Address']).toBe('shuffled@example.com');
+      expect(txn['First Name']).toBe('Alice');
+      expect(txn['Last Name']).toBe('Wonderland');
+      expect(txn.Phone).toBe('(831) 555-4321');
+      expect(txn.Payment).toBe('2 years');
+      expect(txn.Directory).toBe('Share Name, Share Email');
+      expect(txn['Payable Status']).toBe('Paid');
+      expect(txn.Processed).toBe(processed);
+      expect(txn.Timestamp).toBe(timestamp);
+
+      // Verify passthrough fields preserved
+      expect(txn['Are you 18 years of age or older?']).toBe('Yes');
+      expect(txn.Privacy).toBe('Accepted');
+      expect(txn['Membership Agreement']).toBe('Agreed');
+      expect(txn['Payable Order ID']).toBe('ORD-123');
+      expect(txn['Payable Total']).toBe('$60.00');
+      expect(txn['Payable Payment Method']).toBe('Credit Card');
+      expect(txn['Payable Transaction ID']).toBe('TXN-456');
+      expect(txn['Payable Last Updated']).toBe('2023-12-15');
+
+      // Verify write-back metadata uses shuffled headers correctly
+      expect(txn._sheetRowIndex).toBe(3);
+      expect(txn._originalValues['Email Address']).toBe('shuffled@example.com');
+      expect(txn._originalValues['Phone']).toBe('(831) 555-4321');
+      expect(txn._originalValues['Processed']).toBe(processed);
+      expect(txn._originalValues['Timestamp']).toBe(timestamp);
+
+      // Verify instance type preservation
+      expect(txn).toBeInstanceOf(ValidatedTransaction);
+      expect(typeof txn.toArray).toBe('function');
+    });
     
   });
   
@@ -465,7 +535,8 @@ describe('ValidatedTransaction Class', () => {
       
       // Mock MailApp
       global.MailApp = {
-        sendEmail: jest.fn()
+        sendEmail: jest.fn(),
+        getRemainingDailyQuota: jest.fn(() => 100)
       };
     });
     
@@ -511,7 +582,7 @@ describe('ValidatedTransaction Class', () => {
       expect(transactions.length).toBe(1);
       expect(MailApp.sendEmail).toHaveBeenCalledTimes(1);
       
-      const emailCall = MailApp.sendEmail.mock.calls[0][0];
+      const emailCall = /** @type {jest.Mock} */ (MailApp.sendEmail).mock.calls[0][0];
       expect(emailCall.to).toBe('membership-automation@sc3.club');
       expect(emailCall.subject).toContain('2 Transaction Validation Errors');
       expect(emailCall.body).toContain('test-batch-context');
@@ -553,7 +624,7 @@ describe('ValidatedTransaction Class', () => {
     });
     
     test('should handle email send failure gracefully', () => {
-      MailApp.sendEmail.mockImplementation(() => {
+      /** @type {jest.Mock} */ (MailApp.sendEmail).mockImplementation(() => {
         throw new Error('Email service unavailable');
       });
       
@@ -771,19 +842,28 @@ describe('ValidatedTransaction Class', () => {
     
   });
 
+  // @ts-ignore - Testing private method _valuesEqual (not in public API)
   describe('_valuesEqual()', () => {
 
     test('should treat null and undefined as equal', () => {
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual(null, null)).toBe(true);
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual(undefined, undefined)).toBe(true);
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual(null, undefined)).toBe(true);
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual(undefined, null)).toBe(true);
     });
 
     test('should treat null/undefined as not equal to other values', () => {
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual(null, '')).toBe(false);
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual(null, 0)).toBe(false);
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual('', null)).toBe(false);
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual(undefined, '')).toBe(false);
     });
 
@@ -791,22 +871,32 @@ describe('ValidatedTransaction Class', () => {
       const d1 = new Date('2024-01-15T10:00:00Z');
       const d2 = new Date('2024-01-15T10:00:00Z');
       const d3 = new Date('2024-01-16T10:00:00Z');
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual(d1, d2)).toBe(true);
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual(d1, d3)).toBe(false);
     });
 
     test('should not consider Date equal to non-Date', () => {
       const d = new Date('2024-01-15');
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual(d, '2024-01-15')).toBe(false);
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual('2024-01-15', d)).toBe(false);
     });
 
     test('should compare primitives with strict equality', () => {
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual('abc', 'abc')).toBe(true);
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual('abc', 'def')).toBe(false);
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual(42, 42)).toBe(true);
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual(42, 43)).toBe(false);
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual(true, true)).toBe(true);
+      // @ts-ignore - Testing private method
       expect(ValidatedTransaction._valuesEqual(true, false)).toBe(false);
     });
   });

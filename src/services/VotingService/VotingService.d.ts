@@ -44,6 +44,7 @@ declare namespace VotingService {
 
     /**
      * Represents an election object.
+     * @deprecated Use ValidatedElection class instead for type safety and validation
      */
     interface Election {
         Title: string;
@@ -183,10 +184,10 @@ declare namespace VotingService {
 
     /**
      * Gets the state of an election (UNOPENED, ACTIVE, CLOSED).
-     * @param {VotingService.Election} election The election object to check.
-     * @returns {VotingService.ElectionState} The state of the election.
+     * @param election The validated election object to check.
+     * @returns The state of the election.
      */
-    function getElectionState(election: VotingService.Election): VotingService.ElectionState;
+    function getElectionState(election: ValidatedElection): VotingService.ElectionState;
 
     /**
      * 
@@ -194,15 +195,11 @@ declare namespace VotingService {
      * @returns The spreadsheet ID from the election.
      * @throws {Error} If no spreadsheet ID is found.
      */
-    function getSpreadsheetIdFromElection(election: Election): string;
+    function getSpreadsheetIdFromElection(election: ValidatedElection): string;
 
     type DataType = {
 
 
-        /**
-         * Retrieves the election data from the Elections sheet.
-         * @returns {Election[]} Array of Election objects.
-         */
         /**
          * Retrieves the election data from the Elections sheet as validated objects.
          * Delegates to DataAccess.getElections() which returns typed ValidatedElection instances.
@@ -212,24 +209,17 @@ declare namespace VotingService {
         /**
          * Stores the election data in the Elections sheet.
          * Overwrites existing data.
-         * @param {Election[]} elections Array of election objects to store.
+         * @param elections Array of validated election objects to store.
          */
-        storeElectionData(elections: Election[]): void;
+        storeElectionData(elections: ValidatedElection[]): void;
 
         /**
          * Checks if the given email has already voted in the specified election.
-         * @param {string} email Email address to check.
-         * @param {Election} election Election object.
-         * @returns {boolean} True if the email has already voted, false otherwise.
+         * @param email Email address to check.
+         * @param election Validated election object.
+         * @returns True if the email has already voted, false otherwise.
          */
-        hasVotedAlreadyInThisElection(email: string, election: Election): boolean;
-
-        /**
-         * Gets the list of voter emails for the specified election.
-         * @param {Election} election Election object.
-         * @returns {string[]} Array of voter emails.
-         */
-        getVoters_(election: Election): string[];
+        hasVotedAlreadyInThisElection(email: string, election: ValidatedElection): boolean;
 
 
     }

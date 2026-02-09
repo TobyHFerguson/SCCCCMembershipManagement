@@ -12,7 +12,7 @@ VotingService.Auth = {
      * and returns the token data.
      * @param {string} email 
      * @param {string} spreadsheetId 
-     * @returns {Object} tokenData with Email, Token, Timestamp, and Used fields.
+     * @returns {VotingTokenData} tokenData with Email, Token, Timestamp, and Used fields.
      */
     generateAndStoreToken: function (email, spreadsheetId) {
         const token = Utilities.getUuid();
@@ -38,7 +38,7 @@ VotingService.Auth = {
      * If not found or already used, returns undefined.
      * @param {string} token 
      * @param {string} spreadsheetId
-     * @returns {Object | undefined} tokenData if found and marked as used, otherwise undefined.
+     * @returns {VotingTokenData | undefined} tokenData if found and marked as used, otherwise undefined.
      */
     consumeToken: function (token, spreadsheetId) {
         const key = VotingService.Auth.createKey_(spreadsheetId);

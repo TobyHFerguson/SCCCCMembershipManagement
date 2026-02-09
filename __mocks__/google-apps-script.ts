@@ -58,6 +58,12 @@ global.Utilities = {
     getLog: jest.fn(() => ''),
 } as any;
 
+// Mock MailApp
+(global as any).MailApp = {
+    sendEmail: jest.fn(),
+    getRemainingDailyQuota: jest.fn(() => 100),
+} as any;
+
 // ApiClient and ApiClientManager are declared in global.d.ts
 // In GAS runtime, they are loaded from ApiClient.js
 // In tests, we need to load the actual implementation

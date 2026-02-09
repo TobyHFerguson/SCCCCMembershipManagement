@@ -34,7 +34,7 @@ function testUpdateUserSubscriptions() {
  * Uses Manager class for pure business logic
  * 
  * @param {string} userEmail - User's email address
- * @returns {Array} Array of subscription objects
+ * @returns {GroupManagementService.GroupSubscription[]} Array of subscription objects
  */
 GroupManagementService.getUserGroupSubscription = function(userEmail) {
     // PURE: Normalize email

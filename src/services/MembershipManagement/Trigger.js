@@ -85,7 +85,7 @@ MembershipManagement.Trigger = {
         try {
             const result = MembershipManagement.processTransactions();
             const { hasPendingPayments, errors } = result;
-            errors.forEach(e => console.error(`Transaction on row ${e.txnNumber} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack
+            errors.forEach(e => console.error(`Transaction on row ${e.txnNum} ${e.email} had an error: ${e.message}\nStack trace: ${e.stack
                 }`));
             return hasPendingPayments
 

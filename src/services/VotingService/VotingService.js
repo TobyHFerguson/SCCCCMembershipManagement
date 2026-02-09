@@ -13,12 +13,10 @@
  */
 VotingService.getBallotFolderId = function () {
     try {
-        /** @type {any[]} */
-        const config = SheetAccess.getData('ElectionConfiguration');
+        const config = DataAccess.getElectionConfiguration();
         
         // Look for a ballot folder URL configuration
-        /** @type {{Key?: string, Setting?: string, Value?: string}} */
-        const ballotFolderConfig = config.find(/** @param {{Key?: string, Setting?: string, Value?: string}} row */ row => row.Key === 'BALLOT_FOLDER_URL' || row.Setting === 'BALLOT_FOLDER_URL');
+        const ballotFolderConfig = config.find(/** @param {ValidatedElectionConfig} row */ row => row.Key === 'BALLOT_FOLDER_URL' || row.Setting === 'BALLOT_FOLDER_URL');
         
         if (ballotFolderConfig && ballotFolderConfig.Value) {
             // Extract folder ID from Google Drive folder URL
@@ -76,7 +74,7 @@ VotingService.manageElectionLifecycles = function () {
     /** @type {string[]} */
     const activeBallots = [];
     elections.forEach(election => {
-        const ballotId = election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME];
+        const ballotId = election['Form Edit URL'];
         if (!ballotId) {
             console.warn(`Election "${election.Title}" has no Form ID. Skipping lifecycle management for this election.`);
             return;
@@ -107,7 +105,7 @@ VotingService.manageElectionLifecycles = function () {
                 break;
             case VotingService.Constants.ElectionState.CLOSED:
                 if (ballot.isPublished() || election.TriggerId) {
-                    VotingService.closeElection_(VotingService.getBallot(election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME]), election);
+                    VotingService.closeElection_(VotingService.getBallot(election['Form Edit URL']), election);
                     console.log(`Closed election "${election.Title}" with ID "${ballotId}" as the end date has passed.`);
                     election.TriggerId = ''; // Clear the trigger ID after closing
                     changesMade = changesMade || true;
@@ -129,7 +127,7 @@ VotingService.manageElectionLifecycles = function () {
 
 /**
  * Gets the state of an election
- * @param {VotingService.Election} election
+ * @param {ValidatedElection} election
  * @returns {VotingService.ElectionState} 
  */
 VotingService.getElectionState = function (election) {
@@ -151,17 +149,17 @@ VotingService.getElectionState = function (election) {
 
 /**
  * Gets spreadsheet ID from election
- * @param {VotingService.Election} election
+ * @param {ValidatedElection} election
  * @returns {string}
  */
 VotingService.getSpreadsheetIdFromElection = function (election) {
-    const ballot = VotingService.getBallot(election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME]);
+    const ballot = VotingService.getBallot(election['Form Edit URL']);
     if (!ballot) {
-        throw new Error(`Ballot with ID "${election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME]}" not found for election "${election.Title}".`);
+        throw new Error(`Ballot with ID "${election['Form Edit URL']}" not found for election "${election.Title}".`);
     }
     const destinationId = ballot.getDestinationId();
     if (!destinationId) {
-        throw new Error(`Ballot with ID "${election[VotingService.Constants.FORM_EDIT_URL_COLUMN_NAME]}" does not have a destination spreadsheet set.`);
+        throw new Error(`Ballot with ID "${election['Form Edit URL']}" does not have a destination spreadsheet set.`);
     }
     return destinationId;
 }
@@ -169,7 +167,7 @@ VotingService.getSpreadsheetIdFromElection = function (election) {
 /**
  * 
  * @param {VotingService.Ballot} ballot Ballot for which the election is being opened.
- * @param {VotingService.Election} election Election being opened.
+ * @param {ValidatedElection} election Election being opened.
  * @returns {string} The unique ID of the created trigger.
  * 
  * @description Opens the election by setting the ballot to accept responses and attaching the onSubmit trigger.
@@ -179,7 +177,7 @@ VotingService.getSpreadsheetIdFromElection = function (election) {
  * @throws {Error} If there is an issue attaching the trigger or if the form does not have a valid destination.
  */
 VotingService.openElection_ = function (ballot, election) {
-    const electionOfficers = election[VotingService.Constants.ELECTION_OFFICERS_COLUMN_NAME]
+    const electionOfficers = election['Election Officers'];
     VotingService.emailElectionOfficersAboutOpening_(electionOfficers, ballot);
     ballot.setPublished(true);
     return VotingService.attachOnSubmitTrigger_(ballot)
@@ -242,7 +240,7 @@ VotingService.cleanUpOrphanedTriggers = function (activeTriggerIds) {
 /**
  * 
  * @param {VotingService.Ballot} ballot - the ballot whose election is being closed.
- * @param {VotingService.Election} election - the election being closed.
+ * @param {ValidatedElection} election - the election being closed.
  *
  * @description Closes the election by setting the ballot to not accept responses, emailing the election officers, and removing the onSubmit trigger.
  * This is typically called when the election's end date has passed.
@@ -254,7 +252,7 @@ VotingService.closeElection_ = function (ballot, election) {
     ballot.setPublished(false);
     VotingService.removeOnSubmitTrigger_(election.TriggerId)
     VotingService.Auth.deleteAllTokens(VotingService.getSpreadsheetIdFromElection(election));
-    const electionOfficers = election[VotingService.Constants.ELECTION_OFFICERS_COLUMN_NAME];
+    const electionOfficers = election['Election Officers'];
     VotingService.emailElectionOfficersAboutClosure_(electionOfficers, ballot);
 }
 

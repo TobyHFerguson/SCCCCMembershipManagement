@@ -34,8 +34,8 @@ var ServiceExecutionLogger = {
      * 
      * @param {string} serviceName - Service name
      * @param {string} email - User email
-     * @param {Function} getDataFn - Function that returns service data
-     * @returns {Object} Service data with logging metadata
+     * @param {() => Record<string, any>} getDataFn - Function that returns service data (JUSTIFIED: each service returns different data shape)
+     * @returns {Record<string, any>} Service data with logging metadata (JUSTIFIED: return type varies per service getData implementation)
      */
     wrapGetData: function(serviceName, email, getDataFn) {
         const logger = new ServiceLogger(serviceName, email);
@@ -83,9 +83,9 @@ var ServiceExecutionLogger = {
      * @param {string} serviceName - Service name
      * @param {string} operationName - Operation name (e.g., 'updateProfile')
      * @param {string} email - User email
-     * @param {Function} handlerFn - Handler function that performs the operation
-     * @param {Record<string, unknown>} [params] - Optional parameters for logging context (JUSTIFIED: arbitrary debugging data)
-     * @returns {Record<string, unknown>} Handler result with logging metadata (JUSTIFIED: arbitrary handler results from diverse operations)
+     * @param {() => ApiResponse} handlerFn - Handler function that performs the operation
+     * @param {Record<string, any>} [params] - Optional parameters for logging context (JUSTIFIED: arbitrary debugging data)
+     * @returns {ApiResponse} Handler result with logging metadata
      */
     wrapApiHandler: function(serviceName, operationName, email, handlerFn, params) {
         const logger = new ServiceLogger(serviceName, email);

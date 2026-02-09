@@ -25,6 +25,7 @@ const TestData = {
   createGroup: (overrides = {}) => ({
     Name: 'Test Group',
     Email: 'test@sc3.club',
+    Subscription: 'auto',
     ...overrides
   }),
 

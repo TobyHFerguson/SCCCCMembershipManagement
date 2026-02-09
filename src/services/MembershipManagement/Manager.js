@@ -9,6 +9,15 @@ if (typeof require !== 'undefined') {
 
 // @ts-check
 MembershipManagement.Manager = class {
+  /**
+   * Create a MembershipManagement Manager
+   * @param {{[k: string]: ValidatedActionSpec}} actionSpecs - Action specifications keyed by ActionType
+   * @param {Array<{Name: string, Email: string, Subscription: string}>} groups - Auto-subscription public groups
+   * @param {{groupAddFun: function(string, string): void, groupRemoveFun: function(string, string): void, groupEmailReplaceFun: function(string, string): *}} groupManager - Group management functions
+   * @param {function({to: string, subject: string, htmlBody: string}): void} sendEmailFun - Email sending function
+   * @param {Date} [today] - Override for current date (defaults to today)
+   * @param {AuditLogger | null} [auditLogger] - Optional audit logger
+   */
   constructor(actionSpecs, groups, groupManager, sendEmailFun, today, auditLogger) {
     if (!groups || groups.length === 0) { throw new Error('MembershipManager requires a non-empty array of group emails'); }
     this._actionSpecs = actionSpecs;
@@ -21,6 +30,10 @@ MembershipManagement.Manager = class {
     this._auditLogger = auditLogger || null;
   }
 
+  /**
+   * Get the current date (time-zeroed) for membership calculations
+   * @returns {Date} Today's date with time set to midnight
+   */
   today() {
     return this._today;
   }
@@ -84,9 +97,10 @@ MembershipManagement.Manager = class {
           expiredMember.groups = this._groups.map(g => g.Email).join(',');
           expired.add(member.Email);
         }
-    const mc = /** @type {unknown} */ (MembershipManagement.Utils.addPrefillForm(member, prefillFormTemplate));
-    expiredMember.subject = MembershipManagement.Utils.expandTemplate(spec.Subject, /** @type {ValidatedMember | Record<string, unknown>} */ (mc));
-    expiredMember.htmlBody = MembershipManagement.Utils.expandTemplate(spec.Body, /** @type {ValidatedMember | Record<string, unknown>} */ (mc));
+    const mc = MembershipManagement.Utils.addPrefillForm(member, prefillFormTemplate);
+    expiredMember.subject = MembershipManagement.Utils.expandTemplate(spec.Subject, mc);
+    const bodyTemplate = typeof spec.Body === 'string' ? spec.Body : spec.Body.text;
+    expiredMember.htmlBody = MembershipManagement.Utils.expandTemplate(bodyTemplate, mc);
         // collect messages for the consumer to send
         messages.push(expiredMember);
       }
@@ -229,6 +243,16 @@ MembershipManagement.Manager = class {
     return { processed, failed, auditEntries };
   }
 
+  /**
+   * Migrate CE (Cycling Express) members into the active membership roster.
+   * Processes a list of migrating members, adding eligible ones to the active members
+   * array, joining groups, and sending welcome emails for Active members.
+   *
+   * @param {Array<Record<string, any>>} migrators - Array of migrating member objects from the MigratingMembers sheet (JUSTIFIED: dynamic sheet columns that vary per migration batch)
+   * @param {ValidatedMember[]} members - Active members array (modified in place — new members are pushed)
+   * @param {MembershipManagement.ExpirySchedule[]} expirySchedule - Expiry schedule array (modified in place — new entries added for Active members)
+   * @returns {{numMigrations: number, auditEntries: AuditLogEntry[], errors: Array<Error & {rowNum?: number, email?: string}>}}
+   */
   migrateCEMembers(migrators, members, expirySchedule) {
     const actionSpec = this._actionSpecs[MembershipManagement.Utils.ActionType.Migrate];
     const requiredKeys = ['Email', 'First', 'Last', 'Phone', 'Joined', 'Period', 'Expires', 'Renewed On', 'Directory', 'Migrated', 'Status'];
@@ -248,7 +272,8 @@ MembershipManagement.Manager = class {
       }
       if (mi["Migrate Me"] && !mi.Migrated) {
         mi.Migrated = this._today;
-        const newMember = { ...mi, Directory: mi.Directory ? 'Yes' : 'No' };
+        // JSDoc cast: TS spread of Record<string,any> loses index signature, cast restores it
+        const newMember = /** @type {Record<string, any>} */ ({ ...mi, Directory: mi.Directory ? 'Yes' : 'No' });
         // Delete unwanted keys
         try {
           if (mi.Status !== 'Active') {
@@ -257,17 +282,19 @@ MembershipManagement.Manager = class {
             console.log(`Migrating Active member ${newMember.Email}, row ${rowNum} - joining groups and sending member an email`);
             Object.keys(newMember).filter(key => key.includes('@')).filter(k => newMember[k]).forEach(g => this._groupAddFun(newMember.Email, g));
             expirySchedule.push(...this.createScheduleEntries_(newMember.Email, newMember.Expires));
+            const bodyTemplate = typeof actionSpec.Body === 'string' ? actionSpec.Body : actionSpec.Body.text;
             let message = {
               to: newMember.Email,
               subject: MembershipManagement.Utils.expandTemplate(actionSpec.Subject, newMember),
-              htmlBody: MembershipManagement.Utils.expandTemplate(actionSpec.Body, newMember)
+              htmlBody: MembershipManagement.Utils.expandTemplate(bodyTemplate, newMember)
             };
             this._sendEmailFun(message);
           }
           Object.keys(newMember).forEach(key => {
             if (!requiredKeys.includes(key)) delete newMember[key];
           });
-          members.push(newMember);
+          // After trimming to requiredKeys, newMember has ValidatedMember shape
+          members.push(/** @type {ValidatedMember} */ (newMember));
           console.log(`Migrated ${newMember.Email}, row ${rowNum}`);
           numMigrations++;
           
@@ -310,7 +337,7 @@ MembershipManagement.Manager = class {
    * @param {ValidatedTransaction[]} transactions - Array of validated transaction instances
    * @param {ValidatedMember[]} membershipData - Array of ValidatedMember instances
    * @param {MembershipManagement.ExpirySchedule[]} expirySchedule - Expiry schedule array
-   * @returns {{recordsChanged: boolean, hasPendingPayments: boolean, errors: Array<*>, auditEntries: Array<*>}}
+   * @returns {{recordsChanged: boolean, hasPendingPayments: boolean, errors: Array<Error & {txnNum?: number, email?: string}>, auditEntries: AuditLogEntry[]}}
    */
   processPaidTransactions(transactions, membershipData, expirySchedule) {
     const errors = [];
@@ -348,10 +375,11 @@ MembershipManagement.Manager = class {
           this.renewMemberWithEmailChange_(txn, existingMember, expirySchedule, oldEmail);
           
           actionType = 'Renew';
+          const renewBodyTemplate = typeof this._actionSpecs.Renew.Body === 'string' ? this._actionSpecs.Renew.Body : this._actionSpecs.Renew.Body.text;
           message = {
             to: existingMember.Email, // Send to NEW email (may have been updated)
             subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Subject, existingMember),
-            htmlBody: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Body, existingMember)
+            htmlBody: MembershipManagement.Utils.expandTemplate(renewBodyTemplate, existingMember)
           };
           
           // Enhanced audit logging for email change detection
@@ -377,10 +405,11 @@ MembershipManagement.Manager = class {
           const newMember = this.addNewMember_(txn, expirySchedule, membershipData);
           this._groups.forEach(g => this._groupAddFun(newMember.Email, g.Email));
           actionType = 'Join';
+          const joinBodyTemplate = typeof this._actionSpecs.Join.Body === 'string' ? this._actionSpecs.Join.Body : this._actionSpecs.Join.Body.text;
           message = {
             to: newMember.Email,
             subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Join.Subject, newMember),
-            htmlBody: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Join.Body, newMember)
+            htmlBody: MembershipManagement.Utils.expandTemplate(joinBodyTemplate, newMember)
           };
         }
         
@@ -421,6 +450,14 @@ MembershipManagement.Manager = class {
     return { recordsChanged, hasPendingPayments, errors, auditEntries };
   }
 
+  /**
+   * Extract membership period (in years) from a transaction's Payment field.
+   * Parses strings like "1 year", "2 years". Defaults to 1 if unparseable.
+   *
+   * @param {ValidatedTransaction} txn - Transaction with a Payment field
+   * @returns {number} Membership period in years (defaults to 1)
+   * @private
+   */
   static getPeriod_(txn) {
     if (!txn.Payment) { return 1; }
     const yearsMatch = txn.Payment.match(/(\d+)\s*year/);
@@ -680,14 +717,15 @@ MembershipManagement.Manager = class {
   static findExistingMemberForTransaction(txn, membershipData, today) {
     // Create temporary member object from transaction for isPossibleRenewal matching
     // Include Joined date to enable temporal validation (renewal must occur before/around expiry)
-    const tempMember = {
+    // Narrowing cast: isPossibleRenewal only accesses Email, First, Last, Phone, Status, Joined, Expires
+    const tempMember = /** @type {ValidatedMember} */ ({
       Email: txn["Email Address"],
       First: txn["First Name"],
       Last: txn["Last Name"],
       Phone: txn.Phone || '',
       Status: 'Active',
       Joined: today
-    };
+    });
     
     // Find Active member matching name (first letter) + phone/email
     const renewalIndex = membershipData.findIndex(
@@ -713,21 +751,8 @@ MembershipManagement.Manager = class {
   }
 
   /**
-   * Check if two members represent a possible renewal (same person with multiple membership records).
-   * A possible renewal is identified by:
-   * - BOTH members have Status='Active'
-   * - First letters of first names match (case insensitive)
-   * - First letters of last names match (case insensitive)
-   * - Same phone OR same email
-   * - The later Joined date is before or equal to the earlier Expires date (if both have joined/expires)
-   * 
-   * @param {ValidatedMember} memberA - First member object
-   * @param {ValidatedMember} memberB - Second member object
-   * @returns {boolean} True if the pair is a possible renewal
-   */
-  /**
    * Normalize an email address (lowercase, trimmed)
-   * @param {string|any} email - Email address to normalize
+   * @param {string} email - Email address to normalize
    * @returns {string} Normalized email (lowercase, trimmed)
    */
   static normalizeEmail(email) {
@@ -737,6 +762,15 @@ MembershipManagement.Manager = class {
     return email.trim().toLowerCase();
   }
 
+  /**
+   * Determine if two member records represent a possible renewal (duplicate join).
+   * Both must be Active, share first letters of first+last names,
+   * share email or phone, and have compatible date ranges.
+   *
+   * @param {ValidatedMember} memberA - First member object
+   * @param {ValidatedMember} memberB - Second member object
+   * @returns {boolean} True if the pair is a possible renewal
+   */
   static isPossibleRenewal(memberA, memberB) {
     // Must be different members
     if (memberA === memberB) return false;
@@ -941,12 +975,20 @@ MembershipManagement.Manager = class {
     }
   }
 
+  /**
+   * Find all pairs of members that are possible renewals (duplicate joins).
+   * Returns index pairs into the membershipData array.
+   *
+   * @param {ValidatedMember[]} membershipData - Array of active members
+   * @returns {Array<[number, number]>} Array of [indexA, indexB] pairs identifying possible renewals
+   */
   static findPossibleRenewals(membershipData) {
+    /** @type {Array<[number, number]>} */
     const similarPairs = [];
     for (let i = 0; i < membershipData.length; i++) {
       for (let j = i + 1; j < membershipData.length; j++) {
         if (MembershipManagement.Manager.isPossibleRenewal(membershipData[i], membershipData[j])) {
-          similarPairs.push([i, j]);
+          similarPairs.push(/** @type {[number, number]} */ ([i, j]));
         }
       }
     }

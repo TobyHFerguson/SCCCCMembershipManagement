@@ -21,7 +21,12 @@
 // @ts-ignore - TypeScript sees identical types as different due to ActionSpec resolution order
 var DataAccess = {
     getBootstrapData: () => {
-        return SheetAccess.getData('Bootstrap');
+        const allData = SheetAccess.getDataAsArrays('Bootstrap');
+        if (allData.length === 0) { return []; }
+        const headers = allData[0];
+        const rows = allData.slice(1);
+        if (rows.length === 0) { return []; }
+        return ValidatedBootstrap.validateRows(rows, headers, 'DataAccess.getBootstrapData');
     },
     /**
      * Get active members with write-context for selective cell writes.
@@ -98,7 +103,12 @@ var DataAccess = {
         return actionSpecs;
     },
     getPublicGroups: () => {
-        return SheetAccess.getData('PublicGroups');
+        const allData = SheetAccess.getDataAsArrays('PublicGroups');
+        if (allData.length === 0) { return []; }
+        const headers = allData[0];
+        const rows = allData.slice(1);
+        if (rows.length === 0) { return []; }
+        return ValidatedPublicGroup.validateRows(rows, headers, 'DataAccess.getPublicGroups');
     },
     getMember: (email) => {
         email = email.toLowerCase();
@@ -232,6 +242,29 @@ var DataAccess = {
         const rows = allData.slice(1);
         if (rows.length === 0) { return []; }
         return ValidatedFIFOItem.validateRows(rows, headers, 'DataAccess.getExpirationFIFO');
+    },
+    /**
+     * Get expiry schedule data (read accessor).
+     * Returns raw objects from the ExpirySchedule sheet.
+     *
+     * @returns {MembershipManagement.ExpirySchedule[]} Array of expiry schedule entries
+     */
+    getExpirySchedule: () => {
+        return /** @type {MembershipManagement.ExpirySchedule[]} */ (SheetAccess.getData('ExpirySchedule'));
+    },
+    /**
+     * Get election configuration entries as validated objects (read-only accessor).
+     * Wraps SheetAccess + ValidatedElectionConfig.validateRows at the typed domain boundary.
+     *
+     * @returns {ValidatedElectionConfig[]} Array of valid ValidatedElectionConfig instances
+     */
+    getElectionConfiguration: () => {
+        const allData = SheetAccess.getDataAsArrays('ElectionConfiguration');
+        if (allData.length === 0) { return []; }
+        const headers = allData[0];
+        const rows = allData.slice(1);
+        if (rows.length === 0) { return []; }
+        return ValidatedElectionConfig.validateRows(rows, headers, 'DataAccess.getElectionConfiguration');
     }
 };
 

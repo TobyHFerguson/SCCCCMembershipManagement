@@ -137,7 +137,7 @@ function verifyCode(email, code, service) {
  * 
  * @param {string} email - Authenticated user email
  * @param {string} service - Service name (e.g., 'DirectoryService')
- * @returns {object} Service-specific data for client-side rendering
+ * @returns {Record<string, any>} Service-specific data for client-side rendering (JUSTIFIED: each service returns different data shape)
  */
 function getServiceContent(email, service) {
   console.log('getServiceContent(', email, service, ')');

@@ -31,7 +31,7 @@ ProfileManagementService.Api = ProfileManagementService.Api || {};
  * Note: Service access is logged by getServiceContent() wrapper in webapp_endpoints.js
  * 
  * @param {string} email - Authenticated user email
- * @returns {{serviceName: string, profile: Object, email: string, error?: string}} Service data
+ * @returns {{serviceName: string, profile: ProfileManagementService.ProfileDisplayData | null, email: string, error?: string}} Service data
  */
 ProfileManagementService.Api.getData = function(email) {
   AppLogger.info('ProfileManagementService', `getData() started for user: ${email}`);
@@ -59,15 +59,15 @@ ProfileManagementService.Api.getData = function(email) {
     
     // GAS: Format dates for local timezone display and remove Date objects (google.script.run can't serialize them)
     if (displayProfile.Joined) {
-      displayProfile.JoinedFormatted = Utilities.formatDate(/** @type {Date} */ (displayProfile.Joined), Session.getScriptTimeZone(), 'MMM d, yyyy');
+      displayProfile.JoinedFormatted = Utilities.formatDate(displayProfile.Joined, Session.getScriptTimeZone(), 'MMM d, yyyy');
       delete displayProfile.Joined; // Remove Date object
     }
     if (displayProfile.Expires) {
-      displayProfile.ExpiresFormatted = Utilities.formatDate(/** @type {Date} */ (displayProfile.Expires), Session.getScriptTimeZone(), 'MMM d, yyyy');
+      displayProfile.ExpiresFormatted = Utilities.formatDate(displayProfile.Expires, Session.getScriptTimeZone(), 'MMM d, yyyy');
       delete displayProfile.Expires; // Remove Date object
     }
     if (displayProfile['Renewed On']) {
-      displayProfile.RenewedOnFormatted = Utilities.formatDate(/** @type {Date} */ (displayProfile['Renewed On']), Session.getScriptTimeZone(), 'MMM d, yyyy');
+      displayProfile.RenewedOnFormatted = Utilities.formatDate(displayProfile['Renewed On'], Session.getScriptTimeZone(), 'MMM d, yyyy');
       delete displayProfile['Renewed On']; // Remove Date object
     }
     
@@ -165,13 +165,13 @@ ProfileManagementService.Api.handleGetProfile = function(params) {
 
       // GAS: Format dates for local timezone display
       if (displayProfile.Joined) {
-        displayProfile.JoinedFormatted = Utilities.formatDate(/** @type {Date} */ (displayProfile.Joined), Session.getScriptTimeZone(), 'MMM d, yyyy');
+        displayProfile.JoinedFormatted = Utilities.formatDate(displayProfile.Joined, Session.getScriptTimeZone(), 'MMM d, yyyy');
       }
       if (displayProfile.Expires) {
-        displayProfile.ExpiresFormatted = Utilities.formatDate(/** @type {Date} */ (displayProfile.Expires), Session.getScriptTimeZone(), 'MMM d, yyyy');
+        displayProfile.ExpiresFormatted = Utilities.formatDate(displayProfile.Expires, Session.getScriptTimeZone(), 'MMM d, yyyy');
       }
       if (displayProfile['Renewed On']) {
-        displayProfile.RenewedOnFormatted = Utilities.formatDate(/** @type {Date} */ (displayProfile['Renewed On']), Session.getScriptTimeZone(), 'MMM d, yyyy');
+        displayProfile.RenewedOnFormatted = Utilities.formatDate(displayProfile['Renewed On'], Session.getScriptTimeZone(), 'MMM d, yyyy');
       }
 
       // Return success response
@@ -242,7 +242,7 @@ ProfileManagementService.Api.handleGetEditableFields = function(params) {
  * LOGGING: Logs full execution flow including validation and update results
  * Creates audit entries for profile changes
  * 
- * @param {{_authenticatedEmail: string, updates: Record<string, unknown>}} params - Request parameters with updates object containing field values (JUSTIFIED: arbitrary profile field updates from diverse sources)
+ * @param {{_authenticatedEmail: string, updates: Partial<ValidatedMemberData>}} params - Request parameters with updates object containing field values
  * @returns {ApiResponse}
  */
 ProfileManagementService.Api.handleUpdateProfile = function(params) {
@@ -305,7 +305,7 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
 
       // GAS: Persist the update
       AppLogger.info('ProfileManagementService', `Persisting profile update for user: ${normalizedEmail}`);
-      DataAccess.updateMember(normalizedEmail, /** @type {ValidatedMember | ValidatedMemberData} */ (result.mergedProfile));
+      DataAccess.updateMember(normalizedEmail, result.mergedProfile);
       
       // Create audit entry for profile update
       const logger = new ServiceLogger('ProfileManagementService', userEmail);
@@ -335,7 +335,7 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
       return ApiClientManager.successResponse({
         success: true,
         message: result.message,
-        profile: ProfileManagementService.Manager.formatProfileForDisplay(/** @type {ValidatedMember | Record<string, unknown>} */ (result.mergedProfile))
+        profile: ProfileManagementService.Manager.formatProfileForDisplay(result.mergedProfile)
       });
     } catch (error) {
       AppLogger.error('ProfileManagementService', `handleUpdateProfile() failed for user: ${userEmail}`, error);

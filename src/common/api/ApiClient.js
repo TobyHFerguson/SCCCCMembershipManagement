@@ -40,9 +40,9 @@
  */
 
 /**
- * @typedef {{handler: function(Record<string, unknown>, string): ApiResponse, requiresAuth?: boolean, description?: string}} ActionHandler
+ * @typedef {Object} ActionHandler
  * Action handler configuration
- * @property {function(Record<string, unknown>, string): ApiResponse} handler - The handler function (params, token) => ApiResponse - params are truly dynamic API data - JUSTIFIED: arbitrary API data from diverse service endpoints
+ * @property {function(Record<string, unknown>, string): ApiResponse} handler - The handler function (params, token) => ApiResponse (JUSTIFIED: dispatches to any action handler with dynamic params) - params are truly dynamic API data - JUSTIFIED: arbitrary API data from diverse service endpoints
  * @property {boolean} [requiresAuth] - Whether authentication is required
  * @property {string} [description] - Action description
  */

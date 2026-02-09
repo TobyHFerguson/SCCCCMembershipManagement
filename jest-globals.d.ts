@@ -24,5 +24,17 @@ Utilities: {
     getUuid(): string;
     // Add other mocked methods
 };
+        // Validated classes that tests assign to global
+        ValidatedBootstrap: typeof ValidatedBootstrap;
+        ValidatedPublicGroup: typeof ValidatedPublicGroup;
+        ValidatedElectionConfig: typeof ValidatedElectionConfig;
+        ValidatedTransaction: typeof ValidatedTransaction;
+        // MailApp mock for testing
+        MailApp: {
+            sendEmail: jest.Mock<any, any>;
+            getRemainingDailyQuota?: jest.Mock<any, any>;
+        };
+        // AppLogger for testing
+        AppLogger: typeof AppLogger;
   }
 }
