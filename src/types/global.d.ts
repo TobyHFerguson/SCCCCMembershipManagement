@@ -1611,4 +1611,12 @@ declare namespace VotingService {
 // ============================================================================
 
 // Properties Management (not a class, just a namespace object)
-declare const Properties: any; // TODO: Add proper Properties type
+declare var Properties: {
+    getProperty(propertyName: string, defaultValue?: string | null): string | null;
+    getNumberProperty(propertyName: string, defaultValue?: number): number;
+    getBooleanProperty(propertyName: string, defaultValue?: boolean): boolean;
+    setCodeInternalProperty(propertyName: string, value: string): void;
+    deleteCodeInternalProperty(propertyName: string): void;
+    clearCache(): void;
+    getAllUserProperties(): { [key: string]: string };
+};

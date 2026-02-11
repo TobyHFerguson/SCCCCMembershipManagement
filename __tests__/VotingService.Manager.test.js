@@ -34,6 +34,12 @@
 const { Manager } = require('../src/services/VotingService/Manager');
 
 // Test data factories
+/** @type {{
+  createElection: (overrides?: any) => any,
+  createTokenData: (overrides?: any) => any,
+  createVoter: (overrides?: any) => any,
+  [key: string]: any
+}} */
 const TestData = {
   createElection: (overrides = {}) => ({
     Title: 'Test Election 2024',

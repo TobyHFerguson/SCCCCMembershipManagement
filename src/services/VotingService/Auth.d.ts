@@ -52,3 +52,5 @@ declare namespace VotingService {
         function getAllTokens(spreadsheetId: string): VotingTokenData[];
     }
 }
+
+export {};

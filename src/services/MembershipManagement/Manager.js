@@ -3,7 +3,6 @@ if (typeof require !== 'undefined') {
   // Load ValidatedMember for addNewMember_ method
   const { ValidatedMember: ValidatedMemberClass } = require('../../common/data/ValidatedMember.js');
   // Make it globally available for Jest tests
-  // @ts-expect-error - this is just for Jest testing. It has no runtime consequence.
   global.ValidatedMember = ValidatedMemberClass;
 }
 

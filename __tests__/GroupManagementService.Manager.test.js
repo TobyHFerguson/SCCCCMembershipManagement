@@ -21,6 +21,12 @@
 const { Manager, DEFAULT_DELIVERY_OPTIONS } = require('../src/services/GroupManagementService/Manager');
 
 // Test data factories
+/** @type {{
+  createGroup: (overrides?: any) => any,
+  createMember: (overrides?: any) => any,
+  createUpdate: (overrides?: any) => any,
+  [key: string]: any
+}} */
 const TestData = {
   createGroup: (overrides = {}) => ({
     Name: 'Test Group',

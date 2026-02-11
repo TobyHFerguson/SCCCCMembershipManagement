@@ -171,3 +171,5 @@ Processing continues with assumption of pending payments.`
         }
     }
 }
+// Export to make this a module for TypeScript
+if (typeof module !== 'undefined' && module.exports) { module.exports = {}; }

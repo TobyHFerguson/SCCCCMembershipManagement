@@ -22,6 +22,11 @@
 const { Manager, DEFAULT_FORBIDDEN_FIELDS, PROFILE_FIELD_SCHEMA } = require('../src/services/ProfileManagementService/Manager');
 
 // Test data factories
+/** @type {{
+  createProfile: (overrides?: any) => any,
+  createValidUpdate: (overrides?: any) => any,
+  [key: string]: any
+}} */
 const TestData = {
   createProfile: (overrides = {}) => ({
     Status: 'Active',
