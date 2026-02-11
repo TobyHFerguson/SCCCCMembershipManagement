@@ -77,7 +77,6 @@ Object.assign(VotingService, {
     description: 'Participate in SCCCC elections',
     icon: 'voting',
     Data: VotingService.Data || {},
-    WebApp: VotingService.WebApp || {},
     Trigger: VotingService.Trigger || {}
 });
 

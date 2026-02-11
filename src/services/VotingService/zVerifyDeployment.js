@@ -46,7 +46,7 @@ function verifyVotingServiceConstants() {
     console.log('✅ All VotingService constants verified successfully');
     console.log('✅ Namespace integration working (Constants + Service properties)');
     console.log('📋 Available constants:', Object.keys(VotingService.Constants));
-    console.log('📋 Service properties:', ['name', 'service', 'Data', 'WebApp', 'Trigger', 'Constants'].filter(prop => VotingService[prop] !== undefined));
+    console.log('📋 Service properties:', ['name', 'service', 'Data', 'Trigger', 'Constants'].filter(prop => VotingService[prop] !== undefined));
     
     return true;
   } catch (error) {

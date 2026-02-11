@@ -132,9 +132,8 @@ Each service follows this namespace pattern:
 - **`Service.Manager`**: Pure logic class (100% testable, no GAS dependencies)
 - **`Service.Api`**: Data endpoints for SPA services (returns JSON only, not HTML)
 - **`Service.Trigger`**: Time/form-based trigger functions
-- **`Service.WebApp`**: ⚠️ DEPRECATED for new services (use SPA pattern instead)
 
-**Service Registry**: All services registered in `src/1namespaces.js` and routed via `src/webApp.js` doGet handler using `?service=` parameter.
+**Service Registry**: All services registered in `src/1namespaces.js` and routed via `src/webApp.js` doGet handler.
 
 ### SPA Architecture (CRITICAL for Web Services)
 

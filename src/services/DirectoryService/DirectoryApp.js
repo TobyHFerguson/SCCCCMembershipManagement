@@ -1,9 +1,3 @@
-// --- Configuration ---
-const SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId(); // Use container spreadsheet
-const DATA_SHEET_NAME = 'Members';           // Replace with your data sheet name
-const TOKEN_SHEET_NAME = 'MagicLinkTokens'; // Sheet to store tokens (create this sheet)
-const ACCESS_LINK_BASE_URL = ScriptApp.getService().getUrl(); // Base URL of your web app
-
 // Namespace declaration pattern (works in both GAS and Jest)
 // @ts-ignore
 if (typeof DirectoryService === 'undefined') DirectoryService = {};

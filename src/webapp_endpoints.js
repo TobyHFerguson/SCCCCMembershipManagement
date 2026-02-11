@@ -201,42 +201,7 @@ function getServiceContent(email, service) {
     }
   }
   
-  // Fallback for services not yet migrated to new architecture
-  console.warn(`Service ${service} does not have Api.getData() - using legacy approach`);
-  console.warn(`webService:`, JSON.stringify(Object.keys(webService)));
-  
-  // For DirectoryService specifically (legacy)
-  if (service === 'DirectoryService') {
-    try {
-      const directoryEntries = DirectoryService.getDirectoryEntries();
-      console.log('getServiceContent: DirectoryService entries count:', directoryEntries ? directoryEntries.length : 0);
-      console.log('getServiceContent: First entry:', directoryEntries && directoryEntries.length > 0 ? directoryEntries[0] : 'none');
-      
-      // Log successful access (legacy path)
-      const accessEntry = logger.logServiceAccess('getDirectoryEntries');
-      auditEntries.push(accessEntry);
-      _persistAuditEntries(auditEntries);
-      
-      AppLogger.info('WebApp', `getServiceContent() completed (legacy path) for service=${service}, user=${email}`);
-      
-      return {
-        serviceName: 'Directory',
-        directoryEntries: directoryEntries
-      };
-    } catch (error) {
-      // Log error
-      const errorEntry = logger.logError('getDirectoryEntries', error);
-      auditEntries.push(errorEntry);
-      _persistAuditEntries(auditEntries);
-      
-      return {
-        serviceName: 'Directory',
-        error: error.message
-      };
-    }
-  }
-  
-  // Generic fallback
+  // All services must have Api.getData() - no legacy fallback
   console.error(`Service ${service} has no Api.getData() method`);
   
   // Log error
@@ -347,42 +312,18 @@ function refreshSession(token) {
   };
 }
 
-function getDirectoryEntries() {
-  return JSON.stringify(DirectoryService.getDirectoryEntries())
-}
-
 function processForm(form) {
   return EmailService.sendTestEmail(form)
 }
 
-function handleChangeEmailInGroupsUI(originalEmail, newEmail, groupMembershipData) {
-  return EmailChangeService.handleChangeEmailInGroupsUI(originalEmail, newEmail, groupMembershipData)
-}
-
-function handleVerifyAndGetGroups(originalEmail, newEmail, verificationCode) {
-  return EmailChangeService.handleVerifyAndGetGroups(originalEmail, newEmail, verificationCode);
-}
-
-function handleSendVerificationCode(newEmail, originalEmail) {
-  return EmailChangeService.handleSendVerificationCode(newEmail, originalEmail)
-}
-
 function updateUserSubscriptions(updatedSubscriptions, userToken) {
-    const response = GroupManagementService.WebApp.updateUserSubscriptions(updatedSubscriptions, userToken);
-    return response;
-}
-
-function getProfile(userToken) {
     const userEmail = TokenManager.getEmailFromMUT(userToken);
     if (!userEmail) {
         console.warn(`Invalid or expired token: ${userToken}`);
-        return { success: false, message: "Invalid session. Please refresh the page." };
+        return JSON.stringify({ success: false, message: "Invalid session. Please refresh the page." });
     }
-    const profile = DataAccess.getMember(userEmail);
-    if (!profile) {
-        return { success: false, message: `Profile not found for email: ${userEmail}` };
-    }
-    return { success: true, profile: profile };
+    const response = GroupManagementService.updateUserSubscriptions(updatedSubscriptions, userEmail);
+    return response;
 }
 
 function updateProfile(userToken, updatedProfile ) {

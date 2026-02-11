@@ -10,7 +10,7 @@
  *
  * Architecture follows GAS Layer Separation pattern:
  * - Manager: Pure logic (testable)
- * - GAS layer (WebApp.js, Api.js): Orchestration and GAS API calls
+ * - GAS layer (Api.js): Orchestration and GAS API calls
  *
  * @namespace VotingService.Manager
  */

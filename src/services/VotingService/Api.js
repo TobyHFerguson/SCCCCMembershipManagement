@@ -39,9 +39,8 @@ VotingService.Api.getData = function(email) {
   
   try {
     // Get processed elections (already filtered and formatted for display)
-    // This reuses the existing WebApp logic which converts Date to ISO strings
     AppLogger.debug('VotingService', 'Fetching elections for template');
-    const elections = VotingService.WebApp._getElectionsForTemplate(email);
+    const elections = VotingService.Api._getElectionsForTemplate(email);
     
     AppLogger.info('VotingService', `getData() completed successfully for user: ${email}`, {
       electionCount: elections ? elections.length : 0
@@ -59,6 +58,87 @@ VotingService.Api.getData = function(email) {
       elections: []
     };
   }
+};
+
+/**
+ * Process elections so that no URL (ID) is published for an inactive election.
+ * Converts Date objects to ISO strings for safe serialization via google.script.run.
+ * 
+ * @param {string} userEmail - The email address of the user.
+ * @returns {Array<VotingService.ProcessedElection>} - Returns an array of ProcessedElection objects with prefilled URLs for voting.    
+ */
+VotingService.Api._getElectionsForTemplate = function (userEmail) {
+    const elections = VotingService.Data.getElectionData();
+    console.log(`Raw elections data retrieved for user ${userEmail}:`, elections);
+    
+    // Filter out empty/invalid election rows (rows with empty Title, Start, or End)
+    const validElections = elections.filter(election => {
+        return election.Title && 
+               election.Title.trim() !== '' && 
+               election.Start && 
+               election.End;
+    });
+    
+    console.log(`Filtered to ${validElections.length} valid elections (from ${elections.length} total rows)`);
+    
+    /** @type {VotingService.ProcessedElection[]} */
+    const processedElections = validElections.map(election => {
+        const result = {};
+        try {
+            result.title = election.Title;
+            // Convert Date objects to ISO strings for serialization via google.script.run
+            result.opens = new Date(election.Start).toISOString();
+            result.closes = new Date(election.End).toISOString();
+            if (VotingService.Data.hasVotedAlreadyInThisElection(userEmail, election)) {
+                result.status = "Inactive - you've already voted"
+                return result; // Skip further processing if user has already voted
+            }
+
+            const ballot = VotingService.getBallot(election['Form Edit URL']);
+            console.log(`ballot ${ballot.getTitle()} is published: ${ballot.isPublished()}`);
+            console.log(`ballot ${ballot.getTitle()} is accepting responses: ${ballot.isAcceptingResponses()}`);
+            switch (VotingService.getElectionState(election)) {
+                case VotingService.Constants.ElectionState.UNOPENED:
+                    result.status = "Inactive - election not open yet"
+                    break;
+                case VotingService.Constants.ElectionState.CLOSED:
+                    result.status = "Inactive - election has closed"
+                    break;
+                case VotingService.Constants.ElectionState.ACTIVE:
+                    if (!ballot.isPublished() || !ballot.isAcceptingResponses()) {
+                        result.status = "Inactive - ballot is not accepting responses"
+                    }
+                    // Ballot is published
+                    else {
+                        result.url = VotingService.Api._getFormUrlWithTokenField(userEmail, election);
+                        result.status = "Active";
+                    }
+                    break;
+                default:
+                    result.status = "Inactive - unknown status"
+            }
+        } catch (error) {
+            console.error(`Error processing election  for user ${userEmail}:`, election, error);
+            throw new Error(`Error processing election ${election.Title} for user ${userEmail}: ${error.message}`);
+        }
+        return result
+    });
+    /** @type {VotingService.ProcessedElection[]} */
+    return processedElections;
+};
+
+/**
+ * Generate a prefilled ballot URL with a token field for the user.
+ * 
+ * @param {string} userEmail - The email address of the user.
+ * @param {ValidatedElection} election - The election object containing the form ID.
+ * @returns {string} A prefilled ballot URL with a token field for the user.
+ */
+VotingService.Api._getFormUrlWithTokenField = function (userEmail, election) {
+    const spreadsheetId = VotingService.getSpreadsheetIdFromElection(election);
+    const token = VotingService.Auth.generateAndStoreToken(userEmail, spreadsheetId).Token;
+    const preFilledUrl = VotingService.createPrefilledUrlWithTitle(election['Form Edit URL'], VotingService.Constants.TOKEN_ENTRY_FIELD_TITLE, token);
+    return preFilledUrl;
 };
 
 /**
