@@ -13,6 +13,20 @@ type ActionSpec = MembershipManagement.ActionSpec;
 type ExpiredMember = MembershipManagement.ExpiredMember;
 type ExpiredMembersQueue = MembershipManagement.ExpiredMembersQueue;
 
+
+/**
+ * Common - Legacy namespace object for backward compatibility
+ * Tests can assign properties to this object (e.g., Common.Logger, Common.Data)
+ */
+declare var Common: {
+    Logger?: any;
+    Data?: any;
+    Api?: any;
+    Auth?: any;
+    Config?: any;
+    [key: string]: any;
+};
+
 /**
  * AppLogger - Production-friendly logging utility for Google Apps Script
  * Named AppLogger (not Logger) to avoid conflict with GAS built-in Logger.

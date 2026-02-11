@@ -41,8 +41,8 @@ Utilities: {
             info?: jest.Mock<any, any> | ((...args: any[]) => void);
             debug?: jest.Mock<any, any> | ((...args: any[]) => void);
         };
-        // Common namespace extensions for tests
-        Common: typeof Common & {
+        // Common namespace - tests can assign mock objects to it
+        Common?: {
             Logger?: any;
             Data?: any;
             Api?: any;
