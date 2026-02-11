@@ -567,26 +567,6 @@ declare var SheetAccess: {
 };
 
 /**
- * Plain object shape of ValidatedMember data (without class methods)
- * Use this for functions that return/accept member data as plain objects
- * rather than ValidatedMember class instances
- */
-interface ValidatedMemberData {
-    Email: string;
-    Status: string;
-    First: string;
-    Last: string;
-    Phone: string;
-    Joined: Date;
-    Expires: Date;
-    Period: number | null;
-    'Directory Share Name': boolean;
-    'Directory Share Email': boolean;
-    'Directory Share Phone': boolean;
-    'Renewed On': Date | null;
-}
-
-/**
  * Transaction data from payment processor (e.g., JotForm, Square)
  * Used for processing new memberships and renewals
  */
@@ -658,6 +638,15 @@ interface ValidatedMember {
     /** Convert to array for sheet persistence */
     toArray(): Array<string | Date | number | boolean | null>;
 }
+
+/**
+ * Plain object shape of ValidatedMember data (without class methods)
+ * Use this for functions that return/accept member data as plain objects
+ * rather than ValidatedMember class instances
+ *
+ * Excludes 'Migrated' (server-managed) and 'toArray()' (class method)
+ */
+type ValidatedMemberData = Omit<ValidatedMember, 'toArray' | 'Migrated'>;
 
 // Flat ValidatedTransaction class (new pattern for transaction validation)
 // Declared as `var` (not `class`) so tests can assign to `global.ValidatedTransaction`
