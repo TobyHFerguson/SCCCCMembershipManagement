@@ -277,6 +277,17 @@ interface TokenDataType {
     Service?: string;
 }
 
+/**
+ * Voting token data structure
+ */
+interface VotingTokenData {
+    Email: string;
+    Token: string;
+    Timestamp: Date;
+    Used: boolean;
+}
+
+
 // System logging types
 interface SystemLogEntry {
     Timestamp: Date;
