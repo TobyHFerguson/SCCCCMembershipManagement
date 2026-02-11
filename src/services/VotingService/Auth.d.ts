@@ -53,4 +53,8 @@ declare namespace VotingService {
     }
 }
 
-export {};
+
+// Export for Node.js/Jest  
+export const Auth: typeof VotingService.Auth;
+export { VotingTokenData };
+

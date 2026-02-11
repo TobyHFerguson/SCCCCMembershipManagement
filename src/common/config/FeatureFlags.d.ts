@@ -18,4 +18,7 @@
 // Types are declared globally in src/types/global.d.ts
 // No export needed - classes are available globally in GAS runtime
 
-export {};
+
+// Export for Node.js/Jest
+export { FeatureFlags, FeatureFlagsManager };
+

@@ -123,7 +123,7 @@ describe('AuditLogEntry Class', () => {
     });
     
     test('should log error when construction fails', () => {
-      AuditLogEntry.create(123, 'success');  // Invalid type
+      AuditLogEntry.create(/** @type {any} */ (123), 'success');  // Invalid type
       
       expect(Common.Logger.error).toHaveBeenCalledWith(
         'AuditLogEntry',
