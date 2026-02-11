@@ -17,18 +17,21 @@ type ExpiredMembersQueue = MembershipManagement.ExpiredMembersQueue;
  * AppLogger - Production-friendly logging utility for Google Apps Script
  * Named AppLogger (not Logger) to avoid conflict with GAS built-in Logger.
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ * Declared as `var` (not `class`) so tests can assign to `global.AppLogger`
+ * without 'Property does not exist on typeof globalThis' errors.
+ * Methods that tests don't always mock are optional (?) to allow partial mocks.
  */
-declare class AppLogger {
-    static debug(service: string, message: string, data?: any): void;
-    static info(service: string, message: string, data?: any): void;
-    static warn(service: string, message: string, data?: any): void;
-    static error(service: string, message: string, data?: any): void;
-    static configure(): void;
-    static setLevel(level: string): void;
-    static getLogs(): Array<[Date | string, string, string, string, string]>;
-    static clearLogs(): void;
-    static setContainerSpreadsheet(spreadsheetId: string): void;
-}
+declare var AppLogger: {
+    debug(service: string, message: string, data?: any): void;
+    info(service: string, message: string, data?: any): void;
+    warn(service: string, message: string, data?: any): void;
+    error(service: string, message: string, data?: any): void;
+    configure?(): void;
+    setLevel?(level: string): void;
+    getLogs?(): Array<[Date | string, string, string, string, string]>;
+    clearLogs?(): void;
+    setContainerSpreadsheet?(spreadsheetId: string): void;
+};
 
 /**
  * FeatureFlags - Feature flag management for Google Apps Script

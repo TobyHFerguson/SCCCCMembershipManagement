@@ -34,7 +34,12 @@ Utilities: {
             sendEmail: jest.Mock<any, any>;
             getRemainingDailyQuota?: jest.Mock<any, any>;
         };
-        // AppLogger for testing
-        AppLogger: typeof AppLogger;
+        // AppLogger for testing (can be either the real class or a mock object)
+        AppLogger: {
+            error?: jest.Mock<any, any> | ((...args: any[]) => void);
+            warn?: jest.Mock<any, any> | ((...args: any[]) => void);
+            info?: jest.Mock<any, any> | ((...args: any[]) => void);
+            debug?: jest.Mock<any, any> | ((...args: any[]) => void);
+        };
   }
 }
