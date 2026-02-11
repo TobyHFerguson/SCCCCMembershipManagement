@@ -37,9 +37,9 @@ describe('utils', () => {
     });
     it('should calculate dates even if theyre strings', () => {
       const period = 2;
-      const d = '2020-01-01'; // Jan 1, 2020
-      const e = '2022-01-01'; // Jan 1, 2022
-      const result = utils.calculateExpirationDate(d, e, period);
+      const d = /** @type {any} */ ('2020-01-01'); // Jan 1, 2020
+      const e = /** @type {any} */ ('2022-01-01'); // Jan 1, 2022
+      const result = utils.calculateExpirationDate(d, e, /** @type {any} */ (period));
       const expectedResult  = utils.addYearsToDate(e, 2)
       expect(result).toEqual(expectedResult);
     });
