@@ -405,11 +405,11 @@ describe('GroupManagementService.Api', () => {
 
     test('throws for unknown action', () => {
       expect(() => {
-        GroupManagementService.Api._executeAction({
+        GroupManagementService.Api._executeAction(/** @type {any} */ ({
           action: 'invalid',
           groupEmail: 'g1@sc3.club',
           userEmail: 'user@test.com'
-        });
+        }));
       }).toThrow('Unknown action');
     });
   });

@@ -88,7 +88,7 @@ describe('DirectoryService.Manager', () => {
     });
 
     test('returns empty array for non-array input', () => {
-      expect(Manager.filterActiveMembers('not an array')).toEqual([]);
+      expect(Manager.filterActiveMembers(/** @type {any} */ ('not an array'))).toEqual([]);
     });
 
     test('handles null entries in array', () => {
@@ -244,7 +244,7 @@ describe('DirectoryService.Manager', () => {
         // No sharing preferences set
       };
       
-      const result = Manager.transformToDirectoryEntry(member);
+      const result = Manager.transformToDirectoryEntry(/** @type {any} */ (member));
       
       expect(result.email).toBe('');
       expect(result.phone).toBe('');
@@ -551,7 +551,7 @@ describe('DirectoryService.Manager', () => {
     });
 
     test('rejects non-string search term', () => {
-      const result = Manager.validateSearchTerm(123);
+      const result = Manager.validateSearchTerm(/** @type {any} */ (123));
       
       expect(result.valid).toBe(false);
       expect(result.errorCode).toBe('INVALID_SEARCH_TERM');

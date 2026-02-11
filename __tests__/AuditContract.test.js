@@ -66,8 +66,8 @@ describe('Audit Contract Tests', () => {
     sendEmailFun = jest.fn();
     
     manager = new MembershipManagement.Manager(
-      actionSpecs,
-      groups,
+      /** @type {any} */ (actionSpecs),
+      /** @type {any} */ (groups),
       groupManager,
       sendEmailFun,
       today,

@@ -27,7 +27,7 @@ global.Common = {
 };
 
 // Mock AuditLogger (flat class, no namespace)
-global.AuditLogger = class {
+/** @type {any} */ (global.AuditLogger) = class {
     constructor(timestamp) {
         this._timestamp = timestamp || new Date();
     }

@@ -45,7 +45,7 @@ global.DataAccess = DataAccess;
 require('../src/services/MembershipManagement/utils.js');
 require('../src/services/MembershipManagement/Manager.js');
 // Ensure a global MembershipManagement.Internal exists (Manager.js can overwrite the global)
-global.MembershipManagement = global.MembershipManagement || ns.MembershipManagement || {};
+/** @type {any} */ (global).MembershipManagement = global.MembershipManagement || ns.MembershipManagement || {};
 global.MembershipManagement.Internal = /** @type {any} */ (global.MembershipManagement.Internal || {});
 require('../src/services/MembershipManagement/Trigger.js');
 // Require the wrapper last so it can attach to the existing global MembershipManagement
@@ -78,7 +78,7 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
             ['Active', 's3@example.com', 'User', 'Three', '555-3333', new Date('2023-01-01'), new Date('2024-01-01'), 12, '', true, false, false, null]
         ];
         
-        global.SpreadsheetManager.getSheet = jest.fn((sheetName) => {
+        /** @type {any} */ (global.SpreadsheetManager).getSheet = jest.fn((sheetName) => {
             if (sheetName === 'ActiveMembers') {
                 return {
                     getDataRange: jest.fn(() => ({
@@ -100,10 +100,10 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
 
         // Mock Data.Access methods needed by Manager construction
         global.DataAccess = /** @type {any} */ (global.DataAccess || {});
-        global.DataAccess.getActionSpecs = jest.fn(() => ({
+        /** @type {any} */ (global.DataAccess).getActionSpecs = jest.fn(() => ({
             'Expiry1': { Type: 'Expiry1', Subject: 'Expiry notice', Body: 'Your membership expires' }
         }));
-        global.DataAccess.getPublicGroups = jest.fn(() => [
+        /** @type {any} */ (global.DataAccess).getPublicGroups = jest.fn(() => [
             { Name: 'Test Group', Email: 'test@example.com', Subscription: 'auto' }
         ]);
         
@@ -151,7 +151,7 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
 
         // Mock the Manager's processExpiredMembers method
         const originalProcessExpiredMembers = global.MembershipManagement.Manager.prototype.processExpiredMembers;
-        global.MembershipManagement.Manager.prototype.processExpiredMembers = jest.fn(() => fakeResult);
+        /** @type {any} */ (global.MembershipManagement.Manager.prototype).processExpiredMembers = jest.fn(() => fakeResult);
 
         // Act
         const res = global.MembershipManagement.processExpirationFIFO();
@@ -186,7 +186,7 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
         
         // Mock the Manager's processExpiredMembers method
         const originalProcessExpiredMembers = global.MembershipManagement.Manager.prototype.processExpiredMembers;
-        global.MembershipManagement.Manager.prototype.processExpiredMembers = jest.fn(() => fakeResult);
+        /** @type {any} */ (global.MembershipManagement.Manager.prototype).processExpiredMembers = jest.fn(() => fakeResult);
         
         const res = global.MembershipManagement.processExpirationFIFO({ batchSize: 10 });
         // updated queue still has entries (r1 remains) so trigger should be scheduled
@@ -207,7 +207,7 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
         
         // Mock the Manager's processExpiredMembers method
         const originalProcessExpiredMembers = global.MembershipManagement.Manager.prototype.processExpiredMembers;
-        global.MembershipManagement.Manager.prototype.processExpiredMembers = jest.fn(() => fakeResult);
+        /** @type {any} */ (global.MembershipManagement.Manager.prototype).processExpiredMembers = jest.fn(() => fakeResult);
         
         const res = global.MembershipManagement.processExpirationFIFO({ batchSize: 10 });
         // One row (r1) skipped; processed should reflect eligible count (2)
@@ -308,7 +308,7 @@ describe('MembershipManagement audit persistence integration', () => {
         });
 
         // Should not throw
-        const numWritten = global.MembershipManagement.Internal.persistAuditEntries_(mockAuditEntries);
+        const numWritten = global.MembershipManagement.Internal.persistAuditEntries_(/** @type {any} */ (mockAuditEntries));
 
         // Should log error via AuditPersistence (not MembershipManagement since error is caught internally)
         const loggerCalls = Common.Logger.error.mock.calls;

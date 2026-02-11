@@ -441,7 +441,7 @@ describe('EmailChangeService.Api', () => {
       const result = EmailChangeService.Api.handleChangeEmail({
         _authenticatedEmail: 'old@example.com',
         newEmail: 'new@example.com',
-        groups: groups
+        groups: /** @type {any} */ (groups)
       });
 
       expect(result.success).toBe(true);
@@ -495,7 +495,7 @@ describe('EmailChangeService.Api', () => {
       const result = EmailChangeService.Api.handleChangeEmail({
         _authenticatedEmail: 'old@example.com',
         newEmail: 'new@example.com',
-        groups: groups
+        groups: /** @type {any} */ (groups)
       });
 
       expect(result.success).toBe(true); // API call succeeded
@@ -563,7 +563,7 @@ describe('EmailChangeService.Api', () => {
         deleteProperty: jest.fn()
       });
 
-      EmailChangeService.Api.storeVerificationData('123456', { test: 'data' });
+      EmailChangeService.Api.storeVerificationData('123456', /** @type {any} */ ({ test: 'data' }));
 
       expect(mockSetProperty).toHaveBeenCalledWith(
         'verification_123456',
@@ -644,7 +644,7 @@ describe('EmailChangeService.Api', () => {
         body: 'Test body'
       };
 
-      const result = EmailChangeService.Api.sendVerificationEmail('test@example.com', content);
+      const result = EmailChangeService.Api.sendVerificationEmail('test@example.com', /** @type {any} */ (content));
 
       expect(result).toBe(true);
       expect(MailApp.sendEmail).toHaveBeenCalledWith({

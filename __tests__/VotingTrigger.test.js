@@ -28,23 +28,23 @@ describe('Trigger', () => {
         it('returns first element of array values', () => {
             const input = { a: [1, 2], b: ['x', 'y'], c: 42 };
             const expected = { a: 1, b: 'x', c: 42 };
-            expect(Trigger.firstValues_(input)).toEqual(expected);
+            expect(Trigger.firstValues_(/** @type {any} */ (input))).toEqual(expected);
         });
         it('returns original value if not array', () => {
             const input = { a: 5 };
-            expect(Trigger.firstValues_(input)).toEqual({ a: 5 });
+            expect(Trigger.firstValues_(/** @type {any} */ (input))).toEqual({ a: 5 });
         });
     });
 
     describe('getElectionTitle_', () => {
         it('removes RESULTS_SUFFIX from spreadsheet name', () => {
             const spreadsheet = { getName: () => 'Election 2024 - Results' };
-            expect(Trigger.getElectionTitle_(spreadsheet)).toBe('Election 2024');
+            expect(Trigger.getElectionTitle_(/** @type {any} */ (spreadsheet))).toBe('Election 2024');
         });
 
         it('returns name if no suffix', () => {
             const spreadsheet = { getName: () => 'Election 2024' };
-            expect(Trigger.getElectionTitle_(spreadsheet)).toBe('Election 2024');
+            expect(Trigger.getElectionTitle_(/** @type {any} */ (spreadsheet))).toBe('Election 2024');
         });
     });
 
@@ -100,7 +100,7 @@ describe('Trigger', () => {
     describe('firstValues_', () => {
         it('returns first value for mixed arrays and primitives', () => {
             const obj = { a: [1], b: 2, c: ['x', 'y'] };
-            expect(Trigger.firstValues_(obj)).toEqual({ a: 1, b: 2, c: 'x' });
+            expect(Trigger.firstValues_(/** @type {any} */ (obj))).toEqual({ a: 1, b: 2, c: 'x' });
         });
     });
 });

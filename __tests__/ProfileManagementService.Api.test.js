@@ -374,10 +374,10 @@ describe('ProfileManagementService.Api', () => {
     });
 
     test('returns error when updates is not an object', () => {
-      const result = ProfileManagementService.Api.handleUpdateProfile({
+      const result = ProfileManagementService.Api.handleUpdateProfile(/** @type {any} */ ({
         _authenticatedEmail: 'test@example.com',
         updates: 'not an object'
-      });
+      }));
 
       expect(result.success).toBe(false);
       expect(result.errorCode).toBe('INVALID_UPDATES');

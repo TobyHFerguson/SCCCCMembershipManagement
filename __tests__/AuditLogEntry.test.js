@@ -218,7 +218,7 @@ describe('AuditLogEntry Class', () => {
     });
     
     test('should return empty array for non-array input', () => {
-      const result = AuditLogEntry.validateArray('not-array', 'test-context');
+      const result = AuditLogEntry.validateArray(/** @type {any} */ ('not-array'), 'test-context');
       
       expect(result).toEqual([]);
       expect(Common.Logger.error).toHaveBeenCalledWith(

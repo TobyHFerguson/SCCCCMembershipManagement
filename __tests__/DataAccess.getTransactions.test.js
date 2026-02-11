@@ -14,7 +14,7 @@ jest.mock('../src/common/utils/Logger.js', () => ({}));
 
 // Load ValidatedTransaction class and assign to global
 const { ValidatedTransaction } = require('../src/common/data/ValidatedTransaction.js');
-global.ValidatedTransaction = ValidatedTransaction;
+/** @type {any} */ (global).ValidatedTransaction = ValidatedTransaction;
 
 // Mock AppLogger (flat class pattern)
 global.AppLogger = /** @type {any} */ ({
@@ -298,7 +298,7 @@ describe('DataAccess.getTransactionsForUpdate', () => {
     // Write back changed cells
     const changeCount = ValidatedTransaction.writeChangedCells(
       result.sheet,
-      result.transactions,
+      /** @type {any} */ (result.transactions),
       result.headers
     );
 

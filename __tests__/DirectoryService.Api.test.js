@@ -189,7 +189,7 @@ describe('DirectoryService.Api', () => {
         searchTerm: 123
       };
       
-      const result = Api.handleGetEntries(params);
+      const result = Api.handleGetEntries(/** @type {any} */ (params));
       
       expect(result.success).toBe(false);
       expect(result.errorCode).toBe('INVALID_SEARCH_TERM');

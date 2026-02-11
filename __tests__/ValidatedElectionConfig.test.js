@@ -254,7 +254,7 @@ describe('ValidatedElectionConfig Class', () => {
       ValidatedElectionConfig.validateRows(rows, headers, 'test-context');
 
       expect(MailApp.sendEmail).toHaveBeenCalledTimes(1);
-      const call = MailApp.sendEmail.mock.calls[0][0];
+      const call = (/** @type {any} */ (MailApp.sendEmail)).mock.calls[0][0];
       expect(call.to).toBe('membership-automation@sc3.club');
       expect(call.subject).toContain('ElectionConfig Validation Error');
       expect(call.body).toContain('test-context');

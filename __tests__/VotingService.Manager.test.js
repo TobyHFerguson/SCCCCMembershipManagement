@@ -224,7 +224,7 @@ describe('VotingService.Manager', () => {
     });
 
     test('handles non-string', () => {
-      expect(Manager.normalizeEmail(123)).toBe('');
+      expect(Manager.normalizeEmail(/** @type {any} */ (123))).toBe('');
     });
   });
 
