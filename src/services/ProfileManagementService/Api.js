@@ -305,9 +305,17 @@ ProfileManagementService.Api.handleUpdateProfile = function(params) {
 
       // GAS: Persist the update
       AppLogger.info('ProfileManagementService', `Persisting profile update for user: ${normalizedEmail}`);
-      DataAccess.updateMember(normalizedEmail, result.mergedProfile);
+      const updateResult = DataAccess.updateMember(normalizedEmail, result.mergedProfile);
       
-      // Create audit entry for profile update
+      if (updateResult === false) {
+        AppLogger.error('ProfileManagementService', `updateMember returned false for user: ${normalizedEmail}`);
+        return ApiClientManager.errorResponse(
+          'Failed to persist profile update',
+          'UPDATE_PERSIST_ERROR'
+        );
+      }
+
+      // Create audit entry for profile update (only after successful persistence)
       const logger = new ServiceLogger('ProfileManagementService', userEmail);
       const auditEntry = logger.logOperation(
         'ProfileUpdate',

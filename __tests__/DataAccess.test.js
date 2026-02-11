@@ -5,6 +5,7 @@
  * 1. getActiveMembersForUpdate() — Write-context accessor for selective cell writes
  * 2. getMembers() — Read-only accessor (delegates to getActiveMembersForUpdate)
  * 3. getEmailAddresses() — Email list accessor (delegates to getMembers)
+ * 4. updateMember() — Header-based selective cell updates (plain objects + instances)
  */
 
 // Mock GAS environment
@@ -43,7 +44,8 @@ global.DocsService = /** @type {any} */ ({
 // Mock MemberPersistence
 global.MemberPersistence = /** @type {any} */ ({
   valuesEqual: jest.fn((a, b) => a === b),
-  writeChangedCells: jest.fn()
+  writeChangedCells: jest.fn(),
+  writeSingleMemberChanges: jest.fn().mockReturnValue(0)
 });
 
 // Backward compat alias
@@ -262,5 +264,147 @@ describe('DataAccess.getEmailAddresses', () => {
     const emails = DataAccess.getEmailAddresses();
 
     expect(emails).toEqual([]);
+  });
+});
+
+// ==================== updateMember Tests ====================
+
+describe('DataAccess.updateMember', () => {
+  const headers = ['Email', 'Status', 'First', 'Last', 'Phone', 'Joined', 'Expires', 'Period', 'Migrated', 'Directory Share Name', 'Directory Share Email', 'Directory Share Phone', 'Renewed On'];
+  
+  const makeRow = (overrides = {}) => {
+    const defaults = {
+      Email: 'test@example.com', Status: 'Active', First: 'John', Last: 'Doe',
+      Phone: '555-1234', Joined: new Date('2024-01-01'), Expires: new Date('2025-01-01'),
+      Period: 1, Migrated: null, 'Directory Share Name': true,
+      'Directory Share Email': false, 'Directory Share Phone': false, 'Renewed On': null
+    };
+    const merged = { ...defaults, ...overrides };
+    return headers.map(h => merged[h]);
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should delegate to MemberPersistence.writeSingleMemberChanges with a plain object', () => {
+    const originalRow = makeRow();
+    const allData = [headers, originalRow];
+    const { sheet } = createMockSheet(allData);
+    mockSpreadsheetManager.getSheet.mockReturnValue(sheet);
+
+    // Plain object (no toArray method) — the exact shape that mergeProfiles returns
+    const plainObject = {
+      Email: 'test@example.com', Status: 'Active', First: 'Jane', Last: 'Doe',
+      Phone: '555-1234', Joined: new Date('2024-01-01'), Expires: new Date('2025-01-01'),
+      Period: 1, Migrated: null, 'Directory Share Name': true,
+      'Directory Share Email': true, 'Directory Share Phone': false, 'Renewed On': null
+    };
+
+    MemberPersistence.writeSingleMemberChanges.mockReturnValue(2);
+
+    const result = DataAccess.updateMember('test@example.com', plainObject);
+
+    expect(result).toBe(true);
+    expect(MemberPersistence.writeSingleMemberChanges).toHaveBeenCalledWith(
+      sheet, originalRow, plainObject, headers, 2 // sheetRow = rowIndex(0) + 2
+    );
+    expect(AppLogger.info).toHaveBeenCalledWith('data_access', expect.stringContaining('Updated 2 cells'));
+  });
+
+  it('should delegate to MemberPersistence.writeSingleMemberChanges with a ValidatedMember instance', () => {
+    const originalRow = makeRow();
+    const allData = [headers, originalRow];
+    const { sheet } = createMockSheet(allData);
+    mockSpreadsheetManager.getSheet.mockReturnValue(sheet);
+
+    // ValidatedMember instance (has toArray method)
+    const member = new ValidatedMember(
+      'test@example.com', 'Active', 'Jane', 'Doe',
+      '555-1234', new Date('2024-01-01'), new Date('2025-01-01'),
+      1, null, true, true, false, null
+    );
+
+    MemberPersistence.writeSingleMemberChanges.mockReturnValue(3);
+
+    const result = DataAccess.updateMember('test@example.com', member);
+
+    expect(result).toBe(true);
+    expect(MemberPersistence.writeSingleMemberChanges).toHaveBeenCalledWith(
+      sheet, originalRow, member, headers, 2
+    );
+  });
+
+  it('should return false when member is not found', () => {
+    const allData = [headers, makeRow({ Email: 'other@example.com' })];
+    const { sheet } = createMockSheet(allData);
+    mockSpreadsheetManager.getSheet.mockReturnValue(sheet);
+
+    const result = DataAccess.updateMember('notfound@example.com', { Email: 'notfound@example.com', First: 'X' });
+
+    expect(result).toBe(false);
+    expect(AppLogger.warn).toHaveBeenCalledWith('data_access', expect.stringContaining('not found'));
+  });
+
+  it('should handle case-insensitive email lookup', () => {
+    const originalRow = makeRow({ Email: 'Test@Example.COM' });
+    const allData = [headers, originalRow];
+    const { sheet } = createMockSheet(allData);
+    mockSpreadsheetManager.getSheet.mockReturnValue(sheet);
+
+    MemberPersistence.writeSingleMemberChanges.mockReturnValue(0);
+
+    const result = DataAccess.updateMember('test@example.com', { Email: 'test@example.com', First: 'John' });
+
+    expect(result).toBe(true);
+    expect(MemberPersistence.writeSingleMemberChanges).toHaveBeenCalled();
+  });
+
+  it('should report zero changes when MemberPersistence returns 0', () => {
+    const originalRow = makeRow();
+    const allData = [headers, originalRow];
+    const { sheet } = createMockSheet(allData);
+    mockSpreadsheetManager.getSheet.mockReturnValue(sheet);
+
+    MemberPersistence.writeSingleMemberChanges.mockReturnValue(0);
+
+    const plainObject = {
+      Email: 'test@example.com', Status: 'Active', First: 'John', Last: 'Doe',
+      Phone: '555-1234'
+    };
+
+    const result = DataAccess.updateMember('test@example.com', plainObject);
+
+    expect(result).toBe(true);
+    expect(AppLogger.info).toHaveBeenCalledWith('data_access', expect.stringContaining('Updated 0 cells'));
+  });
+
+  it('should pass correct row and headers to MemberPersistence regardless of column order', () => {
+    // Reversed headers to prove delegation passes whatever the sheet provides
+    const reversedHeaders = [...headers].reverse();
+    const row = reversedHeaders.map(h => {
+      const defaults = {
+        Email: 'test@example.com', Status: 'Active', First: 'John', Last: 'Doe',
+        Phone: '555-1234', Joined: new Date('2024-01-01'), Expires: new Date('2025-01-01'),
+        Period: 1, Migrated: null, 'Directory Share Name': true,
+        'Directory Share Email': false, 'Directory Share Phone': false, 'Renewed On': null
+      };
+      return defaults[h];
+    });
+    const allData = [reversedHeaders, row];
+    const { sheet } = createMockSheet(allData);
+    mockSpreadsheetManager.getSheet.mockReturnValue(sheet);
+
+    MemberPersistence.writeSingleMemberChanges.mockReturnValue(1);
+
+    const plainObject = { Email: 'test@example.com', First: 'Jane' };
+
+    const result = DataAccess.updateMember('test@example.com', plainObject);
+
+    expect(result).toBe(true);
+    // Should pass the reversed headers and row to MemberPersistence
+    expect(MemberPersistence.writeSingleMemberChanges).toHaveBeenCalledWith(
+      sheet, row, plainObject, reversedHeaders, 2
+    );
   });
 });

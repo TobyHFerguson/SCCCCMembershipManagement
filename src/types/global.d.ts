@@ -501,33 +501,33 @@ declare var SheetAccess: {
      * Get data from a sheet as array of row objects
      */
     getData(sheetName: string): any[];
-    
+
     /**
      * Get data as 2D array (headers + rows)
      */
     getDataAsArrays(sheetName: string): any[][];
-    
+
     /**
      * Get data from sheet with RichText preserved for link columns
      * Returns objects where link columns have {text, url} structure
      */
     getDataWithRichText(sheetName: string, richTextColumns?: string[]): any[];
-    
+
     /**
      * Write data to a sheet (replaces all data)
      */
     setData(sheetName: string, data: any[]): void;
-    
+
     /**
      * Append rows to end of sheet
      */
     appendRows(sheetName: string, rows: any[][]): void;
-    
+
     /**
      * Update specific rows in a sheet
      */
     updateRows(sheetName: string, rows: any[][], startRow: number): void;
-    
+
     /**
      * Get raw Sheet object for advanced operations
      * Note: Prefer using higher-level methods when possible
@@ -611,7 +611,7 @@ declare var ValidatedMember: {
         dirPhone: boolean,
         renewedOn: Date | null | string
     ): ValidatedMember;
-    
+
     /** Static factory - never throws, returns null on failure */
     fromRow(
         rowArray: Array<any>,
@@ -619,14 +619,14 @@ declare var ValidatedMember: {
         rowNumber: number,
         errorCollector: { errors: string[], rowNumbers: number[] } | null
     ): ValidatedMember | null;
-    
+
     /** Batch validation with consolidated email alert */
     validateRows(
         rows: Array<Array<any>>,
         headers: string[],
         context: string
     ): ValidatedMember[];
-    
+
     /** Column headers constant */
     HEADERS: string[];
 };
@@ -645,7 +645,7 @@ interface ValidatedMember {
     'Directory Share Email': boolean;
     'Directory Share Phone': boolean;
     'Renewed On': Date | null;
-    
+
     /** Convert to array for sheet persistence */
     toArray(): Array<string | Date | number | boolean | null>;
 }
@@ -673,7 +673,7 @@ declare var ValidatedTransaction: {
         processed: Date | string | null,
         timestamp: Date | string | null
     ): ValidatedTransaction;
-    
+
     /** Static factory - never throws, returns null on failure */
     fromRow(
         rowArray: Array<any>,
@@ -681,14 +681,14 @@ declare var ValidatedTransaction: {
         rowNumber: number,
         errorCollector: { errors: string[], rowNumbers: number[] } | null
     ): ValidatedTransaction | null;
-    
+
     /** Batch validation with consolidated email alert */
     validateRows(
         rows: Array<Array<any>>,
         headers: string[],
         context: string
     ): ValidatedTransaction[];
-    
+
     /**
      * Write back only changed cells using header-based column lookup.
      * Avoids row-shift bugs and column-order assumptions.
@@ -698,7 +698,7 @@ declare var ValidatedTransaction: {
         transactions: ValidatedTransaction[],
         sheetHeaders: string[]
     ): number;
-    
+
     /** Column headers constant */
     HEADERS: string[];
 };
@@ -713,12 +713,12 @@ interface ValidatedTransaction {
     'Payable Status': string;
     Processed: Date | null;
     Timestamp: Date | null;
-    
+
     /** 1-based sheet row index, set by fromRow() for write-back targeting */
     _sheetRowIndex?: number;
     /** Header-keyed snapshot of original cell values, set by fromRow() for change detection */
     _originalValues?: Record<string, any>;
-    
+
     /** Convert to array for sheet persistence */
     toArray(): Array<string | Date | null>;
 }
@@ -834,7 +834,7 @@ declare var ValidatedElection: {
         electionOfficers: string,
         triggerId: string
     ): ValidatedElection;
-    
+
     /** Static factory - never throws, returns null on failure */
     fromRow(
         rowArray: Array<any>,
@@ -842,14 +842,14 @@ declare var ValidatedElection: {
         rowNumber: number,
         errorCollector?: { errors: string[], rowNumbers: number[] }
     ): ValidatedElection | null;
-    
+
     /** Batch validation with consolidated email alert */
     validateRows(
         rows: Array<Array<any>>,
         headers: string[],
         context: string
     ): ValidatedElection[];
-    
+
     /** Column headers constant */
     HEADERS: string[];
 };
@@ -861,7 +861,7 @@ interface ValidatedElection {
     'Form Edit URL': string;
     'Election Officers': string;
     TriggerId: string;
-    
+
     /** Convert to array for serialization/testing (NOT for sheet persistence) */
     toArray(): Array<string | Date | null>;
 }
@@ -882,7 +882,7 @@ declare var ValidatedActionSpec: {
         body: string | { text: string; url: string },
         offset?: number | null
     ): ValidatedActionSpec;
-    
+
     /**
      * Static factory method - creates ValidatedActionSpec from row data
      * Never throws - returns null on validation failure
@@ -893,7 +893,7 @@ declare var ValidatedActionSpec: {
         rowNumber: number,
         errorCollector?: { errors: string[]; rowNumbers: number[] }
     ): ValidatedActionSpec | null;
-    
+
     /**
      * Batch validation with consolidated error reporting
      */
@@ -902,7 +902,7 @@ declare var ValidatedActionSpec: {
         headers: Array<string>,
         context: string
     ): ValidatedActionSpec[];
-    
+
     /** Column headers constant */
     HEADERS: string[];
 };
@@ -910,16 +910,16 @@ declare var ValidatedActionSpec: {
 interface ValidatedActionSpec {
     /** Action type (e.g., 'Join', 'Renew', 'Expiry1', etc.) */
     Type: string;
-    
+
     /** Email subject line template */
     Subject: string;
-    
+
     /** Email body template (may be string or RichText object with {text, url}) */
     Body: string | { text: string; url: string };
-    
+
     /** Days offset for expiry actions (optional) */
     Offset: number | null;
-    
+
     /** Convert to array format for spreadsheet persistence */
     toArray(): Array<string | number | null | { text: string; url: string }>;
 }
@@ -954,7 +954,7 @@ declare var ValidatedFIFOItem: {
         maxAttempts?: number | null,
         dead?: boolean
     ): ValidatedFIFOItem;
-    
+
     /**
      * Static factory method - creates ValidatedFIFOItem from row data
      * Never throws - returns null on validation failure
@@ -966,7 +966,7 @@ declare var ValidatedFIFOItem: {
         rowNumber: number,
         errorCollector?: { errors: string[]; rowNumbers: number[] }
     ): ValidatedFIFOItem | null;
-    
+
     /**
      * Batch validation with consolidated error reporting
      */
@@ -975,7 +975,7 @@ declare var ValidatedFIFOItem: {
         headers: Array<string>,
         context: string
     ): ValidatedFIFOItem[];
-    
+
     /** Column headers constant */
     HEADERS: string[];
 };
@@ -983,37 +983,37 @@ declare var ValidatedFIFOItem: {
 interface ValidatedFIFOItem {
     /** Unique identifier */
     id: string;
-    
+
     /** Member email */
     email: string;
-    
+
     /** Email subject */
     subject: string;
-    
+
     /** Email HTML body */
     htmlBody: string;
-    
+
     /** Comma-separated group emails (optional) */
     groups: string;
-    
+
     /** Number of attempts */
     attempts: number;
-    
+
     /** Last attempt timestamp ISO string */
     lastAttemptAt: string;
-    
+
     /** Last error message */
     lastError: string;
-    
+
     /** Next attempt timestamp ISO string */
     nextAttemptAt: string;
-    
+
     /** Max attempts override (optional) */
     maxAttempts: number | null;
-    
+
     /** Dead letter flag */
     dead: boolean;
-    
+
     /** Convert to array format for serialization/testing (NOT for sheet persistence) */
     toArray(): Array<string | number | boolean | null>;
 }
@@ -1028,22 +1028,31 @@ declare var MemberPersistence: {
         modifiedMembers: ValidatedMember[],
         headers: string[]
     ): number;
-    
+
     /** Value equality that handles Dates and primitives */
     valuesEqual(a: any, b: any): boolean;
-};
+
+    /** Write only changed cells for a single member */
+    writeSingleMemberChanges(
+        sheet: GoogleAppsScript.Spreadsheet.Sheet,
+        originalRow: Array<any>,
+        modifiedMember: ValidatedMember,
+        headers: string[],
+        rowNumber: number
+    ): boolean;
+}
 
 // Flat DataAccess object (new pattern - replaces Common.Data.Access)
 declare var DataAccess: {
     /** Gets Bootstrap configuration data as validated objects */
     getBootstrapData: () => ValidatedBootstrap[];
-    
+
     /** Gets all email addresses from active members */
     getEmailAddresses: () => string[];
-    
+
     /** Gets all members */
     getMembers: () => ValidatedMember[];
-    
+
     /**
      * Gets active members with write-context for selective cell writes.
      * Returns validated members plus the sheet, originalRows, and headers needed
@@ -1055,29 +1064,29 @@ declare var DataAccess: {
         originalRows: any[][];
         headers: string[];
     };
-    
+
     /** Gets action specifications with processed body content */
-    getActionSpecs: () => {[k: string]: ValidatedActionSpec};
-    
+    getActionSpecs: () => { [k: string]: ValidatedActionSpec };
+
     /** Gets public groups configuration as validated objects */
     getPublicGroups: () => ValidatedPublicGroup[];
-    
+
     /** Gets a specific member by email address */
     getMember: (email: string) => ValidatedMember | undefined;
-    
+
     /** Updates a member's information (accepts class instance or plain object) */
     updateMember: (email: string, newMember: ValidatedMember | ValidatedMemberData) => boolean;
-    
+
     /** Checks if an email address belongs to a member */
     isMember: (email: string) => boolean;
-    
+
     /** Gets all elections data */
     /**
      * Get all elections as validated objects (read-only accessor).
      * Wraps SheetAccess + ValidatedElection.validateRows at the typed domain boundary.
      */
     getElections: () => ValidatedElection[];
-    
+
     /** Gets system logs */
     getSystemLogs: () => SystemLogEntry[];
 
@@ -1094,10 +1103,10 @@ declare var DataAccess: {
         headers: string[];
         sheet: GoogleAppsScript.Spreadsheet.Sheet;
     };
-    
+
     /** Gets ExpirationFIFO items as validated objects (read-only) */
     getExpirationFIFO: () => ValidatedFIFOItem[];
-    
+
     /** Gets expiry schedule data (read accessor) */
     getExpirySchedule: () => MembershipManagement.ExpirySchedule[];
 
@@ -1116,10 +1125,10 @@ interface ServiceLogger {
     userEmail: string;
     timestamp: Date;
     auditLogger: AuditLogger;
-    
+
     /** Log service access (getData call) */
     logServiceAccess(operation: string): AuditLogEntry;
-    
+
     /** Log service operation (update, delete, etc.) */
     logOperation(
         operationType: string,
@@ -1128,10 +1137,10 @@ interface ServiceLogger {
         error?: string,
         jsonData?: any
     ): AuditLogEntry;
-    
+
     /** Log service error (unexpected failures during execution) */
     logError(operation: string, error: Error | string, additionalData?: any): AuditLogEntry;
-    
+
     /** Create a custom audit entry without system logging */
     createAuditEntry(
         type: string,
@@ -1146,7 +1155,7 @@ interface ServiceLogger {
 declare const ServiceExecutionLogger: {
     /** Wrap a getData function with logging */
     wrapGetData(serviceName: string, email: string, getDataFn: () => any): any;
-    
+
     /** Wrap an API handler function with logging */
     wrapApiHandler(
         serviceName: string,
@@ -1155,7 +1164,7 @@ declare const ServiceExecutionLogger: {
         handlerFn: () => any,
         params?: any
     ): any;
-    
+
     /** Persist audit entries to the Audit sheet (private) */
     _persistAuditEntries(auditEntries: AuditLogEntry[]): void;
 };
@@ -1484,18 +1493,18 @@ declare namespace EmailChangeService {
         static generateVerificationCode(randomFn?: () => number): string;
         static createVerificationEntry(oldEmail: string, newEmail: string, code: string, now?: Date): VerificationData;
         static verifyCode(inputCode: string, oldEmail: string, newEmail: string, storedData: VerificationData | null, now?: Date): ValidationResult;
-        static transformGroupsToMembershipInfo(groups: Array<{email: string}>, oldEmail: string, newEmail: string): GroupMembershipInfo[];
+        static transformGroupsToMembershipInfo(groups: Array<{ email: string }>, oldEmail: string, newEmail: string): GroupMembershipInfo[];
         static updateMembershipResult(membership: GroupMembershipInfo, success: boolean, error?: string): GroupMembershipInfo;
         static aggregateResults(results: GroupMembershipInfo[]): EmailUpdateResult;
         static createUpdatedMemberRecord(originalMember: ValidatedMember, newEmail: string): ValidatedMemberData | null;
-        static createChangeLogEntry(oldEmail: string, newEmail: string, date?: Date): {date: Date, from: string, to: string};
+        static createChangeLogEntry(oldEmail: string, newEmail: string, date?: Date): { date: Date, from: string, to: string };
         static normalizeEmail(email: string): string;
-        static buildVerificationEmailContent(code: string): {subject: string, body: string, htmlBody: string};
-        static formatSendCodeResult(success: boolean, email: string, error?: string): {success: boolean, message: string, error?: string, errorCode?: string};
+        static buildVerificationEmailContent(code: string): { subject: string, body: string, htmlBody: string };
+        static formatSendCodeResult(success: boolean, email: string, error?: string): { success: boolean, message: string, error?: string, errorCode?: string };
         static calculateBackoff(attempt: number, initialBackoffMs?: number): number;
-        static getRetryAction(params: {attempt: number, maxRetries: number, error?: Error}): {action: 'retry'|'fail'|'initial', backoffMs?: number, errorMessage?: string};
-        static createGroupUpdateResult(group: any, success: boolean, error?: string): {groupEmail: string, groupName: string, success: boolean, error: string | null};
-        static aggregateGroupResults(results: Array<{success: boolean, error?: string}>): {successCount: number, failedCount: number, overallSuccess: boolean};
+        static getRetryAction(params: { attempt: number, maxRetries: number, error?: Error }): { action: 'retry' | 'fail' | 'initial', backoffMs?: number, errorMessage?: string };
+        static createGroupUpdateResult(group: any, success: boolean, error?: string): { groupEmail: string, groupName: string, success: boolean, error: string | null };
+        static aggregateGroupResults(results: Array<{ success: boolean, error?: string }>): { successCount: number, failedCount: number, overallSuccess: boolean };
         static formatEmailChangeMessage(overallSuccess: boolean, oldEmail: string, newEmail: string, successCount: number, failedCount: number): string;
     }
 
@@ -1507,7 +1516,7 @@ declare namespace EmailChangeService {
         function storeVerificationData(code: string, data: VerificationData): void;
         function getVerificationData(code: string): VerificationData | null;
         function deleteVerificationData(code: string): void;
-        function sendVerificationEmail(email: string, content: {subject: string, body: string, htmlBody: string}): boolean;
+        function sendVerificationEmail(email: string, content: { subject: string, body: string, htmlBody: string }): boolean;
         function changeEmailInSpreadsheets(oldEmail: string, newEmail: string): void;
         function logEmailChange(oldEmail: string, newEmail: string): void;
     }

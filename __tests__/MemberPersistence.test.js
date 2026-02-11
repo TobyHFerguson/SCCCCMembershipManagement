@@ -1,7 +1,10 @@
 /**
  * @fileoverview Tests for MemberPersistence helper
  * 
- * Tests selective cell writing and value comparison logic.
+ * Table of Contents:
+ * 1. valuesEqual() — Value comparison logic for Dates, nulls, primitives
+ * 2. writeChangedCells() — Bulk selective cell writing for member arrays
+ * 3. writeSingleMemberChanges() — Single-member partial-update cell writing
  */
 
 // Mock GAS environment
@@ -471,6 +474,188 @@ describe('MemberPersistence', () => {
       expect(mockRange.setValue).toHaveBeenCalledWith('Expired');
       // Should NOT reset format for string-to-string change
       expect(mockRange.setNumberFormat).not.toHaveBeenCalled();
+    });
+    
+  });
+  
+  // ==================== writeSingleMemberChanges Tests ====================
+  
+  describe('writeSingleMemberChanges()', () => {
+    
+    let mockSheet;
+    let mockRange;
+    
+    beforeEach(() => {
+      mockRange = {
+        setValue: jest.fn(),
+        setNumberFormat: jest.fn()
+      };
+      
+      mockSheet = {
+        getRange: jest.fn().mockReturnValue(mockRange)
+      };
+    });
+    
+    test('should write only changed cells for a full member object', () => {
+      const headers = ValidatedMember.HEADERS;
+      const originalRow = ['Active', 'test@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, true, false, true, null];
+      
+      const member = new ValidatedMember(
+        'test@example.com', 'Active', 'Jane', 'Doe', '555-1111', // First changed
+        new Date('2023-01-15'), new Date('2024-01-15'), 12,
+        null, true, true, true, null // Directory Share Email changed
+      );
+      
+      const changeCount = MemberPersistence.writeSingleMemberChanges(
+        mockSheet, originalRow, member, headers, 5 // sheetRow = 5
+      );
+      
+      expect(changeCount).toBe(2);
+      // First is at index 2 → column 3
+      expect(mockSheet.getRange).toHaveBeenCalledWith(5, 3);
+      expect(mockRange.setValue).toHaveBeenCalledWith('Jane');
+      // Directory Share Email is at index 10 → column 11
+      expect(mockSheet.getRange).toHaveBeenCalledWith(5, 11);
+      expect(mockRange.setValue).toHaveBeenCalledWith(true);
+    });
+    
+    test('should support partial objects (only update present keys)', () => {
+      const headers = ValidatedMember.HEADERS;
+      const originalRow = ['Active', 'test@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, true, false, true, null];
+      
+      // Partial object — only First and Phone
+      const partialUpdate = { First: 'Jane', Phone: '555-9999' };
+      
+      const changeCount = MemberPersistence.writeSingleMemberChanges(
+        mockSheet, originalRow, partialUpdate, headers, 2
+      );
+      
+      expect(changeCount).toBe(2);
+      // First at index 2 → column 3
+      expect(mockSheet.getRange).toHaveBeenCalledWith(2, 3);
+      expect(mockRange.setValue).toHaveBeenCalledWith('Jane');
+      // Phone at index 4 → column 5
+      expect(mockSheet.getRange).toHaveBeenCalledWith(2, 5);
+      expect(mockRange.setValue).toHaveBeenCalledWith('555-9999');
+      // Should NOT touch any other columns
+      expect(mockSheet.getRange).toHaveBeenCalledTimes(2);
+    });
+    
+    test('should skip keys not present in partial object', () => {
+      const headers = ValidatedMember.HEADERS;
+      const originalRow = ['Active', 'test@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, true, false, true, null];
+      
+      // Partial object with unchanged value
+      const partialUpdate = { First: 'John' }; // Same as original
+      
+      const changeCount = MemberPersistence.writeSingleMemberChanges(
+        mockSheet, originalRow, partialUpdate, headers, 2
+      );
+      
+      expect(changeCount).toBe(0);
+      expect(mockSheet.getRange).not.toHaveBeenCalled();
+    });
+    
+    test('should return 0 when no cells changed', () => {
+      const headers = ValidatedMember.HEADERS;
+      const originalRow = ['Active', 'test@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, true, false, true, null];
+      
+      const member = new ValidatedMember(
+        'test@example.com', 'Active', 'John', 'Doe', '555-1111',
+        new Date('2023-01-15'), new Date('2024-01-15'), 12,
+        null, true, false, true, null
+      );
+      
+      const changeCount = MemberPersistence.writeSingleMemberChanges(
+        mockSheet, originalRow, member, headers, 2
+      );
+      
+      expect(changeCount).toBe(0);
+      expect(mockSheet.getRange).not.toHaveBeenCalled();
+    });
+    
+    test('should reset cell number format when overwriting Date with number', () => {
+      const headers = ValidatedMember.HEADERS;
+      const corruptedDate = new Date('1899-12-31');
+      const originalRow = ['Active', 'test@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), corruptedDate, null, true, false, true, null];
+      
+      // Period was a Date, now it's a number
+      const partialUpdate = { Period: 1 };
+      
+      const changeCount = MemberPersistence.writeSingleMemberChanges(
+        mockSheet, originalRow, partialUpdate, headers, 2
+      );
+      
+      expect(changeCount).toBe(1);
+      expect(mockRange.setValue).toHaveBeenCalledWith(1);
+      expect(mockRange.setNumberFormat).toHaveBeenCalledWith('0');
+    });
+    
+    test('should NOT reset format when overwriting Date with Date', () => {
+      const headers = ValidatedMember.HEADERS;
+      const oldDate = new Date('2023-01-15');
+      const newDate = new Date('2023-06-15');
+      const originalRow = ['Active', 'test@example.com', 'John', 'Doe', '555-1111', oldDate, new Date('2024-01-15'), 12, null, true, false, true, null];
+      
+      const partialUpdate = { Joined: newDate };
+      
+      MemberPersistence.writeSingleMemberChanges(
+        mockSheet, originalRow, partialUpdate, headers, 2
+      );
+      
+      expect(mockRange.setValue).toHaveBeenCalledWith(newDate);
+      expect(mockRange.setNumberFormat).not.toHaveBeenCalled();
+    });
+    
+    test('should be column-order independent', () => {
+      // Headers in reversed order
+      const reversedHeaders = [...ValidatedMember.HEADERS].reverse();
+      // Build original row matching reversed headers
+      const defaults = {
+        Email: 'test@example.com', Status: 'Active', First: 'John', Last: 'Doe',
+        Phone: '555-1111', Joined: new Date('2023-01-15'), Expires: new Date('2024-01-15'),
+        Period: 12, Migrated: null, 'Directory Share Name': true,
+        'Directory Share Email': false, 'Directory Share Phone': true, 'Renewed On': null
+      };
+      const originalRow = reversedHeaders.map(h => defaults[h]);
+      
+      const partialUpdate = { First: 'Jane' };
+      
+      const changeCount = MemberPersistence.writeSingleMemberChanges(
+        mockSheet, originalRow, partialUpdate, reversedHeaders, 3
+      );
+      
+      expect(changeCount).toBe(1);
+      // First should be written at its reversed position
+      const firstCol = reversedHeaders.indexOf('First');
+      expect(mockSheet.getRange).toHaveBeenCalledWith(3, firstCol + 1);
+      expect(mockRange.setValue).toHaveBeenCalledWith('Jane');
+    });
+    
+    test('should handle null to value changes', () => {
+      const headers = ValidatedMember.HEADERS;
+      const originalRow = ['Active', 'test@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), null, null, true, false, true, null];
+      
+      const partialUpdate = { Period: 12, 'Renewed On': new Date('2024-06-01') };
+      
+      const changeCount = MemberPersistence.writeSingleMemberChanges(
+        mockSheet, originalRow, partialUpdate, headers, 2
+      );
+      
+      expect(changeCount).toBe(2);
+    });
+    
+    test('should handle boolean changes', () => {
+      const headers = ValidatedMember.HEADERS;
+      const originalRow = ['Active', 'test@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, true, false, true, null];
+      
+      const partialUpdate = { 'Directory Share Name': false, 'Directory Share Email': true };
+      
+      const changeCount = MemberPersistence.writeSingleMemberChanges(
+        mockSheet, originalRow, partialUpdate, headers, 2
+      );
+      
+      expect(changeCount).toBe(2);
     });
     
   });

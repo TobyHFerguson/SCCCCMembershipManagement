@@ -40,27 +40,31 @@ ProfileManagementService._checkForForbiddenUpdates = function (originalObject, u
 
 ProfileManagementService.updateProfile = function (userToken, updatedProfile) {
   const forbiddenFields = ["Status", "Email", "Joined", "Expires", "Period", "Migrated", "Renewed On"]; // Define the fields that are forbidden to update
-  const userEmail = TokenManager.getEmailFromMUT(userToken);
-  if (!userEmail) {
-    console.warn(`Invalid or expired token: ${userToken}`);
-    return { success: false, message: "Invalid session. Please refresh the page." };
-  }
-  if (!updatedProfile) {
-    throw new Error("Original and updated profiles must be provided.");
-  }
-  const originalProfile = DataAccess.getMember(userEmail);
-  if (!originalProfile) {
-    throw new Error(`Profile not found for email: ${userEmail}`);
-  }
-  ProfileManagementService._checkForForbiddenUpdates(originalProfile, updatedProfile, forbiddenFields);
-  console.log('originalProfile', originalProfile);
-  console.log('updatedProfile', updatedProfile);
-  updatedProfile = {...originalProfile, ...updatedProfile}; // Merge original and updated profiles
-  console.log('mergedProfile', updatedProfile);
+  try {
+    const userEmail = TokenManager.getEmailFromMUT(userToken);
+    if (!userEmail) {
+      AppLogger.warn('ProfileManagementService', `updateProfile: Invalid or expired token`);
+      return { success: false, message: "Invalid session. Please refresh the page." };
+    }
+    if (!updatedProfile) {
+      AppLogger.error('ProfileManagementService', 'updateProfile: No updated profile provided');
+      return { success: false, message: "Profile updates must be provided." };
+    }
+    const originalProfile = DataAccess.getMember(userEmail);
+    if (!originalProfile) {
+      AppLogger.error('ProfileManagementService', `updateProfile: Profile not found for email: ${userEmail}`);
+      return { success: false, message: "Profile not found." };
+    }
+    ProfileManagementService._checkForForbiddenUpdates(originalProfile, updatedProfile, forbiddenFields);
+    const mergedProfile = {...originalProfile, ...updatedProfile};
 
-  // Proceed with the update if no forbidden fields were modified
-  DataAccess.updateMember(userEmail, updatedProfile);
-  return { success: true, message: "Profile updated successfully." };
+    // Proceed with the update if no forbidden fields were modified
+    DataAccess.updateMember(userEmail, mergedProfile);
+    return { success: true, message: "Profile updated successfully." };
+  } catch (error) {
+    AppLogger.error('ProfileManagementService', `updateProfile failed: ${error.message}`, error);
+    return { success: false, message: "Failed to update profile: " + error.message };
+  }
 }
 
 if (typeof module !== 'undefined' && module.exports) {

@@ -131,6 +131,7 @@ var DataAccess = {
     updateMember: (email, newMember) => {
         email = email.toLowerCase();
         // Use SheetAccess with selective cell updates via MemberPersistence
+        // Accepts both ValidatedMember instances and plain objects (ValidatedMemberData)
         const sheet = SheetAccess.getSheet('ActiveMembers');
         const allData = sheet.getDataRange().getValues();
         const headers = allData[0];
@@ -147,20 +148,10 @@ var DataAccess = {
             return false;
         }
         
-        // Write only changed cells for the specific row
-        const original = originalRows[rowIndex];
-        const modified = newMember.toArray();
-        
-        let changeCount = 0;
-        for (let j = 0; j < modified.length; j++) {
-            if (!MemberPersistence.valuesEqual(original[j], modified[j])) {
-                // Write single cell that changed
-                // Row index: rowIndex + 2 (skip header row, 1-based indexing)
-                // Column index: j + 1 (1-based indexing)
-                sheet.getRange(rowIndex + 2, j + 1).setValue(modified[j]);
-                changeCount++;
-            }
-        }
+        // Delegate to MemberPersistence for cell-level diff write with Date format safety
+        const changeCount = MemberPersistence.writeSingleMemberChanges(
+            sheet, originalRows[rowIndex], newMember, headers, rowIndex + 2
+        );
         
         AppLogger.info('data_access', `updateMember: Updated ${changeCount} cells for ${email}`);
         
