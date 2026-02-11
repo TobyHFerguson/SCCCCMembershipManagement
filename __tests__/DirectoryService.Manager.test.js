@@ -19,6 +19,12 @@
 const { Manager } = require('../src/services/DirectoryService/Manager');
 
 // Test data factories
+/** @type {{
+  createMember: (overrides?: Partial<ValidatedMember>) => any,
+  createPublicMember: (overrides?: Partial<ValidatedMember>) => any,
+  createPrivateMember: (overrides?: Partial<ValidatedMember>) => any,
+  createInactiveMember: (overrides?: Partial<ValidatedMember>) => any
+}} */
 const TestData = {
   createMember: (overrides = {}) => ({
     Status: 'Active',
