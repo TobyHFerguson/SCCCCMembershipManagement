@@ -36,31 +36,33 @@ declare var AppLogger: {
 /**
  * FeatureFlags - Feature flag management for Google Apps Script
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ * Declared as `var` (not `class`) so tests can assign to `global.FeatureFlags`
  */
-declare class FeatureFlags {
-    static isEnabled(flagName: string, defaultValue?: boolean): boolean;
-    static setFlag(flagName: string, value: boolean): { success: boolean; error?: string };
-    static deleteFlag(flagName: string): { success: boolean; error?: string };
-    static getAllFlags(): Record<string, boolean>;
-    static getSummary(): { enabled: string[]; disabled: string[]; total: number };
-    static enableNewAuth(): { success: boolean; error?: string };
-    static emergencyRollback(): { success: boolean; error?: string };
-    static isNewAuthEnabled(): boolean;
-    static isSPAModeEnabled(): boolean;
-    static getKnownFlags(): Record<string, FeatureFlagConfig>;
-}
+declare var FeatureFlags: {
+    isEnabled(flagName: string, defaultValue?: boolean): boolean;
+    setFlag(flagName: string, value: boolean): { success: boolean; error?: string };
+    deleteFlag(flagName: string): { success: boolean; error?: string };
+    getAllFlags(): Record<string, boolean>;
+    getSummary(): { enabled: string[]; disabled: string[]; total: number };
+    enableNewAuth(): { success: boolean; error?: string };
+    emergencyRollback(): { success: boolean; error?: string };
+    isNewAuthEnabled(): boolean;
+    isSPAModeEnabled(): boolean;
+    getKnownFlags(): Record<string, FeatureFlagConfig>;
+};
 
 /**
  * FeatureFlagsManager - Pure logic helper class for feature flag operations
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ * Declared as `var` (not `class`) so tests can assign to `global.FeatureFlagsManager`
  */
-declare class FeatureFlagsManager {
-    static validateFlagName(flagName: string): { valid: boolean; error?: string };
-    static parseBoolean(value: string | boolean | null | undefined, defaultValue: boolean): boolean;
-    static formatForStorage(value: boolean): string;
-    static shouldEnableFeature(flagValue: boolean, isProduction: boolean, forceEnabled?: boolean): boolean;
-    static summarizeFlags(flags: Record<string, boolean>): { enabled: string[]; disabled: string[]; total: number };
-}
+declare var FeatureFlagsManager: {
+    validateFlagName(flagName: string): { valid: boolean; error?: string };
+    parseBoolean(value: string | boolean | null | undefined, defaultValue: boolean): boolean;
+    formatForStorage(value: boolean): string;
+    shouldEnableFeature(flagValue: boolean, isProduction: boolean, forceEnabled?: boolean): boolean;
+    summarizeFlags(flags: Record<string, boolean>): { enabled: string[]; disabled: string[]; total: number };
+};
 
 /**
  * Feature flag configuration interface
@@ -78,26 +80,28 @@ interface FeatureFlagConfig {
 /**
  * TokenManager - Multi-use token management for authenticated sessions
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ * Declared as `var` (not `class`) so tests can assign to `global.TokenManager`
  */
-declare class TokenManager {
-    static generateToken(): string;
-    static getMultiUseToken(email: string): string;
-    static getEmailFromMUT(token: string): string | null;
-    static consumeMUT(token: string): string | null;
-    static updateTokenEmail(token: string, newEmail: string): boolean;
-    static getTokenData(token: string): TokenDataType | null;
-}
+declare var TokenManager: {
+    generateToken(): string;
+    getMultiUseToken(email: string): string;
+    getEmailFromMUT(token: string): string | null;
+    consumeMUT(token: string): string | null;
+    updateTokenEmail(token: string, newEmail: string): boolean;
+    getTokenData(token: string): TokenDataType | null;
+};
 
 /**
  * TokenStorage - One-time token persistence via SpreadsheetManager
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ * Declared as `var` (not `class`) so tests can assign to `global.TokenStorage`
  */
-declare class TokenStorage {
-    static generateAndStoreToken(email: string): string;
-    static getTokenData(): TokenDataType[];
-    static consumeToken(token: string): TokenDataType | undefined;
-    static deleteTokens(tokensToDelete: string[]): void;
-}
+declare var TokenStorage: {
+    generateAndStoreToken(email: string): string;
+    getTokenData(): TokenDataType[];
+    consumeToken(token: string): TokenDataType | undefined;
+    deleteTokens(tokensToDelete: string[]): void;
+};
 
 /**
  * VerificationCodeEntry - Stored verification code data
@@ -144,37 +148,39 @@ interface RateLimitResult {
 /**
  * VerificationCodeManager - Pure logic for verification code operations
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ * Declared as `var` (not `class`) so tests can assign to `global.VerificationCodeManager`
  */
-declare class VerificationCodeManager {
-    static generateCode(randomFn?: () => number): string;
-    static validateCodeFormat(code: string): { valid: boolean; error?: string };
-    static validateEmail(email: string): { valid: boolean; error?: string };
-    static calculateExpiry(createdAt: Date, expiryMinutes?: number): Date;
-    static isExpired(expiresAt: string, now?: Date): boolean;
-    static isMaxAttemptsExceeded(attempts: number, maxAttempts?: number): boolean;
-    static createEntry(email: string, code: string, now?: Date, service?: string): VerificationCodeEntry;
-    static verifyCode(inputCode: string, entry: VerificationCodeEntry, now?: Date): VerificationResult;
-    static checkGenerationRateLimit(existingEntries: VerificationCodeEntry[], now?: Date): RateLimitResult;
-    static filterActiveEntries(entries: VerificationCodeEntry[], now?: Date): VerificationCodeEntry[];
-    static getConfig(): typeof VERIFICATION_CONFIG;
-}
+declare var VerificationCodeManager: {
+    generateCode(randomFn?: () => number): string;
+    validateCodeFormat(code: string): { valid: boolean; error?: string };
+    validateEmail(email: string): { valid: boolean; error?: string };
+    calculateExpiry(createdAt: Date, expiryMinutes?: number): Date;
+    isExpired(expiresAt: string, now?: Date): boolean;
+    isMaxAttemptsExceeded(attempts: number, maxAttempts?: number): boolean;
+    createEntry(email: string, code: string, now?: Date, service?: string): VerificationCodeEntry;
+    verifyCode(inputCode: string, entry: VerificationCodeEntry, now?: Date): VerificationResult;
+    checkGenerationRateLimit(existingEntries: VerificationCodeEntry[], now?: Date): RateLimitResult;
+    filterActiveEntries(entries: VerificationCodeEntry[], now?: Date): VerificationCodeEntry[];
+    getConfig(): typeof VERIFICATION_CONFIG;
+};
 
 /**
  * VerificationCode - GAS layer for verification code storage
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ * Declared as `var` (not `class`) so tests can assign to `global.VerificationCode`
  */
-declare class VerificationCode {
-    static readonly _CACHE_PREFIX: string;
-    static readonly _RATE_LIMIT_PREFIX: string;
-    static getVerificationConfig(): typeof VERIFICATION_CONFIG;
-    static generateAndStore(email: string, service?: string): CodeGenerationResult;
-    static verify(email: string, code: string): VerificationResult;
-    static sendCodeEmail(email: string, code: string, serviceName: string): { success: boolean; error?: string };
-    static requestCode(email: string, serviceName: string, service?: string): { success: boolean; error?: string };
-    static clearCodes(email: string): void;
-    static clearRateLimitForEmail(email: string): boolean;
-    static clearAllVerificationData(): { cleared: number; errors: number };
-}
+declare var VerificationCode: {
+    readonly _CACHE_PREFIX: string;
+    readonly _RATE_LIMIT_PREFIX: string;
+    getVerificationConfig(): typeof VERIFICATION_CONFIG;
+    generateAndStore(email: string, service?: string): CodeGenerationResult;
+    verify(email: string, code: string): VerificationResult;
+    sendCodeEmail(email: string, code: string, serviceName: string): { success: boolean; error?: string };
+    requestCode(email: string, serviceName: string, service?: string): { success: boolean; error?: string };
+    clearCodes(email: string): void;
+    clearRateLimitForEmail(email: string): boolean;
+    clearAllVerificationData(): { cleared: number; errors: number };
+};
 
 /**
  * Verification configuration type
@@ -194,32 +200,34 @@ declare const VERIFICATION_CONFIG: {
 /**
  * ApiClientManager - Pure logic for API request/response handling
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ * Declared as `var` (not `class`) so tests can assign to `global.ApiClientManager`
  */
-declare class ApiClientManager {
-    static successResponse(data: any, meta?: any): ApiResponse;
-    static errorResponse(error: string, errorCode?: string, meta?: any): ApiResponse;
-    static validateRequest(request: any): { valid: boolean; error?: string };
-    static validateRequiredParams(params: Record<string, any>, required: string[]): { valid: boolean; missing?: string[] };
-    static sanitizeString(value: any, maxLength?: number): string;
-    static createRequestId(): string;
-    static createRequestContext(action: string | undefined, requestId: string | undefined): { action: string; requestId: string; startTime: number };
-    static getRequestDuration(context: { startTime: number }): number;
-    static createMetaFromContext(context: { action: string; requestId: string; startTime: number }): Record<string, any>;
-    static actionRequiresAuth(action: string, handlers: Record<string, ActionHandler>): boolean;
-    static listActions(handlers: Record<string, ActionHandler>, includePrivate?: boolean): Array<{ action: string; requiresAuth: boolean; description?: string }>;
-    static formatErrorForLogging(error: Error | string, request?: any): Record<string, any>;
-}
+declare var ApiClientManager: {
+    successResponse(data: any, meta?: any): ApiResponse;
+    errorResponse(error: string, errorCode?: string, meta?: any): ApiResponse;
+    validateRequest(request: any): { valid: boolean; error?: string };
+    validateRequiredParams(params: Record<string, any>, required: string[]): { valid: boolean; missing?: string[] };
+    sanitizeString(value: any, maxLength?: number): string;
+    createRequestId(): string;
+    createRequestContext(action: string | undefined, requestId: string | undefined): { action: string; requestId: string; startTime: number };
+    getRequestDuration(context: { startTime: number }): number;
+    createMetaFromContext(context: { action: string; requestId: string; startTime: number }): Record<string, any>;
+    actionRequiresAuth(action: string, handlers: Record<string, ActionHandler>): boolean;
+    listActions(handlers: Record<string, ActionHandler>, includePrivate?: boolean): Array<{ action: string; requiresAuth: boolean; description?: string }>;
+    formatErrorForLogging(error: Error | string, request?: any): Record<string, any>;
+};
 
 /**
  * ApiClient - GAS layer for handling API requests
  * Pattern: IIFE-wrapped class with static methods (per gas-best-practices.md)
+ * Declared as `var` (not `class`) so tests can assign to `global.ApiClient`
  */
-declare class ApiClient {
-    static registerHandler(action: string, handler: (params: Record<string, any>, token?: string) => ApiResponse, options?: { requiresAuth?: boolean; description?: string }): void;
-    static handleRequest(request: ApiRequest): string;
-    static listActions(): string;
-    static getHandler(action: string): ActionHandler | undefined;
-}
+declare var ApiClient: {
+    registerHandler(action: string, handler: (params: Record<string, any>, token?: string) => ApiResponse, options?: { requiresAuth?: boolean; description?: string }): void;
+    handleRequest(request: ApiRequest): string;
+    listActions(): string;
+    getHandler(action: string): ActionHandler | undefined;
+};
 
 // API types
 interface ApiResponse {
@@ -349,8 +357,36 @@ interface Member {
 
 /**
  * Audit Log Entry class - creates validated audit entries
+ * Declared as `var` (not `class`) so tests can assign to `global.AuditLogEntry`
  */
-declare class AuditLogEntry {
+declare var AuditLogEntry: {
+    new(
+        type: string,
+        outcome: string,
+        note?: string,
+        error?: string,
+        jsonData?: string,
+        timestamp?: Date
+    ): AuditLogEntry;
+
+    /** Static factory method - never throws */
+    create(
+        type: string,
+        outcome: string,
+        note?: string,
+        error?: string,
+        jsonData?: string,
+        timestamp?: Date
+    ): AuditLogEntry;
+
+    /** Validate array of entries */
+    validateArray(
+        entries: Array<AuditLogEntry | object>,
+        context: string
+    ): AuditLogEntry[];
+};
+
+interface AuditLogEntry {
     /** Timestamp of the event */
     Timestamp: Date;
     /** Type of business event (ActionType values or 'DeadLetter') */
@@ -366,33 +402,8 @@ declare class AuditLogEntry {
     /** Optional unique identifier for deduplication */
     Id?: string;
 
-    constructor(
-        type: string,
-        outcome: string,
-        note?: string,
-        error?: string,
-        jsonData?: string,
-        timestamp?: Date
-    );
-
     /** Convert to array for spreadsheet persistence */
     toArray(): Array<Date | string>;
-
-    /** Static factory method - never throws */
-    static create(
-        type: string,
-        outcome: string,
-        note?: string,
-        error?: string,
-        jsonData?: string,
-        timestamp?: Date
-    ): AuditLogEntry;
-
-    /** Validate array of entries */
-    static validateArray(
-        entries: Array<AuditLogEntry | object>,
-        context: string
-    ): AuditLogEntry[];
 }
 
 /**
@@ -408,19 +419,24 @@ interface AuditLogParams {
 
 /**
  * Pure JavaScript audit logger - creates audit entries without side effects
+ * Declared as `var` (not `class`) so tests can assign to `global.AuditLogger`
  */
-declare class AuditLogger {
-    constructor(today?: Date);
+declare var AuditLogger: {
+    new(today?: Date): AuditLogger;
+};
+
+interface AuditLogger {
     createLogEntry(params: AuditLogParams): AuditLogEntry;
     createLogEntries(paramsArray: AuditLogParams[]): AuditLogEntry[];
 }
 
 /**
  * Audit persistence class - writes to Audit sheet
+ * Declared as `var` (not `class`) so tests can assign to `global.AuditPersistence`
  */
-declare class AuditPersistence {
-    static persistAuditEntries(auditEntries: AuditLogEntry[]): number;
-}
+declare var AuditPersistence: {
+    persistAuditEntries(auditEntries: AuditLogEntry[]): number;
+};
 
 // ============================================================================
 // SpreadsheetManager (Flat Pattern - no namespace nesting)
@@ -428,17 +444,18 @@ declare class AuditPersistence {
 
 /**
  * SpreadsheetManager class - Low-level spreadsheet access
+ * Declared as `var` (not `class`) so tests can assign to `global.SpreadsheetManager`
  */
-declare class SpreadsheetManager {
+declare var SpreadsheetManager: {
     /**
      * Converts links in a sheet to hyperlinks.
      */
-    static convertLinks(sheetName: string): void;
+    convertLinks(sheetName: string): void;
 
     /**
      * Get a sheet directly by name from Bootstrap
      */
-    static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
+    getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
 
     /**
      * Get a sheet by spreadsheet ID and sheet name (for dynamic/external spreadsheets not in Bootstrap)
@@ -446,50 +463,51 @@ declare class SpreadsheetManager {
      * @param sheetName - The name of the sheet tab within the spreadsheet
      * @param createIfMissing - Whether to create the sheet if it doesn't exist (default: false)
      */
-    static getSheetById(spreadsheetId: string, sheetName: string, createIfMissing?: boolean): GoogleAppsScript.Spreadsheet.Sheet;
-}
+    getSheetById(spreadsheetId: string, sheetName: string, createIfMissing?: boolean): GoogleAppsScript.Spreadsheet.Sheet;
+};
 
 /**
  * SheetAccess - Abstraction over spreadsheet operations
  * Provides consistent interface using native SpreadsheetApp API
+ * Declared as `var` (not `class`) so tests can assign to `global.SheetAccess`
  */
-declare class SheetAccess {
+declare var SheetAccess: {
     /**
      * Get data from a sheet as array of row objects
      */
-    static getData(sheetName: string): any[];
+    getData(sheetName: string): any[];
     
     /**
      * Get data as 2D array (headers + rows)
      */
-    static getDataAsArrays(sheetName: string): any[][];
+    getDataAsArrays(sheetName: string): any[][];
     
     /**
      * Get data from sheet with RichText preserved for link columns
      * Returns objects where link columns have {text, url} structure
      */
-    static getDataWithRichText(sheetName: string, richTextColumns?: string[]): any[];
+    getDataWithRichText(sheetName: string, richTextColumns?: string[]): any[];
     
     /**
      * Write data to a sheet (replaces all data)
      */
-    static setData(sheetName: string, data: any[]): void;
+    setData(sheetName: string, data: any[]): void;
     
     /**
      * Append rows to end of sheet
      */
-    static appendRows(sheetName: string, rows: any[][]): void;
+    appendRows(sheetName: string, rows: any[][]): void;
     
     /**
      * Update specific rows in a sheet
      */
-    static updateRows(sheetName: string, rows: any[][], startRow: number): void;
+    updateRows(sheetName: string, rows: any[][], startRow: number): void;
     
     /**
      * Get raw Sheet object for advanced operations
      * Note: Prefer using higher-level methods when possible
      */
-    static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
+    getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet;
 
     // ========================================================================
     // *ById Methods - For dynamic/external spreadsheets not in Bootstrap
@@ -501,21 +519,21 @@ declare class SheetAccess {
      * @param sheetName - The name of the sheet tab within the spreadsheet
      * @param createIfMissing - Whether to create the sheet if it doesn't exist (default: false)
      */
-    static getSheetById(spreadsheetId: string, sheetName: string, createIfMissing?: boolean): GoogleAppsScript.Spreadsheet.Sheet;
+    getSheetById(spreadsheetId: string, sheetName: string, createIfMissing?: boolean): GoogleAppsScript.Spreadsheet.Sheet;
 
     /**
      * Get data as 2D array from a spreadsheet by ID (for dynamic spreadsheets not in Bootstrap)
      * @param spreadsheetId - The spreadsheet ID to open
      * @param sheetName - The name of the sheet tab within the spreadsheet
      */
-    static getDataAsArraysById(spreadsheetId: string, sheetName: string): any[][];
+    getDataAsArraysById(spreadsheetId: string, sheetName: string): any[][];
 
     /**
      * Get data from a spreadsheet by ID as array of row objects (for dynamic spreadsheets not in Bootstrap)
      * @param spreadsheetId - The spreadsheet ID to open
      * @param sheetName - The name of the sheet tab within the spreadsheet
      */
-    static getDataById(spreadsheetId: string, sheetName: string): any[];
+    getDataById(spreadsheetId: string, sheetName: string): any[];
 
     /**
      * Write data to a sheet by spreadsheet ID (for dynamic spreadsheets not in Bootstrap)
@@ -524,15 +542,15 @@ declare class SheetAccess {
      * @param data - Array of row objects
      * @param createIfMissing - Whether to create the sheet if it doesn't exist (default: false)
      */
-    static setDataById(spreadsheetId: string, sheetName: string, data: any[], createIfMissing?: boolean): void;
+    setDataById(spreadsheetId: string, sheetName: string, data: any[], createIfMissing?: boolean): void;
 
     /**
      * Open a spreadsheet by ID and return it (for operations needing the full spreadsheet object)
      * Use sparingly - prefer specific *ById methods
      * @param spreadsheetId - The spreadsheet ID to open
      */
-    static getSpreadsheetById(spreadsheetId: string): GoogleAppsScript.Spreadsheet.Spreadsheet;
-}
+    getSpreadsheetById(spreadsheetId: string): GoogleAppsScript.Spreadsheet.Spreadsheet;
+};
 
 /**
  * Plain object shape of ValidatedMember data (without class methods)
@@ -571,7 +589,44 @@ interface TransactionData {
 }
 
 // Flat ValidatedMember class (new pattern - replaces Common.Data.ValidatedMember)
-declare class ValidatedMember {
+// Declared as `var` (not `class`) so tests can assign to `global.ValidatedMember`
+declare var ValidatedMember: {
+    new(
+        email: string,
+        status: string,
+        first: string,
+        last: string,
+        phone: string,
+        joined: Date,
+        expires: Date,
+        period: number | null,
+        migrated: Date | null,
+        dirName: boolean,
+        dirEmail: boolean,
+        dirPhone: boolean,
+        renewedOn: Date | null | string
+    ): ValidatedMember;
+    
+    /** Static factory - never throws, returns null on failure */
+    fromRow(
+        rowArray: Array<any>,
+        headers: string[],
+        rowNumber: number,
+        errorCollector: { errors: string[], rowNumbers: number[] } | null
+    ): ValidatedMember | null;
+    
+    /** Batch validation with consolidated email alert */
+    validateRows(
+        rows: Array<Array<any>>,
+        headers: string[],
+        context: string
+    ): ValidatedMember[];
+    
+    /** Column headers constant */
+    HEADERS: string[];
+};
+
+interface ValidatedMember {
     Email: string;
     Status: string;
     First: string;
@@ -586,46 +641,55 @@ declare class ValidatedMember {
     'Directory Share Phone': boolean;
     'Renewed On': Date | null;
     
-    constructor(
-        email: string,
-        status: string,
-        first: string,
-        last: string,
-        phone: string,
-        joined: Date,
-        expires: Date,
-        period: number | null,
-        migrated: Date | null,
-        dirName: boolean,
-        dirEmail: boolean,
-        dirPhone: boolean,
-        renewedOn: Date | null | string
-    );
-    
     /** Convert to array for sheet persistence */
     toArray(): Array<string | Date | number | boolean | null>;
+}
+
+// Flat ValidatedTransaction class (new pattern for transaction validation)
+// Declared as `var` (not `class`) so tests can assign to `global.ValidatedTransaction`
+declare var ValidatedTransaction: {
+    new(
+        emailAddress: string,
+        firstName: string,
+        lastName: string,
+        phone: string,
+        payment: string,
+        directory: string,
+        payableStatus: string,
+        processed: Date | string | null,
+        timestamp: Date | string | null
+    ): ValidatedTransaction;
     
     /** Static factory - never throws, returns null on failure */
-    static fromRow(
+    fromRow(
         rowArray: Array<any>,
         headers: string[],
         rowNumber: number,
         errorCollector: { errors: string[], rowNumbers: number[] } | null
-    ): ValidatedMember | null;
+    ): ValidatedTransaction | null;
     
     /** Batch validation with consolidated email alert */
-    static validateRows(
+    validateRows(
         rows: Array<Array<any>>,
         headers: string[],
         context: string
-    ): ValidatedMember[];
+    ): ValidatedTransaction[];
+    
+    /**
+     * Write back only changed cells using header-based column lookup.
+     * Avoids row-shift bugs and column-order assumptions.
+     */
+    writeChangedCells(
+        sheet: GoogleAppsScript.Spreadsheet.Sheet,
+        transactions: ValidatedTransaction[],
+        sheetHeaders: string[]
+    ): number;
     
     /** Column headers constant */
-    static HEADERS: string[];
-}
+    HEADERS: string[];
+};
 
-// Flat ValidatedTransaction class (new pattern for transaction validation)
-declare class ValidatedTransaction {
+interface ValidatedTransaction {
     'Email Address': string;
     'First Name': string;
     'Last Name': string;
@@ -641,64 +705,17 @@ declare class ValidatedTransaction {
     /** Header-keyed snapshot of original cell values, set by fromRow() for change detection */
     _originalValues?: Record<string, any>;
     
-    constructor(
-        emailAddress: string,
-        firstName: string,
-        lastName: string,
-        phone: string,
-        payment: string,
-        directory: string,
-        payableStatus: string,
-        processed: Date | string | null,
-        timestamp: Date | string | null
-    );
-    
     /** Convert to array for sheet persistence */
     toArray(): Array<string | Date | null>;
-    
-    /** Static factory - never throws, returns null on failure */
-    static fromRow(
-        rowArray: Array<any>,
-        headers: string[],
-        rowNumber: number,
-        errorCollector: { errors: string[], rowNumbers: number[] } | null
-    ): ValidatedTransaction | null;
-    
-    /** Batch validation with consolidated email alert */
-    static validateRows(
-        rows: Array<Array<any>>,
-        headers: string[],
-        context: string
-    ): ValidatedTransaction[];
-    
-    /**
-     * Write back only changed cells using header-based column lookup.
-     * Avoids row-shift bugs and column-order assumptions.
-     */
-    static writeChangedCells(
-        sheet: GoogleAppsScript.Spreadsheet.Sheet,
-        transactions: ValidatedTransaction[],
-        sheetHeaders: string[]
-    ): number;
-    
-    /** Column headers constant */
-    static HEADERS: string[];
 }
 
 // Flat ValidatedBootstrap class (type-safe Bootstrap configuration rows)
-declare class ValidatedBootstrap {
-    Reference: string;
-    id: string;
-    sheetName: string;
-    createIfMissing: boolean;
-
-    constructor(reference: string, id: string | null | undefined, sheetName: string, createIfMissing: boolean | string);
-
-    /** Convert to array for serialization/testing (NOT for sheet persistence) */
-    toArray(): Array<string | boolean>;
+// Declared as `var` (not `class`) so tests can assign to `global.ValidatedBootstrap`
+declare var ValidatedBootstrap: {
+    new(reference: string, id: string | null | undefined, sheetName: string, createIfMissing: boolean | string): ValidatedBootstrap;
 
     /** Static factory - never throws, returns null on failure */
-    static fromRow(
+    fromRow(
         rowArray: Array<any>,
         headers: string[],
         rowNumber: number,
@@ -706,29 +723,33 @@ declare class ValidatedBootstrap {
     ): ValidatedBootstrap | null;
 
     /** Batch validation with consolidated email alert */
-    static validateRows(
+    validateRows(
         rows: Array<Array<any>>,
         headers: string[],
         context: string
     ): ValidatedBootstrap[];
 
     /** Column headers constant */
-    static HEADERS: string[];
+    HEADERS: string[];
+};
+
+interface ValidatedBootstrap {
+    Reference: string;
+    id: string;
+    sheetName: string;
+    createIfMissing: boolean;
+
+    /** Convert to array for serialization/testing (NOT for sheet persistence) */
+    toArray(): Array<string | boolean>;
 }
 
 // Flat ValidatedPublicGroup class (type-safe PublicGroups rows)
-declare class ValidatedPublicGroup {
-    Name: string;
-    Email: string;
-    Subscription: string;
-
-    constructor(name: string, email: string, subscription: string);
-
-    /** Convert to array for serialization/testing (NOT for sheet persistence) */
-    toArray(): string[];
+// Declared as `var` (not `class`) so tests can assign to `global.ValidatedPublicGroup`
+declare var ValidatedPublicGroup: {
+    new(name: string, email: string, subscription: string): ValidatedPublicGroup;
 
     /** Static factory - never throws, returns null on failure */
-    static fromRow(
+    fromRow(
         rowArray: Array<any>,
         headers: string[],
         rowNumber: number,
@@ -736,29 +757,32 @@ declare class ValidatedPublicGroup {
     ): ValidatedPublicGroup | null;
 
     /** Batch validation with consolidated email alert */
-    static validateRows(
+    validateRows(
         rows: Array<Array<any>>,
         headers: string[],
         context: string
     ): ValidatedPublicGroup[];
 
     /** Column headers constant */
-    static HEADERS: string[];
-}
+    HEADERS: string[];
+};
 
-// Flat ValidatedElectionConfig class (type-safe ElectionConfiguration rows)
-declare class ValidatedElectionConfig {
-    Key: string;
-    Setting: string;
-    Value: string;
-
-    constructor(key: string | null, setting: string | null, value: string);
+interface ValidatedPublicGroup {
+    Name: string;
+    Email: string;
+    Subscription: string;
 
     /** Convert to array for serialization/testing (NOT for sheet persistence) */
     toArray(): string[];
+}
+
+// Flat ValidatedElectionConfig class (type-safe ElectionConfiguration rows)
+// Declared as `var` (not `class`) so tests can assign to `global.ValidatedElectionConfig`
+declare var ValidatedElectionConfig: {
+    new(key: string | null, setting: string | null, value: string): ValidatedElectionConfig;
 
     /** Static factory - never throws, returns null on failure */
-    static fromRow(
+    fromRow(
         rowArray: Array<any>,
         headers: string[],
         rowNumber: number,
@@ -766,39 +790,39 @@ declare class ValidatedElectionConfig {
     ): ValidatedElectionConfig | null;
 
     /** Batch validation with consolidated email alert */
-    static validateRows(
+    validateRows(
         rows: Array<Array<any>>,
         headers: string[],
         context: string
     ): ValidatedElectionConfig[];
 
     /** Column headers constant */
-    static HEADERS: string[];
+    HEADERS: string[];
+};
+
+interface ValidatedElectionConfig {
+    Key: string;
+    Setting: string;
+    Value: string;
+
+    /** Convert to array for serialization/testing (NOT for sheet persistence) */
+    toArray(): string[];
 }
 
 // Flat ValidatedElection class (new pattern for election validation)
-declare class ValidatedElection {
-    Title: string;
-    Start: Date | null;
-    End: Date | null;
-    'Form Edit URL': string;
-    'Election Officers': string;
-    TriggerId: string;
-    
-    constructor(
+// Declared as `var` (not `class`) so tests can assign to `global.ValidatedElection`
+declare var ValidatedElection: {
+    new(
         title: string,
         start: Date | string | null,
         end: Date | string | null,
         formEditUrl: string,
         electionOfficers: string,
         triggerId: string
-    );
-    
-    /** Convert to array for serialization/testing (NOT for sheet persistence) */
-    toArray(): Array<string | Date | null>;
+    ): ValidatedElection;
     
     /** Static factory - never throws, returns null on failure */
-    static fromRow(
+    fromRow(
         rowArray: Array<any>,
         headers: string[],
         rowNumber: number,
@@ -806,18 +830,70 @@ declare class ValidatedElection {
     ): ValidatedElection | null;
     
     /** Batch validation with consolidated email alert */
-    static validateRows(
+    validateRows(
         rows: Array<Array<any>>,
         headers: string[],
         context: string
     ): ValidatedElection[];
     
     /** Column headers constant */
-    static HEADERS: string[];
+    HEADERS: string[];
+};
+
+interface ValidatedElection {
+    Title: string;
+    Start: Date | null;
+    End: Date | null;
+    'Form Edit URL': string;
+    'Election Officers': string;
+    TriggerId: string;
+    
+    /** Convert to array for serialization/testing (NOT for sheet persistence) */
+    toArray(): Array<string | Date | null>;
 }
 
 // Flat ValidatedActionSpec class (new pattern for action spec validation)
-declare class ValidatedActionSpec {
+// Declared as `var` (not `class`) so tests can assign to `global.ValidatedActionSpec`
+declare var ValidatedActionSpec: {
+    /**
+     * Constructor
+     * @param type - Action type (required, must be one of known ActionTypes)
+     * @param subject - Email subject line (required)
+     * @param body - Email body (required, may be string or RichText object)
+     * @param offset - Days offset for expiry actions (optional)
+     */
+    new(
+        type: string,
+        subject: string,
+        body: string | { text: string; url: string },
+        offset?: number | null
+    ): ValidatedActionSpec;
+    
+    /**
+     * Static factory method - creates ValidatedActionSpec from row data
+     * Never throws - returns null on validation failure
+     */
+    fromRow(
+        rowArray: Array<any>,
+        headers: Array<string>,
+        rowNumber: number,
+        errorCollector?: { errors: string[]; rowNumbers: number[] }
+    ): ValidatedActionSpec | null;
+    
+    /**
+     * Batch validation with consolidated error reporting
+     */
+    validateRows(
+        rows: Array<Array<any>>,
+        headers: Array<string>,
+        context: string
+    ): ValidatedActionSpec[];
+    
+    /** Column headers constant */
+    HEADERS: string[];
+};
+
+interface ValidatedActionSpec {
     /** Action type (e.g., 'Join', 'Renew', 'Expiry1', etc.) */
     Type: string;
     
@@ -830,49 +906,67 @@ declare class ValidatedActionSpec {
     /** Days offset for expiry actions (optional) */
     Offset: number | null;
     
-    /**
-     * Constructor
-     * @param type - Action type (required, must be one of known ActionTypes)
-     * @param subject - Email subject line (required)
-     * @param body - Email body (required, may be string or RichText object)
-     * @param offset - Days offset for expiry actions (optional)
-     */
-    constructor(
-        type: string,
-        subject: string,
-        body: string | { text: string; url: string },
-        offset?: number | null
-    );
-    
     /** Convert to array format for spreadsheet persistence */
     toArray(): Array<string | number | null | { text: string; url: string }>;
+}
+
+// Flat ValidatedFIFOItem class (new pattern for FIFO item validation)
+// Declared as `var` (not `class`) so tests can assign to `global.ValidatedFIFOItem`
+declare var ValidatedFIFOItem: {
+    /**
+     * Constructor
+     * @param id - Unique identifier (required)
+     * @param email - Member email (required, validated format)
+     * @param subject - Email subject (required, non-empty)
+     * @param htmlBody - Email HTML body (required, non-empty)
+     * @param groups - Comma-separated group emails (optional)
+     * @param attempts - Number of attempts (required, >= 0)
+     * @param lastAttemptAt - Last attempt timestamp ISO string (optional)
+     * @param lastError - Last error message (optional)
+     * @param nextAttemptAt - Next attempt timestamp ISO string (optional)
+     * @param maxAttempts - Max attempts override (optional)
+     * @param dead - Dead letter flag (optional, defaults to false)
+     */
+    new(
+        id: string,
+        email: string,
+        subject: string,
+        htmlBody: string,
+        groups: string,
+        attempts: number,
+        lastAttemptAt: string,
+        lastError: string,
+        nextAttemptAt: string,
+        maxAttempts?: number | null,
+        dead?: boolean
+    ): ValidatedFIFOItem;
     
     /**
-     * Static factory method - creates ValidatedActionSpec from row data
+     * Static factory method - creates ValidatedFIFOItem from row data
      * Never throws - returns null on validation failure
+     * Uses header-based lookup for column-order independence
      */
-    static fromRow(
+    fromRow(
         rowArray: Array<any>,
         headers: Array<string>,
         rowNumber: number,
         errorCollector?: { errors: string[]; rowNumbers: number[] }
-    ): ValidatedActionSpec | null;
+    ): ValidatedFIFOItem | null;
     
     /**
      * Batch validation with consolidated error reporting
      */
-    static validateRows(
+    validateRows(
         rows: Array<Array<any>>,
         headers: Array<string>,
         context: string
-    ): ValidatedActionSpec[];
+    ): ValidatedFIFOItem[];
     
     /** Column headers constant */
-    static HEADERS: string[];
-}
+    HEADERS: string[];
+};
 
-// Flat ValidatedFIFOItem class (new pattern for FIFO item validation)
-declare class ValidatedFIFOItem {
+interface ValidatedFIFOItem {
     /** Unique identifier */
     id: string;
     
@@ -906,65 +1000,15 @@ declare class ValidatedFIFOItem {
     /** Dead letter flag */
     dead: boolean;
     
-    /**
-     * Constructor
-     * @param id - Unique identifier (required)
-     * @param email - Member email (required, validated format)
-     * @param subject - Email subject (required, non-empty)
-     * @param htmlBody - Email HTML body (required, non-empty)
-     * @param groups - Comma-separated group emails (optional)
-     * @param attempts - Number of attempts (required, >= 0)
-     * @param lastAttemptAt - Last attempt timestamp ISO string (optional)
-     * @param lastError - Last error message (optional)
-     * @param nextAttemptAt - Next attempt timestamp ISO string (optional)
-     * @param maxAttempts - Max attempts override (optional)
-     * @param dead - Dead letter flag (optional, defaults to false)
-     */
-    constructor(
-        id: string,
-        email: string,
-        subject: string,
-        htmlBody: string,
-        groups: string,
-        attempts: number,
-        lastAttemptAt: string,
-        lastError: string,
-        nextAttemptAt: string,
-        maxAttempts?: number | null,
-        dead?: boolean
-    );
-    
     /** Convert to array format for serialization/testing (NOT for sheet persistence) */
     toArray(): Array<string | number | boolean | null>;
-    
-    /**
-     * Static factory method - creates ValidatedFIFOItem from row data
-     * Never throws - returns null on validation failure
-     * Uses header-based lookup for column-order independence
-     */
-    static fromRow(
-        rowArray: Array<any>,
-        headers: Array<string>,
-        rowNumber: number,
-        errorCollector?: { errors: string[]; rowNumbers: number[] }
-    ): ValidatedFIFOItem | null;
-    
-    /**
-     * Batch validation with consolidated error reporting
-     */
-    static validateRows(
-        rows: Array<Array<any>>,
-        headers: Array<string>,
-        context: string
-    ): ValidatedFIFOItem[];
-    
-    /** Column headers constant */
-    static HEADERS: string[];
 }
 
-declare class MemberPersistence {
+// MemberPersistence - Static-only utility class
+// Declared as `var` (not `class`) so tests can assign to `global.MemberPersistence`
+declare var MemberPersistence: {
     /** Write only changed cells to minimize version history noise */
-    static writeChangedCells(
+    writeChangedCells(
         sheet: GoogleAppsScript.Spreadsheet.Sheet,
         originalRows: Array<Array<any>>,
         modifiedMembers: ValidatedMember[],
@@ -972,8 +1016,8 @@ declare class MemberPersistence {
     ): number;
     
     /** Value equality that handles Dates and primitives */
-    static valuesEqual(a: any, b: any): boolean;
-}
+    valuesEqual(a: any, b: any): boolean;
+};
 
 // Flat DataAccess object (new pattern - replaces Common.Data.Access)
 declare var DataAccess: {
@@ -1048,13 +1092,16 @@ declare var DataAccess: {
 };
 
 // Flat ServiceLogger class (new pattern - replaces Common.Logging.ServiceLogger)
-declare class ServiceLogger {
+// Declared as `var` (not `class`) so tests can assign to `global.ServiceLogger`
+declare var ServiceLogger: {
+    new(serviceName: string, userEmail: string, timestamp?: Date): ServiceLogger;
+};
+
+interface ServiceLogger {
     serviceName: string;
     userEmail: string;
     timestamp: Date;
     auditLogger: AuditLogger;
-    
-    constructor(serviceName: string, userEmail: string, timestamp?: Date);
     
     /** Log service access (getData call) */
     logServiceAccess(operation: string): AuditLogEntry;
