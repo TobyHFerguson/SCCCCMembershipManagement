@@ -189,7 +189,7 @@ describe('ClientManager - Pure Logic', () => {
   describe('sanitizeParams', () => {
     test('sanitizes string values', () => {
       const params = { name: '  Test  ', email: 'test@example.com' };
-      const result = ClientManager.sanitizeParams(params);
+      const result = ClientManager.sanitizeParams(/** @type {any} */ (params), undefined);
       
       expect(result.name).toBe('Test');
       expect(result.email).toBe('test@example.com');
@@ -197,7 +197,7 @@ describe('ClientManager - Pure Logic', () => {
 
     test('preserves non-string values', () => {
       const params = { count: 123, active: true };
-      const result = ClientManager.sanitizeParams(params);
+      const result = ClientManager.sanitizeParams(/** @type {any} */ (params), undefined);
       
       expect(result.count).toBe(123);
       expect(result.active).toBe(true);
@@ -210,22 +210,22 @@ describe('ClientManager - Pure Logic', () => {
           email: 'test@example.com' 
         } 
       };
-      const result = ClientManager.sanitizeParams(params);
+      const result = ClientManager.sanitizeParams(/** @type {any} */ (params), undefined);
       
-      expect(result.user.name).toBe('Test');
+      expect((/** @type {any} */ (result.user)).name).toBe('Test');
     });
 
     test('respects schema for max lengths', () => {
       const params = { name: 'a'.repeat(100) };
       const schema = { name: 10 };
-      const result = ClientManager.sanitizeParams(params, schema);
+      const result = ClientManager.sanitizeParams(/** @type {any} */ (params), /** @type {any} */ (schema));
       
       expect(result.name).toHaveLength(10);
     });
 
     test('handles null/undefined params', () => {
-      expect(ClientManager.sanitizeParams(null)).toEqual({});
-      expect(ClientManager.sanitizeParams(undefined)).toEqual({});
+      expect(ClientManager.sanitizeParams(/** @type {any} */ (null), undefined)).toEqual({});
+      expect(ClientManager.sanitizeParams(/** @type {any} */ (undefined), undefined)).toEqual({});
     });
   });
 
@@ -306,19 +306,19 @@ describe('ClientManager - Pure Logic', () => {
     };
 
     test('returns false for public actions', () => {
-      expect(ClientManager.actionRequiresAuth('publicAction', handlers)).toBe(false);
+      expect(ClientManager.actionRequiresAuth('publicAction', /** @type {any} */ (handlers))).toBe(false);
     });
 
     test('returns true for private actions', () => {
-      expect(ClientManager.actionRequiresAuth('privateAction', handlers)).toBe(true);
+      expect(ClientManager.actionRequiresAuth('privateAction', /** @type {any} */ (handlers))).toBe(true);
     });
 
     test('returns true by default', () => {
-      expect(ClientManager.actionRequiresAuth('defaultAction', handlers)).toBe(true);
+      expect(ClientManager.actionRequiresAuth('defaultAction', /** @type {any} */ (handlers))).toBe(true);
     });
 
     test('returns true for unknown actions', () => {
-      expect(ClientManager.actionRequiresAuth('unknown', handlers)).toBe(true);
+      expect(ClientManager.actionRequiresAuth('unknown', /** @type {any} */ (handlers))).toBe(true);
     });
   });
 
@@ -332,7 +332,7 @@ describe('ClientManager - Pure Logic', () => {
     };
 
     test('lists public actions', () => {
-      const actions = ClientManager.listActions(handlers);
+      const actions = ClientManager.listActions(/** @type {any} */ (handlers));
       
       expect(actions).toHaveLength(2);
       expect(actions.find(a => a.action === 'publicAction')).toBeDefined();
@@ -340,19 +340,19 @@ describe('ClientManager - Pure Logic', () => {
     });
 
     test('excludes private actions by default', () => {
-      const actions = ClientManager.listActions(handlers);
+      const actions = ClientManager.listActions(/** @type {any} */ (handlers));
       
       expect(actions.find(a => a.action === '_internalAction')).toBeUndefined();
     });
 
     test('includes private actions when requested', () => {
-      const actions = ClientManager.listActions(handlers, true);
+      const actions = ClientManager.listActions(/** @type {any} */ (handlers), true);
       
       expect(actions.find(a => a.action === '_internalAction')).toBeDefined();
     });
 
     test('includes auth requirement and description', () => {
-      const actions = ClientManager.listActions(handlers);
+      const actions = ClientManager.listActions(/** @type {any} */ (handlers));
       const publicAction = actions.find(a => a.action === 'publicAction');
       
       expect(publicAction.requiresAuth).toBe(false);
@@ -360,7 +360,7 @@ describe('ClientManager - Pure Logic', () => {
     });
 
     test('returns sorted list', () => {
-      const actions = ClientManager.listActions(handlers);
+      const actions = ClientManager.listActions(/** @type {any} */ (handlers));
       
       expect(actions[0].action).toBe('privateAction');
       expect(actions[1].action).toBe('publicAction');
@@ -399,8 +399,8 @@ describe('ClientManager - Pure Logic', () => {
       expect(result.hasParams).toBe(true);
       expect(result.hasToken).toBe(true);
       // Should NOT include actual params or token
-      expect(result.params).toBeUndefined();
-      expect(result.token).toBeUndefined();
+      expect((/** @type {any} */ (result)).params).toBeUndefined();
+      expect((/** @type {any} */ (result)).token).toBeUndefined();
     });
   });
 });
@@ -411,29 +411,29 @@ describe('ApiClient - GAS Layer', () => {
     ApiClient.clearHandlers();
     
     // Mock Logger
-    global.AppLogger = {
+    global.AppLogger = /** @type {any} */ ({
       log: jest.fn()
-    };
+    });
 
     // Mock GAS built-in Logger
-    global.Logger = {
+    global.Logger = /** @type {any} */ ({
       log: jest.fn(),
       clear: jest.fn(),
       getLog: jest.fn(() => '')
-    };
+    });
     
     // Mock flat TokenManager class
-    global.TokenManager = {
+    global.TokenManager = /** @type {any} */ ({
       getEmailFromMUT: jest.fn()
-    };
+    });
     
     // Mock Common.Auth.TokenManager for backward compatibility
-    global.Common = {
+    global.Common = /** @type {any} */ ({
       Auth: {
         TokenManager: global.TokenManager
       },
       Api: require('../src/common/api/ApiClient')
-    };
+    });
   });
 
   afterEach(() => {
@@ -504,7 +504,7 @@ describe('ApiClient - GAS Layer', () => {
 
     test('returns error for invalid token', () => {
       ApiClient.registerHandler('test', jest.fn());
-      TokenManager.getEmailFromMUT.mockReturnValue(null);
+      (/** @type {any} */ (TokenManager.getEmailFromMUT)).mockReturnValue(null);
       
       const result = JSON.parse(ApiClient.handleRequest({ 
         action: 'test', 
@@ -518,7 +518,7 @@ describe('ApiClient - GAS Layer', () => {
     test('calls handler with params and token', () => {
       const handler = jest.fn().mockReturnValue({ success: true, data: 'result' });
       ApiClient.registerHandler('test', handler);
-      TokenManager.getEmailFromMUT.mockReturnValue('user@example.com');
+      (/** @type {any} */ (TokenManager.getEmailFromMUT)).mockReturnValue('user@example.com');
       
       const result = JSON.parse(ApiClient.handleRequest({ 
         action: 'test', 

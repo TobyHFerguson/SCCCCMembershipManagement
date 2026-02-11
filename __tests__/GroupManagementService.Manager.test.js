@@ -21,6 +21,12 @@
 const { Manager, DEFAULT_DELIVERY_OPTIONS } = require('../src/services/GroupManagementService/Manager');
 
 // Test data factories
+/** @type {{
+  createGroup: (overrides?: any) => any,
+  createMember: (overrides?: any) => any,
+  createUpdate: (overrides?: any) => any,
+  [key: string]: any
+}} */
 const TestData = {
   createGroup: (overrides = {}) => ({
     Name: 'Test Group',
@@ -145,7 +151,7 @@ describe('GroupManagementService.Manager', () => {
 
     test('accepts custom delivery options', () => {
       const customOptions = { 'CUSTOM': ['Custom', 'Custom option'] };
-      expect(Manager.validateDeliveryValue('CUSTOM', customOptions)).toEqual({ valid: true });
+      expect(Manager.validateDeliveryValue('CUSTOM', /** @type {any} */ (customOptions))).toEqual({ valid: true });
     });
   });
 
@@ -164,7 +170,7 @@ describe('GroupManagementService.Manager', () => {
     });
 
     test('rejects non-object update', () => {
-      const result = Manager.validateSubscriptionUpdate('not an object');
+      const result = Manager.validateSubscriptionUpdate(/** @type {any} */ ('not an object'));
       expect(result.valid).toBe(false);
       expect(result.errorCode).toBe('INVALID_UPDATE');
     });
@@ -195,7 +201,7 @@ describe('GroupManagementService.Manager', () => {
     });
 
     test('rejects non-array', () => {
-      const result = Manager.validateSubscriptionUpdates('not an array');
+      const result = Manager.validateSubscriptionUpdates(/** @type {any} */ ('not an array'));
       expect(result.valid).toBe(false);
       expect(result.errorCode).toBe('INVALID_UPDATES');
     });
@@ -261,7 +267,7 @@ describe('GroupManagementService.Manager', () => {
       const group = TestData.createGroup();
       const member = { email: 'user@test.com' }; // No delivery_settings
       
-      const result = Manager.buildSubscription(group, member);
+      const result = Manager.buildSubscription(group, /** @type {any} */ (member));
       
       expect(result.deliveryValue).toBe('UNSUBSCRIBE');
       expect(result.deliveryName).toBe('UNSUBSCRIBED');
@@ -282,7 +288,7 @@ describe('GroupManagementService.Manager', () => {
       const member = TestData.createMember({ delivery_settings: 'CUSTOM' });
       const customOptions = { 'CUSTOM': ['Custom Name', 'Custom tooltip'] };
       
-      const result = Manager.buildSubscription(group, member, customOptions);
+      const result = Manager.buildSubscription(group, member, /** @type {any} */ (customOptions));
       
       expect(result.deliveryName).toBe('Custom Name');
     });
@@ -492,7 +498,7 @@ describe('GroupManagementService.Manager', () => {
         'CUSTOM2': ['Name2', 'Desc2']
       };
       
-      const result = Manager.getDeliveryOptionsArray(customOptions);
+      const result = Manager.getDeliveryOptionsArray(/** @type {any} */ (customOptions));
       
       expect(result).toHaveLength(2);
       expect(result[0].value).toBe('CUSTOM1');
@@ -562,7 +568,7 @@ describe('GroupManagementService.Manager', () => {
     });
 
     test('handles non-string', () => {
-      expect(Manager.normalizeEmail(123)).toBe('');
+      expect(Manager.normalizeEmail(/** @type {any} */ (123))).toBe('');
     });
   });
 

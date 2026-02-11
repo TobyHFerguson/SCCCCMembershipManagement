@@ -561,11 +561,11 @@ describe('ValidatedFIFOItem Class', () => {
       ];
       
       // Mock AppLogger
-      global.AppLogger = {
+      global.AppLogger = /** @type {any} */ ({
         error: jest.fn(),
         warn: jest.fn(),
         info: jest.fn()
-      };
+      });
       
       const item = ValidatedFIFOItem.fromRow(row, headers, 2, null);
       
@@ -598,11 +598,11 @@ describe('ValidatedFIFOItem Class', () => {
         false
       ];
       
-      global.AppLogger = {
+      global.AppLogger = /** @type {any} */ ({
         error: jest.fn(),
         warn: jest.fn(),
         info: jest.fn()
-      };
+      });
       
       const item = ValidatedFIFOItem.fromRow(row, headers, 2, null);
       
@@ -629,11 +629,11 @@ describe('ValidatedFIFOItem Class', () => {
         false
       ];
       
-      global.AppLogger = {
+      global.AppLogger = /** @type {any} */ ({
         error: jest.fn(),
         warn: jest.fn(),
         info: jest.fn()
-      };
+      });
       
       const item = ValidatedFIFOItem.fromRow(row, headers, 2, null);
       
@@ -659,11 +659,11 @@ describe('ValidatedFIFOItem Class', () => {
         false
       ];
       
-      global.AppLogger = {
+      global.AppLogger = /** @type {any} */ ({
         error: jest.fn(),
         warn: jest.fn(),
         info: jest.fn()
-      };
+      });
       
       const item = ValidatedFIFOItem.fromRow(row, headers, 3, null);
       
@@ -689,11 +689,11 @@ describe('ValidatedFIFOItem Class', () => {
         false
       ];
       
-      global.AppLogger = {
+      global.AppLogger = /** @type {any} */ ({
         error: jest.fn(),
         warn: jest.fn(),
         info: jest.fn()
-      };
+      });
       
       const item = ValidatedFIFOItem.fromRow(row, headers, 4, null);
       
@@ -723,11 +723,11 @@ describe('ValidatedFIFOItem Class', () => {
         false
       ];
       
-      global.AppLogger = {
+      global.AppLogger = /** @type {any} */ ({
         error: jest.fn(),
         warn: jest.fn(),
         info: jest.fn()
-      };
+      });
       
       const errorCollector = { errors: [], rowNumbers: [] };
       const item = ValidatedFIFOItem.fromRow(row, headers, 5, errorCollector);
@@ -756,11 +756,11 @@ describe('ValidatedFIFOItem Class', () => {
       };
       const rowData = shuffledHeaders.map(h => testObj[h]);
       
-      global.AppLogger = {
+      global.AppLogger = /** @type {any} */ ({
         error: jest.fn(),
         warn: jest.fn(),
         info: jest.fn()
-      };
+      });
       
       // Act
       const instance = ValidatedFIFOItem.fromRow(rowData, shuffledHeaders, 2, null);
@@ -783,22 +783,22 @@ describe('ValidatedFIFOItem Class', () => {
     
     beforeEach(() => {
       // Mock AppLogger
-      global.AppLogger = {
+      global.AppLogger = /** @type {any} */ ({
         error: jest.fn(),
         warn: jest.fn(),
         info: jest.fn(),
         debug: jest.fn()
-      };
+      });
       
       // Mock Properties
-      global.Properties = {
+      global.Properties = /** @type {any} */ ({
         getProperty: jest.fn(() => 'test@sc3.club')
-      };
+      });
       
       // Mock MailApp
-      global.MailApp = {
+      global.MailApp = /** @type {any} */ ({
         sendEmail: jest.fn()
-      };
+      });
     });
     
     test('should validate all valid rows', () => {
@@ -849,9 +849,9 @@ describe('ValidatedFIFOItem Class', () => {
     });
     
     test('should use default email when VALIDATION_ERROR_EMAIL not set', () => {
-      global.Properties = {
+      global.Properties = /** @type {any} */ ({
         getProperty: jest.fn(() => null)
-      };
+      });
       
       const rows = [
         ['', 'test@example.com', 'Subject', '<p>Body</p>', '', 0, '', '', '', null, false]
@@ -867,9 +867,9 @@ describe('ValidatedFIFOItem Class', () => {
     });
     
     test('should handle email send failure gracefully', () => {
-      global.MailApp = {
+      global.MailApp = /** @type {any} */ ({
         sendEmail: jest.fn(() => { throw new Error('Email service unavailable'); })
-      };
+      });
       
       const rows = [
         ['', 'test@example.com', 'Subject', '<p>Body</p>', '', 0, '', '', '', null, false]

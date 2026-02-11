@@ -97,7 +97,7 @@ const TestData = {
     const processed = data.Processed ? (typeof data.Processed === 'string' ? new Date(data.Processed) : data.Processed) : null;
     const timestamp = data.Timestamp ? (typeof data.Timestamp === 'string' ? new Date(data.Timestamp) : data.Timestamp) : null;
     
-    return new ValidatedTransaction(
+    return /** @type {any} */ (new ValidatedTransaction(
       data["Email Address"],
       data["First Name"],
       data["Last Name"],
@@ -107,7 +107,7 @@ const TestData = {
       data["Payable Status"],
       processed,
       timestamp
-    );
+    ));
   },
 
   /**
@@ -1777,7 +1777,7 @@ describe('Manager tests', () => {
       // This should NOT throw "toArray is not a function"
       expect(() => {
         MemberPersistence.writeChangedCells(
-          mockSheet,
+          /** @type {any} */ (mockSheet),
           [originalRows[0]], // Only first row remains after merge
           membershipData,
           ValidatedMember.HEADERS

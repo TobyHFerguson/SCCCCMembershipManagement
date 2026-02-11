@@ -11,7 +11,7 @@ const {
 
 const { 
   FeatureFlags 
-} = require('../src/common/config/FeatureFlags');
+} = /** @type {any} */ (require('../src/common/config/FeatureFlags'));
 
 describe('Authentication Flow Integration', () => {
   let mockCache;

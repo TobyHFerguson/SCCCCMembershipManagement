@@ -11,7 +11,7 @@
  */
 
 // Set up VotingService namespace before requiring Api
-global.VotingService = {
+global.VotingService = /** @type {any} */ ({
   Constants: {
     VOTE_TITLE_COLUMN_NAME: 'Title',
     FORM_EDIT_URL_COLUMN_NAME: 'Form Edit URL',
@@ -40,37 +40,37 @@ global.VotingService = {
   getBallot: jest.fn(),
   getSpreadsheetIdFromElection: jest.fn(),
   createPrefilledUrlWithTitle: jest.fn()
-};
+});
 
 // Import Manager first (it will extend VotingService)
 const { Manager } = require('../src/services/VotingService/Manager');
 global.VotingService.Manager = Manager;
 
 // Mock ApiClient (flat class pattern)
-global.ApiClient = {
+global.ApiClient = /** @type {any} */ ({
   registerHandler: jest.fn(),
   handleRequest: jest.fn(),
   clearHandlers: jest.fn()
-};
+});
 
 // Mock ApiClientManager (flat class pattern)
-global.ApiClientManager = {
+global.ApiClientManager = /** @type {any} */ ({
   successResponse: jest.fn((data) => ({ success: true, data })),
   errorResponse: jest.fn((error, errorCode) => ({ success: false, error, errorCode }))
-};
+});
 
 // Set up Common namespace for API handling
-global.Common = {
+global.Common = /** @type {any} */ ({
   Api: {
     Client: global.ApiClient,
     ClientManager: global.ApiClientManager
   }
-};
+});
 
 // Set up Logger
-global.AppLogger = {
+global.AppLogger = /** @type {any} */ ({
   log: jest.fn()
-};
+});
 
 // Import Api module
 const { Api, initApi } = require('../src/services/VotingService/Api');
@@ -152,15 +152,15 @@ describe('VotingService.Api', () => {
       const elections = [TestData.createElection()];
       const ballot = TestData.createBallot();
 
-      VotingService.Data.getElectionData.mockReturnValue(elections);
-      VotingService.getSpreadsheetIdFromElection.mockReturnValue('spreadsheetId');
-      VotingService.Auth.getAllTokens.mockReturnValue([]);
-      VotingService.getBallot.mockReturnValue(ballot);
+      (/** @type {any} */ (VotingService.Data.getElectionData)).mockReturnValue(elections);
+      (/** @type {any} */ (VotingService.getSpreadsheetIdFromElection)).mockReturnValue('spreadsheetId');
+      (/** @type {any} */ (VotingService.Auth.getAllTokens)).mockReturnValue([]);
+      (/** @type {any} */ (VotingService.getBallot)).mockReturnValue(ballot);
 
       const result = Api.handleGetActiveElections({ _authenticatedEmail: 'user@example.com' });
 
       expect(ApiClientManager.successResponse).toHaveBeenCalled();
-      const successCall = ApiClientManager.successResponse.mock.calls[0][0];
+      const successCall = (/** @type {any} */ (ApiClientManager.successResponse)).mock.calls[0][0];
       expect(successCall.userEmail).toBe('user@example.com');
       expect(successCall.elections).toBeDefined();
       expect(successCall.count).toBeGreaterThanOrEqual(0);
@@ -169,12 +169,12 @@ describe('VotingService.Api', () => {
     test('skips elections without form URL', () => {
       const elections = [TestData.createElection({ 'Form Edit URL': '' })];
 
-      VotingService.Data.getElectionData.mockReturnValue(elections);
+      (/** @type {any} */ (VotingService.Data.getElectionData)).mockReturnValue(elections);
 
       const result = Api.handleGetActiveElections({ _authenticatedEmail: 'user@example.com' });
 
       expect(ApiClientManager.successResponse).toHaveBeenCalled();
-      const successCall = ApiClientManager.successResponse.mock.calls[0][0];
+      const successCall = (/** @type {any} */ (ApiClientManager.successResponse)).mock.calls[0][0];
       expect(successCall.elections).toHaveLength(0);
     });
 
@@ -182,11 +182,11 @@ describe('VotingService.Api', () => {
       const elections = [TestData.createElection()];
       const ballot = TestData.createBallot();
 
-      VotingService.Data.getElectionData.mockReturnValue(elections);
-      VotingService.getSpreadsheetIdFromElection.mockImplementation(() => {
+      (/** @type {any} */ (VotingService.Data.getElectionData)).mockReturnValue(elections);
+      (/** @type {any} */ (VotingService.getSpreadsheetIdFromElection)).mockImplementation(() => {
         throw new Error('Spreadsheet not found');
       });
-      VotingService.getBallot.mockReturnValue(ballot);
+      (/** @type {any} */ (VotingService.getBallot)).mockReturnValue(ballot);
 
       const result = Api.handleGetActiveElections({ _authenticatedEmail: 'user@example.com' });
 
@@ -197,10 +197,10 @@ describe('VotingService.Api', () => {
     test('handles error when getting ballot status fails', () => {
       const elections = [TestData.createElection()];
 
-      VotingService.Data.getElectionData.mockReturnValue(elections);
-      VotingService.getSpreadsheetIdFromElection.mockReturnValue('spreadsheetId');
-      VotingService.Auth.getAllTokens.mockReturnValue([]);
-      VotingService.getBallot.mockImplementation(() => {
+      (/** @type {any} */ (VotingService.Data.getElectionData)).mockReturnValue(elections);
+      (/** @type {any} */ (VotingService.getSpreadsheetIdFromElection)).mockReturnValue('spreadsheetId');
+      (/** @type {any} */ (VotingService.Auth.getAllTokens)).mockReturnValue([]);
+      (/** @type {any} */ (VotingService.getBallot)).mockImplementation(() => {
         throw new Error('Ballot not found');
       });
 
@@ -211,7 +211,7 @@ describe('VotingService.Api', () => {
     });
 
     test('handles general error', () => {
-      VotingService.Data.getElectionData.mockImplementation(() => {
+      (/** @type {any} */ (VotingService.Data.getElectionData)).mockImplementation(() => {
         throw new Error('Database error');
       });
 
@@ -241,18 +241,18 @@ describe('VotingService.Api', () => {
         TestData.createElection({ Start: '2024-01-01', End: '2024-12-31' })
       ];
 
-      VotingService.Data.getElectionData.mockReturnValue(elections);
+      (/** @type {any} */ (VotingService.Data.getElectionData)).mockReturnValue(elections);
 
       const result = Api.handleGetElectionStats({ _authenticatedEmail: 'user@example.com' });
 
       expect(ApiClientManager.successResponse).toHaveBeenCalled();
-      const successCall = ApiClientManager.successResponse.mock.calls[0][0];
+      const successCall = (/** @type {any} */ (ApiClientManager.successResponse)).mock.calls[0][0];
       expect(successCall.stats).toBeDefined();
       expect(successCall.stats.total).toBe(1);
     });
 
     test('handles error', () => {
-      VotingService.Data.getElectionData.mockImplementation(() => {
+      (/** @type {any} */ (VotingService.Data.getElectionData)).mockImplementation(() => {
         throw new Error('Database error');
       });
 
@@ -287,7 +287,7 @@ describe('VotingService.Api', () => {
     });
 
     test('returns error when election not found', () => {
-      VotingService.Data.getElectionData.mockReturnValue([]);
+      (/** @type {any} */ (VotingService.Data.getElectionData)).mockReturnValue([]);
 
       const result = Api.handleGenerateBallotToken({
         _authenticatedEmail: 'user@example.com',
@@ -302,7 +302,7 @@ describe('VotingService.Api', () => {
 
     test('returns error when election has no ballot form', () => {
       const elections = [TestData.createElection({ 'Form Edit URL': '' })];
-      VotingService.Data.getElectionData.mockReturnValue(elections);
+      (/** @type {any} */ (VotingService.Data.getElectionData)).mockReturnValue(elections);
 
       const result = Api.handleGenerateBallotToken({
         _authenticatedEmail: 'user@example.com',
@@ -322,7 +322,7 @@ describe('VotingService.Api', () => {
           End: '2030-12-31'
         })
       ];
-      VotingService.Data.getElectionData.mockReturnValue(elections);
+      (/** @type {any} */ (VotingService.Data.getElectionData)).mockReturnValue(elections);
 
       const result = Api.handleGenerateBallotToken({
         _authenticatedEmail: 'user@example.com',
@@ -347,9 +347,9 @@ describe('VotingService.Api', () => {
           End: future.toISOString()
         })
       ];
-      VotingService.Data.getElectionData.mockReturnValue(elections);
-      VotingService.getSpreadsheetIdFromElection.mockReturnValue('spreadsheetId');
-      VotingService.Data.hasVotedAlreadyInThisElection.mockReturnValue(true);
+      (/** @type {any} */ (VotingService.Data.getElectionData)).mockReturnValue(elections);
+      (/** @type {any} */ (VotingService.getSpreadsheetIdFromElection)).mockReturnValue('spreadsheetId');
+      (/** @type {any} */ (VotingService.Data.hasVotedAlreadyInThisElection)).mockReturnValue(true);
 
       const result = Api.handleGenerateBallotToken({
         _authenticatedEmail: 'user@example.com',
@@ -378,10 +378,10 @@ describe('VotingService.Api', () => {
         isAcceptingResponses: jest.fn(() => false)
       });
 
-      VotingService.Data.getElectionData.mockReturnValue(elections);
-      VotingService.getSpreadsheetIdFromElection.mockReturnValue('spreadsheetId');
-      VotingService.Data.hasVotedAlreadyInThisElection.mockReturnValue(false);
-      VotingService.getBallot.mockReturnValue(ballot);
+      (/** @type {any} */ (VotingService.Data.getElectionData)).mockReturnValue(elections);
+      (/** @type {any} */ (VotingService.getSpreadsheetIdFromElection)).mockReturnValue('spreadsheetId');
+      (/** @type {any} */ (VotingService.Data.hasVotedAlreadyInThisElection)).mockReturnValue(false);
+      (/** @type {any} */ (VotingService.getBallot)).mockReturnValue(ballot);
 
       const result = Api.handleGenerateBallotToken({
         _authenticatedEmail: 'user@example.com',
@@ -408,12 +408,12 @@ describe('VotingService.Api', () => {
       const ballot = TestData.createBallot();
       const tokenData = TestData.createTokenData();
 
-      VotingService.Data.getElectionData.mockReturnValue(elections);
-      VotingService.getSpreadsheetIdFromElection.mockReturnValue('spreadsheetId');
-      VotingService.Data.hasVotedAlreadyInThisElection.mockReturnValue(false);
-      VotingService.getBallot.mockReturnValue(ballot);
-      VotingService.Auth.generateAndStoreToken.mockReturnValue(tokenData);
-      VotingService.createPrefilledUrlWithTitle.mockReturnValue('https://example.com/ballot?token=xxx');
+      (/** @type {any} */ (VotingService.Data.getElectionData)).mockReturnValue(elections);
+      (/** @type {any} */ (VotingService.getSpreadsheetIdFromElection)).mockReturnValue('spreadsheetId');
+      (/** @type {any} */ (VotingService.Data.hasVotedAlreadyInThisElection)).mockReturnValue(false);
+      (/** @type {any} */ (VotingService.getBallot)).mockReturnValue(ballot);
+      (/** @type {any} */ (VotingService.Auth.generateAndStoreToken)).mockReturnValue(tokenData);
+      (/** @type {any} */ (VotingService.createPrefilledUrlWithTitle)).mockReturnValue('https://example.com/ballot?token=xxx');
 
       const result = Api.handleGenerateBallotToken({
         _authenticatedEmail: 'user@example.com',
@@ -421,13 +421,13 @@ describe('VotingService.Api', () => {
       });
 
       expect(ApiClientManager.successResponse).toHaveBeenCalled();
-      const successCall = ApiClientManager.successResponse.mock.calls[0][0];
+      const successCall = (/** @type {any} */ (ApiClientManager.successResponse)).mock.calls[0][0];
       expect(successCall.ballotUrl).toBe('https://example.com/ballot?token=xxx');
       expect(successCall.electionTitle).toBe('Test Election 2024');
     });
 
     test('handles general error', () => {
-      VotingService.Data.getElectionData.mockImplementation(() => {
+      (/** @type {any} */ (VotingService.Data.getElectionData)).mockImplementation(() => {
         throw new Error('Database error');
       });
 

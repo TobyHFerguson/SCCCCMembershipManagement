@@ -41,5 +41,15 @@ Utilities: {
             info?: jest.Mock<any, any> | ((...args: any[]) => void);
             debug?: jest.Mock<any, any> | ((...args: any[]) => void);
         };
+        // Common namespace - tests can assign mock objects to it
+        Common?: {
+            Logger?: any;
+            Data?: any;
+            Api?: any;
+            Auth?: any;
+            Config?: any;
+        };
+        // GAS globals that tests assign
+        Properties?: any;
   }
 }

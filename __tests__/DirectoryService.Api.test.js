@@ -10,7 +10,7 @@
  */
 
 // Mock the GAS globals
-global.Logger = { log: jest.fn() };
+global.Logger = /** @type {any} */ ({ log: jest.fn() });
 
 // Mock Common.Data.Access
 const mockMembers = [
@@ -57,14 +57,14 @@ const mockMembers = [
 ];
 
 // Mock ApiClient (flat class pattern)
-global.ApiClient = {
+global.ApiClient = /** @type {any} */ ({
   registerHandler: jest.fn(),
   handleRequest: jest.fn(),
   clearHandlers: jest.fn()
-};
+});
 
 // Mock ApiClientManager (flat class pattern)
-global.ApiClientManager = {
+global.ApiClientManager = /** @type {any} */ ({
   successResponse: jest.fn((data) => ({ 
     success: true, 
     data: data 
@@ -74,15 +74,15 @@ global.ApiClientManager = {
     error: error, 
     errorCode: errorCode 
   }))
-};
+});
 
 // Mock DataAccess (flat class pattern)
-global.DataAccess = {
+global.DataAccess = /** @type {any} */ ({
   getMembers: jest.fn(() => mockMembers)
-};
+});
 
 // Mock Common namespace (backward compatibility)
-global.Common = {
+global.Common = /** @type {any} */ ({
   Data: {
     Access: global.DataAccess
   },
@@ -90,20 +90,20 @@ global.Common = {
     Client: global.ApiClient,
     ClientManager: global.ApiClientManager
   }
-};
+});
 
 // Load the modules after mocks are set up
 const { Manager } = require('../src/services/DirectoryService/Manager');
 const { Api, initApi } = require('../src/services/DirectoryService/Api');
 
 // Make Manager available in the namespace
-global.DirectoryService = { Manager, Api };
+global.DirectoryService = /** @type {any} */ ({ Manager, Api });
 
 describe('DirectoryService.Api', () => {
   
   beforeEach(() => {
     jest.clearAllMocks();
-    DataAccess.getMembers.mockReturnValue(mockMembers);
+    (/** @type {any} */ (DataAccess.getMembers)).mockReturnValue(mockMembers);
   });
 
   // ==================== handleGetEntries Tests ====================
@@ -189,7 +189,7 @@ describe('DirectoryService.Api', () => {
         searchTerm: 123
       };
       
-      const result = Api.handleGetEntries(params);
+      const result = Api.handleGetEntries(/** @type {any} */ (params));
       
       expect(result.success).toBe(false);
       expect(result.errorCode).toBe('INVALID_SEARCH_TERM');
@@ -233,7 +233,7 @@ describe('DirectoryService.Api', () => {
     });
 
     test('handles data access error', () => {
-      DataAccess.getMembers.mockImplementation(() => {
+      (/** @type {any} */ (DataAccess.getMembers)).mockImplementation(() => {
         throw new Error('Database error');
       });
       
@@ -304,7 +304,7 @@ describe('DirectoryService.Api', () => {
     });
 
     test('handles data access error', () => {
-      DataAccess.getMembers.mockImplementation(() => {
+      (/** @type {any} */ (DataAccess.getMembers)).mockImplementation(() => {
         throw new Error('Database error');
       });
       
@@ -318,7 +318,7 @@ describe('DirectoryService.Api', () => {
     });
 
     test('handles empty members list', () => {
-      DataAccess.getMembers.mockReturnValue([]);
+      (/** @type {any} */ (DataAccess.getMembers)).mockReturnValue([]);
       
       const params = { _authenticatedEmail: 'user@example.com' };
       

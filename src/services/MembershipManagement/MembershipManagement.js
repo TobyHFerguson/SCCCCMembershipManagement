@@ -915,3 +915,6 @@ MembershipManagement.Internal.persistAuditEntries_ = function (auditEntries) {
 
 
 
+
+// Export to make this a module for TypeScript
+if (typeof module !== 'undefined' && module.exports) { module.exports = {}; }

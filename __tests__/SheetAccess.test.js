@@ -29,9 +29,9 @@ const createMockSheet = (values = [[]]) => {
 };
 
 // Create mock SpreadsheetManager as global
-global.SpreadsheetManager = {
+global.SpreadsheetManager = /** @type {any} */ ({
   getSheet: jest.fn()
-};
+});
 
 const { SheetAccess } = require('../src/common/data/SheetAccess.js');
 
@@ -51,7 +51,7 @@ describe('SheetAccess', () => {
       ];
       
       const { sheet } = createMockSheet(values);
-      SpreadsheetManager.getSheet.mockReturnValue(sheet);
+      (/** @type {any} */ (SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
       const result = SheetAccess.getData('ActiveMembers');
 
@@ -65,7 +65,7 @@ describe('SheetAccess', () => {
     it('should return empty array when sheet has only headers', () => {
       const values = [['First', 'Last', 'Email']];
       const { sheet } = createMockSheet(values);
-      SpreadsheetManager.getSheet.mockReturnValue(sheet);
+      (/** @type {any} */ (SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
       const result = SheetAccess.getData('EmptySheet');
 
@@ -82,7 +82,7 @@ describe('SheetAccess', () => {
       ];
       
       const { sheet } = createMockSheet(values);
-      SpreadsheetManager.getSheet.mockReturnValue(sheet);
+      (/** @type {any} */ (SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
       const result = SheetAccess.getDataAsArrays('ActiveMembers');
 
@@ -92,7 +92,7 @@ describe('SheetAccess', () => {
 
     it('should return empty 2D array when sheet is empty', () => {
       const { sheet } = createMockSheet([]);
-      SpreadsheetManager.getSheet.mockReturnValue(sheet);
+      (/** @type {any} */ (SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
       const result = SheetAccess.getDataAsArrays('EmptySheet');
 
@@ -109,7 +109,7 @@ describe('SheetAccess', () => {
       
       const values = [['First', 'Last']]; // Existing headers
       const { sheet, mockRange } = createMockSheet(values);
-      SpreadsheetManager.getSheet.mockReturnValue(sheet);
+      (/** @type {any} */ (SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
       SheetAccess.setData('ActiveMembers', mockData);
 
@@ -120,7 +120,7 @@ describe('SheetAccess', () => {
     it('should handle empty data array by clearing content', () => {
       const values = [['First', 'Last'], ['Old', 'Data']]; // Has existing data
       const { sheet, mockRange } = createMockSheet(values);
-      SpreadsheetManager.getSheet.mockReturnValue(sheet);
+      (/** @type {any} */ (SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
       SheetAccess.setData('ActiveMembers', []);
 
@@ -131,7 +131,7 @@ describe('SheetAccess', () => {
   describe('getSheet', () => {
     it('should get raw Sheet object', () => {
       const { sheet } = createMockSheet();
-      SpreadsheetManager.getSheet.mockReturnValue(sheet);
+      (/** @type {any} */ (SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
       const result = SheetAccess.getSheet('ActiveMembers');
 
@@ -249,9 +249,9 @@ describe('SheetAccess', () => {
   describe('getSpreadsheetById', () => {
     it('should open spreadsheet by ID using SpreadsheetApp', () => {
       const mockSpreadsheet = { getId: jest.fn(() => 'test-id') };
-      global.SpreadsheetApp = {
+      global.SpreadsheetApp = /** @type {any} */ ({
         openById: jest.fn().mockReturnValue(mockSpreadsheet)
-      };
+      });
 
       const result = SheetAccess.getSpreadsheetById('test-spreadsheet-id');
 

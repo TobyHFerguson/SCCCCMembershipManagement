@@ -52,3 +52,9 @@ declare namespace VotingService {
         function getAllTokens(spreadsheetId: string): VotingTokenData[];
     }
 }
+
+
+// Export for Node.js/Jest  
+export const Auth: typeof VotingService.Auth;
+export { VotingTokenData };
+

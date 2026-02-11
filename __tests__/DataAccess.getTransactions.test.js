@@ -14,27 +14,27 @@ jest.mock('../src/common/utils/Logger.js', () => ({}));
 
 // Load ValidatedTransaction class and assign to global
 const { ValidatedTransaction } = require('../src/common/data/ValidatedTransaction.js');
-global.ValidatedTransaction = ValidatedTransaction;
+/** @type {any} */ (global).ValidatedTransaction = ValidatedTransaction;
 
 // Mock AppLogger (flat class pattern)
-global.AppLogger = {
+global.AppLogger = /** @type {any} */ ({
   error: jest.fn(),
   warn: jest.fn(),
   info: jest.fn(),
   debug: jest.fn()
-};
+});
 
 // Mock Logger (GAS built-in)
-global.Logger = {
+global.Logger = /** @type {any} */ ({
   log: jest.fn(),
   clear: jest.fn(),
   getLog: jest.fn(() => '')
-};
+});
 
 // Mock MailApp
-global.MailApp = {
+global.MailApp = /** @type {any} */ ({
   sendEmail: jest.fn()
-};
+});
 
 // Backward compat alias
 global.Common = global.Common || {};
@@ -58,9 +58,9 @@ const createMockSheet = (values = [[]]) => {
 };
 
 // Mock SpreadsheetManager (used by SheetAccess)
-global.SpreadsheetManager = {
+global.SpreadsheetManager = /** @type {any} */ ({
   getSheet: jest.fn()
-};
+});
 
 // Load SheetAccess and assign to global
 const { SheetAccess } = require('../src/common/data/SheetAccess.js');
@@ -112,7 +112,7 @@ describe('DataAccess.getTransactions', () => {
     ];
 
     const { sheet } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const transactions = global.DataAccess.getTransactions();
 
@@ -130,7 +130,7 @@ describe('DataAccess.getTransactions', () => {
     ];
 
     const { sheet } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const transactions = global.DataAccess.getTransactions();
 
@@ -141,7 +141,7 @@ describe('DataAccess.getTransactions', () => {
   test('should return empty array when sheet is completely empty', () => {
     // SheetAccess.getDataAsArrays returns empty array for empty sheet
     const { sheet } = createMockSheet([[]]);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const transactions = global.DataAccess.getTransactions();
 
@@ -158,7 +158,7 @@ describe('DataAccess.getTransactions', () => {
     ];
 
     const { sheet } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const transactions = global.DataAccess.getTransactions();
 
@@ -175,7 +175,7 @@ describe('DataAccess.getTransactions', () => {
     ];
 
     const { sheet } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     // Spy on SheetAccess.getDataAsArrays
     const spy = jest.spyOn(SheetAccess, 'getDataAsArrays');
@@ -202,7 +202,7 @@ describe('DataAccess.getTransactionsForUpdate', () => {
     ];
 
     const { sheet } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const result = global.DataAccess.getTransactionsForUpdate();
 
@@ -228,7 +228,7 @@ describe('DataAccess.getTransactionsForUpdate', () => {
     ];
 
     const { sheet } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const result = global.DataAccess.getTransactionsForUpdate();
 
@@ -239,7 +239,7 @@ describe('DataAccess.getTransactionsForUpdate', () => {
 
   test('should return empty result when sheet has no data', () => {
     const { sheet } = createMockSheet([[]]);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const result = global.DataAccess.getTransactionsForUpdate();
 
@@ -256,7 +256,7 @@ describe('DataAccess.getTransactionsForUpdate', () => {
     ];
 
     const { sheet } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const result = global.DataAccess.getTransactionsForUpdate();
 
@@ -273,7 +273,7 @@ describe('DataAccess.getTransactionsForUpdate', () => {
     ];
 
     const { sheet } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const result = global.DataAccess.getTransactionsForUpdate();
 
@@ -288,7 +288,7 @@ describe('DataAccess.getTransactionsForUpdate', () => {
     ];
 
     const { sheet, mockRange } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const result = global.DataAccess.getTransactionsForUpdate();
 
@@ -298,7 +298,7 @@ describe('DataAccess.getTransactionsForUpdate', () => {
     // Write back changed cells
     const changeCount = ValidatedTransaction.writeChangedCells(
       result.sheet,
-      result.transactions,
+      /** @type {any} */ (result.transactions),
       result.headers
     );
 

@@ -11,8 +11,8 @@ module.exports = function createFiddlerMock(initialFifo = [], initialDead = []) 
     global.Common = global.Common || {};
     global.Common.Data = global.Common.Data || {};
     global.Common.Data.Storage = global.Common.Data.Storage || {};
-    global.SpreadsheetManager = global.SpreadsheetManager || {};
-    global.SheetAccess = global.SheetAccess || {};
+    global.SpreadsheetManager = /** @type {any} */ (global.SpreadsheetManager || {});
+    global.SheetAccess = /** @type {any} */ (global.SheetAccess || {});
     
     // Mock SheetAccess getData/setData/getDataAsArrays methods
     originalGetData = global.SheetAccess.getData;

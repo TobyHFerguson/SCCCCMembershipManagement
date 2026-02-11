@@ -13,26 +13,26 @@
 // Mock GAS globals before requiring the module
 beforeEach(() => {
   // Reset GroupManagementService namespace
-  global.GroupManagementService = {};
+  global.GroupManagementService = /** @type {any} */ ({});
   
   // Mock Logger (flat class pattern)
-  global.AppLogger = {
+  global.AppLogger = /** @type {any} */ ({
     log: jest.fn(),
     info: jest.fn(),
     debug: jest.fn(),
     warn: jest.fn(),
     error: jest.fn()
-  };
+  });
 
     // Mock GAS built-in Logger
-    global.Logger = {
+    global.Logger = /** @type {any} */ ({
       log: jest.fn(),
       clear: jest.fn(),
       getLog: jest.fn(() => '')
-    };
+    });
 
   // Mock GroupSubscription
-  global.GroupSubscription = {
+  global.GroupSubscription = /** @type {any} */ ({
     deliveryOptions: {
       'UNSUBSCRIBE': ['Unsubscribed', 'Not subscribed to the group'],
       'ALL_MAIL': ['Each message', 'Receive an email for every message'],
@@ -44,12 +44,12 @@ beforeEach(() => {
     subscribeMember: jest.fn(),
     updateMember: jest.fn(),
     removeMember: jest.fn()
-  };
+  });
 
   // Mock DataAccess (flat class pattern)
-  global.DataAccess = {
+  global.DataAccess = /** @type {any} */ ({
     getPublicGroups: jest.fn()
-  };
+  });
 
   // Mock ServiceLogger (flat class pattern)
   global.ServiceLogger = jest.fn().mockImplementation(() => ({
@@ -64,7 +64,7 @@ beforeEach(() => {
   }));
 
   // Mock Common namespace (backward compat for Logger)
-  global.Common = {
+  global.Common = /** @type {any} */ ({
     Data: {
       Access: global.DataAccess,
       Storage: {
@@ -80,14 +80,14 @@ beforeEach(() => {
     Logging: {
       ServiceLogger: global.ServiceLogger  // backward compat alias
     }
-  };
+  });
   
   // Mock Audit namespace
-  global.Audit = {
+  global.Audit = /** @type {any} */ ({
     Persistence: {
       persistAuditEntries: jest.fn()
     }
-  };
+  });
 
   // Load Manager first (dependency)
   require('../src/services/GroupManagementService/Manager');
@@ -136,8 +136,8 @@ describe('GroupManagementService.Api', () => {
         TestData.createGroup({ Name: 'Group 2', Email: 'g2@sc3.club' })
       ];
       
-      DataAccess.getPublicGroups.mockReturnValue(groups);
-      GroupSubscription.getMember
+      (/** @type {any} */ (DataAccess.getPublicGroups)).mockReturnValue(groups);
+      (/** @type {any} */ (GroupSubscription.getMember))
         .mockReturnValueOnce(TestData.createMember({ delivery_settings: 'ALL_MAIL' }))
         .mockReturnValueOnce(null);
 
@@ -162,8 +162,8 @@ describe('GroupManagementService.Api', () => {
     test('handles getMember errors gracefully', () => {
       const groups = [TestData.createGroup()];
       
-      DataAccess.getPublicGroups.mockReturnValue(groups);
-      GroupSubscription.getMember.mockImplementation(() => {
+      (/** @type {any} */ (DataAccess.getPublicGroups)).mockReturnValue(groups);
+      (/** @type {any} */ (GroupSubscription.getMember)).mockImplementation(() => {
         throw new Error('API error');
       });
 
@@ -177,7 +177,7 @@ describe('GroupManagementService.Api', () => {
     });
 
     test('handles getPublicGroups error', () => {
-      DataAccess.getPublicGroups.mockImplementation(() => {
+      (/** @type {any} */ (DataAccess.getPublicGroups)).mockImplementation(() => {
         throw new Error('Database error');
       });
 
@@ -198,10 +198,10 @@ describe('GroupManagementService.Api', () => {
         TestData.createUpdate({ groupEmail: 'g1@sc3.club', deliveryValue: 'DIGEST' })
       ];
       
-      GroupSubscription.getMember.mockReturnValue(
+      (/** @type {any} */ (GroupSubscription.getMember)).mockReturnValue(
         TestData.createMember({ delivery_settings: 'ALL_MAIL' })
       );
-      GroupSubscription.updateMember.mockReturnValue({});
+      (/** @type {any} */ (GroupSubscription.updateMember)).mockReturnValue({});
 
       const result = GroupManagementService.Api.handleUpdateSubscriptions({
         _authenticatedEmail: 'user@test.com',
@@ -247,8 +247,8 @@ describe('GroupManagementService.Api', () => {
         TestData.createUpdate({ groupEmail: 'g1@sc3.club', deliveryValue: 'ALL_MAIL' })
       ];
       
-      GroupSubscription.getMember.mockReturnValue(null); // Not subscribed
-      GroupSubscription.subscribeMember.mockReturnValue({});
+      (/** @type {any} */ (GroupSubscription.getMember)).mockReturnValue(null); // Not subscribed
+      (/** @type {any} */ (GroupSubscription.subscribeMember)).mockReturnValue({});
 
       const result = GroupManagementService.Api.handleUpdateSubscriptions({
         _authenticatedEmail: 'user@test.com',
@@ -264,8 +264,8 @@ describe('GroupManagementService.Api', () => {
         TestData.createUpdate({ groupEmail: 'g1@sc3.club', deliveryValue: 'UNSUBSCRIBE' })
       ];
       
-      GroupSubscription.getMember.mockReturnValue(TestData.createMember());
-      GroupSubscription.removeMember.mockReturnValue(true);
+      (/** @type {any} */ (GroupSubscription.getMember)).mockReturnValue(TestData.createMember());
+      (/** @type {any} */ (GroupSubscription.removeMember)).mockReturnValue(true);
 
       const result = GroupManagementService.Api.handleUpdateSubscriptions({
         _authenticatedEmail: 'user@test.com',
@@ -282,8 +282,8 @@ describe('GroupManagementService.Api', () => {
         TestData.createUpdate({ groupEmail: 'g2@sc3.club', deliveryValue: 'DIGEST' })
       ];
       
-      GroupSubscription.getMember.mockReturnValue(null);
-      GroupSubscription.subscribeMember
+      (/** @type {any} */ (GroupSubscription.getMember)).mockReturnValue(null);
+      (/** @type {any} */ (GroupSubscription.subscribeMember))
         .mockImplementationOnce(() => ({})) // First succeeds
         .mockImplementationOnce(() => { throw new Error('Failed'); }); // Second fails
 
@@ -302,7 +302,7 @@ describe('GroupManagementService.Api', () => {
       ];
       
       // Already has same settings
-      GroupSubscription.getMember.mockReturnValue(
+      (/** @type {any} */ (GroupSubscription.getMember)).mockReturnValue(
         TestData.createMember({ delivery_settings: 'ALL_MAIL' })
       );
 
@@ -341,7 +341,7 @@ describe('GroupManagementService.Api', () => {
   
   describe('_executeAction', () => {
     test('executes unsubscribe action', () => {
-      GroupSubscription.removeMember.mockReturnValue(true);
+      (/** @type {any} */ (GroupSubscription.removeMember)).mockReturnValue(true);
 
       GroupManagementService.Api._executeAction({
         action: 'unsubscribe',
@@ -353,7 +353,7 @@ describe('GroupManagementService.Api', () => {
     });
 
     test('executes subscribe action', () => {
-      GroupSubscription.subscribeMember.mockReturnValue({});
+      (/** @type {any} */ (GroupSubscription.subscribeMember)).mockReturnValue({});
 
       GroupManagementService.Api._executeAction({
         action: 'subscribe',
@@ -370,8 +370,8 @@ describe('GroupManagementService.Api', () => {
 
     test('executes update action', () => {
       const member = TestData.createMember({ delivery_settings: 'ALL_MAIL' });
-      GroupSubscription.getMember.mockReturnValue(member);
-      GroupSubscription.updateMember.mockReturnValue({});
+      (/** @type {any} */ (GroupSubscription.getMember)).mockReturnValue(member);
+      (/** @type {any} */ (GroupSubscription.updateMember)).mockReturnValue({});
 
       GroupManagementService.Api._executeAction({
         action: 'update',
@@ -387,8 +387,8 @@ describe('GroupManagementService.Api', () => {
     });
 
     test('update falls back to subscribe if member not found', () => {
-      GroupSubscription.getMember.mockReturnValue(null);
-      GroupSubscription.subscribeMember.mockReturnValue({});
+      (/** @type {any} */ (GroupSubscription.getMember)).mockReturnValue(null);
+      (/** @type {any} */ (GroupSubscription.subscribeMember)).mockReturnValue({});
 
       GroupManagementService.Api._executeAction({
         action: 'update',
@@ -405,11 +405,11 @@ describe('GroupManagementService.Api', () => {
 
     test('throws for unknown action', () => {
       expect(() => {
-        GroupManagementService.Api._executeAction({
+        GroupManagementService.Api._executeAction(/** @type {any} */ ({
           action: 'invalid',
           groupEmail: 'g1@sc3.club',
           userEmail: 'user@test.com'
-        });
+        }));
       }).toThrow('Unknown action');
     });
   });

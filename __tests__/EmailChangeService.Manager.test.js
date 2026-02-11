@@ -29,6 +29,12 @@
 const { Manager, VERIFICATION_CONFIG, EMAIL_REGEX } = require('../src/services/EmailChangeService/Manager');
 
 // Test data factories
+/** @type {{
+  createVerificationData: (overrides?: any) => any,
+  createGroupMembershipInfo: (overrides?: any) => any,
+  createMemberRecord: (overrides?: any) => any,
+  [key: string]: any
+}} */
 const TestData = {
   createVerificationData: (overrides = {}) => ({
     newEmail: 'new@example.com',
@@ -593,7 +599,7 @@ describe('EmailChangeService.Manager', () => {
     });
 
     test('handles non-string', () => {
-      expect(Manager.normalizeEmail(123)).toBe('');
+      expect(Manager.normalizeEmail(/** @type {any} */ (123))).toBe('');
     });
   });
 

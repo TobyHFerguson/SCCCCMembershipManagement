@@ -79,29 +79,29 @@ describe('AuditLogEntry Class', () => {
       jest.clearAllMocks();
       
       // Mock Logger (flat class pattern)
-      global.AppLogger = {
+      global.AppLogger = /** @type {any} */ ({
         error: jest.fn(),
         info: jest.fn(),
         warn: jest.fn(),
         debug: jest.fn()
-      };
+      });
 
     // Mock GAS built-in Logger
-    global.Logger = {
+    global.Logger = /** @type {any} */ ({
       log: jest.fn(),
       clear: jest.fn(),
       getLog: jest.fn(() => '')
-    };
+    });
       
       // Mock Common.Logger (backward compat)
-      global.Common = {
+      global.Common = /** @type {any} */ ({
         Logger: global.AppLogger
-      };
+      });
       
       // Mock MailApp
-      global.MailApp = {
+      global.MailApp = /** @type {any} */ ({
         sendEmail: jest.fn()
-      };
+      });
     });
     
     test('should create valid entry when parameters are correct', () => {
@@ -123,7 +123,7 @@ describe('AuditLogEntry Class', () => {
     });
     
     test('should log error when construction fails', () => {
-      AuditLogEntry.create(123, 'success');  // Invalid type
+      AuditLogEntry.create(/** @type {any} */ (123), 'success');  // Invalid type
       
       expect(Common.Logger.error).toHaveBeenCalledWith(
         'AuditLogEntry',
@@ -144,7 +144,7 @@ describe('AuditLogEntry Class', () => {
     });
     
     test('should handle email failure gracefully', () => {
-      MailApp.sendEmail.mockImplementation(() => {
+      (/** @type {any} */ (MailApp.sendEmail)).mockImplementation(() => {
         throw new Error('Email service down');
       });
       
@@ -192,33 +192,33 @@ describe('AuditLogEntry Class', () => {
       jest.clearAllMocks();
       
       // Mock Logger (flat class pattern)
-      global.AppLogger = {
+      global.AppLogger = /** @type {any} */ ({
         error: jest.fn(),
         info: jest.fn(),
         warn: jest.fn(),
         debug: jest.fn()
-      };
+      });
 
     // Mock GAS built-in Logger
-    global.Logger = {
+    global.Logger = /** @type {any} */ ({
       log: jest.fn(),
       clear: jest.fn(),
       getLog: jest.fn(() => '')
-    };
+    });
       
       // Mock Common.Logger (backward compat)
-      global.Common = {
+      global.Common = /** @type {any} */ ({
         Logger: global.AppLogger
-      };
+      });
       
       // Mock MailApp
-      global.MailApp = {
+      global.MailApp = /** @type {any} */ ({
         sendEmail: jest.fn()
-      };
+      });
     });
     
     test('should return empty array for non-array input', () => {
-      const result = AuditLogEntry.validateArray('not-array', 'test-context');
+      const result = AuditLogEntry.validateArray(/** @type {any} */ ('not-array'), 'test-context');
       
       expect(result).toEqual([]);
       expect(Common.Logger.error).toHaveBeenCalledWith(
@@ -317,7 +317,7 @@ describe('AuditLogEntry Class', () => {
     });
     
     test('should handle email sending failure gracefully', () => {
-      MailApp.sendEmail.mockImplementation(() => {
+      (/** @type {any} */ (MailApp.sendEmail)).mockImplementation(() => {
         throw new Error('Email service unavailable');
       });
       

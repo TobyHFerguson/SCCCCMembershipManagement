@@ -22,6 +22,11 @@
 const { Manager, DEFAULT_FORBIDDEN_FIELDS, PROFILE_FIELD_SCHEMA } = require('../src/services/ProfileManagementService/Manager');
 
 // Test data factories
+/** @type {{
+  createProfile: (overrides?: any) => any,
+  createValidUpdate: (overrides?: any) => any,
+  [key: string]: any
+}} */
 const TestData = {
   createProfile: (overrides = {}) => ({
     Status: 'Active',
@@ -266,7 +271,7 @@ describe('ProfileManagementService.Manager', () => {
       const original = { First: 'John', Last: 'Doe' }; // No Status field
       const updated = { First: 'Jane', Status: 'Active' }; // Adding Status
       
-      const result = Manager.checkForForbiddenUpdates(original, updated);
+      const result = Manager.checkForForbiddenUpdates(/** @type {any} */ (original), /** @type {any} */ (updated));
       expect(result.hasViolation).toBe(true);
       expect(result.field).toBe('Status');
       expect(result.violationType).toBe('add');
@@ -276,7 +281,7 @@ describe('ProfileManagementService.Manager', () => {
       const original = { First: 'John', CustomField: 'value1' };
       const updated = { First: 'Jane', CustomField: 'value2' };
       
-      const result = Manager.checkForForbiddenUpdates(original, updated, ['CustomField']);
+      const result = Manager.checkForForbiddenUpdates(/** @type {any} */ (original), /** @type {any} */ (updated), ['CustomField']);
       expect(result.hasViolation).toBe(true);
       expect(result.field).toBe('CustomField');
     });
@@ -316,7 +321,7 @@ describe('ProfileManagementService.Manager', () => {
     });
 
     test('rejects non-object profile', () => {
-      const result = Manager.validateProfileUpdate('not an object');
+      const result = Manager.validateProfileUpdate(/** @type {any} */ ('not an object'));
       expect(result.valid).toBe(false);
       expect(result.errorCode).toBe('INVALID_PROFILE');
     });
@@ -344,21 +349,21 @@ describe('ProfileManagementService.Manager', () => {
 
     test('rejects non-boolean Directory Share Name', () => {
       const update = { 'Directory Share Name': 'yes' };
-      const result = Manager.validateProfileUpdate(update);
+      const result = Manager.validateProfileUpdate(/** @type {any} */ (update));
       expect(result.valid).toBe(false);
       expect(result.errorCode).toBe('INVALID_BOOLEAN_FIELD');
     });
 
     test('rejects non-boolean Directory Share Phone', () => {
       const update = { 'Directory Share Phone': 1 };
-      const result = Manager.validateProfileUpdate(update);
+      const result = Manager.validateProfileUpdate(/** @type {any} */ (update));
       expect(result.valid).toBe(false);
       expect(result.errorCode).toBe('INVALID_BOOLEAN_FIELD');
     });
 
     test('rejects non-boolean Directory Share Email', () => {
       const update = { 'Directory Share Email': 'true' };
-      const result = Manager.validateProfileUpdate(update);
+      const result = Manager.validateProfileUpdate(/** @type {any} */ (update));
       expect(result.valid).toBe(false);
       expect(result.errorCode).toBe('INVALID_BOOLEAN_FIELD');
     });
@@ -447,7 +452,7 @@ describe('ProfileManagementService.Manager', () => {
       const original = { a: 1, b: 2, c: 3 };
       const updates = { b: 20, d: 4 };
       
-      const result = Manager.mergeProfiles(original, updates);
+      const result = Manager.mergeProfiles(/** @type {any} */ (original), /** @type {any} */ (updates));
       
       expect(result).toEqual({ a: 1, b: 20, c: 3, d: 4 });
     });
@@ -456,7 +461,7 @@ describe('ProfileManagementService.Manager', () => {
       const original = { a: 1, b: 2 };
       const updates = { b: 20 };
       
-      Manager.mergeProfiles(original, updates);
+      Manager.mergeProfiles(/** @type {any} */ (original), /** @type {any} */ (updates));
       
       expect(original.b).toBe(2);
     });
@@ -464,7 +469,7 @@ describe('ProfileManagementService.Manager', () => {
     test('handles empty updates', () => {
       const original = { a: 1, b: 2 };
       
-      const result = Manager.mergeProfiles(original, {});
+      const result = Manager.mergeProfiles(/** @type {any} */ (original), {});
       
       expect(result).toEqual({ a: 1, b: 2 });
     });
@@ -507,7 +512,7 @@ describe('ProfileManagementService.Manager', () => {
         'Directory Share Phone': 0 // Falsy
       };
       
-      const result = Manager.formatProfileForDisplay(profile);
+      const result = Manager.formatProfileForDisplay(/** @type {any} */ (profile));
       
       expect(result['Directory Share Name']).toBe(true);
       expect(result['Directory Share Phone']).toBe(false);
@@ -516,7 +521,7 @@ describe('ProfileManagementService.Manager', () => {
     test('defaults missing fields to empty string or false', () => {
       const profile = {};
       
-      const result = Manager.formatProfileForDisplay(profile);
+      const result = Manager.formatProfileForDisplay(/** @type {any} */ (profile));
       
       expect(result.First).toBe('');
       expect(result.Last).toBe('');
@@ -538,8 +543,8 @@ describe('ProfileManagementService.Manager', () => {
         'First', 'Last', 'Phone',
         'Directory Share Name', 'Directory Share Phone', 'Directory Share Email'
       ]);
-      expect(result.Email).toBeUndefined();
-      expect(result.Status).toBeUndefined();
+      expect((/** @type {any} */ (result)).Email).toBeUndefined();
+      expect((/** @type {any} */ (result)).Status).toBeUndefined();
     });
 
     test('returns null for null profile', () => {
@@ -552,7 +557,7 @@ describe('ProfileManagementService.Manager', () => {
         'Directory Share Name': 'yes' // Truthy string
       };
       
-      const result = Manager.getEditableFields(profile);
+      const result = Manager.getEditableFields(/** @type {any} */ (profile));
       
       expect(result['Directory Share Name']).toBe(true);
     });
@@ -578,7 +583,7 @@ describe('ProfileManagementService.Manager', () => {
     });
 
     test('handles non-string', () => {
-      expect(Manager.normalizeEmail(123)).toBe('');
+      expect(Manager.normalizeEmail(/** @type {any} */ (123))).toBe('');
     });
   });
 

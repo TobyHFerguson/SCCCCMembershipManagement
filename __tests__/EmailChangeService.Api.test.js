@@ -14,47 +14,47 @@
 // Mock GAS globals before requiring the module
 beforeEach(() => {
   // Reset EmailChangeService namespace
-  global.EmailChangeService = {};
+  global.EmailChangeService = /** @type {any} */ ({});
   
   // Mock Logger
-  global.AppLogger = {
+  global.AppLogger = /** @type {any} */ ({
     log: jest.fn()
-  };
+  });
 
     // Mock GAS built-in Logger
-    global.Logger = {
+    global.Logger = /** @type {any} */ ({
       log: jest.fn(),
       clear: jest.fn(),
       getLog: jest.fn(() => '')
-    };
+    });
 
   // Mock PropertiesService
-  global.PropertiesService = {
+  global.PropertiesService = /** @type {any} */ ({
     getScriptProperties: jest.fn(() => ({
       setProperty: jest.fn(),
       getProperty: jest.fn(),
       deleteProperty: jest.fn()
     }))
-  };
+  });
 
   // Mock MailApp
-  global.MailApp = {
+  global.MailApp = /** @type {any} */ ({
     sendEmail: jest.fn()
-  };
+  });
 
   // Mock GroupSubscription
-  global.GroupSubscription = {
+  global.GroupSubscription = /** @type {any} */ ({
     listGroupsFor: jest.fn(),
     changeMembersEmail: jest.fn()
-  };
+  });
 
   // Mock SpreadsheetManager (flat class pattern)
-  global.SpreadsheetManager = {
+  global.SpreadsheetManager = /** @type {any} */ ({
     getFiddler: jest.fn()
-  };
+  });
 
   // Mock SheetAccess (abstraction layer)
-  global.SheetAccess = {
+  global.SheetAccess = /** @type {any} */ ({
     getData: jest.fn(),
     setData: jest.fn(),
     getDataAsArrays: jest.fn(),
@@ -65,20 +65,20 @@ beforeEach(() => {
     clearCache: jest.fn(),
     getSheet: jest.fn(),
     getFiddler: jest.fn()
-  };
+  });
 
   // Mock ApiClient (flat class pattern)
-  global.ApiClient = {
+  global.ApiClient = /** @type {any} */ ({
     registerHandler: jest.fn(),
     handleRequest: jest.fn(),
     clearHandlers: jest.fn()
-  };
+  });
 
   // Mock ApiClientManager (flat class pattern)
-  global.ApiClientManager = require('../src/common/api/ApiClient').ClientManager;
+  global.ApiClientManager = /** @type {any} */ (require('../src/common/api/ApiClient').ClientManager);
 
   // Mock SpreadsheetManager - backward compat via Common namespace
-  global.Common = {
+  global.Common = /** @type {any} */ ({
     Data: {
       Storage: {
         SpreadsheetManager: global.SpreadsheetManager
@@ -88,7 +88,7 @@ beforeEach(() => {
       Client: global.ApiClient,
       ClientManager: global.ApiClientManager
     }
-  };
+  });
 
   // Load Manager first (dependency)
   require('../src/services/EmailChangeService/Manager');
@@ -179,7 +179,7 @@ describe('EmailChangeService.Api', () => {
   
   describe('handleSendVerificationCode', () => {
     test('sends verification code successfully', () => {
-      MailApp.sendEmail.mockImplementation(() => {});
+      (/** @type {any} */ (MailApp.sendEmail)).mockImplementation(() => {});
 
       const result = EmailChangeService.Api.handleSendVerificationCode({
         _authenticatedEmail: 'old@example.com',
@@ -230,7 +230,7 @@ describe('EmailChangeService.Api', () => {
     });
 
     test('handles email send failure', () => {
-      MailApp.sendEmail.mockImplementation(() => {
+      (/** @type {any} */ (MailApp.sendEmail)).mockImplementation(() => {
         throw new Error('SMTP error');
       });
 
@@ -245,7 +245,7 @@ describe('EmailChangeService.Api', () => {
 
     test('stores verification data in properties', () => {
       const mockSetProperty = jest.fn();
-      PropertiesService.getScriptProperties.mockReturnValue({
+      (/** @type {any} */ (PropertiesService.getScriptProperties)).mockReturnValue({
         setProperty: mockSetProperty,
         getProperty: jest.fn(),
         deleteProperty: jest.fn()
@@ -267,7 +267,7 @@ describe('EmailChangeService.Api', () => {
     });
 
     test('normalizes email addresses', () => {
-      MailApp.sendEmail.mockImplementation(() => {});
+      (/** @type {any} */ (MailApp.sendEmail)).mockImplementation(() => {});
 
       EmailChangeService.Api.handleSendVerificationCode({
         _authenticatedEmail: 'OLD@EXAMPLE.COM',
@@ -289,13 +289,13 @@ describe('EmailChangeService.Api', () => {
       const storedData = TestData.createVerificationData();
       const mockGetProperty = jest.fn(() => JSON.stringify(storedData));
       const mockDeleteProperty = jest.fn();
-      PropertiesService.getScriptProperties.mockReturnValue({
+      (/** @type {any} */ (PropertiesService.getScriptProperties)).mockReturnValue({
         setProperty: jest.fn(),
         getProperty: mockGetProperty,
         deleteProperty: mockDeleteProperty
       });
 
-      GroupSubscription.listGroupsFor.mockReturnValue([
+      (/** @type {any} */ (GroupSubscription.listGroupsFor)).mockReturnValue([
         { email: 'group1@example.com' },
         { email: 'group2@example.com' }
       ]);
@@ -343,7 +343,7 @@ describe('EmailChangeService.Api', () => {
     });
 
     test('returns error when code not found', () => {
-      PropertiesService.getScriptProperties.mockReturnValue({
+      (/** @type {any} */ (PropertiesService.getScriptProperties)).mockReturnValue({
         setProperty: jest.fn(),
         getProperty: jest.fn(() => null),
         deleteProperty: jest.fn()
@@ -363,7 +363,7 @@ describe('EmailChangeService.Api', () => {
       const expiredData = TestData.createVerificationData({
         expiry: Date.now() - 1000 // Already expired
       });
-      PropertiesService.getScriptProperties.mockReturnValue({
+      (/** @type {any} */ (PropertiesService.getScriptProperties)).mockReturnValue({
         setProperty: jest.fn(),
         getProperty: jest.fn(() => JSON.stringify(expiredData)),
         deleteProperty: jest.fn()
@@ -382,7 +382,7 @@ describe('EmailChangeService.Api', () => {
 
     test('returns error when code is wrong', () => {
       const storedData = TestData.createVerificationData({ code: '999999' });
-      PropertiesService.getScriptProperties.mockReturnValue({
+      (/** @type {any} */ (PropertiesService.getScriptProperties)).mockReturnValue({
         setProperty: jest.fn(),
         getProperty: jest.fn(() => JSON.stringify(storedData)),
         deleteProperty: jest.fn()
@@ -400,13 +400,13 @@ describe('EmailChangeService.Api', () => {
 
     test('handles empty groups list', () => {
       const storedData = TestData.createVerificationData();
-      PropertiesService.getScriptProperties.mockReturnValue({
+      (/** @type {any} */ (PropertiesService.getScriptProperties)).mockReturnValue({
         setProperty: jest.fn(),
         getProperty: jest.fn(() => JSON.stringify(storedData)),
         deleteProperty: jest.fn()
       });
 
-      GroupSubscription.listGroupsFor.mockReturnValue([]);
+      (/** @type {any} */ (GroupSubscription.listGroupsFor)).mockReturnValue([]);
 
       const result = EmailChangeService.Api.handleVerifyAndGetGroups({
         _authenticatedEmail: 'old@example.com',
@@ -427,11 +427,11 @@ describe('EmailChangeService.Api', () => {
       const mockData = [
         { Email: 'old@example.com', First: 'John' }
       ];
-      SheetAccess.getData.mockReturnValue(mockData);
+      (/** @type {any} */ (SheetAccess.getData)).mockReturnValue(mockData);
     });
 
     test('changes email in groups successfully', () => {
-      GroupSubscription.changeMembersEmail.mockImplementation(() => {});
+      (/** @type {any} */ (GroupSubscription.changeMembersEmail)).mockImplementation(() => {});
 
       const groups = [
         TestData.createGroupMembershipInfo({ groupEmail: 'group1@example.com' }),
@@ -441,7 +441,7 @@ describe('EmailChangeService.Api', () => {
       const result = EmailChangeService.Api.handleChangeEmail({
         _authenticatedEmail: 'old@example.com',
         newEmail: 'new@example.com',
-        groups: groups
+        groups: /** @type {any} */ (groups)
       });
 
       expect(result.success).toBe(true);
@@ -483,7 +483,7 @@ describe('EmailChangeService.Api', () => {
     });
 
     test('handles partial group update failure', () => {
-      GroupSubscription.changeMembersEmail
+      (/** @type {any} */ (GroupSubscription.changeMembersEmail))
         .mockImplementationOnce(() => {})  // First succeeds
         .mockImplementationOnce(() => { throw new Error('Access denied'); }); // Second fails
 
@@ -495,7 +495,7 @@ describe('EmailChangeService.Api', () => {
       const result = EmailChangeService.Api.handleChangeEmail({
         _authenticatedEmail: 'old@example.com',
         newEmail: 'new@example.com',
-        groups: groups
+        groups: /** @type {any} */ (groups)
       });
 
       expect(result.success).toBe(true); // API call succeeded
@@ -525,7 +525,7 @@ describe('EmailChangeService.Api', () => {
       });
 
       // Verify setData was called for EmailChange sheet
-      const setDataCalls = SheetAccess.setData.mock.calls;
+      const setDataCalls = (/** @type {any} */ (SheetAccess.setData)).mock.calls;
       const emailChangeCall = setDataCalls.find(call => call[0] === 'EmailChange');
       expect(emailChangeCall).toBeDefined();
     });
@@ -557,13 +557,13 @@ describe('EmailChangeService.Api', () => {
   describe('storeVerificationData', () => {
     test('stores data with correct key prefix', () => {
       const mockSetProperty = jest.fn();
-      PropertiesService.getScriptProperties.mockReturnValue({
+      (/** @type {any} */ (PropertiesService.getScriptProperties)).mockReturnValue({
         setProperty: mockSetProperty,
         getProperty: jest.fn(),
         deleteProperty: jest.fn()
       });
 
-      EmailChangeService.Api.storeVerificationData('123456', { test: 'data' });
+      EmailChangeService.Api.storeVerificationData('123456', /** @type {any} */ ({ test: 'data' }));
 
       expect(mockSetProperty).toHaveBeenCalledWith(
         'verification_123456',
@@ -575,7 +575,7 @@ describe('EmailChangeService.Api', () => {
   describe('getVerificationData', () => {
     test('returns parsed data', () => {
       const data = { code: '123456', expiry: Date.now() + 10000 };
-      PropertiesService.getScriptProperties.mockReturnValue({
+      (/** @type {any} */ (PropertiesService.getScriptProperties)).mockReturnValue({
         setProperty: jest.fn(),
         getProperty: jest.fn(() => JSON.stringify(data)),
         deleteProperty: jest.fn()
@@ -586,7 +586,7 @@ describe('EmailChangeService.Api', () => {
     });
 
     test('returns null for missing data', () => {
-      PropertiesService.getScriptProperties.mockReturnValue({
+      (/** @type {any} */ (PropertiesService.getScriptProperties)).mockReturnValue({
         setProperty: jest.fn(),
         getProperty: jest.fn(() => null),
         deleteProperty: jest.fn()
@@ -599,7 +599,7 @@ describe('EmailChangeService.Api', () => {
     test('returns null for expired data and deletes it', () => {
       const mockDeleteProperty = jest.fn();
       const expiredData = { code: '123456', expiry: Date.now() - 1000 };
-      PropertiesService.getScriptProperties.mockReturnValue({
+      (/** @type {any} */ (PropertiesService.getScriptProperties)).mockReturnValue({
         setProperty: jest.fn(),
         getProperty: jest.fn(() => JSON.stringify(expiredData)),
         deleteProperty: mockDeleteProperty
@@ -611,7 +611,7 @@ describe('EmailChangeService.Api', () => {
     });
 
     test('handles JSON parse error', () => {
-      PropertiesService.getScriptProperties.mockReturnValue({
+      (/** @type {any} */ (PropertiesService.getScriptProperties)).mockReturnValue({
         setProperty: jest.fn(),
         getProperty: jest.fn(() => 'invalid json'),
         deleteProperty: jest.fn()
@@ -625,7 +625,7 @@ describe('EmailChangeService.Api', () => {
   describe('deleteVerificationData', () => {
     test('deletes with correct key', () => {
       const mockDeleteProperty = jest.fn();
-      PropertiesService.getScriptProperties.mockReturnValue({
+      (/** @type {any} */ (PropertiesService.getScriptProperties)).mockReturnValue({
         setProperty: jest.fn(),
         getProperty: jest.fn(),
         deleteProperty: mockDeleteProperty
@@ -644,7 +644,7 @@ describe('EmailChangeService.Api', () => {
         body: 'Test body'
       };
 
-      const result = EmailChangeService.Api.sendVerificationEmail('test@example.com', content);
+      const result = EmailChangeService.Api.sendVerificationEmail('test@example.com', /** @type {any} */ (content));
 
       expect(result).toBe(true);
       expect(MailApp.sendEmail).toHaveBeenCalledWith({
@@ -655,7 +655,7 @@ describe('EmailChangeService.Api', () => {
     });
 
     test('returns false on error', () => {
-      MailApp.sendEmail.mockImplementation(() => {
+      (/** @type {any} */ (MailApp.sendEmail)).mockImplementation(() => {
         throw new Error('SMTP error');
       });
 
@@ -675,7 +675,7 @@ describe('EmailChangeService.Api', () => {
         { Email: 'old@example.com', First: 'John' },
         { Email: 'other@example.com', First: 'Jane' }
       ];
-      SheetAccess.getData.mockReturnValue(mockData);
+      (/** @type {any} */ (SheetAccess.getData)).mockReturnValue(mockData);
 
       EmailChangeService.Api.changeEmailInSpreadsheets('old@example.com', 'new@example.com');
 
@@ -694,7 +694,7 @@ describe('EmailChangeService.Api', () => {
     });
 
     test('handles errors gracefully', () => {
-      SheetAccess.getData.mockImplementation(() => {
+      (/** @type {any} */ (SheetAccess.getData)).mockImplementation(() => {
         throw new Error('Sheet not found');
       });
 
@@ -708,7 +708,7 @@ describe('EmailChangeService.Api', () => {
   describe('logEmailChange', () => {
     test('appends log entry to EmailChange sheet', () => {
       const existingData = [];
-      SheetAccess.getData.mockReturnValue(existingData);
+      (/** @type {any} */ (SheetAccess.getData)).mockReturnValue(existingData);
 
       EmailChangeService.Api.logEmailChange('old@example.com', 'new@example.com');
 
@@ -716,7 +716,7 @@ describe('EmailChangeService.Api', () => {
       expect(SheetAccess.setData).toHaveBeenCalled();
       
       // Verify setData was called with data that includes the new entry
-      const setDataCall = SheetAccess.setData.mock.calls[0];
+      const setDataCall = (/** @type {any} */ (SheetAccess.setData)).mock.calls[0];
       expect(setDataCall[0]).toBe('EmailChange');
       expect(setDataCall[1]).toHaveLength(1);
       expect(setDataCall[1][0]).toMatchObject({
@@ -727,7 +727,7 @@ describe('EmailChangeService.Api', () => {
     });
 
     test('handles errors gracefully', () => {
-      SheetAccess.getData.mockImplementation(() => {
+      (/** @type {any} */ (SheetAccess.getData)).mockImplementation(() => {
         throw new Error('Sheet not found');
       });
 

@@ -423,19 +423,19 @@ describe('ValidatedMember Class', () => {
     
     beforeEach(() => {
       // Mock AppLogger (flat class pattern)
-      global.AppLogger = {
+      global.AppLogger = /** @type {any} */ ({
         error: jest.fn(),
         warn: jest.fn(),
         info: jest.fn(),
         debug: jest.fn()
-      };
+      });
 
     // Mock GAS built-in Logger
-    global.Logger = {
+    global.Logger = /** @type {any} */ ({
       log: jest.fn(),
       clear: jest.fn(),
       getLog: jest.fn(() => '')
-    };
+    });
       
       // Mock Common.Logger (backward compat)
       global.Common = global.Common || {};
@@ -580,28 +580,28 @@ describe('ValidatedMember Class', () => {
     
     beforeEach(() => {
       // Mock Logger (flat class pattern)
-      global.AppLogger = {
+      global.AppLogger = /** @type {any} */ ({
         error: jest.fn(),
         warn: jest.fn(),
         info: jest.fn(),
         debug: jest.fn()
-      };
+      });
 
     // Mock GAS built-in Logger
-    global.Logger = {
+    global.Logger = /** @type {any} */ ({
       log: jest.fn(),
       clear: jest.fn(),
       getLog: jest.fn(() => '')
-    };
+    });
       
       // Mock Common.Logger (backward compat)
       global.Common = global.Common || {};
       global.Common.Logger = global.AppLogger;
       
       // Mock MailApp
-      global.MailApp = {
+      global.MailApp = /** @type {any} */ ({
         sendEmail: jest.fn()
-      };
+      });
     });
     
     test('should process all valid rows', () => {
@@ -646,7 +646,7 @@ describe('ValidatedMember Class', () => {
       expect(members.length).toBe(1);
       expect(MailApp.sendEmail).toHaveBeenCalledTimes(1);
       
-      const emailCall = MailApp.sendEmail.mock.calls[0][0];
+      const emailCall = (/** @type {any} */ (MailApp.sendEmail)).mock.calls[0][0];
       expect(emailCall.to).toBe('membership-automation@sc3.club');
       expect(emailCall.subject).toContain('2 Member Validation Errors');
       expect(emailCall.body).toContain('test-batch-context');
@@ -688,7 +688,7 @@ describe('ValidatedMember Class', () => {
     });
     
     test('should handle email send failure gracefully', () => {
-      MailApp.sendEmail.mockImplementation(() => {
+      (/** @type {any} */ (MailApp.sendEmail)).mockImplementation(() => {
         throw new Error('Email service unavailable');
       });
       

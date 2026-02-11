@@ -4,7 +4,7 @@
  * Tests both the Manager (pure logic) and FeatureFlags (GAS layer) components
  */
 
-const { FeatureFlags, FeatureFlagsManager } = require('../src/common/config/FeatureFlags');
+const { FeatureFlags, FeatureFlagsManager } = /** @type {any} */ (require('../src/common/config/FeatureFlags'));
 
 describe('FeatureFlagsManager - Pure Logic', () => {
   
@@ -31,7 +31,7 @@ describe('FeatureFlagsManager - Pure Logic', () => {
         valid: false, 
         error: 'Flag name must be a non-empty string' 
       });
-      expect(FeatureFlagsManager.validateFlagName(123)).toEqual({ 
+      expect(FeatureFlagsManager.validateFlagName(/** @type {any} */ (123))).toEqual({ 
         valid: false, 
         error: 'Flag name must be a non-empty string' 
       });
@@ -183,19 +183,19 @@ describe('FeatureFlags - GAS Layer', () => {
     mockProperties = {};
     
     // Mock PropertiesService
-    global.PropertiesService = {
-      getScriptProperties: () => ({
+    /** @type {any} */ (global.PropertiesService) = {
+      getScriptProperties: () => /** @type {any} */ (({
         getProperty: (key) => mockProperties[key] || null,
-        setProperty: (key, value) => { mockProperties[key] = value; },
-        deleteProperty: (key) => { delete mockProperties[key]; },
+        setProperty: /** @type {any} */ ((key, value) => { mockProperties[key] = value; }),
+        deleteProperty: /** @type {any} */ ((key) => { delete mockProperties[key]; }),
         getProperties: () => ({ ...mockProperties })
-      })
+      }))
     };
     
     // Mock Logger
-    global.AppLogger = {
+    global.AppLogger = /** @type {any} */ ({
       log: jest.fn()
-    };
+    });
 
     // Mock GAS built-in Logger
     global.Logger = {
@@ -336,7 +336,7 @@ describe('FeatureFlags - GAS Layer', () => {
       const flags1 = FeatureFlags.getKnownFlags();
       const flags2 = FeatureFlags.getKnownFlags();
       
-      flags1['FEATURE_NEW'] = { name: 'test' };
+      (/** @type {any} */ (flags1))['FEATURE_NEW'] = { name: 'test' };
       expect(flags2['FEATURE_NEW']).toBeUndefined();
     });
   });

@@ -16,35 +16,35 @@ const { ValidatedMember } = require('../src/common/data/ValidatedMember.js');
 global.ValidatedMember = ValidatedMember;
 
 // Mock AppLogger (flat class pattern)
-global.AppLogger = {
+global.AppLogger = /** @type {any} */ ({
   error: jest.fn(),
   warn: jest.fn(),
   info: jest.fn(),
   debug: jest.fn()
-};
+});
 
 // Mock Logger (GAS built-in)
-global.Logger = {
+global.Logger = /** @type {any} */ ({
   log: jest.fn(),
   clear: jest.fn(),
   getLog: jest.fn(() => '')
-};
+});
 
 // Mock MailApp
-global.MailApp = {
+global.MailApp = /** @type {any} */ ({
   sendEmail: jest.fn()
-};
+});
 
 // Mock DocsService
-global.DocsService = {
+global.DocsService = /** @type {any} */ ({
   convertDocToHtml: jest.fn((url) => `<html>Mock doc content for ${url}</html>`)
-};
+});
 
 // Mock MemberPersistence
-global.MemberPersistence = {
+global.MemberPersistence = /** @type {any} */ ({
   valuesEqual: jest.fn((a, b) => a === b),
   writeChangedCells: jest.fn()
-};
+});
 
 // Backward compat alias
 global.Common = global.Common || {};
@@ -72,7 +72,7 @@ const mockSpreadsheetManager = {
   getSheet: jest.fn()
 };
 
-global.SpreadsheetManager = mockSpreadsheetManager;
+global.SpreadsheetManager = /** @type {any} */ (mockSpreadsheetManager);
 
 // Load modules after global setup
 const { SheetAccess } = require('../src/common/data/SheetAccess.js');
