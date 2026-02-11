@@ -17,24 +17,24 @@ const { ValidatedTransaction } = require('../src/common/data/ValidatedTransactio
 global.ValidatedTransaction = ValidatedTransaction;
 
 // Mock AppLogger (flat class pattern)
-global.AppLogger = {
+global.AppLogger = /** @type {any} */ ({
   error: jest.fn(),
   warn: jest.fn(),
   info: jest.fn(),
   debug: jest.fn()
-};
+});
 
 // Mock Logger (GAS built-in)
-global.Logger = {
+global.Logger = /** @type {any} */ ({
   log: jest.fn(),
   clear: jest.fn(),
   getLog: jest.fn(() => '')
-};
+});
 
 // Mock MailApp
-global.MailApp = {
+global.MailApp = /** @type {any} */ ({
   sendEmail: jest.fn()
-};
+});
 
 // Backward compat alias
 global.Common = global.Common || {};
@@ -58,9 +58,9 @@ const createMockSheet = (values = [[]]) => {
 };
 
 // Mock SpreadsheetManager (used by SheetAccess)
-global.SpreadsheetManager = {
+global.SpreadsheetManager = /** @type {any} */ ({
   getSheet: jest.fn()
-};
+});
 
 // Load SheetAccess and assign to global
 const { SheetAccess } = require('../src/common/data/SheetAccess.js');

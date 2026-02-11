@@ -380,7 +380,7 @@ describe('ValidatedElection Class', () => {
     test('should process all rows and send email on errors', () => {
       // Mock MailApp
       const mockSendEmail = jest.fn();
-      global.MailApp = { sendEmail: mockSendEmail };
+      global.MailApp = /** @type {any} */ ({ sendEmail: mockSendEmail });
       
       const headers = ['Title', 'Start', 'End', 'Form Edit URL', 'Election Officers', 'TriggerId'];
       const rows = [

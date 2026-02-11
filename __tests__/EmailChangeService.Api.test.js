@@ -14,47 +14,47 @@
 // Mock GAS globals before requiring the module
 beforeEach(() => {
   // Reset EmailChangeService namespace
-  global.EmailChangeService = {};
+  global.EmailChangeService = /** @type {any} */ ({});
   
   // Mock Logger
-  global.AppLogger = {
+  global.AppLogger = /** @type {any} */ ({
     log: jest.fn()
-  };
+  });
 
     // Mock GAS built-in Logger
-    global.Logger = {
+    global.Logger = /** @type {any} */ ({
       log: jest.fn(),
       clear: jest.fn(),
       getLog: jest.fn(() => '')
-    };
+    });
 
   // Mock PropertiesService
-  global.PropertiesService = {
+  global.PropertiesService = /** @type {any} */ ({
     getScriptProperties: jest.fn(() => ({
       setProperty: jest.fn(),
       getProperty: jest.fn(),
       deleteProperty: jest.fn()
     }))
-  };
+  });
 
   // Mock MailApp
-  global.MailApp = {
+  global.MailApp = /** @type {any} */ ({
     sendEmail: jest.fn()
-  };
+  });
 
   // Mock GroupSubscription
-  global.GroupSubscription = {
+  global.GroupSubscription = /** @type {any} */ ({
     listGroupsFor: jest.fn(),
     changeMembersEmail: jest.fn()
-  };
+  });
 
   // Mock SpreadsheetManager (flat class pattern)
-  global.SpreadsheetManager = {
+  global.SpreadsheetManager = /** @type {any} */ ({
     getFiddler: jest.fn()
-  };
+  });
 
   // Mock SheetAccess (abstraction layer)
-  global.SheetAccess = {
+  global.SheetAccess = /** @type {any} */ ({
     getData: jest.fn(),
     setData: jest.fn(),
     getDataAsArrays: jest.fn(),
@@ -65,20 +65,20 @@ beforeEach(() => {
     clearCache: jest.fn(),
     getSheet: jest.fn(),
     getFiddler: jest.fn()
-  };
+  });
 
   // Mock ApiClient (flat class pattern)
-  global.ApiClient = {
+  global.ApiClient = /** @type {any} */ ({
     registerHandler: jest.fn(),
     handleRequest: jest.fn(),
     clearHandlers: jest.fn()
-  };
+  });
 
   // Mock ApiClientManager (flat class pattern)
-  global.ApiClientManager = require('../src/common/api/ApiClient').ClientManager;
+  global.ApiClientManager = /** @type {any} */ (require('../src/common/api/ApiClient').ClientManager);
 
   // Mock SpreadsheetManager - backward compat via Common namespace
-  global.Common = {
+  global.Common = /** @type {any} */ ({
     Data: {
       Storage: {
         SpreadsheetManager: global.SpreadsheetManager
@@ -88,7 +88,7 @@ beforeEach(() => {
       Client: global.ApiClient,
       ClientManager: global.ApiClientManager
     }
-  };
+  });
 
   // Load Manager first (dependency)
   require('../src/services/EmailChangeService/Manager');

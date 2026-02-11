@@ -13,26 +13,26 @@
 // Mock GAS globals before requiring the module
 beforeEach(() => {
   // Reset GroupManagementService namespace
-  global.GroupManagementService = {};
+  global.GroupManagementService = /** @type {any} */ ({});
   
   // Mock Logger (flat class pattern)
-  global.AppLogger = {
+  global.AppLogger = /** @type {any} */ ({
     log: jest.fn(),
     info: jest.fn(),
     debug: jest.fn(),
     warn: jest.fn(),
     error: jest.fn()
-  };
+  });
 
     // Mock GAS built-in Logger
-    global.Logger = {
+    global.Logger = /** @type {any} */ ({
       log: jest.fn(),
       clear: jest.fn(),
       getLog: jest.fn(() => '')
-    };
+    });
 
   // Mock GroupSubscription
-  global.GroupSubscription = {
+  global.GroupSubscription = /** @type {any} */ ({
     deliveryOptions: {
       'UNSUBSCRIBE': ['Unsubscribed', 'Not subscribed to the group'],
       'ALL_MAIL': ['Each message', 'Receive an email for every message'],
@@ -44,12 +44,12 @@ beforeEach(() => {
     subscribeMember: jest.fn(),
     updateMember: jest.fn(),
     removeMember: jest.fn()
-  };
+  });
 
   // Mock DataAccess (flat class pattern)
-  global.DataAccess = {
+  global.DataAccess = /** @type {any} */ ({
     getPublicGroups: jest.fn()
-  };
+  });
 
   // Mock ServiceLogger (flat class pattern)
   global.ServiceLogger = jest.fn().mockImplementation(() => ({
@@ -64,7 +64,7 @@ beforeEach(() => {
   }));
 
   // Mock Common namespace (backward compat for Logger)
-  global.Common = {
+  global.Common = /** @type {any} */ ({
     Data: {
       Access: global.DataAccess,
       Storage: {
@@ -80,14 +80,14 @@ beforeEach(() => {
     Logging: {
       ServiceLogger: global.ServiceLogger  // backward compat alias
     }
-  };
+  });
   
   // Mock Audit namespace
-  global.Audit = {
+  global.Audit = /** @type {any} */ ({
     Persistence: {
       persistAuditEntries: jest.fn()
     }
-  };
+  });
 
   // Load Manager first (dependency)
   require('../src/services/GroupManagementService/Manager');

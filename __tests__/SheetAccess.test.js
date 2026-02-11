@@ -29,9 +29,9 @@ const createMockSheet = (values = [[]]) => {
 };
 
 // Create mock SpreadsheetManager as global
-global.SpreadsheetManager = {
+global.SpreadsheetManager = /** @type {any} */ ({
   getSheet: jest.fn()
-};
+});
 
 const { SheetAccess } = require('../src/common/data/SheetAccess.js');
 
@@ -249,9 +249,9 @@ describe('SheetAccess', () => {
   describe('getSpreadsheetById', () => {
     it('should open spreadsheet by ID using SpreadsheetApp', () => {
       const mockSpreadsheet = { getId: jest.fn(() => 'test-id') };
-      global.SpreadsheetApp = {
+      global.SpreadsheetApp = /** @type {any} */ ({
         openById: jest.fn().mockReturnValue(mockSpreadsheet)
-      };
+      });
 
       const result = SheetAccess.getSpreadsheetById('test-spreadsheet-id');
 

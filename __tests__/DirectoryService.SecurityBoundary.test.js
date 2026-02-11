@@ -9,27 +9,27 @@
  */
 
 // Mock GAS globals before imports
-global.SpreadsheetApp = {
+global.SpreadsheetApp = /** @type {any} */ ({
   getActiveSpreadsheet: jest.fn(() => ({ getId: () => 'mock-id' }))
-};
-global.ScriptApp = {
+});
+global.ScriptApp = /** @type {any} */ ({
   getService: jest.fn(() => ({ getUrl: () => 'mock-url' }))
-};
+});
 
 // Mock Common.Data.Access
 const mockMembers = [];
 
 // Mock DataAccess (flat class pattern)
-global.DataAccess = {
+global.DataAccess = /** @type {any} */ ({
   getMembers: jest.fn(() => mockMembers)
-};
+});
 
 // Mock Common namespace (backward compatibility)
-global.Common = {
+global.Common = /** @type {any} */ ({
   Data: {
     Access: global.DataAccess
   }
-};
+});
 
 const { getDirectoryEntries } = require('../src/services/DirectoryService/DirectoryApp');
 

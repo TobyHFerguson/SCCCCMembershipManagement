@@ -12,24 +12,24 @@
 // Mock GAS globals before requiring the module
 beforeEach(() => {
   // Reset ProfileManagementService namespace
-  global.ProfileManagementService = {};
+  global.ProfileManagementService = /** @type {any} */ ({});
   
   // Mock AppLogger (flat class pattern - our custom logger)
-  global.AppLogger = {
+  global.AppLogger = /** @type {any} */ ({
     info: jest.fn(),
     debug: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
     configure: jest.fn()
-  };
+  });
   
   // Mock GAS built-in Logger
-  global.Logger = {
+  global.Logger = /** @type {any} */ ({
     log: jest.fn()
-  };
+  });
 
   // Mock Utilities and Session for date formatting
-  global.Utilities = {
+  global.Utilities = /** @type {any} */ ({
     formatDate: jest.fn((date, timezone, format) => {
       // Return a formatted string that matches the expected format
       if (!date) return '';
@@ -37,27 +37,27 @@ beforeEach(() => {
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
     })
-  };
+  });
   
-  global.Session = {
+  global.Session = /** @type {any} */ ({
     getScriptTimeZone: jest.fn(() => 'America/Los_Angeles')
-  };
+  });
 
   // Mock ApiClient (flat class pattern)
-  global.ApiClient = {
+  global.ApiClient = /** @type {any} */ ({
     registerHandler: jest.fn(),
     handleRequest: jest.fn(),
     clearHandlers: jest.fn()
-  };
+  });
 
   // Mock ApiClientManager (flat class pattern)
-  global.ApiClientManager = require('../src/common/api/ApiClient').ClientManager;
+  global.ApiClientManager = /** @type {any} */ (require('../src/common/api/ApiClient').ClientManager);
 
   // Mock DataAccess (flat class pattern)
-  global.DataAccess = {
+  global.DataAccess = /** @type {any} */ ({
     getMember: jest.fn(),
     updateMember: jest.fn()
-  };
+  });
 
   // Mock ServiceLogger (flat class pattern)
   global.ServiceLogger = jest.fn().mockImplementation(() => ({
@@ -72,7 +72,7 @@ beforeEach(() => {
   }));
 
   // Mock Common namespace (backward compat for Logger)
-  global.Common = {
+  global.Common = /** @type {any} */ ({
     Data: {
       Access: global.DataAccess,
       Storage: {
@@ -89,14 +89,14 @@ beforeEach(() => {
     Logging: {
       ServiceLogger: global.ServiceLogger  // backward compat alias
     }
-  };
+  });
   
   // Mock Audit namespace
-  global.Audit = {
+  global.Audit = /** @type {any} */ ({
     Persistence: {
       persistAuditEntries: jest.fn()
     }
-  };
+  });
 
   // Load Manager first (dependency)
   require('../src/services/ProfileManagementService/Manager');

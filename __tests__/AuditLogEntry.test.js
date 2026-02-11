@@ -79,29 +79,29 @@ describe('AuditLogEntry Class', () => {
       jest.clearAllMocks();
       
       // Mock Logger (flat class pattern)
-      global.AppLogger = {
+      global.AppLogger = /** @type {any} */ ({
         error: jest.fn(),
         info: jest.fn(),
         warn: jest.fn(),
         debug: jest.fn()
-      };
+      });
 
     // Mock GAS built-in Logger
-    global.Logger = {
+    global.Logger = /** @type {any} */ ({
       log: jest.fn(),
       clear: jest.fn(),
       getLog: jest.fn(() => '')
-    };
+    });
       
       // Mock Common.Logger (backward compat)
-      global.Common = {
+      global.Common = /** @type {any} */ ({
         Logger: global.AppLogger
-      };
+      });
       
       // Mock MailApp
-      global.MailApp = {
+      global.MailApp = /** @type {any} */ ({
         sendEmail: jest.fn()
-      };
+      });
     });
     
     test('should create valid entry when parameters are correct', () => {
@@ -192,29 +192,29 @@ describe('AuditLogEntry Class', () => {
       jest.clearAllMocks();
       
       // Mock Logger (flat class pattern)
-      global.AppLogger = {
+      global.AppLogger = /** @type {any} */ ({
         error: jest.fn(),
         info: jest.fn(),
         warn: jest.fn(),
         debug: jest.fn()
-      };
+      });
 
     // Mock GAS built-in Logger
-    global.Logger = {
+    global.Logger = /** @type {any} */ ({
       log: jest.fn(),
       clear: jest.fn(),
       getLog: jest.fn(() => '')
-    };
+    });
       
       // Mock Common.Logger (backward compat)
-      global.Common = {
+      global.Common = /** @type {any} */ ({
         Logger: global.AppLogger
-      };
+      });
       
       // Mock MailApp
-      global.MailApp = {
+      global.MailApp = /** @type {any} */ ({
         sendEmail: jest.fn()
-      };
+      });
     });
     
     test('should return empty array for non-array input', () => {

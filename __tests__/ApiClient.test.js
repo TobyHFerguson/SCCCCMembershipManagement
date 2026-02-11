@@ -411,29 +411,29 @@ describe('ApiClient - GAS Layer', () => {
     ApiClient.clearHandlers();
     
     // Mock Logger
-    global.AppLogger = {
+    global.AppLogger = /** @type {any} */ ({
       log: jest.fn()
-    };
+    });
 
     // Mock GAS built-in Logger
-    global.Logger = {
+    global.Logger = /** @type {any} */ ({
       log: jest.fn(),
       clear: jest.fn(),
       getLog: jest.fn(() => '')
-    };
+    });
     
     // Mock flat TokenManager class
-    global.TokenManager = {
+    global.TokenManager = /** @type {any} */ ({
       getEmailFromMUT: jest.fn()
-    };
+    });
     
     // Mock Common.Auth.TokenManager for backward compatibility
-    global.Common = {
+    global.Common = /** @type {any} */ ({
       Auth: {
         TokenManager: global.TokenManager
       },
       Api: require('../src/common/api/ApiClient')
-    };
+    });
   });
 
   afterEach(() => {

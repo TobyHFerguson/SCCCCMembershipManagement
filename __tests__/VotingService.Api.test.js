@@ -11,7 +11,7 @@
  */
 
 // Set up VotingService namespace before requiring Api
-global.VotingService = {
+global.VotingService = /** @type {any} */ ({
   Constants: {
     VOTE_TITLE_COLUMN_NAME: 'Title',
     FORM_EDIT_URL_COLUMN_NAME: 'Form Edit URL',
@@ -40,37 +40,37 @@ global.VotingService = {
   getBallot: jest.fn(),
   getSpreadsheetIdFromElection: jest.fn(),
   createPrefilledUrlWithTitle: jest.fn()
-};
+});
 
 // Import Manager first (it will extend VotingService)
 const { Manager } = require('../src/services/VotingService/Manager');
 global.VotingService.Manager = Manager;
 
 // Mock ApiClient (flat class pattern)
-global.ApiClient = {
+global.ApiClient = /** @type {any} */ ({
   registerHandler: jest.fn(),
   handleRequest: jest.fn(),
   clearHandlers: jest.fn()
-};
+});
 
 // Mock ApiClientManager (flat class pattern)
-global.ApiClientManager = {
+global.ApiClientManager = /** @type {any} */ ({
   successResponse: jest.fn((data) => ({ success: true, data })),
   errorResponse: jest.fn((error, errorCode) => ({ success: false, error, errorCode }))
-};
+});
 
 // Set up Common namespace for API handling
-global.Common = {
+global.Common = /** @type {any} */ ({
   Api: {
     Client: global.ApiClient,
     ClientManager: global.ApiClientManager
   }
-};
+});
 
 // Set up Logger
-global.AppLogger = {
+global.AppLogger = /** @type {any} */ ({
   log: jest.fn()
-};
+});
 
 // Import Api module
 const { Api, initApi } = require('../src/services/VotingService/Api');

@@ -338,15 +338,15 @@ describe('ValidatedActionSpec Class', () => {
     
     beforeEach(() => {
       // Mock AppLogger
-      global.AppLogger = {
+      global.AppLogger = /** @type {any} */ ({
         error: jest.fn(),
         warn: jest.fn()
-      };
+      });
       
       // Mock MailApp
-      global.MailApp = {
+      global.MailApp = /** @type {any} */ ({
         sendEmail: jest.fn()
-      };
+      });
     });
     
     test('should validate multiple valid rows', () => {

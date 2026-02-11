@@ -3,7 +3,7 @@ const ns = require('../src/1namespaces.js');
 const createFiddlerMock = require('./helpers/fiddlerMock');
 
 // Set up mock for flat Properties class (new pattern)
-global.Properties = {
+global.Properties = /** @type {any} */ ({
     getProperty: jest.fn((key, defaultValue) => defaultValue),
     getNumberProperty: jest.fn((key, defaultValue) => defaultValue),
     getBooleanProperty: jest.fn((key, defaultValue) => defaultValue),
@@ -11,7 +11,7 @@ global.Properties = {
     deleteCodeInternalProperty: jest.fn(),
     clearCache: jest.fn(),
     getAllUserProperties: jest.fn(() => ({}))
-};
+});
 
 // Set up Common mocks FIRST before loading any MembershipManagement code
 global.Common = global.Common || {};
@@ -46,7 +46,7 @@ require('../src/services/MembershipManagement/utils.js');
 require('../src/services/MembershipManagement/Manager.js');
 // Ensure a global MembershipManagement.Internal exists (Manager.js can overwrite the global)
 global.MembershipManagement = global.MembershipManagement || ns.MembershipManagement || {};
-global.MembershipManagement.Internal = global.MembershipManagement.Internal || {};
+global.MembershipManagement.Internal = /** @type {any} */ (global.MembershipManagement.Internal || {});
 require('../src/services/MembershipManagement/Trigger.js');
 // Require the wrapper last so it can attach to the existing global MembershipManagement
 require('../src/services/MembershipManagement/MembershipManagement.js');
@@ -99,7 +99,7 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
         });
 
         // Mock Data.Access methods needed by Manager construction
-        global.DataAccess = global.DataAccess || {};
+        global.DataAccess = /** @type {any} */ (global.DataAccess || {});
         global.DataAccess.getActionSpecs = jest.fn(() => ({
             'Expiry1': { Type: 'Expiry1', Subject: 'Expiry notice', Body: 'Your membership expires' }
         }));
@@ -121,14 +121,14 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
         global.Common.Data.Access = global.DataAccess;
 
         // Mock Internal functions
-        global.MembershipManagement.Internal = global.MembershipManagement.Internal || {};
+        global.MembershipManagement.Internal = /** @type {any} */ (global.MembershipManagement.Internal || {});
         global.MembershipManagement.Internal.getEmailSender_ = jest.fn(() => jest.fn());
         global.MembershipManagement.Internal.getGroupAdder_ = jest.fn(() => jest.fn());
         global.MembershipManagement.Internal.getGroupRemover_ = jest.fn(() => jest.fn());
         global.MembershipManagement.Internal.getGroupEmailReplacer_ = jest.fn(() => jest.fn());
 
         // Stub trigger helpers so tests don't call ScriptApp
-        global.MembershipManagement.Trigger = global.MembershipManagement.Trigger || {};
+        global.MembershipManagement.Trigger = /** @type {any} */ (global.MembershipManagement.Trigger || {});
         global.MembershipManagement.Trigger._deleteTriggersByFunctionName = jest.fn();
         global.MembershipManagement.Trigger._createMinuteTrigger = jest.fn();
     });
@@ -262,9 +262,9 @@ describe('MembershipManagement audit persistence integration', () => {
         global.Common = global.Common || {};
         global.Common.Data = global.Common.Data || {};
         global.Common.Data.Storage = global.Common.Data.Storage || {};
-        global.SpreadsheetManager = {
+        global.SpreadsheetManager = /** @type {any} */ ({
             getSheet: jest.fn(() => mockSheet)
-        };
+        });
 
         // Call the wrapper function
         const numWritten = global.MembershipManagement.Internal.persistAuditEntries_(mockAuditEntries);
@@ -301,11 +301,11 @@ describe('MembershipManagement audit persistence integration', () => {
         global.Common = global.Common || {};
         global.Common.Data = global.Common.Data || {};
         global.Common.Data.Storage = global.Common.Data.Storage || {};
-        global.SpreadsheetManager = {
+        global.SpreadsheetManager = /** @type {any} */ ({
             getSheet: jest.fn(() => {
                 throw new Error('Sheet error');
             })
-        };
+        });
 
         // Should not throw
         const numWritten = global.MembershipManagement.Internal.persistAuditEntries_(mockAuditEntries);
