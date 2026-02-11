@@ -504,7 +504,7 @@ describe('ApiClient - GAS Layer', () => {
 
     test('returns error for invalid token', () => {
       ApiClient.registerHandler('test', jest.fn());
-      TokenManager.getEmailFromMUT.mockReturnValue(null);
+      (/** @type {any} */ (TokenManager.getEmailFromMUT)).mockReturnValue(null);
       
       const result = JSON.parse(ApiClient.handleRequest({ 
         action: 'test', 
@@ -518,7 +518,7 @@ describe('ApiClient - GAS Layer', () => {
     test('calls handler with params and token', () => {
       const handler = jest.fn().mockReturnValue({ success: true, data: 'result' });
       ApiClient.registerHandler('test', handler);
-      TokenManager.getEmailFromMUT.mockReturnValue('user@example.com');
+      (/** @type {any} */ (TokenManager.getEmailFromMUT)).mockReturnValue('user@example.com');
       
       const result = JSON.parse(ApiClient.handleRequest({ 
         action: 'test', 

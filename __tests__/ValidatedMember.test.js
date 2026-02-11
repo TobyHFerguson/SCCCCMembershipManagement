@@ -646,7 +646,7 @@ describe('ValidatedMember Class', () => {
       expect(members.length).toBe(1);
       expect(MailApp.sendEmail).toHaveBeenCalledTimes(1);
       
-      const emailCall = MailApp.sendEmail.mock.calls[0][0];
+      const emailCall = (/** @type {any} */ (MailApp.sendEmail)).mock.calls[0][0];
       expect(emailCall.to).toBe('membership-automation@sc3.club');
       expect(emailCall.subject).toContain('2 Member Validation Errors');
       expect(emailCall.body).toContain('test-batch-context');
@@ -688,7 +688,7 @@ describe('ValidatedMember Class', () => {
     });
     
     test('should handle email send failure gracefully', () => {
-      MailApp.sendEmail.mockImplementation(() => {
+      (/** @type {any} */ (MailApp.sendEmail)).mockImplementation(() => {
         throw new Error('Email service unavailable');
       });
       

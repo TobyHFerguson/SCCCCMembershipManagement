@@ -394,7 +394,7 @@ describe('ValidatedActionSpec Class', () => {
       ValidatedActionSpec.validateRows(rows, headers, 'DataAccess.getActionSpecs');
       
       expect(global.MailApp.sendEmail).toHaveBeenCalledTimes(1);
-      const emailCall = global.MailApp.sendEmail.mock.calls[0][0];
+      const emailCall = (/** @type {any} */ (global.MailApp.sendEmail)).mock.calls[0][0];
       expect(emailCall.to).toBe('membership-automation@sc3.club');
       expect(emailCall.subject).toContain('2 ActionSpec Validation Error');
       expect(emailCall.body).toContain('Context: DataAccess.getActionSpecs');
@@ -419,7 +419,7 @@ describe('ValidatedActionSpec Class', () => {
         ['', 0, 'Subject', 'Body']  // Invalid - missing Type
       ];
       
-      global.MailApp.sendEmail.mockImplementation(() => {
+      (/** @type {any} */ (global.MailApp.sendEmail)).mockImplementation(() => {
         throw new Error('Email send failed');
       });
       

@@ -144,7 +144,7 @@ describe('AuditLogEntry Class', () => {
     });
     
     test('should handle email failure gracefully', () => {
-      MailApp.sendEmail.mockImplementation(() => {
+      (/** @type {any} */ (MailApp.sendEmail)).mockImplementation(() => {
         throw new Error('Email service down');
       });
       
@@ -317,7 +317,7 @@ describe('AuditLogEntry Class', () => {
     });
     
     test('should handle email sending failure gracefully', () => {
-      MailApp.sendEmail.mockImplementation(() => {
+      (/** @type {any} */ (MailApp.sendEmail)).mockImplementation(() => {
         throw new Error('Email service unavailable');
       });
       

@@ -103,7 +103,7 @@ describe('DirectoryService.Api', () => {
   
   beforeEach(() => {
     jest.clearAllMocks();
-    DataAccess.getMembers.mockReturnValue(mockMembers);
+    (/** @type {any} */ (DataAccess.getMembers)).mockReturnValue(mockMembers);
   });
 
   // ==================== handleGetEntries Tests ====================
@@ -233,7 +233,7 @@ describe('DirectoryService.Api', () => {
     });
 
     test('handles data access error', () => {
-      DataAccess.getMembers.mockImplementation(() => {
+      (/** @type {any} */ (DataAccess.getMembers)).mockImplementation(() => {
         throw new Error('Database error');
       });
       
@@ -304,7 +304,7 @@ describe('DirectoryService.Api', () => {
     });
 
     test('handles data access error', () => {
-      DataAccess.getMembers.mockImplementation(() => {
+      (/** @type {any} */ (DataAccess.getMembers)).mockImplementation(() => {
         throw new Error('Database error');
       });
       
@@ -318,7 +318,7 @@ describe('DirectoryService.Api', () => {
     });
 
     test('handles empty members list', () => {
-      DataAccess.getMembers.mockReturnValue([]);
+      (/** @type {any} */ (DataAccess.getMembers)).mockReturnValue([]);
       
       const params = { _authenticatedEmail: 'user@example.com' };
       

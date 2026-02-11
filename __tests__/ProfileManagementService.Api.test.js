@@ -183,7 +183,7 @@ describe('ProfileManagementService.Api', () => {
   describe('handleGetProfile', () => {
     test('returns profile for authenticated user', () => {
       const profile = TestData.createProfile();
-      DataAccess.getMember.mockReturnValue(profile);
+      (/** @type {any} */ (DataAccess.getMember)).mockReturnValue(profile);
 
       const result = ProfileManagementService.Api.handleGetProfile({
         _authenticatedEmail: 'test@example.com'
@@ -198,7 +198,7 @@ describe('ProfileManagementService.Api', () => {
 
     test('includes membership fields and formatted dates', () => {
       const profile = TestData.createProfile();
-      DataAccess.getMember.mockReturnValue(profile);
+      (/** @type {any} */ (DataAccess.getMember)).mockReturnValue(profile);
 
       const result = ProfileManagementService.Api.handleGetProfile({
         _authenticatedEmail: 'test@example.com'
@@ -228,7 +228,7 @@ describe('ProfileManagementService.Api', () => {
     });
 
     test('returns error when profile not found', () => {
-      DataAccess.getMember.mockReturnValue(null);
+      (/** @type {any} */ (DataAccess.getMember)).mockReturnValue(null);
 
       const result = ProfileManagementService.Api.handleGetProfile({
         _authenticatedEmail: 'unknown@example.com'
@@ -239,7 +239,7 @@ describe('ProfileManagementService.Api', () => {
     });
 
     test('handles getMember error gracefully', () => {
-      DataAccess.getMember.mockImplementation(() => {
+      (/** @type {any} */ (DataAccess.getMember)).mockImplementation(() => {
         throw new Error('Database error');
       });
 
@@ -253,7 +253,7 @@ describe('ProfileManagementService.Api', () => {
 
     test('normalizes email to lowercase', () => {
       const profile = TestData.createProfile();
-      DataAccess.getMember.mockReturnValue(profile);
+      (/** @type {any} */ (DataAccess.getMember)).mockReturnValue(profile);
 
       ProfileManagementService.Api.handleGetProfile({
         _authenticatedEmail: 'TEST@EXAMPLE.COM'
@@ -268,7 +268,7 @@ describe('ProfileManagementService.Api', () => {
   describe('handleGetEditableFields', () => {
     test('returns editable fields for authenticated user', () => {
       const profile = TestData.createProfile();
-      DataAccess.getMember.mockReturnValue(profile);
+      (/** @type {any} */ (DataAccess.getMember)).mockReturnValue(profile);
 
       const result = ProfileManagementService.Api.handleGetEditableFields({
         _authenticatedEmail: 'test@example.com'
@@ -284,7 +284,7 @@ describe('ProfileManagementService.Api', () => {
 
     test('returns field schema', () => {
       const profile = TestData.createProfile();
-      DataAccess.getMember.mockReturnValue(profile);
+      (/** @type {any} */ (DataAccess.getMember)).mockReturnValue(profile);
 
       const result = ProfileManagementService.Api.handleGetEditableFields({
         _authenticatedEmail: 'test@example.com'
@@ -304,7 +304,7 @@ describe('ProfileManagementService.Api', () => {
     });
 
     test('returns error when profile not found', () => {
-      DataAccess.getMember.mockReturnValue(null);
+      (/** @type {any} */ (DataAccess.getMember)).mockReturnValue(null);
 
       const result = ProfileManagementService.Api.handleGetEditableFields({
         _authenticatedEmail: 'unknown@example.com'
@@ -320,8 +320,8 @@ describe('ProfileManagementService.Api', () => {
   describe('handleUpdateProfile', () => {
     test('successfully updates profile', () => {
       const profile = TestData.createProfile();
-      DataAccess.getMember.mockReturnValue(profile);
-      DataAccess.updateMember.mockReturnValue(true);
+      (/** @type {any} */ (DataAccess.getMember)).mockReturnValue(profile);
+      (/** @type {any} */ (DataAccess.updateMember)).mockReturnValue(true);
 
       const result = ProfileManagementService.Api.handleUpdateProfile({
         _authenticatedEmail: 'test@example.com',
@@ -337,8 +337,8 @@ describe('ProfileManagementService.Api', () => {
 
     test('calls updateMember with merged profile', () => {
       const profile = TestData.createProfile();
-      DataAccess.getMember.mockReturnValue(profile);
-      DataAccess.updateMember.mockReturnValue(true);
+      (/** @type {any} */ (DataAccess.getMember)).mockReturnValue(profile);
+      (/** @type {any} */ (DataAccess.updateMember)).mockReturnValue(true);
 
       ProfileManagementService.Api.handleUpdateProfile({
         _authenticatedEmail: 'test@example.com',
@@ -384,7 +384,7 @@ describe('ProfileManagementService.Api', () => {
     });
 
     test('returns error when profile not found', () => {
-      DataAccess.getMember.mockReturnValue(null);
+      (/** @type {any} */ (DataAccess.getMember)).mockReturnValue(null);
 
       const result = ProfileManagementService.Api.handleUpdateProfile({
         _authenticatedEmail: 'unknown@example.com',
@@ -397,7 +397,7 @@ describe('ProfileManagementService.Api', () => {
 
     test('returns error when updating forbidden field', () => {
       const profile = TestData.createProfile();
-      DataAccess.getMember.mockReturnValue(profile);
+      (/** @type {any} */ (DataAccess.getMember)).mockReturnValue(profile);
 
       const result = ProfileManagementService.Api.handleUpdateProfile({
         _authenticatedEmail: 'test@example.com',
@@ -410,7 +410,7 @@ describe('ProfileManagementService.Api', () => {
 
     test('returns error when validation fails', () => {
       const profile = TestData.createProfile();
-      DataAccess.getMember.mockReturnValue(profile);
+      (/** @type {any} */ (DataAccess.getMember)).mockReturnValue(profile);
 
       const result = ProfileManagementService.Api.handleUpdateProfile({
         _authenticatedEmail: 'test@example.com',
@@ -423,8 +423,8 @@ describe('ProfileManagementService.Api', () => {
 
     test('handles updateMember error gracefully', () => {
       const profile = TestData.createProfile();
-      DataAccess.getMember.mockReturnValue(profile);
-      DataAccess.updateMember.mockImplementation(() => {
+      (/** @type {any} */ (DataAccess.getMember)).mockReturnValue(profile);
+      (/** @type {any} */ (DataAccess.updateMember)).mockImplementation(() => {
         throw new Error('Database error');
       });
 
@@ -439,8 +439,8 @@ describe('ProfileManagementService.Api', () => {
 
     test('logs successful update', () => {
       const profile = TestData.createProfile();
-      DataAccess.getMember.mockReturnValue(profile);
-      DataAccess.updateMember.mockReturnValue(true);
+      (/** @type {any} */ (DataAccess.getMember)).mockReturnValue(profile);
+      (/** @type {any} */ (DataAccess.updateMember)).mockReturnValue(true);
 
       ProfileManagementService.Api.handleUpdateProfile({
         _authenticatedEmail: 'test@example.com',
@@ -456,8 +456,8 @@ describe('ProfileManagementService.Api', () => {
 
     test('normalizes email to lowercase before lookup', () => {
       const profile = TestData.createProfile();
-      DataAccess.getMember.mockReturnValue(profile);
-      DataAccess.updateMember.mockReturnValue(true);
+      (/** @type {any} */ (DataAccess.getMember)).mockReturnValue(profile);
+      (/** @type {any} */ (DataAccess.updateMember)).mockReturnValue(true);
 
       ProfileManagementService.Api.handleUpdateProfile({
         _authenticatedEmail: 'TEST@EXAMPLE.COM',

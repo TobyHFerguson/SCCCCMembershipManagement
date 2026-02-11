@@ -112,7 +112,7 @@ describe('DataAccess.getTransactions', () => {
     ];
 
     const { sheet } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const transactions = global.DataAccess.getTransactions();
 
@@ -130,7 +130,7 @@ describe('DataAccess.getTransactions', () => {
     ];
 
     const { sheet } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const transactions = global.DataAccess.getTransactions();
 
@@ -141,7 +141,7 @@ describe('DataAccess.getTransactions', () => {
   test('should return empty array when sheet is completely empty', () => {
     // SheetAccess.getDataAsArrays returns empty array for empty sheet
     const { sheet } = createMockSheet([[]]);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const transactions = global.DataAccess.getTransactions();
 
@@ -158,7 +158,7 @@ describe('DataAccess.getTransactions', () => {
     ];
 
     const { sheet } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const transactions = global.DataAccess.getTransactions();
 
@@ -175,7 +175,7 @@ describe('DataAccess.getTransactions', () => {
     ];
 
     const { sheet } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     // Spy on SheetAccess.getDataAsArrays
     const spy = jest.spyOn(SheetAccess, 'getDataAsArrays');
@@ -202,7 +202,7 @@ describe('DataAccess.getTransactionsForUpdate', () => {
     ];
 
     const { sheet } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const result = global.DataAccess.getTransactionsForUpdate();
 
@@ -228,7 +228,7 @@ describe('DataAccess.getTransactionsForUpdate', () => {
     ];
 
     const { sheet } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const result = global.DataAccess.getTransactionsForUpdate();
 
@@ -239,7 +239,7 @@ describe('DataAccess.getTransactionsForUpdate', () => {
 
   test('should return empty result when sheet has no data', () => {
     const { sheet } = createMockSheet([[]]);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const result = global.DataAccess.getTransactionsForUpdate();
 
@@ -256,7 +256,7 @@ describe('DataAccess.getTransactionsForUpdate', () => {
     ];
 
     const { sheet } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const result = global.DataAccess.getTransactionsForUpdate();
 
@@ -273,7 +273,7 @@ describe('DataAccess.getTransactionsForUpdate', () => {
     ];
 
     const { sheet } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const result = global.DataAccess.getTransactionsForUpdate();
 
@@ -288,7 +288,7 @@ describe('DataAccess.getTransactionsForUpdate', () => {
     ];
 
     const { sheet, mockRange } = createMockSheet(sheetValues);
-    global.SpreadsheetManager.getSheet.mockReturnValue(sheet);
+    (/** @type {any} */ (global.SpreadsheetManager.getSheet)).mockReturnValue(sheet);
 
     const result = global.DataAccess.getTransactionsForUpdate();
 
