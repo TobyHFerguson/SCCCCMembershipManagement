@@ -8,9 +8,16 @@ const _LAYOUT_FILE = 'common/html/_Layout.html'; // Name of the layout file
  * No query parameters required - this is the single entry point.
  * 
  * @param {GoogleAppsScript.Events.DoGet} e 
- * @returns {GoogleAppsScript.HTML.HtmlOutput}
+ * @returns {GoogleAppsScript.HTML.HtmlOutput | GoogleAppsScript.Content.TextOutput}
  */
 function doGet(e) {
+    // Deployment verification endpoint — returns JSON, no auth required
+    if (e && e.parameter && e.parameter.verify === '1') {
+        const result = verifyAll();
+        return ContentService.createTextOutput(JSON.stringify(result))
+            .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // Configure logger for web app execution
     AppLogger.configure();
     AppLogger.info('WebApp', 'doGet() called');

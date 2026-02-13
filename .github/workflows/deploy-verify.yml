@@ -1,0 +1,104 @@
+# Deploy to staging and run GAS verification
+#
+# Pushes code to the dev GAS project, creates a versioned staging deployment,
+# then hits the web app's ?verify=1 endpoint to run verifyAll().
+#
+# The staging deployment is versioned and publicly accessible (ANYONE_ANONYMOUS),
+# unlike the @HEAD deployment which requires domain authentication.
+#
+# Required repository secrets (see docs/CI_SETUP.md):
+#   CLASP_CREDENTIALS   - Contents of .clasp-credentials.json (OAuth token for clasp push/deploy)
+#   CLASP_DEV_SCRIPT_ID - GAS script ID for the dev environment
+#
+# Required repository variable:
+#   GAS_STAGING_DEPLOYMENT_URL - Full URL to the staging deployment /exec endpoint
+#
+name: Deploy & Verify (Staging)
+
+on:
+  workflow_dispatch:  # Manual trigger
+  workflow_run:       # Auto-trigger after CI passes
+    workflows: ['CI']
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy-and-verify:
+    runs-on: ubuntu-latest
+    # Only run if CI succeeded (for auto-trigger) or always for manual trigger
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install clasp
+        run: npm install -g @google/clasp
+
+      - name: Configure clasp credentials
+        run: |
+          echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
+
+      - name: Configure clasp project (dev)
+        run: |
+          echo '{"scriptId":"${{ secrets.CLASP_DEV_SCRIPT_ID }}","rootDir":"src"}' > .clasp.json
+
+      - name: Push to GAS environment
+        run: clasp push
+
+      - name: Create version and deploy to staging
+        run: |
+          # Create a new version
+          VERSION_OUTPUT=$(clasp version "CI deploy - $(git rev-parse --short HEAD) - $(date -u '+%Y-%m-%d %H:%M:%S UTC')")
+          echo "$VERSION_OUTPUT"
+          VERSION_NUM=$(echo "$VERSION_OUTPUT" | grep -oP '(?<=Created version )\d+')
+          echo "Created version: $VERSION_NUM"
+
+          # Deploy to staging deployment
+          STAGING_DEPLOY_ID=$(node -e "console.log(require('./package.json').config.CLASP_STAGING_DEPLOYMENT_ID)")
+          clasp deploy --deploymentId "$STAGING_DEPLOY_ID" --versionNumber "$VERSION_NUM" --description "Staging"
+
+      - name: Wait for deployment propagation
+        run: sleep 5
+
+      - name: Run GAS verification via web app
+        run: node scripts/run-gas-verification.js
+        env:
+          GAS_VERIFY_URL: ${{ vars.GAS_STAGING_DEPLOYMENT_URL }}
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ -f gas-verification-results.json ]; then
+            echo "## GAS Deployment Verification Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            node -e "
+              const r = require('./gas-verification-results.json');
+              console.log('| Metric | Value |');
+              console.log('|--------|-------|');
+              console.log('| Total checks | ' + r.total + ' |');
+              console.log('| Passed | ' + r.passed + ' |');
+              console.log('| Failed | ' + r.failed + ' |');
+              console.log('| Timestamp | ' + r.timestamp + ' |');
+              console.log('');
+              if (r.failed > 0) {
+                console.log('### Failed Checks');
+                console.log('');
+                r.checks.filter(c => !c.passed).forEach(c => {
+                  console.log('- **' + c.category + '**: ' + c.name + ' — ' + c.error);
+                });
+              }
+            " >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ No verification results file found" >> $GITHUB_STEP_SUMMARY
+          fi
