@@ -1,7 +1,8 @@
 # Deploy to staging and run GAS verification
 #
-# Pushes code to the dev GAS project, creates a versioned staging deployment,
-# then hits the web app's ?verify=1 endpoint to run verifyAll().
+# Pushes code to the dev GAS project, creates a versioned staging deployment
+# (or reuses existing "CI-Staging" deployment), then hits the web app's 
+# ?verify=1 endpoint to run verifyAll().
 #
 # The staging deployment is versioned and publicly accessible (ANYONE_ANONYMOUS),
 # unlike the @HEAD deployment which requires domain authentication.
@@ -12,6 +13,7 @@
 #
 # Required repository variable:
 #   GAS_STAGING_DEPLOYMENT_URL - Full URL to the staging deployment /exec endpoint
+#                                (update after first run with deployment ID from summary)
 #
 name: Deploy & Verify (Staging)
 
@@ -71,9 +73,24 @@ jobs:
           VERSION_NUM=$(echo "$VERSION_OUTPUT" | grep -oP '(?<=Created version )\d+')
           echo "Created version: $VERSION_NUM"
 
-          # Deploy to staging deployment
-          STAGING_DEPLOY_ID=$(node -e "console.log(require('./package.json').config.CLASP_STAGING_DEPLOYMENT_ID)")
-          clasp deploy --deploymentId "$STAGING_DEPLOY_ID" --versionNumber "$VERSION_NUM" --description "Staging"
+          # Get or create staging deployment
+          DEPLOYMENTS=$(clasp deployments)
+          if echo "$DEPLOYMENTS" | grep -q "CI-Staging"; then
+            # Extract existing staging deployment ID
+            STAGING_DEPLOY_ID=$(echo "$DEPLOYMENTS" | grep "CI-Staging" | awk '{print $2}')
+            echo "Using existing staging deployment: $STAGING_DEPLOY_ID"
+            clasp deploy --deploymentId "$STAGING_DEPLOY_ID" --versionNumber "$VERSION_NUM" --description "CI-Staging"
+          else
+            # Create new staging deployment
+            echo "Creating new staging deployment..."
+            DEPLOY_OUTPUT=$(clasp deploy --versionNumber "$VERSION_NUM" --description "CI-Staging")
+            echo "$DEPLOY_OUTPUT"
+            STAGING_DEPLOY_ID=$(echo "$DEPLOY_OUTPUT" | grep -oP 'AKfycb[a-zA-Z0-9_-]+')
+            echo "Created new staging deployment: $STAGING_DEPLOY_ID"
+          fi
+          
+          # Save deployment ID to outputs for next steps
+          echo "STAGING_DEPLOYMENT_ID=$STAGING_DEPLOY_ID" >> $GITHUB_ENV
 
       - name: Wait for deployment propagation
         run: sleep 5
@@ -108,4 +125,11 @@ jobs:
             " >> $GITHUB_STEP_SUMMARY
           else
             echo "⚠️ No verification results file found" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Show deployment ID for reference
+          if [ -n "$STAGING_DEPLOYMENT_ID" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## Deployment Info" >> $GITHUB_STEP_SUMMARY
+            echo "Staging Deployment ID: \`$STAGING_DEPLOYMENT_ID\`" >> $GITHUB_STEP_SUMMARY
           fi
