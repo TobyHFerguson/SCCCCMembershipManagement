@@ -48,6 +48,11 @@ npm run verify-rules        # Check all code rules (universal + project-specific
 npm run validate-all        # Full pipeline: typecheck + verify-rules + tests
 ```
 
+**CI/CD Pipeline** (runs automatically on PRs):
+- **CI workflow**: typecheck + verify-rules + npm test (Node.js only)
+- **Deploy & Verify workflow**: pushes to GAS staging, runs `verifyAll()` (129+ structural + E2E checks)
+- Both must be green before merge. See `docs/CI_SETUP.md`.
+
 **Linting:**
 ```bash
 # Prettier auto-formats on save (config in .prettierrc.js)
@@ -63,7 +68,7 @@ npm run dev:deploy          # Deploy to dev test deployment
 npm run stage:deploy        # Full staging deploy (push + version + redeploy)
 npm run prod:deploy-live    # Production deploy with git versioning
 ```
-
+)
 ---
 
 ## Project-Specific Boundaries
@@ -77,11 +82,14 @@ npm run prod:deploy-live    # Production deploy with git versioning
 - Use `AppLogger` in Layer 0 modules (SpreadsheetManager.js, Properties.js, Logger.js) - creates circular dependency
 - Throw exceptions from Manager methods - **return errors as data** instead (allows partial success handling)
 - Skip tests when modifying Manager class business logic
-- Open a PR without running `npm test` and ensuring all tests pass
+- Open a PR without running `npm run validate-all` and ensuring it passes
+- Merge a PR while CI or Deploy & Verify workflows are failing
+- Run clasp commands directly — **CI/CD handles GAS deployment and verification**
 - Modify production configuration without review
 
 **ALWAYS (SCCCCMembershipManagement-specific)**:
-- Run `npm test` BEFORE every commit and verify all tests pass
+- Run `npm run validate-all` BEFORE every commit (typecheck + verify-rules + tests)
+- Wait for **both** CI and Deploy & Verify workflows to pass on your PR before considering work complete
 - Use `npm run {env}:*` scripts for deployment (never run clasp commands directly)
 - Use SheetAccess for ALL spreadsheet operations (wraps SpreadsheetManager/Fiddler)
 - Extract business logic into testable Manager classes
@@ -447,11 +455,26 @@ npm run stage:group-test    # Opens GroupManagementService in staging
 
 - **Branching**: Create feature branches for new features
 - **Commits**: Commit frequently with descriptive messages
-- **Testing**: ALL tests MUST pass before every commit (`npm test`)
-- **PR Requirement**: Run `npm test` and verify 100% pass before opening PR
+- **Local validation**: Run `npm run validate-all` before every commit (typecheck + rules + tests)
+- **PR Requirement**: Both CI and Deploy & Verify workflows must be green before merge
 - **Multi-phase work**: Use "References #issue" in PR description (NOT "Fixes #issue") to keep issue open
 - **Clean working directory**: Production deployments require clean git state
 - **Version tracking**: Use `clasp:create-version` for git tag/commit embedding
+
+### CI/CD Pipeline (CRITICAL for agents)
+
+When you push to a PR branch, two GitHub Actions workflows run automatically:
+
+1. **CI** (`ci.yml`): typecheck, verify-rules, npm test — validates Node.js logic
+2. **Deploy & Verify** (`deploy-verify.yml`): pushes code to GAS staging, runs `verifyAll()` which executes 129+ checks including:
+   - Namespace availability (all services loaded)
+   - Function existence (doGet, handleApiRequest, all API endpoints)
+   - GAS API integration (SpreadsheetApp, CacheService, MailApp, AdminDirectory)
+   - End-to-end pipeline (doGet returns HTML, token lifecycle, API routing)
+
+**Your work is NOT done until both workflows are green.** The Deploy & Verify workflow catches errors that local tests cannot — GAS runtime issues, namespace loading failures, missing function declarations, and API integration problems.
+
+**If Deploy & Verify fails**: Check the workflow summary for the specific failed checks. Fix the issues, push again, and wait for green.
 
 ---
 

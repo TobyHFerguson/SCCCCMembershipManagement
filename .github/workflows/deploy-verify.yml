@@ -17,7 +17,9 @@ name: Deploy & Verify (Staging)
 
 on:
   workflow_dispatch:  # Manual trigger
-  workflow_run:       # Auto-trigger after CI passes
+  pull_request:       # Run on PRs to verify GAS deployment before merge
+    branches: [main]
+  workflow_run:       # Auto-trigger after CI passes on main
     workflows: ['CI']
     types: [completed]
     branches: [main]
@@ -25,8 +27,13 @@ on:
 jobs:
   deploy-and-verify:
     runs-on: ubuntu-latest
-    # Only run if CI succeeded (for auto-trigger) or always for manual trigger
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # Run for: manual trigger, PRs, or auto-trigger after CI passes on main
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'pull_request' ||
+        github.event.workflow_run.conclusion == 'success'
+      }}
     timeout-minutes: 10
 
     steps:
