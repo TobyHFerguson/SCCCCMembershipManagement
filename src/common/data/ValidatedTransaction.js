@@ -29,10 +29,11 @@ var ValidatedTransaction = (function() {
    * @param {string} payableStatus - Payment status (optional, e.g., "Paid", "Pending")
    * @param {Date | string | null} processed - Date when transaction was processed (optional)
    * @param {Date | string | null} timestamp - Transaction timestamp (optional)
+   * @param {string | null} [memberId] - Member ID in format SC3-XXXXX (optional, null for new members)
    * @param {{'Are you 18 years of age or older?'?: *, Privacy?: *, 'Membership Agreement'?: *, 'Payable Order ID'?: *, 'Payable Total'?: *, 'Payable Payment Method'?: *, 'Payable Transaction ID'?: *, 'Payable Last Updated'?: *}} [passthrough] - Additional sheet columns stored as-is for round-trip persistence
    */
   class ValidatedTransaction {
-    constructor(emailAddress, firstName, lastName, phone, payment, directory, payableStatus, processed, timestamp, passthrough = {}) {
+    constructor(emailAddress, firstName, lastName, phone, payment, directory, payableStatus, processed, timestamp, memberId = null, passthrough = {}) {
       // Validate email address (required)
       if (typeof emailAddress !== 'string' || emailAddress.trim() === '') {
         throw new Error(`ValidatedTransaction email address is required, got: ${typeof emailAddress} "${emailAddress}"`);
@@ -104,6 +105,10 @@ var ValidatedTransaction = (function() {
         this.Timestamp = timestamp;
       }
 
+      // Handle optional Member ID
+      /** @type {string|null} */
+      this['Member ID'] = (typeof memberId === 'string' && memberId.trim() !== '') ? memberId.trim() : null;
+
       // Passthrough fields — stored as-is for round-trip persistence to sheet
       this['Are you 18 years of age or older?'] = passthrough['Are you 18 years of age or older?'] ?? '';
       this.Privacy = passthrough.Privacy ?? '';
@@ -123,9 +128,9 @@ var ValidatedTransaction = (function() {
 
     /**
      * Convert ValidatedTransaction to array format for spreadsheet persistence
-     * Column order matches HEADERS constant (all 17 sheet columns)
+     * Column order matches HEADERS constant (all 18 sheet columns)
      * 
-     * @returns {Array<string|Date|number|null>} Array with 17 elements matching sheet columns
+     * @returns {Array<string|Date|number|null>} Array with 18 elements matching sheet columns
      */
     toArray() {
       return [
@@ -145,7 +150,8 @@ var ValidatedTransaction = (function() {
         this['Payable Payment Method'],
         this['Payable Transaction ID'],
         this['Payable Last Updated'],
-        this.Processed
+        this.Processed,
+        this['Member ID']
       ];
     }
 
@@ -171,7 +177,8 @@ var ValidatedTransaction = (function() {
         'Payable Payment Method',
         'Payable Transaction ID',
         'Payable Last Updated',
-        'Processed'
+        'Processed',
+        'Member ID'
       ];
     }
 
@@ -204,6 +211,7 @@ var ValidatedTransaction = (function() {
         const payableStatus = rowObj['Payable Status'];
         const processed = rowObj['Processed'];
         const timestamp = rowObj['Timestamp'];
+        const memberId = rowObj['Member ID'];
         
         // Passthrough fields — stored as-is for round-trip persistence
         const passthrough = {
@@ -221,7 +229,7 @@ var ValidatedTransaction = (function() {
         const txn = new ValidatedTransaction(
           emailAddress, firstName, lastName, phone, payment,
           directory, payableStatus, processed, timestamp,
-          passthrough
+          memberId, passthrough
         );
 
         // Store original row metadata for selective write-back

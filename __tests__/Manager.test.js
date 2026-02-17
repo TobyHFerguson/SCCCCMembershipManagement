@@ -89,7 +89,8 @@ const TestData = {
       Phone: '(123) 456-7890',
       Directory: 'share name',
       Processed: null,
-      Timestamp: null
+      Timestamp: null,
+      'Member ID': null
     };
     const data = { ...defaults, ...overrides };
     
@@ -106,7 +107,8 @@ const TestData = {
       data.Directory,
       data["Payable Status"],
       processed,
-      timestamp
+      timestamp,
+      data['Member ID']
     ));
   },
 

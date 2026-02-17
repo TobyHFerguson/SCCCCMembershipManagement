@@ -252,6 +252,128 @@ describe('ValidatedTransaction Class', () => {
     
   });
   
+  describe('Member ID Field', () => {
+    
+    test('should store valid Member ID when provided', () => {
+      const txn = new ValidatedTransaction(
+        'test@example.com',
+        'John',
+        'Doe',
+        '(555) 555-5555',
+        '1 year',
+        'Share Name',
+        'Paid',
+        null,
+        null,
+        'SC3-A7K3M'
+      );
+      
+      expect(txn['Member ID']).toBe('SC3-A7K3M');
+    });
+    
+    test('should trim whitespace from Member ID', () => {
+      const txn = new ValidatedTransaction(
+        'test@example.com',
+        'John',
+        'Doe',
+        '(555) 555-5555',
+        '1 year',
+        'Share Name',
+        'Paid',
+        null,
+        null,
+        '  SC3-B8M4N  '
+      );
+      
+      expect(txn['Member ID']).toBe('SC3-B8M4N');
+    });
+    
+    test('should store null when Member ID is null', () => {
+      const txn = new ValidatedTransaction(
+        'test@example.com',
+        'John',
+        'Doe',
+        '(555) 555-5555',
+        '1 year',
+        'Share Name',
+        'Paid',
+        null,
+        null,
+        null
+      );
+      
+      expect(txn['Member ID']).toBe(null);
+    });
+    
+    test('should store null when Member ID is undefined (backward compat)', () => {
+      const txn = new ValidatedTransaction(
+        'test@example.com',
+        'John',
+        'Doe',
+        '(555) 555-5555',
+        '1 year',
+        'Share Name',
+        'Paid',
+        null,
+        null,
+        undefined
+      );
+      
+      expect(txn['Member ID']).toBe(null);
+    });
+    
+    test('should store null when Member ID is empty string', () => {
+      const txn = new ValidatedTransaction(
+        'test@example.com',
+        'John',
+        'Doe',
+        '(555) 555-5555',
+        '1 year',
+        'Share Name',
+        'Paid',
+        null,
+        null,
+        ''
+      );
+      
+      expect(txn['Member ID']).toBe(null);
+    });
+    
+    test('should store null when Member ID is whitespace-only string', () => {
+      const txn = new ValidatedTransaction(
+        'test@example.com',
+        'John',
+        'Doe',
+        '(555) 555-5555',
+        '1 year',
+        'Share Name',
+        'Paid',
+        null,
+        null,
+        '   '
+      );
+      
+      expect(txn['Member ID']).toBe(null);
+    });
+    
+    test('should omit Member ID parameter (backward compat)', () => {
+      const txn = new ValidatedTransaction(
+        'test@example.com',
+        'John',
+        'Doe',
+        '(555) 555-5555',
+        '1 year',
+        'Share Name',
+        'Paid',
+        null,
+        null
+      );
+      
+      expect(txn['Member ID']).toBe(null);
+    });
+    
+  });
+  
   describe('fromRow() Static Factory', () => {
     
     const headers = [
@@ -433,9 +555,9 @@ describe('ValidatedTransaction Class', () => {
     });
 
     test('should work correctly when sheet columns are in different order than HEADERS (column-order independence)', () => {
-      // Arrange: Use ALL 17 HEADERS columns in REVERSED order
+      // Arrange: Use ALL 18 HEADERS columns in REVERSED order
       const shuffledHeaders = [...ValidatedTransaction.HEADERS].reverse();
-      // shuffledHeaders = ['Processed', 'Payable Last Updated', ..., 'Timestamp']
+      // shuffledHeaders = ['Member ID', 'Processed', 'Payable Last Updated', ..., 'Timestamp']
 
       const processed = new Date('2023-12-15');
       const timestamp = new Date('2023-12-01');
@@ -458,7 +580,8 @@ describe('ValidatedTransaction Class', () => {
         'Payable Payment Method': 'Credit Card',
         'Payable Transaction ID': 'TXN-456',
         'Payable Last Updated': '2023-12-15',
-        'Processed': processed
+        'Processed': processed,
+        'Member ID': 'SC3-A7K3M'
       };
 
       // Build row array in shuffled header order
@@ -499,6 +622,39 @@ describe('ValidatedTransaction Class', () => {
       // Verify instance type preservation
       expect(txn).toBeInstanceOf(ValidatedTransaction);
       expect(typeof txn.toArray).toBe('function');
+    });
+    
+    test('should handle missing Member ID column (backward compatibility)', () => {
+      // Headers without Member ID column (old sheet format)
+      const oldHeaders = [
+        'Email Address',
+        'First Name',
+        'Last Name',
+        'Phone',
+        'Payment',
+        'Directory',
+        'Payable Status',
+        'Processed',
+        'Timestamp'
+      ];
+      
+      const row = [
+        'test@example.com',
+        'John',
+        'Doe',
+        '(555) 555-5555',
+        '1 year',
+        'Share Name',
+        'Paid',
+        null,
+        new Date('2023-12-01')
+      ];
+      
+      const txn = ValidatedTransaction.fromRow(row, oldHeaders, 2, null);
+      
+      expect(txn).not.toBeNull();
+      expect(txn['Email Address']).toBe('test@example.com');
+      expect(txn['Member ID']).toBe(null); // Should be null when column missing
     });
     
   });
@@ -658,7 +814,8 @@ describe('ValidatedTransaction Class', () => {
         'Share Name, Share Email, Share Phone',
         'Paid',
         processed,
-        timestamp
+        timestamp,
+        'SC3-A7K3M'
       );
       
       const array = txn.toArray();
@@ -680,7 +837,8 @@ describe('ValidatedTransaction Class', () => {
         '',                                     // Payable Payment Method
         '',                                     // Payable Transaction ID
         '',                                     // Payable Last Updated
-        processed                               // Processed
+        processed,                              // Processed
+        'SC3-A7K3M'                             // Member ID
       ]);
     });
     
@@ -699,7 +857,7 @@ describe('ValidatedTransaction Class', () => {
       
       const array = txn.toArray();
       
-      expect(array.length).toBe(17);
+      expect(array.length).toBe(18);
       expect(array[0]).toBe(null);              // Timestamp
       expect(array[1]).toBe('test@example.com'); // Email Address
       expect(array[5]).toBe('');                // Directory
@@ -709,6 +867,7 @@ describe('ValidatedTransaction Class', () => {
       expect(array[9]).toBe('');                // Payment
       expect(array[12]).toBe('');               // Payable Status
       expect(array[16]).toBe(null);             // Processed
+      expect(array[17]).toBe(null);             // Member ID
     });
     
   });
@@ -737,7 +896,8 @@ describe('ValidatedTransaction Class', () => {
         'Credit Card',                          // Payable Payment Method
         'TXN-12345',                            // Payable Transaction ID
         '2023-12-10',                           // Payable Last Updated
-        processed                               // Processed
+        processed,                              // Processed
+        'SC3-A7K3M'                             // Member ID
       ];
       
       const txn = ValidatedTransaction.fromRow(originalRow, headers, 2, null);
@@ -771,11 +931,12 @@ describe('ValidatedTransaction Class', () => {
         'Payable Payment Method',
         'Payable Transaction ID',
         'Payable Last Updated',
-        'Processed'
+        'Processed',
+        'Member ID'
       ]);
     });
     
-    test('should have 17 headers matching toArray() output length', () => {
+    test('should have 18 headers matching toArray() output length', () => {
       const txn = new ValidatedTransaction(
         'test@example.com',
         'John',
@@ -790,7 +951,7 @@ describe('ValidatedTransaction Class', () => {
       
       const array = txn.toArray();
       expect(array.length).toBe(ValidatedTransaction.HEADERS.length);
-      expect(array.length).toBe(17);
+      expect(array.length).toBe(18);
     });
     
   });
