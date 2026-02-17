@@ -410,15 +410,82 @@ describe('ValidatedMember Class', () => {
       expect(member3['Renewed On']).toBe(null);
     });
     
+    test('should accept memberId string and store as Member ID', () => {
+      const member = new ValidatedMember(
+        'test@example.com', 'Active', 'John', 'Doe', '',
+        new Date('2023-01-15'), new Date('2024-01-15'),
+        null, null, false, false, false, null, 'SC3-A7K3M'
+      );
+      
+      expect(member['Member ID']).toBe('SC3-A7K3M');
+    });
+    
+    test('should accept null memberId and store null', () => {
+      const member = new ValidatedMember(
+        'test@example.com', 'Active', 'John', 'Doe', '',
+        new Date('2023-01-15'), new Date('2024-01-15'),
+        null, null, false, false, false, null, null
+      );
+      
+      expect(member['Member ID']).toBe(null);
+    });
+    
+    test('should accept undefined/omitted memberId and store null (backward compat)', () => {
+      const member1 = new ValidatedMember(
+        'test@example.com', 'Active', 'John', 'Doe', '',
+        new Date('2023-01-15'), new Date('2024-01-15'),
+        null, null, false, false, false, null, undefined
+      );
+      expect(member1['Member ID']).toBe(null);
+      
+      // Omitted parameter (relies on default)
+      const member2 = new ValidatedMember(
+        'test@example.com', 'Active', 'John', 'Doe', '',
+        new Date('2023-01-15'), new Date('2024-01-15'),
+        null, null, false, false, false, null
+      );
+      expect(member2['Member ID']).toBe(null);
+    });
+    
+    test('should convert empty string memberId to null', () => {
+      const member = new ValidatedMember(
+        'test@example.com', 'Active', 'John', 'Doe', '',
+        new Date('2023-01-15'), new Date('2024-01-15'),
+        null, null, false, false, false, null, ''
+      );
+      
+      expect(member['Member ID']).toBe(null);
+    });
+    
+    test('should convert whitespace-only memberId to null', () => {
+      const member = new ValidatedMember(
+        'test@example.com', 'Active', 'John', 'Doe', '',
+        new Date('2023-01-15'), new Date('2024-01-15'),
+        null, null, false, false, false, null, '   '
+      );
+      
+      expect(member['Member ID']).toBe(null);
+    });
+    
+    test('should trim whitespace from memberId', () => {
+      const member = new ValidatedMember(
+        'test@example.com', 'Active', 'John', 'Doe', '',
+        new Date('2023-01-15'), new Date('2024-01-15'),
+        null, null, false, false, false, null, '  SC3-A7K3M  '
+      );
+      
+      expect(member['Member ID']).toBe('SC3-A7K3M');
+    });
+    
   });
   
   describe('fromRow() Static Factory', () => {
     
     const headers = [
       'Status', 'Email', 'First', 'Last', 'Phone',
-      'Joined', 'Expires', 'Period',
+      'Joined', 'Expires', 'Period', 'Migrated',
       'Directory Share Name', 'Directory Share Email', 'Directory Share Phone',
-      'Renewed On'
+      'Renewed On', 'Member ID'
     ];
     
     beforeEach(() => {
@@ -452,10 +519,12 @@ describe('ValidatedMember Class', () => {
         new Date('2023-01-15'),
         new Date('2024-01-15'),
         12,
+        null,
         true,
         false,
         true,
-        new Date('2023-12-01')
+        new Date('2023-12-01'),
+        'SC3-A7K3M'
       ];
       
       const member = ValidatedMember.fromRow(row, headers, 2, null);
@@ -465,6 +534,7 @@ describe('ValidatedMember Class', () => {
       expect(member.Status).toBe('Active');
       expect(member.First).toBe('John');
       expect(member.Last).toBe('Doe');
+      expect(member['Member ID']).toBe('SC3-A7K3M');
     });
     
     test('should return null for row with missing required field', () => {
@@ -477,9 +547,11 @@ describe('ValidatedMember Class', () => {
         new Date('2023-01-15'),
         new Date('2024-01-15'),
         12,
+        null,
         true,
         false,
         true,
+        null,
         null
       ];
       
@@ -502,9 +574,11 @@ describe('ValidatedMember Class', () => {
         new Date('2023-01-15'),
         new Date('2024-01-15'),
         12,
+        null,
         true,
         false,
         true,
+        null,
         null
       ];
       
@@ -528,10 +602,12 @@ describe('ValidatedMember Class', () => {
         new Date('2023-01-15'),
         new Date('2024-01-15'),
         null, // No period
+        null, // No migrated
         false,
         false,
         false,
-        null // No renewed date
+        null, // No renewed date
+        null  // No member ID
       ];
       
       const member = ValidatedMember.fromRow(row, headers, 2, null);
@@ -540,6 +616,7 @@ describe('ValidatedMember Class', () => {
       expect(member.Phone).toBe('');
       expect(member.Period).toBe(null);
       expect(member['Renewed On']).toBe(null);
+      expect(member['Member ID']).toBe(null);
     });
     
     test('should handle Date object in Period column (cell formatting corruption)', () => {
@@ -554,10 +631,12 @@ describe('ValidatedMember Class', () => {
         new Date('2023-01-15'),
         new Date('2024-01-15'),
         new Date('1899-12-31'), // Period as Date (serial number 1 corrupted by cell format)
+        null,   // Migrated
         true,   // Directory Share Name
         false,  // Directory Share Email
         true,   // Directory Share Phone
-        null    // Renewed On
+        null,   // Renewed On
+        null    // Member ID
       ];
       
       const member = ValidatedMember.fromRow(row, headers, 2, null);
@@ -567,15 +646,47 @@ describe('ValidatedMember Class', () => {
       expect(member.Period).toBe(null);
     });
     
+    test('should handle fromRow without Member ID column (backward compat)', () => {
+      // Old headers without Member ID
+      const oldHeaders = [
+        'Status', 'Email', 'First', 'Last', 'Phone',
+        'Joined', 'Expires', 'Period', 'Migrated',
+        'Directory Share Name', 'Directory Share Email', 'Directory Share Phone',
+        'Renewed On'
+      ];
+      
+      const row = [
+        'Active',
+        'test@example.com',
+        'John',
+        'Doe',
+        '555-1234',
+        new Date('2023-01-15'),
+        new Date('2024-01-15'),
+        12,
+        null,
+        true,
+        false,
+        true,
+        new Date('2023-12-01')
+      ];
+      
+      const member = ValidatedMember.fromRow(row, oldHeaders, 2, null);
+      
+      expect(member).not.toBeNull();
+      expect(member.Email).toBe('test@example.com');
+      expect(member['Member ID']).toBe(null); // Should be null when not in headers
+    });
+    
   });
   
   describe('validateRows() Batch Validation', () => {
     
     const headers = [
       'Status', 'Email', 'First', 'Last', 'Phone',
-      'Joined', 'Expires', 'Period',
+      'Joined', 'Expires', 'Period', 'Migrated',
       'Directory Share Name', 'Directory Share Email', 'Directory Share Phone',
-      'Renewed On'
+      'Renewed On', 'Member ID'
     ];
     
     beforeEach(() => {
@@ -606,9 +717,9 @@ describe('ValidatedMember Class', () => {
     
     test('should process all valid rows', () => {
       const rows = [
-        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, true, false, true, null],
-        ['Active', 'test2@example.com', 'Jane', 'Smith', '555-2222', new Date('2023-02-20'), new Date('2024-02-20'), 12, false, true, false, null],
-        ['Expired', 'test3@example.com', 'Bob', 'Jones', '', new Date('2022-01-10'), new Date('2023-01-10'), 12, true, true, true, null]
+        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, true, false, true, null, 'SC3-A1B2C'],
+        ['Active', 'test2@example.com', 'Jane', 'Smith', '555-2222', new Date('2023-02-20'), new Date('2024-02-20'), 12, null, false, true, false, null, 'SC3-D3E4F'],
+        ['Expired', 'test3@example.com', 'Bob', 'Jones', '', new Date('2022-01-10'), new Date('2023-01-10'), 12, null, true, true, true, null, null]
       ];
       
       const members = ValidatedMember.validateRows(rows, headers, 'test-context');
@@ -622,9 +733,9 @@ describe('ValidatedMember Class', () => {
     
     test('should skip invalid rows and continue processing', () => {
       const rows = [
-        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, true, false, true, null],
-        ['Active', 'not-an-email', 'Jane', 'Smith', '555-2222', new Date('2023-02-20'), new Date('2024-02-20'), 12, false, true, false, null], // Invalid
-        ['Active', 'test3@example.com', 'Bob', 'Jones', '', new Date('2022-01-10'), new Date('2023-01-10'), 12, true, true, true, null]
+        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, true, false, true, null, null],
+        ['Active', 'not-an-email', 'Jane', 'Smith', '555-2222', new Date('2023-02-20'), new Date('2024-02-20'), 12, null, false, true, false, null, null], // Invalid
+        ['Active', 'test3@example.com', 'Bob', 'Jones', '', new Date('2022-01-10'), new Date('2023-01-10'), 12, null, true, true, true, null, null]
       ];
       
       const members = ValidatedMember.validateRows(rows, headers, 'test-context');
@@ -636,9 +747,9 @@ describe('ValidatedMember Class', () => {
     
     test('should send consolidated email on validation errors', () => {
       const rows = [
-        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, true, false, true, null],
-        ['Active', 'not-an-email', 'Jane', 'Smith', '555-2222', new Date('2023-02-20'), new Date('2024-02-20'), 12, false, true, false, null], // Invalid email
-        ['Active', 'test3@example.com', '', 'Jones', '', new Date('2022-01-10'), new Date('2023-01-10'), 12, true, true, true, null] // Missing first name
+        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, true, false, true, null, null],
+        ['Active', 'not-an-email', 'Jane', 'Smith', '555-2222', new Date('2023-02-20'), new Date('2024-02-20'), 12, null, false, true, false, null, null], // Invalid email
+        ['Active', 'test3@example.com', '', 'Jones', '', new Date('2022-01-10'), new Date('2023-01-10'), 12, null, true, true, true, null, null] // Missing first name
       ];
       
       const members = ValidatedMember.validateRows(rows, headers, 'test-batch-context');
@@ -658,7 +769,7 @@ describe('ValidatedMember Class', () => {
     
     test('should not send email when all rows are valid', () => {
       const rows = [
-        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, true, false, true, null]
+        ['Active', 'test1@example.com', 'John', 'Doe', '555-1111', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, true, false, true, null, null]
       ];
       
       const members = ValidatedMember.validateRows(rows, headers, 'test-context');
@@ -676,7 +787,7 @@ describe('ValidatedMember Class', () => {
     
     test('should log warning when sending email', () => {
       const rows = [
-        ['Active', 'invalid', 'John', 'Doe', '', new Date('2023-01-15'), new Date('2024-01-15'), 12, false, false, false, null]
+        ['Active', 'invalid', 'John', 'Doe', '', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, false, false, false, null, null]
       ];
       
       ValidatedMember.validateRows(rows, headers, 'test-email-context');
@@ -693,7 +804,7 @@ describe('ValidatedMember Class', () => {
       });
       
       const rows = [
-        ['Active', 'invalid', 'John', 'Doe', '', new Date('2023-01-15'), new Date('2024-01-15'), 12, false, false, false, null]
+        ['Active', 'invalid', 'John', 'Doe', '', new Date('2023-01-15'), new Date('2024-01-15'), 12, null, false, false, false, null, null]
       ];
       
       const members = ValidatedMember.validateRows(rows, headers, 'test-context');
@@ -727,7 +838,8 @@ describe('ValidatedMember Class', () => {
         true,
         false,
         true,
-        renewedOn
+        renewedOn,
+        'SC3-A7K3M'
       );
       
       const array = member.toArray();
@@ -745,8 +857,10 @@ describe('ValidatedMember Class', () => {
         true,
         false,
         true,
-        renewedOn
+        renewedOn,
+        'SC3-A7K3M'
       ]);
+      expect(array.length).toBe(14);
     });
     
     test('should handle null optional fields in array', () => {
@@ -763,6 +877,7 @@ describe('ValidatedMember Class', () => {
         false,
         false,
         false,
+        null,
         null
       );
       
@@ -772,6 +887,7 @@ describe('ValidatedMember Class', () => {
       expect(array[7]).toBe(null); // Period
       expect(array[8]).toBe(null); // Migrated
       expect(array[12]).toBe(null); // Renewed On
+      expect(array[13]).toBe(null); // Member ID
     });
     
   });
@@ -793,7 +909,8 @@ describe('ValidatedMember Class', () => {
         true,
         false,
         true,
-        new Date('2023-12-01')
+        new Date('2023-12-01'),
+        'SC3-A7K3M'
       ];
       
       const member = ValidatedMember.fromRow(originalRow, headers, 2, null);
@@ -813,8 +930,7 @@ describe('ValidatedMember Class', () => {
       expect(reconstructedRow[10]).toBe(originalRow[10]); // Directory Share Email
       expect(reconstructedRow[11]).toBe(originalRow[11]); // Directory Share Phone
       expect(reconstructedRow[12]).toBe(originalRow[12]); // Renewed On
-      expect(reconstructedRow[10]).toBe(originalRow[10]); // Directory Share Phone
-      expect(reconstructedRow[11]).toBe(originalRow[11]); // Renewed On
+      expect(reconstructedRow[13]).toBe(originalRow[13]); // Member ID
     });
     
   });
@@ -835,11 +951,12 @@ describe('ValidatedMember Class', () => {
         'Directory Share Name',
         'Directory Share Email',
         'Directory Share Phone',
-        'Renewed On'
+        'Renewed On',
+        'Member ID'
       ]);
     });
     
-    test('should have 13 headers matching toArray() output length', () => {
+    test('should have 14 headers matching toArray() output length', () => {
       const member = new ValidatedMember(
         'test@example.com',
         'Active',
@@ -853,13 +970,127 @@ describe('ValidatedMember Class', () => {
         false,
         false,
         false,
+        null,
         null
       );
       
       const array = member.toArray();
       expect(array.length).toBe(ValidatedMember.HEADERS.length);
+      expect(ValidatedMember.HEADERS.length).toBe(14);
     });
   
+  });
+  
+  // ========================================================================
+  // Column-Order Independence (MANDATORY per gas-best-practices.md)
+  // ========================================================================
+  
+  describe('Column-Order Independence', () => {
+    
+    test('should work correctly when sheet columns are in different order than HEADERS', () => {
+      // Arrange: Headers in REVERSED order
+      const shuffledHeaders = [...ValidatedMember.HEADERS].reverse();
+      const testObj = {
+        Status: 'Active',
+        Email: 'test@example.com',
+        First: 'John',
+        Last: 'Doe',
+        Phone: '555-1234',
+        Joined: new Date('2023-01-15'),
+        Expires: new Date('2024-01-15'),
+        Period: 12,
+        Migrated: null,
+        'Directory Share Name': true,
+        'Directory Share Email': false,
+        'Directory Share Phone': true,
+        'Renewed On': new Date('2023-12-01'),
+        'Member ID': 'SC3-A7K3M'
+      };
+      const rowData = shuffledHeaders.map(h => testObj[h]);
+      
+      // Act
+      const member = ValidatedMember.fromRow(rowData, shuffledHeaders, 2);
+      
+      // Assert
+      expect(member).not.toBeNull();
+      expect(member.Email).toBe('test@example.com');
+      expect(member.Status).toBe('Active');
+      expect(member.First).toBe('John');
+      expect(member.Last).toBe('Doe');
+      expect(member['Member ID']).toBe('SC3-A7K3M');
+    });
+    
+    test('should work with arbitrary column order', () => {
+      const randomHeaders = [
+        'Member ID', 'Email', 'Last', 'First', 'Status',
+        'Expires', 'Joined', 'Phone', 'Period', 'Migrated',
+        'Directory Share Phone', 'Directory Share Email', 'Directory Share Name',
+        'Renewed On'
+      ];
+      const testObj = {
+        Status: 'Active',
+        Email: 'random@example.com',
+        First: 'Random',
+        Last: 'Order',
+        Phone: '555-9999',
+        Joined: new Date('2023-03-10'),
+        Expires: new Date('2024-03-10'),
+        Period: 12,
+        Migrated: null,
+        'Directory Share Name': false,
+        'Directory Share Email': true,
+        'Directory Share Phone': false,
+        'Renewed On': null,
+        'Member ID': 'SC3-B8C9D'
+      };
+      const rowData = randomHeaders.map(h => testObj[h]);
+      
+      const member = ValidatedMember.fromRow(rowData, randomHeaders, 3);
+      
+      expect(member).not.toBeNull();
+      expect(member.Email).toBe('random@example.com');
+      expect(member.First).toBe('Random');
+      expect(member.Last).toBe('Order');
+      expect(member['Member ID']).toBe('SC3-B8C9D');
+    });
+    
+    test('should work with shuffled headers including Member ID', () => {
+      const shuffledHeaders = [
+        'First', 'Member ID', 'Status', 'Last', 'Email',
+        'Period', 'Phone', 'Joined', 'Expires', 'Migrated',
+        'Renewed On', 'Directory Share Name', 'Directory Share Email', 'Directory Share Phone'
+      ];
+      const testObj = {
+        Status: 'Active',
+        Email: 'shuffled@example.com',
+        First: 'Shuffled',
+        Last: 'Test',
+        Phone: '',
+        Joined: new Date('2023-05-20'),
+        Expires: new Date('2024-05-20'),
+        Period: null,
+        Migrated: null,
+        'Directory Share Name': true,
+        'Directory Share Email': true,
+        'Directory Share Phone': true,
+        'Renewed On': null,
+        'Member ID': 'SC3-E1F2G'
+      };
+      const rowData = shuffledHeaders.map(h => testObj[h]);
+      
+      const member = ValidatedMember.fromRow(rowData, shuffledHeaders, 4);
+      
+      expect(member).not.toBeNull();
+      expect(member.Email).toBe('shuffled@example.com');
+      expect(member['Member ID']).toBe('SC3-E1F2G');
+      
+      // Verify all fields are correct despite shuffled input
+      expect(member.Status).toBe('Active');
+      expect(member.First).toBe('Shuffled');
+      expect(member.Last).toBe('Test');
+      expect(member.Joined).toEqual(new Date('2023-05-20'));
+    });
+    
   });
   
 });

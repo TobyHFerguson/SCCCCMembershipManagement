@@ -374,6 +374,7 @@ interface Member {
     'Directory Share Email': boolean;
     'Directory Share Phone': boolean;
     'Renewed On': Date;
+    'Member ID'?: string | null;
 }
 
 // ============================================================================
