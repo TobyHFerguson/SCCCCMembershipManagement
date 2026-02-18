@@ -129,6 +129,7 @@ const TestData = {
       'Directory Share Name': false,
       'Directory Share Email': false,
       'Directory Share Phone': false,
+      'Member ID': null,
       ...overrides
     };
   },
@@ -848,9 +849,9 @@ describe('Manager tests', () => {
       it('should create the new members', () => {
         const txns = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": null, Status: "Active", Migrated: null, "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false },
-          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '(123) 456-7890', Joined: today, Expires: utils.addYearsToDate(today, 2), "Renewed On": null, Status: "Active", Migrated: null, "Directory Share Name": true, "Directory Share Email": false, "Directory Share Phone": true },
-          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '(098) 765-4321', Joined: today, Expires: utils.addYearsToDate(today, 3), "Renewed On": null, Status: "Active", Migrated: null, "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false }]
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": null, Status: "Active", Migrated: null, "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false, "Member ID": null },
+          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '(123) 456-7890', Joined: today, Expires: utils.addYearsToDate(today, 2), "Renewed On": null, Status: "Active", Migrated: null, "Directory Share Name": true, "Directory Share Email": false, "Directory Share Phone": true, "Member ID": null },
+          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '(098) 765-4321', Joined: today, Expires: utils.addYearsToDate(today, 3), "Renewed On": null, Status: "Active", Migrated: null, "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false, "Member ID": null }]
 
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(activeMembers.length).toEqual(3)
@@ -889,7 +890,7 @@ describe('Manager tests', () => {
         const txns = [TestData.paidTransaction({ "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Directory": "Share Email", Phone: '(123) 456-7890' })]
         const members = [TestData.activeMember({ Email: "test1@example.com", First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10" })]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: '(123) 456-7890', Joined: "2024-03-10", Expires: utils.addYearsToDate("2025-03-10", 1), "Renewed On": today, Status: "Active", Migrated: null, "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: '(123) 456-7890', Joined: "2024-03-10", Expires: utils.addYearsToDate("2025-03-10", 1), "Renewed On": today, Status: "Active", Migrated: null, "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false, "Member ID": null },
         ]
         manager.processPaidTransactions(txns, members, expirySchedule,);
         expect(members.length).toEqual(1)
@@ -899,8 +900,8 @@ describe('Manager tests', () => {
         const txns = [TestData.paidTransaction({ "Email Address": "test1@example.com", "First Name": "John", "Last Name": "Doe", "Directory": "Share Email" })]
         const members = [TestData.activeMember({ Email: "test1@example.com", First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", Status: "Expired", Phone: '(123) 456-7890' })]
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired", Phone: '(123) 456-7890', Migrated: null, "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false },
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": null, Status: "Active", Phone: '(123) 456-7890', Migrated: null, "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired", Phone: '(123) 456-7890', Migrated: null, "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false, "Member ID": null },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": null, Status: "Active", Phone: '(123) 456-7890', Migrated: null, "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false, "Member ID": null },
         ]
         manager.processPaidTransactions(txns, members, expirySchedule,);
         expect(members).toEqual(expectedMembers);
@@ -1084,7 +1085,8 @@ describe('Manager tests', () => {
             Migrated: null,
             "Directory Share Name": false,
             "Directory Share Email": false,
-            "Directory Share Phone": false
+            "Directory Share Phone": false,
+            "Member ID": null
           },
         ]
         manager.processPaidTransactions(txns, activeMembers, expirySchedule);
@@ -1109,7 +1111,8 @@ describe('Manager tests', () => {
             Migrated: null,
             "Directory Share Name": false,
             "Directory Share Email": false,
-            "Directory Share Phone": false
+            "Directory Share Phone": false,
+            "Member ID": null
           },
           // New membership created
           {
@@ -1125,7 +1128,8 @@ describe('Manager tests', () => {
             Migrated: null,
             "Directory Share Name": false,
             "Directory Share Email": false,
-            "Directory Share Phone": false
+            "Directory Share Phone": false,
+            "Member ID": null
           },
         ]
         manager.processPaidTransactions(txns, activeMembers, expirySchedule);
@@ -1742,7 +1746,7 @@ describe('Manager tests', () => {
       // Verify the result is an array with proper structure
       const arr = membershipData[0].toArray();
       expect(Array.isArray(arr)).toBe(true);
-      expect(arr.length).toBe(13); // ValidatedMember.HEADERS.length
+      expect(arr.length).toBe(14); // ValidatedMember.HEADERS.length
     });
 
     it('should work with MemberPersistence.writeChangedCells after conversion', () => {
