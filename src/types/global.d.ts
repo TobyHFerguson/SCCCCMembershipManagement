@@ -374,6 +374,7 @@ interface Member {
     'Directory Share Email': boolean;
     'Directory Share Phone': boolean;
     'Renewed On': Date;
+    'Member ID'?: string | null;
 }
 
 // ============================================================================
@@ -591,6 +592,7 @@ interface TransactionData {
     'Payable Status'?: string;  // e.g., "Paid", "Pending"
     Processed?: Date | string | null;  // Date when transaction was processed
     Timestamp?: Date | string | null;  // Transaction timestamp
+    'Member ID'?: string | null;  // Member ID in format SC3-XXXXX (optional, null for new members)
 }
 
 // Flat ValidatedMember class (new pattern - replaces Common.Data.ValidatedMember)

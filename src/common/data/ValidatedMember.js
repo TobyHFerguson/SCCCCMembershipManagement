@@ -33,9 +33,10 @@ var ValidatedMember = (function() {
    * @param {boolean} dirEmail - Directory share email (optional, coerced to boolean)
    * @param {boolean} dirPhone - Directory share phone (optional, coerced to boolean)
    * @param {Date | null | string} renewedOn - Renewed date (optional, may be Date, null, or empty string)
+   * @param {string|null} [memberId] - Member ID (optional, format: SC3-XXXXX, defaults to null)
    */
   class ValidatedMember {
-    constructor(email, status, first, last, phone, joined, expires, period, migrated, dirName, dirEmail, dirPhone, renewedOn) {
+    constructor(email, status, first, last, phone, joined, expires, period, migrated, dirName, dirEmail, dirPhone, renewedOn, memberId = null) {
       // Validate email (required, must be valid format)
       if (typeof email !== 'string' || email.trim() === '') {
         throw new Error(`ValidatedMember email is required, got: ${typeof email} "${email}"`);
@@ -132,13 +133,17 @@ var ValidatedMember = (function() {
       } else {
         this['Renewed On'] = renewedOn;
       }
+      
+      // Handle optional member ID
+      /** @type {string|null} */
+      this['Member ID'] = (typeof memberId === 'string' && memberId.trim() !== '') ? memberId.trim() : null;
     }
 
     /**
      * Convert ValidatedMember to array format for spreadsheet persistence
      * Column order matches HEADERS constant
      * 
-     * @returns {Array<string|Date|number|boolean|null>} Array with 13 elements matching sheet columns
+     * @returns {Array<string|Date|number|boolean|null>} Array with 14 elements matching sheet columns
      */
     toArray() {
       return [
@@ -154,7 +159,8 @@ var ValidatedMember = (function() {
         this['Directory Share Name'],
         this['Directory Share Email'],
         this['Directory Share Phone'],
-        this['Renewed On']
+        this['Renewed On'],
+        this['Member ID']
       ];
     }
 
@@ -176,7 +182,8 @@ var ValidatedMember = (function() {
         'Directory Share Name',
         'Directory Share Email',
         'Directory Share Phone',
-        'Renewed On'
+        'Renewed On',
+        'Member ID'
       ];
     }
 
@@ -213,12 +220,13 @@ var ValidatedMember = (function() {
         const dirEmail = rowObj['Directory Share Email'];
         const dirPhone = rowObj['Directory Share Phone'];
         const renewedOn = rowObj['Renewed On'];
+        const memberId = rowObj['Member ID'];
         
         // Construct ValidatedMember (throws on validation failure)
         return new ValidatedMember(
           email, status, first, last, phone, 
           joined, expires, period, migrated,
-          dirName, dirEmail, dirPhone, renewedOn
+          dirName, dirEmail, dirPhone, renewedOn, memberId
         );
         
       } catch (validationError) {

@@ -12,6 +12,7 @@ declare namespace MembershipManagement {
         'Payable Status': string;
         Payment: string;
         Timestamp: Date;
+        'Member ID'?: string | null;
     }
 
     interface ActionSchedule {
