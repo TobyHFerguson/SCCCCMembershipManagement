@@ -792,6 +792,15 @@ interface ValidatedPublicGroup {
     toArray(): string[];
 }
 
+// Flat MemberIdGenerator utility class
+// Declared as `var` (not `class`) so tests can assign to `global.MemberIdGenerator`
+declare var MemberIdGenerator: {
+    generate(existingIds: Set<string> | string[], maxAttempts?: number): string;
+    isValid(id: string): boolean;
+    readonly CHARSET: string;
+    readonly PREFIX: string;
+};
+
 // Flat ValidatedElectionConfig class (type-safe ElectionConfiguration rows)
 // Declared as `var` (not `class`) so tests can assign to `global.ValidatedElectionConfig`
 declare var ValidatedElectionConfig: {
