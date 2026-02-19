@@ -637,12 +637,15 @@ describe('Manager tests', () => {
         ];
       });
       it('should migrate only marked members, record the date of migration and removing any unused keys', () => {
-        const expectedMigrators = [{ ...migrators[0], Migrated: today }, { ...migrators[1] }];
+        const expectedMigrators = [
+          { ...migrators[0], Migrated: today, 'Member ID': expect.stringMatching(/^SC3-[A-Z2-9]{5}$/) }, 
+          { ...migrators[1] }
+        ];
         const m = { ...migrators[0], Migrated: today, Directory: 'Yes' };
         delete m["Migrate Me"];
         delete m["board_announcements@sc3.club"];
         delete m["member_discussions@sc3.club"]
-        const expectedMembers = [m];
+        const expectedMembers = [{ ...m, 'Member ID': expect.stringMatching(/^SC3-[A-Z2-9]{5}$/) }];
         manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
         expect(activeMembers).toEqual(expectedMembers);
         expect(migrators).toEqual(expectedMigrators);
@@ -685,9 +688,9 @@ describe('Manager tests', () => {
             "board_announcements@sc3.club": false, "member_discussions@sc3.club": true
           }),
         ];
-        let expectedMigrators = [{ ...migrators[0], Migrated: today }];
+        let expectedMigrators = [{ ...migrators[0], Migrated: today, 'Member ID': expect.stringMatching(/^SC3-[A-Z2-9]{5}$/) }];
         let expectedMembers = [members[0],
-        { Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: 'Yes', Migrated: today, Status: "Active" }
+        { Email: "a@b.com", Period: 1, First: "John", Last: "Doe", Phone: '(408) 386-9343', Joined: "2020-03-10", Expires: "2021-01-10", Directory: 'Yes', Migrated: today, Status: "Active", 'Member ID': expect.stringMatching(/^SC3-[A-Z2-9]{5}$/) }
         ];
         manager.migrateCEMembers(migrators, members, expirySchedule);
         expect(migrators).toEqual(expectedMigrators);
@@ -770,10 +773,10 @@ describe('Manager tests', () => {
         ];
       });
       it('should migrate expired members without groups, emails, or expiry schedules', () => {
-        const expectedMigrators = [{ ...migrators[0], Migrated: today }, { ...migrators[1] }];
+        const expectedMigrators = [{ ...migrators[0], Migrated: today, 'Member ID': expect.stringMatching(/^SC3-[A-Z2-9]{5}$/) }, { ...migrators[1] }];
         const m = { ...migrators[0], Migrated: today, Directory: 'Yes' };
         delete m["Migrate Me"];
-        const expectedMembers = [m];
+        const expectedMembers = [{ ...m, 'Member ID': expect.stringMatching(/^SC3-[A-Z2-9]{5}$/) }];
         
         manager.migrateCEMembers(migrators, activeMembers, expirySchedule);
         
@@ -851,9 +854,9 @@ describe('Manager tests', () => {
       it('should create the new members', () => {
         const txns = transactionsFixture.paid.map(t => { return { ...t } }) // clone the array
         const expectedMembers = [
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": null, Status: "Active", Migrated: null, "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false, "Member ID": null },
-          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '(123) 456-7890', Joined: today, Expires: utils.addYearsToDate(today, 2), "Renewed On": null, Status: "Active", Migrated: null, "Directory Share Name": true, "Directory Share Email": false, "Directory Share Phone": true, "Member ID": null },
-          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '(098) 765-4321', Joined: today, Expires: utils.addYearsToDate(today, 3), "Renewed On": null, Status: "Active", Migrated: null, "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false, "Member ID": null }]
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Phone: "(408) 386-9343", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": null, Status: "Active", Migrated: null, "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false, "Member ID": expect.stringMatching(/^SC3-[A-Z2-9]{5}$/) },
+          { Email: "test2@example.com", Period: 2, First: "Jane", Last: "Smith", Phone: '(123) 456-7890', Joined: today, Expires: utils.addYearsToDate(today, 2), "Renewed On": null, Status: "Active", Migrated: null, "Directory Share Name": true, "Directory Share Email": false, "Directory Share Phone": true, "Member ID": expect.stringMatching(/^SC3-[A-Z2-9]{5}$/) },
+          { Email: "test3@example.com", Period: 3, First: "Not", Last: "Member", Phone: '(098) 765-4321', Joined: today, Expires: utils.addYearsToDate(today, 3), "Renewed On": null, Status: "Active", Migrated: null, "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false, "Member ID": expect.stringMatching(/^SC3-[A-Z2-9]{5}$/) }]
 
         manager.processPaidTransactions(txns, activeMembers, expirySchedule,);
         expect(activeMembers.length).toEqual(3)
@@ -903,7 +906,7 @@ describe('Manager tests', () => {
         const members = [TestData.activeMember({ Email: "test1@example.com", First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", Status: "Expired", Phone: '(123) 456-7890' })]
         const expectedMembers = [
           { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: "2024-03-10", Expires: "2025-03-10", "Renewed On": "", Status: "Expired", Phone: '(123) 456-7890', Migrated: null, "Directory Share Name": false, "Directory Share Email": false, "Directory Share Phone": false, "Member ID": null },
-          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": null, Status: "Active", Phone: '(123) 456-7890', Migrated: null, "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false, "Member ID": null },
+          { Email: "test1@example.com", Period: 1, First: "John", Last: "Doe", Joined: today, Expires: utils.addYearsToDate(today, 1), "Renewed On": null, Status: "Active", Phone: '(123) 456-7890', Migrated: null, "Directory Share Name": false, "Directory Share Email": true, "Directory Share Phone": false, "Member ID": expect.stringMatching(/^SC3-[A-Z2-9]{5}$/) },
         ]
         manager.processPaidTransactions(txns, members, expirySchedule,);
         expect(members).toEqual(expectedMembers);
@@ -1131,7 +1134,7 @@ describe('Manager tests', () => {
             "Directory Share Name": false,
             "Directory Share Email": false,
             "Directory Share Phone": false,
-            "Member ID": null
+            "Member ID": expect.stringMatching(/^SC3-[A-Z2-9]{5}$/)
           },
         ]
         manager.processPaidTransactions(txns, activeMembers, expirySchedule);
@@ -1363,6 +1366,123 @@ describe('Manager tests', () => {
         
         // Should NOT mention email change
         expect(result.auditEntries[0].Note).not.toContain('email change');
+      });
+    });
+
+    describe('Member ID matching', () => {
+      it('should match transaction to member by Member ID (happy path)', () => {
+        const memberId = 'SC3-A7K3M';
+        const txns = [TestData.paidTransaction({ 
+          "Email Address": "newemail@example.com", 
+          "First Name": "John", 
+          "Last Name": "Doe", 
+          "Member ID": memberId 
+        })];
+        const members = [TestData.activeMember({ 
+          Email: "oldemail@example.com", 
+          First: "John", 
+          Last: "Doe", 
+          Joined: "2024-03-10", 
+          Expires: "2025-03-10",
+          'Member ID': memberId 
+        })];
+        
+        manager.processPaidTransactions(txns, members, expirySchedule);
+        
+        // Should renew the existing member (not create new)
+        expect(members.length).toEqual(1);
+        expect(members[0]['Member ID']).toEqual(memberId);
+        expect(members[0].Email).toEqual("newemail@example.com"); // Email updated
+        expect(members[0].Expires).toEqual(utils.addYearsToDate("2025-03-10", 1)); // Renewed
+        expect(members[0]['Renewed On']).toEqual(today);
+        
+        // Should send renewal email
+        expect(sendEmailFun).toHaveBeenCalledTimes(1);
+        expect(sendEmailFun).toHaveBeenCalledWith(expect.objectContaining({
+          to: "newemail@example.com",
+          subject: expect.stringContaining('Renew')
+        }));
+      });
+
+      it('should error on invalid Member ID (set but not found)', () => {
+        const txns = [TestData.paidTransaction({ 
+          "Email Address": "test@example.com", 
+          "First Name": "John", 
+          "Last Name": "Doe", 
+          "Member ID": 'SC3-XXXXX' // Valid format but not in members
+        })];
+        const members = [TestData.activeMember({ 
+          Email: "other@example.com", 
+          First: "Jane", 
+          Last: "Smith",
+          'Member ID': 'SC3-AAAAA' 
+        })];
+        
+        const result = manager.processPaidTransactions(txns, members, expirySchedule);
+        
+        // Should NOT create new member
+        expect(members.length).toEqual(1);
+        expect(members[0].Email).toEqual("other@example.com"); // Original unchanged
+        
+        // Should have error
+        expect(result.errors.length).toEqual(1);
+        expect(result.errors[0].message).toContain('SC3-XXXXX');
+        expect(result.errors[0].message).toContain('no Active member found');
+        
+        // Should NOT send email or add to groups
+        expect(sendEmailFun).not.toHaveBeenCalled();
+        expect(groupManager.groupAddFun).not.toHaveBeenCalled();
+      });
+
+      it('should fall back to heuristic when transaction has no Member ID', () => {
+        const txns = [TestData.paidTransaction({ 
+          "Email Address": "test@example.com", 
+          "First Name": "John", 
+          "Last Name": "Doe",
+          Phone: "(123) 456-7890",
+          "Member ID": null // No Member ID - use heuristic
+        })];
+        const members = [TestData.activeMember({ 
+          Email: "test@example.com", 
+          First: "John", 
+          Last: "Doe",
+          Phone: "(123) 456-7890",
+          Joined: "2024-03-10", 
+          Expires: "2025-03-10",
+          'Member ID': 'SC3-AAAAA' 
+        })];
+        
+        manager.processPaidTransactions(txns, members, expirySchedule);
+        
+        // Should match via isPossibleRenewal and renew
+        expect(members.length).toEqual(1);
+        expect(members[0].Expires).toEqual(utils.addYearsToDate("2025-03-10", 1));
+        expect(members[0]['Renewed On']).toEqual(today);
+        
+        // Should send renewal email
+        expect(sendEmailFun).toHaveBeenCalledTimes(1);
+      });
+
+      it('should generate Member ID for new member joins', () => {
+        const txns = [TestData.paidTransaction({ 
+          "Email Address": "newmember@example.com", 
+          "First Name": "New", 
+          "Last Name": "Member"
+        })];
+        const members = [TestData.activeMember({ 
+          Email: "existing@example.com",
+          'Member ID': 'SC3-AAAAA'
+        })];
+        
+        manager.processPaidTransactions(txns, members, expirySchedule);
+        
+        // Should create new member with generated Member ID
+        expect(members.length).toEqual(2);
+        const newMember = members.find(m => m.Email === "newmember@example.com");
+        expect(newMember).toBeDefined();
+        expect(newMember['Member ID']).toBeTruthy();
+        expect(newMember['Member ID']).toMatch(/^SC3-[A-Z2-9]{5}$/);
+        expect(newMember['Member ID']).not.toEqual('SC3-AAAAA'); // Different from existing
       });
     });
 
@@ -1639,8 +1759,8 @@ describe('Manager tests', () => {
   describe('convertJoinToRenew utility (additional tests)', () => {
     it('merges INITIAL into LATEST when LATEST.Joined <= INITIAL.Expires', () => {
       const membershipData = [
-        { Status: 'Active', Email: 'captenphil@aol.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '8/8/2017', Expires: '12/15/2026', Period: 3, 'Directory Share Name': false, 'Directory Share Email': false, 'Directory Share Phone': false, 'Renewed On': '' },
-        { Status: 'Active', Email: 'phil.stotts@gmail.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '10/23/2025', Expires: '10/23/2027', Period: 2, 'Directory Share Name': true, 'Directory Share Email': true, 'Directory Share Phone': true, 'Renewed On': '' }
+        { Status: 'Active', Email: 'captenphil@aol.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '8/8/2017', Expires: '12/15/2026', Period: 3, 'Directory Share Name': false, 'Directory Share Email': false, 'Directory Share Phone': false, 'Renewed On': '', 'Member ID': null },
+        { Status: 'Active', Email: 'phil.stotts@gmail.com', First: 'Phil', Last: 'Stotts', Phone: '(831) 345-9634', Joined: '10/23/2025', Expires: '10/23/2027', Period: 2, 'Directory Share Name': true, 'Directory Share Email': true, 'Directory Share Phone': true, 'Renewed On': '', 'Member ID': null }
       ];
 
       const expirySchedule = [
@@ -1669,7 +1789,8 @@ describe('Manager tests', () => {
         'Directory Share Name': true,
         'Directory Share Email': true,
         'Directory Share Phone': true,
-        'Renewed On': new Date('10/23/2025')
+        'Renewed On': new Date('10/23/2025'),
+        'Member ID': null
       };
 
       const result = manager.convertJoinToRenew(0, 1, membershipData, expirySchedule);
@@ -1789,6 +1910,183 @@ describe('Manager tests', () => {
           ValidatedMember.HEADERS
         );
       }).not.toThrow();
+    });
+
+    describe('Member ID preservation', () => {
+      it('should preserve INITIAL member\'s Member ID when merging', () => {
+        const member1 = new ValidatedMember(
+          'old@example.com', 'Active', 'Test', 'User', '555-1111',
+          new Date('2020-01-01'), new Date('2021-01-01'), 1,
+          null, true, false, true, null, 'SC3-AAAAA'  // INITIAL has Member ID
+        );
+        const member2 = new ValidatedMember(
+          'old@example.com', 'Active', 'Test', 'User', '555-1111',
+          new Date('2020-06-01'), new Date('2022-06-01'), 2,
+          null, true, true, true, null, 'SC3-BBBBB'  // LATEST has different Member ID
+        );
+
+        const membershipData = [member1, member2];
+        const expirySchedule = [];
+
+        const result = manager.convertJoinToRenew(0, 1, membershipData, expirySchedule);
+        expect(result.success).toBe(true);
+        expect(membershipData.length).toBe(1);
+        
+        // Should keep INITIAL's Member ID
+        expect(membershipData[0]['Member ID']).toEqual('SC3-AAAAA');
+      });
+
+      it('should keep LATEST\'s Member ID when INITIAL has none', () => {
+        const member1 = new ValidatedMember(
+          'old@example.com', 'Active', 'Test', 'User', '555-1111',
+          new Date('2020-01-01'), new Date('2021-01-01'), 1,
+          null, true, false, true, null, null  // INITIAL has no Member ID
+        );
+        const member2 = new ValidatedMember(
+          'old@example.com', 'Active', 'Test', 'User', '555-1111',
+          new Date('2020-06-01'), new Date('2022-06-01'), 2,
+          null, true, true, true, null, 'SC3-BBBBB'  // LATEST has Member ID
+        );
+
+        const membershipData = [member1, member2];
+        const expirySchedule = [];
+
+        const result = manager.convertJoinToRenew(0, 1, membershipData, expirySchedule);
+        expect(result.success).toBe(true);
+        expect(membershipData.length).toBe(1);
+        
+        // Should keep LATEST's Member ID
+        expect(membershipData[0]['Member ID']).toEqual('SC3-BBBBB');
+      });
+
+      it('should set null when neither has Member ID', () => {
+        const member1 = new ValidatedMember(
+          'old@example.com', 'Active', 'Test', 'User', '555-1111',
+          new Date('2020-01-01'), new Date('2021-01-01'), 1,
+          null, true, false, true, null, null  // No Member ID
+        );
+        const member2 = new ValidatedMember(
+          'old@example.com', 'Active', 'Test', 'User', '555-1111',
+          new Date('2020-06-01'), new Date('2022-06-01'), 2,
+          null, true, true, true, null, null  // No Member ID
+        );
+
+        const membershipData = [member1, member2];
+        const expirySchedule = [];
+
+        const result = manager.convertJoinToRenew(0, 1, membershipData, expirySchedule);
+        expect(result.success).toBe(true);
+        expect(membershipData.length).toBe(1);
+        
+        // Should be null
+        expect(membershipData[0]['Member ID']).toBeNull();
+      });
+    });
+  });
+
+  describe('migrateCEMembers', () => {
+    describe('Member ID handling', () => {
+      it('should preserve existing Member ID from migrator data', () => {
+        const migrators = [{
+          'Migrate Me': true,
+          Email: 'test@example.com',
+          First: 'Test',
+          Last: 'User',
+          Phone: '555-1111',
+          Joined: '2020-01-01',
+          Period: 1,
+          Expires: '2021-01-01',
+          'Renewed On': '',
+          Directory: 'Yes',
+          Migrated: null,
+          Status: 'Active',
+          'Member ID': 'SC3-XXXXX'
+        }];
+        const members = [];
+        const expirySchedule = [];
+
+        const result = manager.migrateCEMembers(migrators, members, expirySchedule);
+        
+        expect(result.numMigrations).toBe(1);
+        expect(members.length).toBe(1);
+        expect(members[0]['Member ID']).toEqual('SC3-XXXXX');
+      });
+
+      it('should generate Member ID when migrator has none', () => {
+        const migrators = [{
+          'Migrate Me': true,
+          Email: 'test@example.com',
+          First: 'Test',
+          Last: 'User',
+          Phone: '555-1111',
+          Joined: '2020-01-01',
+          Period: 1,
+          Expires: '2021-01-01',
+          'Renewed On': '',
+          Directory: 'Yes',
+          Migrated: null,
+          Status: 'Active',
+          'Member ID': null  // No Member ID
+        }];
+        const members = [];
+        const expirySchedule = [];
+
+        const result = manager.migrateCEMembers(migrators, members, expirySchedule);
+        
+        expect(result.numMigrations).toBe(1);
+        expect(members.length).toBe(1);
+        expect(members[0]['Member ID']).toBeTruthy();
+        expect(members[0]['Member ID']).toMatch(/^SC3-[A-Z2-9]{5}$/);
+      });
+
+      it('should avoid collisions when generating Member IDs for multiple migrants', () => {
+        const migrators = [
+          {
+            'Migrate Me': true,
+            Email: 'test1@example.com',
+            First: 'Test1',
+            Last: 'User1',
+            Phone: '555-1111',
+            Joined: '2020-01-01',
+            Period: 1,
+            Expires: '2021-01-01',
+            'Renewed On': '',
+            Directory: 'Yes',
+            Migrated: null,
+            Status: 'Active',
+            'Member ID': null
+          },
+          {
+            'Migrate Me': true,
+            Email: 'test2@example.com',
+            First: 'Test2',
+            Last: 'User2',
+            Phone: '555-2222',
+            Joined: '2020-01-01',
+            Period: 1,
+            Expires: '2021-01-01',
+            'Renewed On': '',
+            Directory: 'Yes',
+            Migrated: null,
+            Status: 'Active',
+            'Member ID': null
+          }
+        ];
+        const members = [];
+        const expirySchedule = [];
+
+        const result = manager.migrateCEMembers(migrators, members, expirySchedule);
+        
+        expect(result.numMigrations).toBe(2);
+        expect(members.length).toBe(2);
+        
+        // Both should have Member IDs
+        expect(members[0]['Member ID']).toBeTruthy();
+        expect(members[1]['Member ID']).toBeTruthy();
+        
+        // IDs should be different
+        expect(members[0]['Member ID']).not.toEqual(members[1]['Member ID']);
+      });
     });
   });
 
