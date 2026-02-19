@@ -611,7 +611,8 @@ declare var ValidatedMember: {
         dirName: boolean,
         dirEmail: boolean,
         dirPhone: boolean,
-        renewedOn: Date | null | string
+        renewedOn: Date | null | string,
+        memberId?: string | null
     ): ValidatedMember;
 
     /** Static factory - never throws, returns null on failure */

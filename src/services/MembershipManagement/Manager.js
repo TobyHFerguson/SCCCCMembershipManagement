@@ -4,6 +4,9 @@ if (typeof require !== 'undefined') {
   const { ValidatedMember: ValidatedMemberClass } = require('../../common/data/ValidatedMember.js');
   // Make it globally available for Jest tests
   global.ValidatedMember = ValidatedMemberClass;
+  // Load MemberIdGenerator for Member ID generation
+  const { MemberIdGenerator: MemberIdGeneratorClass } = require('../../common/utils/MemberIdGenerator.js');
+  global.MemberIdGenerator = MemberIdGeneratorClass;
 }
 
 // @ts-check
@@ -254,11 +257,19 @@ MembershipManagement.Manager = class {
    */
   migrateCEMembers(migrators, members, expirySchedule) {
     const actionSpec = this._actionSpecs[MembershipManagement.Utils.ActionType.Migrate];
-    const requiredKeys = ['Email', 'First', 'Last', 'Phone', 'Joined', 'Period', 'Expires', 'Renewed On', 'Directory', 'Migrated', 'Status'];
+    const requiredKeys = ['Email', 'First', 'Last', 'Phone', 'Joined', 'Period', 'Expires', 'Renewed On', 'Directory', 'Migrated', 'Status', 'Member ID'];
 
     let numMigrations = 0;
     const errors = [];
     const auditEntries = [];
+    
+    // Collect existing Member IDs to avoid collisions when generating new ones
+    const existingIds = new Set(
+      members
+        .map(m => m['Member ID'])
+        .filter(id => id && typeof id === 'string')
+    );
+    
     migrators.forEach((mi, i) => {
       const rowNum = i + 2;
       if (!mi.Email) {
@@ -271,6 +282,15 @@ MembershipManagement.Manager = class {
       }
       if (mi["Migrate Me"] && !mi.Migrated) {
         mi.Migrated = this._today;
+        
+        // Handle Member ID: use existing or generate new
+        if (!mi['Member ID'] || typeof mi['Member ID'] !== 'string' || mi['Member ID'].trim() === '') {
+          mi['Member ID'] = MemberIdGenerator.generate(existingIds);
+          existingIds.add(mi['Member ID']); // Track newly generated ID
+        } else {
+          existingIds.add(mi['Member ID']); // Track existing ID from migrator
+        }
+        
         // JSDoc cast: TS spread of Record<string,any> loses index signature, cast restores it
         const newMember = /** @type {Record<string, any>} */ ({ ...mi, Directory: mi.Directory ? 'Yes' : 'No' });
         // Delete unwanted keys
@@ -355,14 +375,82 @@ MembershipManagement.Manager = class {
       
       // We get here with a transaction that is not processed but is marked as paid. Process it.
       try {
-        // Find existing member using isPossibleRenewal (name+phone/email matching)
+        // Find existing member using Member ID (primary) or isPossibleRenewal (fallback)
         const match = MembershipManagement.Manager.findExistingMemberForTransaction(txn, membershipData, this._today);
         
         let message;
         let actionType;
         let skipStandardAuditLog = false; // Flag to prevent duplicate audit entries
         
-        if (match.matchType === 'POSSIBLE_RENEWAL') {
+        if (match.matchType === 'MEMBER_ID_MATCH') {
+          // Detected renewal via Member ID match (most reliable)
+          const existingMember = match.member;
+          const oldEmail = existingMember.Email;
+          const emailChanged = MembershipManagement.Manager.normalizeEmail(oldEmail) !== MembershipManagement.Manager.normalizeEmail(txn["Email Address"]);
+          
+          console.log(`transaction on row ${i + 2} ${txn["Email Address"]} matched Active member by Member ID: ${txn['Member ID']}`);
+          
+          // Renew member (email change handled inside renewMemberWithEmailChange_ if oldEmail differs)
+          this.renewMemberWithEmailChange_(txn, existingMember, expirySchedule, oldEmail);
+          
+          actionType = 'Renew';
+          const renewBodyTemplate = typeof this._actionSpecs.Renew.Body === 'string' ? this._actionSpecs.Renew.Body : this._actionSpecs.Renew.Body.text;
+          message = {
+            to: existingMember.Email, // Send to NEW email (may have been updated)
+            subject: MembershipManagement.Utils.expandTemplate(this._actionSpecs.Renew.Subject, existingMember),
+            htmlBody: MembershipManagement.Utils.expandTemplate(renewBodyTemplate, existingMember)
+          };
+          
+          // Audit logging for Member ID match
+          if (this._auditLogger) {
+            auditEntries.push(this._auditLogger.createLogEntry({
+              type: 'Renew',
+              outcome: 'success',
+              note: emailChanged 
+                ? `Member ID match with email change: ${oldEmail} → ${txn["Email Address"]}`
+                : `Member ID match: ${txn['Member ID']}`,
+              jsonData: {
+                txnRow: i + 2,
+                memberId: txn['Member ID'],
+                oldEmail: oldEmail,
+                newEmail: txn["Email Address"],
+                detectionMethod: 'MEMBER_ID_MATCH',
+                emailChanged: emailChanged
+              }
+            }));
+            skipStandardAuditLog = true;
+          }
+          
+        } else if (match.matchType === 'INVALID_MEMBER_ID') {
+          // Transaction has Member ID but it doesn't match any Active member
+          const errorMsg = `Transaction has Member ID '${match.memberId}' but no Active member found with that ID`;
+          console.error(`transaction on row ${i + 2}: ${errorMsg}`);
+          
+          const error = /** @type {Error & {txnNum?: number, email?: string}} */ (new Error(errorMsg));
+          error.txnNum = i + 2;
+          error.email = txn["Email Address"];
+          errors.push(error);
+          
+          // Audit logging for invalid Member ID
+          if (this._auditLogger) {
+            auditEntries.push(this._auditLogger.createLogEntry({
+              type: 'ProcessTransaction',
+              outcome: 'fail',
+              note: errorMsg,
+              error: errorMsg,
+              jsonData: {
+                txnRow: i + 2,
+                email: txn["Email Address"],
+                invalidMemberId: match.memberId,
+                detectionMethod: 'INVALID_MEMBER_ID'
+              }
+            }));
+          }
+          
+          // Skip further processing - do NOT create a new member for invalid Member ID
+          return;
+          
+        } else if (match.matchType === 'POSSIBLE_RENEWAL') {
           // Detected renewal via name+phone match with different email (member is already Active)
           const existingMember = match.member;
           const oldEmail = existingMember.Email;
@@ -666,7 +754,27 @@ MembershipManagement.Manager = class {
    * @returns {ValidatedMember} The newly created ValidatedMember instance
    * @private
    */
+  /**
+   * Add a new member from a paid transaction.
+   * Generates a unique Member ID automatically.
+   * 
+   * @param {ValidatedTransaction} txn - Paid transaction
+   * @param {MembershipManagement.ExpirySchedule[]} expirySchedule - Expiry schedule array to update
+   * @param {ValidatedMember[]} membershipData - All member records (used to check existing IDs)
+   * @returns {ValidatedMember} The newly created member
+   * @private
+   */
   addNewMember_(txn, expirySchedule, membershipData) {
+    // Collect existing Member IDs to avoid collisions
+    const existingIds = new Set(
+      membershipData
+        .map(m => m['Member ID'])
+        .filter(id => id && typeof id === 'string')
+    );
+    
+    // Generate unique Member ID
+    const memberId = MemberIdGenerator.generate(existingIds);
+    
     // Create ValidatedMember instance (not plain object) to preserve .toArray() method
     const dirSharing = MembershipManagement.Manager.extractDirectorySharing_(txn);
     const newMember = new ValidatedMember(
@@ -682,7 +790,8 @@ MembershipManagement.Manager = class {
       dirSharing["Directory Share Name"],
       dirSharing["Directory Share Email"],
       dirSharing["Directory Share Phone"],
-      ''  // Renewed On - empty string, not null
+      '',  // Renewed On - empty string, not null
+      memberId  // Member ID - auto-generated
     );
     membershipData.push(newMember);
     this.addNewMemberToActionSchedule_(newMember, expirySchedule);
@@ -704,16 +813,51 @@ MembershipManagement.Manager = class {
 
   /**
    * Find existing member who might be renewing based on transaction data.
-   * Uses isPossibleRenewal to match on name (first letter) + phone/email + temporal relationship.
+   * Primary: Match by Member ID (if present and valid on transaction).
+   * Fallback: Use isPossibleRenewal to match on name (first letter) + phone/email + temporal relationship.
    * Only matches Active members.
    * 
-   * @param {{'Email Address': string, 'First Name': string, 'Last Name': string, Phone?: string}} txn - Transaction data from payment processor
+   * @param {{'Email Address': string, 'First Name': string, 'Last Name': string, Phone?: string, 'Member ID'?: string|null}} txn - Transaction data from payment processor
    * @param {ValidatedMember[]} membershipData - All member records
    * @param {Date|string} today - Current date for temporal validation
-   * @returns {{found: boolean, index: number, member: ValidatedMember|null, matchType: string}}
-   *   matchType values: 'POSSIBLE_RENEWAL' | 'NEW_MEMBER'
+   * @returns {{found: boolean, index: number, member: ValidatedMember|null, matchType: string, memberId?: string}}
+   *   matchType values: 'MEMBER_ID_MATCH' | 'INVALID_MEMBER_ID' | 'POSSIBLE_RENEWAL' | 'NEW_MEMBER'
+   *   memberId: included when matchType is 'INVALID_MEMBER_ID' (the bad ID value)
    */
   static findExistingMemberForTransaction(txn, membershipData, today) {
+    // Stage 1: Member ID match (primary method)
+    const txnMemberId = txn['Member ID'];
+    if (txnMemberId && typeof txnMemberId === 'string' && txnMemberId.trim() !== '') {
+      // Transaction has a Member ID - validate format first
+      if (MemberIdGenerator.isValid(txnMemberId)) {
+        // Valid format - search for matching Active member
+        const memberIdIndex = membershipData.findIndex(
+          m => m['Member ID'] === txnMemberId && m.Status === 'Active'
+        );
+        
+        if (memberIdIndex !== -1) {
+          // Found active member with matching Member ID
+          return {
+            found: true,
+            index: memberIdIndex,
+            member: membershipData[memberIdIndex],
+            matchType: 'MEMBER_ID_MATCH'
+          };
+        } else {
+          // Member ID is valid format but not found or member is not Active
+          return {
+            found: false,
+            index: -1,
+            member: null,
+            matchType: 'INVALID_MEMBER_ID',
+            memberId: txnMemberId
+          };
+        }
+      }
+      // Member ID present but invalid format - fall through to heuristic
+    }
+    
+    // Stage 2: Heuristic fallback (isPossibleRenewal) - unchanged from original
     // Create temporary member object from transaction for isPossibleRenewal matching
     // Include Joined date to enable temporal validation (renewal must occur before/around expiry)
     // Narrowing cast: isPossibleRenewal only accesses Email, First, Last, Phone, Status, Joined, Expires
@@ -907,6 +1051,19 @@ MembershipManagement.Manager = class {
         LATEST.Expires = MembershipManagement.Utils.calculateExpirationDate(latestJoined, initialExpires, periodYears);
         LATEST['Renewed On'] = MembershipManagement.Utils.dateOnly(LATEST.Joined);
         LATEST.Joined = MembershipManagement.Utils.dateOnly(INITIAL.Joined); // Preserve original join date
+        
+        // Preserve Member ID: prefer INITIAL's ID (original member), fall back to LATEST's if INITIAL has none
+        if (INITIAL['Member ID']) {
+          LATEST['Member ID'] = INITIAL['Member ID'];
+          // Log if there's a discrepancy (both have IDs but they differ)
+          if (LATEST['Member ID'] && before['Member ID'] !== INITIAL['Member ID']) {
+            console.log(`convertJoinToRenew: Member ID conflict - keeping INITIAL's ID ${INITIAL['Member ID']}, discarding LATEST's ID ${before['Member ID']}`);
+          }
+        } else if (!LATEST['Member ID']) {
+          // Neither has a Member ID - this is legacy data, no action needed
+          LATEST['Member ID'] = null;
+        }
+        // else: INITIAL has no ID but LATEST does - keep LATEST's ID (already in LATEST)
 
         // Write LATEST properties back into the ValidatedMember instance (preserve instance, don't replace with plain object)
         Object.assign(membershipData[latestIdx], LATEST);
