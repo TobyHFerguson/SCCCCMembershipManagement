@@ -178,13 +178,157 @@ MembershipManagement.Utils.dateOnly = function(date)  {
  */
 MembershipManagement.Utils.addPrefillForm = function(member, prefillFormTemplate)  {
   const memberCopy = { ...member, Form: null }; // Create a shallow copy to avoid mutating the original member
+
+  // Map Directory Share booleans to their Google Forms checkbox option text.
+  // When true → the checkbox option string (e.g. "Share Name"); when false → "" (unchecked)
+  /** @type {Record<string, string>} */
+  const SHARE_MAPPING = {
+    'Directory Share Name': 'Share Name',
+    'Directory Share Email': 'Share Email',
+    'Directory Share Phone': 'Share Phone'
+  };
+  const memberForEncoding = { ...member };
+  const shareKeys = Object.keys(SHARE_MAPPING);
+  for (let i = 0; i < shareKeys.length; i++) {
+    const key = shareKeys[i];
+    if (key in memberForEncoding) {
+      memberForEncoding[key] = memberForEncoding[key] ? SHARE_MAPPING[key] : '';
+    }
+  }
+
   const memberAsQueryParams = Object.fromEntries(
-    Object.entries(member).map(([k, v]) => [k, encodeURIComponent(v)])
+    Object.entries(memberForEncoding).map(([k, v]) => [k, encodeURIComponent(String(v))])
   );
   const prefillFormUrl = MembershipManagement.Utils.expandTemplate(prefillFormTemplate, memberAsQueryParams);
   // Keep an HTML anchor for email bodies; the raw URL is redundant once the email body is built
   memberCopy.Form = `<a href="${prefillFormUrl}">renewal form</a>`;
   return memberCopy;
+}
+
+/**
+ * Build a PREFILL_FORM_TEMPLATE URL from a Google Forms pre-filled link.
+ *
+ * The operator obtains the pre-filled link by using the Form editor's
+ * "Get pre-filled link" feature, entering specific answers:
+ * - Required constants: Yes, I have read the privacy policy, I Agree
+ * - Checkbox selections: Share Name, Share Email, Share Phone
+ * - Template markers: First, Last, Phone, Member ID
+ *
+ * This function:
+ * 1. Keeps constant answers (Yes, I have read the privacy policy, I Agree) as-is
+ * 2. Converts Share checkbox values to {Directory Share ...} template fields
+ * 3. Converts personal info markers to {First}, {Last}, {Phone}, {Member ID} fields
+ * 4. Keeps all other entry parameters as-is (e.g. payment period)
+ * 5. Returns the template URL ready for PREFILL_FORM_TEMPLATE
+ *
+ * @param {string} prefillUrl - Pre-filled URL from Google Forms
+ * @returns {string} Template URL with placeholders for expandable fields
+ * @throws {Error} If no entry parameters found or required markers are missing
+ */
+MembershipManagement.Utils.buildPrefillFormTemplate = function(prefillUrl) {
+  /** @type {Record<string, string>} Marker answer → template field */
+  var TEMPLATE_MARKERS = {
+    'First': '{First}',
+    'Last': '{Last}',
+    'Phone': '{Phone}',
+    'Member ID': '{Member ID}'
+  };
+
+  /** @type {Record<string, string>} Checkbox answer → template field */
+  var CHECKBOX_MARKERS = {
+    'Share Name': '{Directory Share Name}',
+    'Share Email': '{Directory Share Email}',
+    'Share Phone': '{Directory Share Phone}'
+  };
+
+  var qIndex = prefillUrl.indexOf('?');
+  if (qIndex === -1) {
+    throw new Error('No entry parameters found in URL');
+  }
+
+  var baseUrl = prefillUrl.substring(0, qIndex);
+  var queryString = prefillUrl.substring(qIndex + 1);
+  var params = queryString.split('&');
+
+  // Collect non-entry params (like usp=pp_url) and entry params separately
+  /** @type {string[]} */
+  var nonEntryParts = [];
+  /** @type {{raw: string, entryKey: string, decodedValue: string}[]} */
+  var entryParams = [];
+
+  for (var i = 0; i < params.length; i++) {
+    var param = params[i];
+    if (param.startsWith('entry.')) {
+      var eqIdx = param.indexOf('=');
+      if (eqIdx !== -1) {
+        var entryKey = param.substring(0, eqIdx);
+        var rawValue = param.substring(eqIdx + 1);
+        // Decode: handle both + (space) and %XX encoding
+        var decoded = decodeURIComponent(rawValue.replace(/\+/g, ' '));
+        entryParams.push({ raw: param, entryKey: entryKey, decodedValue: decoded });
+      }
+    } else {
+      nonEntryParts.push(param);
+    }
+  }
+
+  if (entryParams.length === 0) {
+    throw new Error('No entry parameters found in URL');
+  }
+
+  // Process entries: convert markers/checkboxes to template fields, keep everything else as-is
+  /** @type {string[]} */
+  var templateParts = [];
+  /** @type {Set<string>} */
+  var foundTemplateMarkers = new Set();
+  /** @type {Set<string>} */
+  var foundCheckboxMarkers = new Set();
+
+  for (var j = 0; j < entryParams.length; j++) {
+    var entry = entryParams[j];
+    if (TEMPLATE_MARKERS.hasOwnProperty(entry.decodedValue)) {
+      templateParts.push(entry.entryKey + '=' + TEMPLATE_MARKERS[entry.decodedValue]);
+      foundTemplateMarkers.add(entry.decodedValue);
+    } else if (CHECKBOX_MARKERS.hasOwnProperty(entry.decodedValue)) {
+      templateParts.push(entry.entryKey + '=' + CHECKBOX_MARKERS[entry.decodedValue]);
+      foundCheckboxMarkers.add(entry.decodedValue);
+    } else {
+      // Constants and other entries: keep the original raw parameter string
+      templateParts.push(entry.raw);
+    }
+  }
+
+  // Verify all template markers were found
+  var templateMarkerNames = Object.keys(TEMPLATE_MARKERS);
+  /** @type {string[]} */
+  var missingTemplate = [];
+  for (var k = 0; k < templateMarkerNames.length; k++) {
+    if (!foundTemplateMarkers.has(templateMarkerNames[k])) {
+      missingTemplate.push(templateMarkerNames[k]);
+    }
+  }
+  if (missingTemplate.length > 0) {
+    throw new Error('Missing template marker answers in URL: ' + missingTemplate.join(', ') +
+      '. Type these exact values as answers: First, Last, Phone, Member ID');
+  }
+
+  // Verify all checkbox markers were found
+  var checkboxMarkerNames = Object.keys(CHECKBOX_MARKERS);
+  /** @type {string[]} */
+  var missingCheckbox = [];
+  for (var m = 0; m < checkboxMarkerNames.length; m++) {
+    if (!foundCheckboxMarkers.has(checkboxMarkerNames[m])) {
+      missingCheckbox.push(checkboxMarkerNames[m]);
+    }
+  }
+  if (missingCheckbox.length > 0) {
+    throw new Error('Missing checkbox marker answers in URL: ' + missingCheckbox.join(', ') +
+      '. Select all three Share checkboxes: Share Name, Share Email, Share Phone');
+  }
+
+  // Reassemble URL: base + non-entry params + all template entries (in original order)
+  var allQueryParts = nonEntryParts.concat(templateParts);
+  return baseUrl + '?' + allQueryParts.join('&');
 }
 
 if (typeof module !== 'undefined' && module.exports) {

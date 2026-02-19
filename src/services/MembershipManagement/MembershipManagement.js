@@ -3,7 +3,7 @@ MembershipManagement.convertJoinToRenew = function (rowAIndex, rowBIndex) {
   // Use DataAccess for ActiveMembers with write-context
   const { members: membershipData, sheet: membershipSheet, 
           originalRows: originalMembershipRows, 
-          headers: membershipHeaders } = DataAccess.getActiveMembersForUpdate();
+          headers: membershipHeaders } = DataAccess.getMembersForUpdate();
   
   const expiryScheduleData = SheetAccess.getData('ExpirySchedule');
   
@@ -333,6 +333,45 @@ MembershipManagement.generateExpiringMembersList = function () {
 }
 
 /**
+ * Backfill Member IDs for all existing members that lack one.
+ * One-time migration function, invoked manually from menu.
+ * Uses MemberIdGenerator to generate unique SC3-XXXXX IDs.
+ * Writes only changed cells for clean version history.
+ * 
+ * @returns {void}
+ */
+MembershipManagement.assignMemberIds = function() {
+  const { members, sheet, originalRows, headers } = DataAccess.getMembersForUpdate();
+
+  // Collect existing IDs to avoid collisions
+  const existingIds = new Set(
+    members.map(m => m['Member ID']).filter(Boolean)
+  );
+
+  let assignedCount = 0;
+  members.forEach(member => {
+    if (!member['Member ID']) {
+      const newId = MemberIdGenerator.generate(existingIds);
+      member['Member ID'] = newId;
+      existingIds.add(newId); // Prevent collision with just-generated IDs
+      assignedCount++;
+    }
+  });
+
+  if (assignedCount > 0) {
+    const changeCount = MemberPersistence.writeChangedCells(sheet, originalRows, members, headers);
+    AppLogger.info('MembershipManagement', 
+      `assignMemberIds: Assigned ${assignedCount} Member IDs, wrote ${changeCount} cells`);
+  }
+
+  SpreadsheetApp.getUi().alert(
+    assignedCount > 0
+      ? `Assigned Member IDs to ${assignedCount} members.`
+      : 'All members already have Member IDs — nothing to do.'
+  );
+};
+
+/**
  * Consumer: process up to batchSize entries from the ExpirationFIFO sheet.
  * This function is intended to be called by a time-based trigger (minute-based) while work remains.
  * It will reschedule itself (create a 1-minute trigger) if more work remains after processing the batch.
@@ -358,7 +397,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       );
     } else {
       // Production path: use DataAccess for write-context
-      const result = DataAccess.getActiveMembersForUpdate();
+      const result = DataAccess.getMembersForUpdate();
       membershipData = result.members;
       membershipSheet = result.sheet;
       originalMembershipRows = result.originalRows;
@@ -553,7 +592,7 @@ MembershipManagement.Internal.initializeManagerDataWithSpreadsheetApp_ = functio
   // Load ActiveMembers using DataAccess for write-context
   const { members: membershipData, sheet: membershipSheet, 
           originalRows: originalMembershipRows, 
-          headers: membershipHeaders } = DataAccess.getActiveMembersForUpdate();
+          headers: membershipHeaders } = DataAccess.getMembersForUpdate();
   
   // Load ExpirySchedule using SheetAccess
   const expiryScheduleData = SheetAccess.getData('ExpirySchedule');

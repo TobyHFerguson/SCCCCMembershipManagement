@@ -107,8 +107,8 @@ describe('MembershipManagement.processExpirationFIFO (wrapper) ', () => {
             { Name: 'Test Group', Email: 'test@example.com', Subscription: 'auto' }
         ]);
         
-        // Mock getActiveMembersForUpdate for processExpirationFIFO
-        global.DataAccess.getActiveMembersForUpdate = jest.fn(() => {
+        // Mock getMembersForUpdate for processExpirationFIFO
+        global.DataAccess.getMembersForUpdate = jest.fn(() => {
             const sheet = global.SpreadsheetManager.getSheet('ActiveMembers');
             const allData = sheet.getDataRange().getValues();
             const headers = allData[0];

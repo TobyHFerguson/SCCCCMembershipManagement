@@ -29,24 +29,24 @@ var DataAccess = {
         return ValidatedBootstrap.validateRows(rows, headers, 'DataAccess.getBootstrapData');
     },
     /**
-     * Get active members with write-context for selective cell writes.
-     * Returns validated members plus the sheet, originalRows, and headers needed
+     * Get all members from the ActiveMembers sheet with write-context for selective cell writes.
+     * Returns all rows regardless of Status, plus the sheet, originalRows, and headers needed
      * for MemberPersistence.writeChangedCells().
      *
      * Usage:
-     *   const { members, sheet, originalRows, headers } = DataAccess.getActiveMembersForUpdate();
+     *   const { members, sheet, originalRows, headers } = DataAccess.getMembersForUpdate();
      *   // ... Manager modifies members in place ...
      *   MemberPersistence.writeChangedCells(sheet, originalRows, members, headers);
      *
      * @returns {{members: ValidatedMember[], sheet: GoogleAppsScript.Spreadsheet.Sheet, originalRows: any[][], headers: string[]}}
      */
-    getActiveMembersForUpdate: function() {
+    getMembersForUpdate: function() {
         const sheet = SheetAccess.getSheet('ActiveMembers');
         const allData = sheet.getDataRange().getValues();
         const headers = allData[0];
         const originalRows = allData.slice(1);
         const members = ValidatedMember.validateRows(
-            originalRows, headers, 'DataAccess.getActiveMembersForUpdate');
+            originalRows, headers, 'DataAccess.getMembersForUpdate');
         return { members, sheet, originalRows, headers };
     },
     getEmailAddresses: function () {
@@ -54,8 +54,8 @@ var DataAccess = {
         return DataAccess.getMembers().map(member => member.Email.toLowerCase());
     },
     getMembers: () => {
-        // Delegate to getActiveMembersForUpdate for single validation path
-        return DataAccess.getActiveMembersForUpdate().members;
+        // Delegate to getMembersForUpdate for single validation path
+        return DataAccess.getMembersForUpdate().members;
     },
     getActionSpecs: () => {
         // Use getDataWithRichText to read native RichText links directly

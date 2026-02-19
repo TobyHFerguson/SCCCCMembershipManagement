@@ -2,8 +2,8 @@
  * @fileoverview Tests for DataAccess module focusing on member data accessors
  *
  * Table of Contents:
- * 1. getActiveMembersForUpdate() — Write-context accessor for selective cell writes
- * 2. getMembers() — Read-only accessor (delegates to getActiveMembersForUpdate)
+ * 1. getMembersForUpdate() — Write-context accessor for selective cell writes
+ * 2. getMembers() — Read-only accessor (delegates to getMembersForUpdate)
  * 3. getEmailAddresses() — Email list accessor (delegates to getMembers)
  * 4. updateMember() — Header-based selective cell updates (plain objects + instances)
  */
@@ -83,7 +83,7 @@ global.SheetAccess = SheetAccess;
 const { DataAccess } = require('../src/common/data/data_access.js');
 global.DataAccess = DataAccess;
 
-describe('DataAccess.getActiveMembersForUpdate', () => {
+describe('DataAccess.getMembersForUpdate', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -96,7 +96,7 @@ describe('DataAccess.getActiveMembersForUpdate', () => {
     const { sheet } = createMockSheet(allData);
     mockSpreadsheetManager.getSheet.mockReturnValue(sheet);
 
-    const result = DataAccess.getActiveMembersForUpdate();
+    const result = DataAccess.getMembersForUpdate();
 
     expect(result).toHaveProperty('members');
     expect(result).toHaveProperty('sheet');
@@ -116,7 +116,7 @@ describe('DataAccess.getActiveMembersForUpdate', () => {
     const { sheet } = createMockSheet(allData);
     mockSpreadsheetManager.getSheet.mockReturnValue(sheet);
 
-    const { members } = DataAccess.getActiveMembersForUpdate();
+    const { members } = DataAccess.getMembersForUpdate();
 
     expect(members.length).toBe(1);
     expect(members[0]).toBeInstanceOf(ValidatedMember);
@@ -134,7 +134,7 @@ describe('DataAccess.getActiveMembersForUpdate', () => {
     const { sheet } = createMockSheet(allData);
     mockSpreadsheetManager.getSheet.mockReturnValue(sheet);
 
-    const { originalRows } = DataAccess.getActiveMembersForUpdate();
+    const { originalRows } = DataAccess.getMembersForUpdate();
 
     expect(originalRows.length).toBe(1);
     expect(Array.isArray(originalRows[0])).toBe(true);
@@ -150,7 +150,7 @@ describe('DataAccess.getActiveMembersForUpdate', () => {
     const { sheet } = createMockSheet(allData);
     mockSpreadsheetManager.getSheet.mockReturnValue(sheet);
 
-    const result = DataAccess.getActiveMembersForUpdate();
+    const result = DataAccess.getMembersForUpdate();
 
     expect(result.headers).toEqual(headers);
   });
@@ -162,7 +162,7 @@ describe('DataAccess.getActiveMembersForUpdate', () => {
     const { sheet } = createMockSheet(allData);
     mockSpreadsheetManager.getSheet.mockReturnValue(sheet);
 
-    const { members, originalRows } = DataAccess.getActiveMembersForUpdate();
+    const { members, originalRows } = DataAccess.getMembersForUpdate();
 
     expect(members).toEqual([]);
     expect(originalRows).toEqual([]);
@@ -175,7 +175,7 @@ describe('DataAccess.getActiveMembersForUpdate', () => {
     const { sheet } = createMockSheet(allData);
     mockSpreadsheetManager.getSheet.mockReturnValue(sheet);
 
-    DataAccess.getActiveMembersForUpdate();
+    DataAccess.getMembersForUpdate();
 
     expect(mockSpreadsheetManager.getSheet).toHaveBeenCalledWith('ActiveMembers');
   });
@@ -189,7 +189,7 @@ describe('DataAccess.getActiveMembersForUpdate', () => {
     const { sheet } = createMockSheet(allData);
     mockSpreadsheetManager.getSheet.mockReturnValue(sheet);
 
-    const { members, originalRows } = DataAccess.getActiveMembersForUpdate();
+    const { members, originalRows } = DataAccess.getMembersForUpdate();
 
     expect(members.length).toBe(2);
     expect(originalRows.length).toBe(2);
@@ -203,7 +203,7 @@ describe('DataAccess.getMembers', () => {
     jest.clearAllMocks();
   });
 
-  it('should return ValidatedMember[] by delegating to getActiveMembersForUpdate', () => {
+  it('should return ValidatedMember[] by delegating to getMembersForUpdate', () => {
     const headers = ['Status', 'Email', 'First', 'Last', 'Phone', 'Joined', 'Expires', 'Period', 'Migrated', 'Directory Share Name', 'Directory Share Email', 'Directory Share Phone', 'Renewed On'];
     const row1 = ['Active', 'test@example.com', 'John', 'Doe', '555-1234', new Date('2024-01-01'), new Date('2025-01-01'), 12, '', 'Yes', 'Yes', 'Yes', ''];
     const allData = [headers, row1];
