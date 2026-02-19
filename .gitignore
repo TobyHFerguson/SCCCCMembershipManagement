@@ -13,3 +13,4 @@ coverage/
 clasp-wrapper.sh
 .clasp-credentials.json
 gas-verification-results.json
+.clasp.json

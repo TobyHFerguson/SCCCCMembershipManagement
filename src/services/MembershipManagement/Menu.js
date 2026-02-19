@@ -8,6 +8,8 @@ MembershipManagement.Menu = {
             .addItem('Find possible renewals', findPossibleRenewalsFromMenu.name)
             .addItem('Merge Selected Members', mergeSelectedMembers.name)
             .addSeparator()
+            .addItem('Assign Member IDs', assignMemberIds_.name)
+            .addSeparator()
             .addItem('Process Migrations', processMigrations.name)
             .addToUi();
     }
@@ -273,6 +275,17 @@ function mergeSelectedMembers() {
             }
         },
         'Merge Selected Members'
+    )();
+}
+
+function assignMemberIds_() {
+    return wrapMenuFunction_(
+        function() {
+            AppLogger.info('MembershipManagement', 'Menu: Assign Member IDs - Starting');
+            MembershipManagement.assignMemberIds();
+            AppLogger.info('MembershipManagement', 'Menu: Assign Member IDs - Completed');
+        },
+        'Assign Member IDs'
     )();
 }
 
