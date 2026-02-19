@@ -3,7 +3,7 @@ MembershipManagement.convertJoinToRenew = function (rowAIndex, rowBIndex) {
   // Use DataAccess for ActiveMembers with write-context
   const { members: membershipData, sheet: membershipSheet, 
           originalRows: originalMembershipRows, 
-          headers: membershipHeaders } = DataAccess.getActiveMembersForUpdate();
+          headers: membershipHeaders } = DataAccess.getMembersForUpdate();
   
   const expiryScheduleData = SheetAccess.getData('ExpirySchedule');
   
@@ -341,7 +341,7 @@ MembershipManagement.generateExpiringMembersList = function () {
  * @returns {void}
  */
 MembershipManagement.assignMemberIds = function() {
-  const { members, sheet, originalRows, headers } = DataAccess.getActiveMembersForUpdate();
+  const { members, sheet, originalRows, headers } = DataAccess.getMembersForUpdate();
 
   // Collect existing IDs to avoid collisions
   const existingIds = new Set(
@@ -397,7 +397,7 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       );
     } else {
       // Production path: use DataAccess for write-context
-      const result = DataAccess.getActiveMembersForUpdate();
+      const result = DataAccess.getMembersForUpdate();
       membershipData = result.members;
       membershipSheet = result.sheet;
       originalMembershipRows = result.originalRows;
@@ -592,7 +592,7 @@ MembershipManagement.Internal.initializeManagerDataWithSpreadsheetApp_ = functio
   // Load ActiveMembers using DataAccess for write-context
   const { members: membershipData, sheet: membershipSheet, 
           originalRows: originalMembershipRows, 
-          headers: membershipHeaders } = DataAccess.getActiveMembersForUpdate();
+          headers: membershipHeaders } = DataAccess.getMembersForUpdate();
   
   // Load ExpirySchedule using SheetAccess
   const expiryScheduleData = SheetAccess.getData('ExpirySchedule');

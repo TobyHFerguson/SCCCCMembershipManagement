@@ -1066,11 +1066,11 @@ declare var DataAccess: {
     getMembers: () => ValidatedMember[];
 
     /**
-     * Gets active members with write-context for selective cell writes.
-     * Returns validated members plus the sheet, originalRows, and headers needed
+     * Gets all members from the ActiveMembers sheet with write-context for selective cell writes.
+     * Returns all rows regardless of Status, plus the sheet, originalRows, and headers needed
      * for MemberPersistence.writeChangedCells().
      */
-    getActiveMembersForUpdate: () => {
+    getMembersForUpdate: () => {
         members: ValidatedMember[];
         sheet: GoogleAppsScript.Spreadsheet.Sheet;
         originalRows: any[][];

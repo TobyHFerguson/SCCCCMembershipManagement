@@ -2,7 +2,7 @@
  * Integration test for MembershipManagement.assignMemberIds
  * 
  * This test verifies that assignMemberIds correctly:
- * 1. Reads members via DataAccess.getActiveMembersForUpdate()
+ * 1. Reads members via DataAccess.getMembersForUpdate()
  * 2. Generates unique Member IDs for members without one
  * 3. Writes changes using MemberPersistence.writeChangedCells()
  * 4. Is idempotent (safe to run multiple times)
@@ -62,7 +62,7 @@ const mockSheet = {
 };
 
 global.DataAccess = {
-    getActiveMembersForUpdate: jest.fn()
+    getMembersForUpdate: jest.fn()
 };
 
 // Load MembershipManagement
@@ -105,7 +105,7 @@ describe('MembershipManagement.assignMemberIds', () => {
         const members = [member1, member2, member3];
         const originalRows = members.map(m => headers.map(h => m[h]));
         
-        global.DataAccess.getActiveMembersForUpdate.mockReturnValue({
+        global.DataAccess.getMembersForUpdate.mockReturnValue({
             members,
             sheet: mockSheet,
             originalRows,
@@ -159,7 +159,7 @@ describe('MembershipManagement.assignMemberIds', () => {
         const members = [member1, member2];
         const originalRows = members.map(m => headers.map(h => m[h]));
         
-        global.DataAccess.getActiveMembersForUpdate.mockReturnValue({
+        global.DataAccess.getMembersForUpdate.mockReturnValue({
             members,
             sheet: mockSheet,
             originalRows,
@@ -200,7 +200,7 @@ describe('MembershipManagement.assignMemberIds', () => {
         const members = [member1, member2];
         const originalRows = members.map(m => headers.map(h => m[h]));
         
-        global.DataAccess.getActiveMembersForUpdate.mockReturnValue({
+        global.DataAccess.getMembersForUpdate.mockReturnValue({
             members,
             sheet: mockSheet,
             originalRows,
