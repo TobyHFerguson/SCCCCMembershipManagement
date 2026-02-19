@@ -386,12 +386,20 @@ MembershipManagement.Manager = class {
           // Detected renewal via Member ID match (most reliable)
           const existingMember = match.member;
           const oldEmail = existingMember.Email;
+          const wasActive = existingMember.Status === 'Active';
+          const priorStatus = existingMember.Status;
           const emailChanged = MembershipManagement.Manager.normalizeEmail(oldEmail) !== MembershipManagement.Manager.normalizeEmail(txn["Email Address"]);
           
-          console.log(`transaction on row ${i + 2} ${txn["Email Address"]} matched Active member by Member ID: ${txn['Member ID']}`);
+          console.log(`transaction on row ${i + 2} ${txn["Email Address"]} matched member by Member ID: ${txn['Member ID']}${wasActive ? '' : ' (re-activating from ' + existingMember.Status + ')'}`);
           
           // Renew member (email change handled inside renewMemberWithEmailChange_ if oldEmail differs)
           this.renewMemberWithEmailChange_(txn, existingMember, expirySchedule, oldEmail);
+          
+          // Re-activate if member was not Active (e.g., Expired)
+          if (!wasActive) {
+            existingMember.Status = 'Active';
+            this._groups.forEach(g => this._groupAddFun(existingMember.Email, g.Email));
+          }
           
           actionType = 'Renew';
           const renewBodyTemplate = typeof this._actionSpecs.Renew.Body === 'string' ? this._actionSpecs.Renew.Body : this._actionSpecs.Renew.Body.text;
@@ -403,27 +411,36 @@ MembershipManagement.Manager = class {
           
           // Audit logging for Member ID match
           if (this._auditLogger) {
+            var note;
+            if (!wasActive && emailChanged) {
+              note = `Re-activated (${priorStatus} → Active) with email change: ${oldEmail} → ${txn["Email Address"]}`;
+            } else if (!wasActive) {
+              note = `Re-activated (${priorStatus} → Active) via Member ID match: ${txn['Member ID']}`;
+            } else if (emailChanged) {
+              note = `Member ID match with email change: ${oldEmail} → ${txn["Email Address"]}`;
+            } else {
+              note = `Member ID match: ${txn['Member ID']}`;
+            }
             auditEntries.push(this._auditLogger.createLogEntry({
               type: 'Renew',
               outcome: 'success',
-              note: emailChanged 
-                ? `Member ID match with email change: ${oldEmail} → ${txn["Email Address"]}`
-                : `Member ID match: ${txn['Member ID']}`,
+              note: note,
               jsonData: {
                 txnRow: i + 2,
                 memberId: txn['Member ID'],
                 oldEmail: oldEmail,
                 newEmail: txn["Email Address"],
                 detectionMethod: 'MEMBER_ID_MATCH',
-                emailChanged: emailChanged
+                emailChanged: emailChanged,
+                reactivated: !wasActive
               }
             }));
             skipStandardAuditLog = true;
           }
           
         } else if (match.matchType === 'INVALID_MEMBER_ID') {
-          // Transaction has Member ID but it doesn't match any Active member
-          const errorMsg = `Transaction has Member ID '${match.memberId}' but no Active member found with that ID`;
+          // Transaction has Member ID but no member record exists with that ID
+          const errorMsg = `Transaction has Member ID '${match.memberId}' but no member found with that ID`;
           console.error(`transaction on row ${i + 2}: ${errorMsg}`);
           
           const error = /** @type {Error & {txnNum?: number, email?: string}} */ (new Error(errorMsg));
@@ -815,7 +832,8 @@ MembershipManagement.Manager = class {
    * Find existing member who might be renewing based on transaction data.
    * Primary: Match by Member ID (if present and valid on transaction).
    * Fallback: Use isPossibleRenewal to match on name (first letter) + phone/email + temporal relationship.
-   * Only matches Active members.
+   * Member ID matching finds members regardless of Status (enabling re-activation of expired members).
+   * Heuristic fallback only matches Active members.
    * 
    * @param {{'Email Address': string, 'First Name': string, 'Last Name': string, Phone?: string, 'Member ID'?: string|null}} txn - Transaction data from payment processor
    * @param {ValidatedMember[]} membershipData - All member records
@@ -830,13 +848,13 @@ MembershipManagement.Manager = class {
     if (txnMemberId && typeof txnMemberId === 'string' && txnMemberId.trim() !== '') {
       // Transaction has a Member ID - validate format first
       if (MemberIdGenerator.isValid(txnMemberId)) {
-        // Valid format - search for matching Active member
+        // Valid format - search for matching member (any status)
         const memberIdIndex = membershipData.findIndex(
-          m => m['Member ID'] === txnMemberId && m.Status === 'Active'
+          m => m['Member ID'] === txnMemberId
         );
         
         if (memberIdIndex !== -1) {
-          // Found active member with matching Member ID
+          // Found member with matching Member ID (any status)
           return {
             found: true,
             index: memberIdIndex,
@@ -844,7 +862,7 @@ MembershipManagement.Manager = class {
             matchType: 'MEMBER_ID_MATCH'
           };
         } else {
-          // Member ID is valid format but not found or member is not Active
+          // Member ID is valid format but no member found with that ID
           return {
             found: false,
             index: -1,

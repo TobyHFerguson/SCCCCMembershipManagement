@@ -9,6 +9,7 @@ MembershipManagement.Menu = {
             .addItem('Merge Selected Members', mergeSelectedMembers.name)
             .addSeparator()
             .addItem('Assign Member IDs', assignMemberIds_.name)
+            .addItem('Generate Prefill Template', generatePrefillTemplate_.name)
             .addSeparator()
             .addItem('Process Migrations', processMigrations.name)
             .addToUi();
@@ -286,6 +287,71 @@ function assignMemberIds_() {
             AppLogger.info('MembershipManagement', 'Menu: Assign Member IDs - Completed');
         },
         'Assign Member IDs'
+    )();
+}
+
+function generatePrefillTemplate_() {
+    return wrapMenuFunction_(
+        function() {
+            AppLogger.info('MembershipManagement', 'Menu: Generate Prefill Template - Starting');
+            var ui = SpreadsheetApp.getUi();
+
+            // Step 1: Instruct the user
+            var instructions = ui.alert(
+                'Generate Prefill Form Template',
+                'This tool builds the PREFILL_FORM_TEMPLATE value for the Properties sheet.\n\n' +
+                'Steps:\n' +
+                '1. Open your Join/Renew Google Form in the Form editor\n' +
+                '2. Click the ⋮ menu → "Get pre-filled link"\n' +
+                '3. Type exactly these values as answers to the corresponding questions:\n' +
+                '   • First Name → First\n' +
+                '   • Last Name → Last\n' +
+                '   • Phone → Phone\n' +
+                '   • Member ID → Member ID\n' +
+                '4. Leave all other questions blank or with their defaults\n' +
+                '5. Click "Get link" and copy the URL\n\n' +
+                'Click OK when you have the URL ready to paste.',
+                ui.ButtonSet.OK_CANCEL
+            );
+
+            if (instructions !== ui.Button.OK) {
+                AppLogger.info('MembershipManagement', 'Menu: Generate Prefill Template - Cancelled by user');
+                return;
+            }
+
+            // Step 2: Prompt for the URL
+            var response = ui.prompt(
+                'Paste Pre-filled URL',
+                'Paste the pre-filled link you copied from Google Forms:',
+                ui.ButtonSet.OK_CANCEL
+            );
+
+            if (response.getSelectedButton() !== ui.Button.OK) {
+                AppLogger.info('MembershipManagement', 'Menu: Generate Prefill Template - Cancelled at URL prompt');
+                return;
+            }
+
+            var prefillUrl = response.getResponseText().trim();
+            if (!prefillUrl) {
+                ui.alert('Error', 'No URL provided.', ui.ButtonSet.OK);
+                return;
+            }
+
+            // Step 3: Build the template
+            var template = MembershipManagement.Utils.buildPrefillFormTemplate(prefillUrl);
+
+            AppLogger.info('MembershipManagement', 'Menu: Generate Prefill Template - Generated', { templateLength: template.length });
+
+            // Step 4: Show the result and instruct user to update Properties sheet
+            ui.alert(
+                'Prefill Template Generated',
+                'Copy the template below and paste it as the Value for\n' +
+                'PREFILL_FORM_TEMPLATE in the Properties sheet:\n\n' +
+                template,
+                ui.ButtonSet.OK
+            );
+        },
+        'Generate Prefill Template'
     )();
 }
 

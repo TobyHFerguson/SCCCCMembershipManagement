@@ -1191,6 +1191,147 @@ describe('Manager tests', () => {
         })
       });
     })
+
+    describe('Member ID matching', () => {
+      it('should re-activate expired member when transaction has matching Member ID', () => {
+        const memberId = 'SC3-AAAAA';
+        const txns = [TestData.paidTransaction({
+          "Email Address": "test1@example.com",
+          "First Name": "John",
+          "Last Name": "Doe",
+          Phone: '(123) 456-7890',
+          "Member ID": memberId
+        })];
+        activeMembers = [TestData.activeMember({
+          Email: "test1@example.com",
+          First: "John",
+          Last: "Doe",
+          Status: "Expired",
+          Joined: "2023-03-10",
+          Expires: "2024-03-10",
+          Phone: '(123) 456-7890',
+          "Member ID": memberId
+        })];
+
+        const result = manager.processPaidTransactions(txns, activeMembers, expirySchedule);
+
+        // Member should be re-activated (not duplicated)
+        expect(activeMembers.length).toBe(1);
+        expect(activeMembers[0].Status).toBe('Active');
+        expect(activeMembers[0]["Renewed On"]).toEqual(today);
+        expect(activeMembers[0].Expires).toEqual(utils.addYearsToDate(today, 1));
+        expect(activeMembers[0]["Member ID"]).toBe(memberId);
+
+        // Re-added to groups since member was expired
+        expect(groupManager.groupAddFun).toHaveBeenCalledTimes(2);
+        expect(groupManager.groupAddFun).toHaveBeenCalledWith("test1@example.com", "a@b.com");
+        expect(groupManager.groupAddFun).toHaveBeenCalledWith("test1@example.com", "member_discussions@sc3.club");
+
+        // Renew email sent (not Join)
+        expect(sendEmailFun).toHaveBeenCalledTimes(1);
+        expect(sendEmailFun).toHaveBeenCalledWith(expect.objectContaining({
+          to: "test1@example.com",
+          subject: expect.stringContaining("Renewal")
+        }));
+
+        // No errors
+        expect(result.errors).toEqual([]);
+        expect(result.recordsChanged).toBe(true);
+      });
+
+      it('should renew active member via Member ID without re-adding to groups', () => {
+        const memberId = 'SC3-BBBBB';
+        const txns = [TestData.paidTransaction({
+          "Email Address": "test1@example.com",
+          "First Name": "John",
+          "Last Name": "Doe",
+          "Member ID": memberId
+        })];
+        activeMembers = [TestData.activeMember({
+          Email: "test1@example.com",
+          First: "John",
+          Last: "Doe",
+          Joined: "2024-03-10",
+          Expires: "2025-03-10",
+          "Member ID": memberId
+        })];
+
+        const result = manager.processPaidTransactions(txns, activeMembers, expirySchedule);
+
+        expect(activeMembers[0].Status).toBe('Active');
+        expect(activeMembers[0]["Renewed On"]).toEqual(today);
+        expect(activeMembers[0]["Member ID"]).toBe(memberId);
+        expect(activeMembers.length).toBe(1);
+
+        // NOT re-added to groups (already active)
+        expect(groupManager.groupAddFun).not.toHaveBeenCalled();
+
+        // Renew email sent
+        expect(sendEmailFun).toHaveBeenCalledTimes(1);
+        expect(result.errors).toEqual([]);
+      });
+
+      it('should error with INVALID_MEMBER_ID only when no member has that ID', () => {
+        const txns = [TestData.paidTransaction({
+          "Email Address": "test1@example.com",
+          "First Name": "John",
+          "Last Name": "Doe",
+          "Member ID": "SC3-ZZZZZ"
+        })];
+        activeMembers = [TestData.activeMember({
+          Email: "other@example.com",
+          First: "Other",
+          Last: "Person",
+          "Member ID": "SC3-AAAAA"
+        })];
+
+        const result = manager.processPaidTransactions(txns, activeMembers, expirySchedule);
+
+        // Should error because SC3-ZZZZZ doesn't match ANY member
+        expect(result.errors.length).toBe(1);
+        expect(result.errors[0].message).toContain("SC3-ZZZZZ");
+        expect(activeMembers.length).toBe(1); // No new member created
+      });
+
+      it('should re-activate expired member with email change via Member ID', () => {
+        const memberId = 'SC3-CCCCC';
+        const oldEmail = 'old@example.com';
+        const newEmail = 'new@example.com';
+        const txns = [TestData.paidTransaction({
+          "Email Address": newEmail,
+          "First Name": "John",
+          "Last Name": "Doe",
+          Phone: '(123) 456-7890',
+          "Member ID": memberId
+        })];
+        activeMembers = [TestData.activeMember({
+          Email: oldEmail,
+          First: "John",
+          Last: "Doe",
+          Status: "Expired",
+          Joined: "2023-03-10",
+          Expires: "2024-03-10",
+          Phone: '(123) 456-7890',
+          "Member ID": memberId
+        })];
+
+        const result = manager.processPaidTransactions(txns, activeMembers, expirySchedule);
+
+        // Member re-activated with new email
+        expect(activeMembers.length).toBe(1);
+        expect(activeMembers[0].Status).toBe('Active');
+        expect(activeMembers[0].Email).toBe(newEmail);
+        expect(activeMembers[0]["Member ID"]).toBe(memberId);
+
+        // Email change in groups
+        expect(groupManager.groupEmailReplaceFun).toHaveBeenCalledWith(oldEmail, newEmail);
+
+        // Re-added to groups since member was expired
+        expect(groupManager.groupAddFun).toHaveBeenCalledTimes(2);
+
+        expect(result.errors).toEqual([]);
+      });
+    })
   });
 
 
@@ -1427,7 +1568,7 @@ describe('Manager tests', () => {
         // Should have error
         expect(result.errors.length).toEqual(1);
         expect(result.errors[0].message).toContain('SC3-XXXXX');
-        expect(result.errors[0].message).toContain('no Active member found');
+        expect(result.errors[0].message).toContain('no member found');
         
         // Should NOT send email or add to groups
         expect(sendEmailFun).not.toHaveBeenCalled();
@@ -2257,6 +2398,31 @@ describe('Manager tests', () => {
       expect(result.matchType).toBe('NEW_MEMBER');
       expect(result.index).toBe(-1);
       expect(result.member).toBeNull();
+    });
+
+    it('should return MEMBER_ID_MATCH for expired member with matching Member ID', () => {
+      const txn = { "Email Address": "john@example.com", "First Name": "John", "Last Name": "Doe", Phone: "(555) 555-1234", "Member ID": "SC3-AAAAA" };
+      const members = [
+        { Email: "john@example.com", First: "John", Last: "Doe", Phone: "(555) 555-1234", Status: "Expired", Joined: "2023-01-01", Expires: "2024-01-01", "Member ID": "SC3-AAAAA" }
+      ];
+      const today = "2025-03-01";
+      const result = MembershipManagement.Manager.findExistingMemberForTransaction(txn, members, today);
+      expect(result.found).toBe(true);
+      expect(result.matchType).toBe('MEMBER_ID_MATCH');
+      expect(result.index).toBe(0);
+      expect(result.member.Email).toBe("john@example.com");
+    });
+
+    it('should return INVALID_MEMBER_ID only when no member at all has that ID', () => {
+      const txn = { "Email Address": "john@example.com", "First Name": "John", "Last Name": "Doe", Phone: "(555) 555-1234", "Member ID": "SC3-ZZZZZ" };
+      const members = [
+        { Email: "john@example.com", First: "John", Last: "Doe", Phone: "(555) 555-1234", Status: "Expired", Joined: "2023-01-01", Expires: "2024-01-01", "Member ID": "SC3-AAAAA" }
+      ];
+      const today = "2025-03-01";
+      const result = MembershipManagement.Manager.findExistingMemberForTransaction(txn, members, today);
+      expect(result.found).toBe(false);
+      expect(result.matchType).toBe('INVALID_MEMBER_ID');
+      expect(result.memberId).toBe('SC3-ZZZZZ');
     });
 
     describe('isSimilarMember (deprecated alias)', () => {

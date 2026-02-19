@@ -114,4 +114,82 @@ describe('utils', () => {
       expect(utils.toLocaleDateString(date)).toBe('1/1/2021');
     });
   });
+
+  describe('buildPrefillFormTemplate', () => {
+    const BASE = 'https://docs.google.com/forms/d/e/1FAIpQLSfXXX/viewform';
+
+    test('should convert marker answers to template fields and remove other entries', () => {
+      const url = BASE + '?usp=pp_url' +
+        '&entry.111=Yes' +
+        '&entry.222=First' +
+        '&entry.333=Last' +
+        '&entry.444=Phone' +
+        '&entry.555=Member+ID';
+      const result = utils.buildPrefillFormTemplate(url);
+      expect(result).toBe(BASE + '?usp=pp_url' +
+        '&entry.222={First}' +
+        '&entry.333={Last}' +
+        '&entry.444={Phone}' +
+        '&entry.555={Member ID}');
+    });
+
+    test('should handle %20 encoding for Member ID', () => {
+      const url = BASE + '?usp=pp_url&entry.222=First&entry.333=Last&entry.444=Phone&entry.555=Member%20ID';
+      const result = utils.buildPrefillFormTemplate(url);
+      expect(result).toBe(BASE + '?usp=pp_url&entry.222={First}&entry.333={Last}&entry.444={Phone}&entry.555={Member ID}');
+    });
+
+    test('should preserve entry order from the original URL', () => {
+      const url = BASE + '?usp=pp_url' +
+        '&entry.999=Phone' +
+        '&entry.111=First' +
+        '&entry.555=Last' +
+        '&entry.777=Member+ID';
+      const result = utils.buildPrefillFormTemplate(url);
+      expect(result).toBe(BASE + '?usp=pp_url' +
+        '&entry.999={Phone}' +
+        '&entry.111={First}' +
+        '&entry.555={Last}' +
+        '&entry.777={Member ID}');
+    });
+
+    test('should keep only the four marker entries and drop all others', () => {
+      const url = BASE + '?usp=pp_url' +
+        '&entry.100=I+agree' +
+        '&entry.200=Share+Name' +
+        '&entry.300=First' +
+        '&entry.400=Last' +
+        '&entry.500=Phone' +
+        '&entry.600=Member+ID' +
+        '&entry.200=Share+Email' +
+        '&entry.200=Share+Phone';
+      const result = utils.buildPrefillFormTemplate(url);
+      // Only the 4 marker entries remain
+      expect(result).toBe(BASE + '?usp=pp_url' +
+        '&entry.300={First}' +
+        '&entry.400={Last}' +
+        '&entry.500={Phone}' +
+        '&entry.600={Member ID}');
+    });
+
+    test('should throw if URL has no entry parameters', () => {
+      const url = BASE + '?usp=pp_url';
+      expect(() => utils.buildPrefillFormTemplate(url)).toThrow('No entry parameters found');
+    });
+
+    test('should throw if a marker answer is not found in the URL', () => {
+      // Missing Member ID marker
+      const url = BASE + '?usp=pp_url' +
+        '&entry.222=First' +
+        '&entry.333=Last' +
+        '&entry.444=Phone';
+      expect(() => utils.buildPrefillFormTemplate(url)).toThrow('Member ID');
+    });
+
+    test('should handle URL without usp parameter', () => {
+      const url = BASE + '?entry.222=First&entry.333=Last&entry.444=Phone&entry.555=Member+ID';
+      const result = utils.buildPrefillFormTemplate(url);
+      expect(result).toBe(BASE + '?entry.222={First}&entry.333={Last}&entry.444={Phone}&entry.555={Member ID}');
+    });
+  });
 });

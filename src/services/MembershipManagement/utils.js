@@ -187,6 +187,103 @@ MembershipManagement.Utils.addPrefillForm = function(member, prefillFormTemplate
   return memberCopy;
 }
 
+/**
+ * Build a PREFILL_FORM_TEMPLATE URL from a Google Forms pre-filled link.
+ *
+ * The operator obtains the pre-filled link by using the Form editor's
+ * "Get pre-filled link" feature, typing the Members-sheet column names
+ * (First, Last, Phone, Member ID) as the answers for the corresponding
+ * form questions.
+ *
+ * This function:
+ * 1. Finds entry parameters whose decoded values match those marker answers
+ * 2. Replaces each marker value with the corresponding template field
+ *    (e.g. First → {First})
+ * 3. Drops every other entry parameter (static checkboxes, agreements, etc.)
+ * 4. Returns the cleaned URL ready for PREFILL_FORM_TEMPLATE
+ *
+ * @param {string} prefillUrl - Pre-filled URL from Google Forms
+ * @returns {string} Template URL with {First}, {Last}, {Phone}, {Member ID} placeholders
+ * @throws {Error} If no entry parameters found or a required marker is missing
+ */
+MembershipManagement.Utils.buildPrefillFormTemplate = function(prefillUrl) {
+  /** @type {Record<string, string>} */
+  var MARKER_TO_TEMPLATE = {
+    'First': '{First}',
+    'Last': '{Last}',
+    'Phone': '{Phone}',
+    'Member ID': '{Member ID}'
+  };
+
+  var qIndex = prefillUrl.indexOf('?');
+  if (qIndex === -1) {
+    throw new Error('No entry parameters found in URL');
+  }
+
+  var baseUrl = prefillUrl.substring(0, qIndex);
+  var queryString = prefillUrl.substring(qIndex + 1);
+  var params = queryString.split('&');
+
+  // Collect non-entry params (like usp=pp_url) and entry params separately
+  /** @type {string[]} */
+  var nonEntryParts = [];
+  /** @type {{raw: string, entryKey: string, decodedValue: string}[]} */
+  var entryParams = [];
+
+  for (var i = 0; i < params.length; i++) {
+    var param = params[i];
+    if (param.startsWith('entry.')) {
+      var eqIdx = param.indexOf('=');
+      if (eqIdx !== -1) {
+        var entryKey = param.substring(0, eqIdx);
+        var rawValue = param.substring(eqIdx + 1);
+        // Decode: handle both + (space) and %XX encoding
+        var decoded = decodeURIComponent(rawValue.replace(/\+/g, ' '));
+        entryParams.push({ raw: param, entryKey: entryKey, decodedValue: decoded });
+      }
+    } else {
+      nonEntryParts.push(param);
+    }
+  }
+
+  if (entryParams.length === 0) {
+    throw new Error('No entry parameters found in URL');
+  }
+
+  // Match markers and build template entries in original URL order
+  /** @type {string[]} */
+  var templateParts = [];
+  /** @type {Set<string>} */
+  var foundMarkers = new Set();
+
+  for (var j = 0; j < entryParams.length; j++) {
+    var entry = entryParams[j];
+    if (MARKER_TO_TEMPLATE.hasOwnProperty(entry.decodedValue)) {
+      templateParts.push(entry.entryKey + '=' + MARKER_TO_TEMPLATE[entry.decodedValue]);
+      foundMarkers.add(entry.decodedValue);
+    }
+    // Non-marker entries are silently dropped
+  }
+
+  // Verify all markers were found
+  var markerNames = Object.keys(MARKER_TO_TEMPLATE);
+  /** @type {string[]} */
+  var missing = [];
+  for (var k = 0; k < markerNames.length; k++) {
+    if (!foundMarkers.has(markerNames[k])) {
+      missing.push(markerNames[k]);
+    }
+  }
+  if (missing.length > 0) {
+    throw new Error('Missing marker answers in URL: ' + missing.join(', ') +
+      '. When creating the pre-filled link, type these exact values as answers: First, Last, Phone, Member ID');
+  }
+
+  // Reassemble URL: base + non-entry params + template entries
+  var allQueryParts = nonEntryParts.concat(templateParts);
+  return baseUrl + '?' + allQueryParts.join('&');
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = MembershipManagement;
 }
