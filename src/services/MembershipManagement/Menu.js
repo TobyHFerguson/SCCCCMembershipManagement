@@ -303,12 +303,21 @@ function generatePrefillTemplate_() {
                 'Steps:\n' +
                 '1. Open your Join/Renew Google Form in the Form editor\n' +
                 '2. Click the ⋮ menu → "Get pre-filled link"\n' +
-                '3. Type exactly these values as answers to the corresponding questions:\n' +
+                '3. Enter these EXACT answers for the corresponding questions:\n\n' +
+                '   Required constant answers (type or select exactly):\n' +
+                '   • Waiver → Yes\n' +
+                '   • Privacy Policy → I have read the privacy policy\n' +
+                '   • Agreement → I Agree\n\n' +
+                '   Directory sharing checkboxes (select ALL three):\n' +
+                '   • ☑ Share Name\n' +
+                '   • ☑ Share Email\n' +
+                '   • ☑ Share Phone\n\n' +
+                '   Template marker answers (type exactly):\n' +
                 '   • First Name → First\n' +
                 '   • Last Name → Last\n' +
                 '   • Phone → Phone\n' +
-                '   • Member ID → Member ID\n' +
-                '4. Leave all other questions blank or with their defaults\n' +
+                '   • Member ID → Member ID\n\n' +
+                '4. Leave all other questions with their defaults\n' +
                 '5. Click "Get link" and copy the URL\n\n' +
                 'Click OK when you have the URL ready to paste.',
                 ui.ButtonSet.OK_CANCEL
