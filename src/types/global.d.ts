@@ -1652,3 +1652,10 @@ declare var Properties: {
     clearCache(): void;
     getAllUserProperties(): { [key: string]: string };
 };
+
+// ============================================================================
+// Global Functions - Exposed via webapp_endpoints.js for google.script.run
+// ============================================================================
+
+declare function handleApiRequest(request: { action: string; params?: Record<string, unknown>; token?: string } | null): string;
+declare function getAllServiceData(token: string): { email: string; services: Record<string, Record<string, any>>; homePageServices: Array<any> } | { error: string; errorCode: string };

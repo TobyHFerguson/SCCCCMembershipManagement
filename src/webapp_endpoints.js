@@ -257,6 +257,62 @@ function getHomePageContent(email) {
 }
 
 /**
+ * Fetch data from all 5 services in a single call for authenticated user.
+ * Replaces multiple individual getServiceContent() calls with one bulk request.
+ * Individual service failures return error objects and do not prevent other services from loading.
+ *
+ * CRITICAL: No Date objects in return value - google.script.run cannot serialize them.
+ *
+ * @param {string} token - Multi-use auth token from verifyCode()
+ * @returns {{email: string, services: Record<string, Record<string, any>>, homePageServices: Array} | {error: string, errorCode: string}} Combined service data or error (JUSTIFIED: each service returns a different data shape)
+ */
+function getAllServiceData(token) {
+  AppLogger.configure();
+
+  var email = TokenManager.getEmailFromMUT(token);
+  if (!email) {
+    return { error: 'Invalid or expired session', errorCode: 'INVALID_TOKEN' };
+  }
+
+  AppLogger.info('WebApp', 'getAllServiceData() called', { email: email });
+
+  var serviceIds = [
+    'DirectoryService',
+    'GroupManagementService',
+    'ProfileManagementService',
+    'EmailChangeService',
+    'VotingService'
+  ];
+
+  var services = /** @type {Record<string, any>} */ ({});
+
+  for (var i = 0; i < serviceIds.length; i++) {
+    var serviceId = serviceIds[i];
+    var webService = /** @type {any} */ (WebServices[serviceId]);
+    try {
+      services[serviceId] = webService.Api.getData(email);
+    } catch (err) {
+      services[serviceId] = {
+        error: 'Failed to load ' + serviceId + ': ' + err.message,
+        serviceName: serviceId
+      };
+    }
+  }
+
+  var homePageServices = Common.HomePage.Manager.getAvailableServices();
+
+  var logger = new ServiceLogger('AllServices', email);
+  var auditEntries = [logger.logServiceAccess('getAllServiceData')];
+  _persistAuditEntries(auditEntries);
+
+  return {
+    email: email,
+    services: services,
+    homePageServices: homePageServices
+  };
+}
+
+/**
  * Render verification page HTML content for sign-out flow
  * Returns the initial verification code input page
  * 
@@ -359,4 +415,9 @@ function handleApiRequest(request) {
   
   // Handle the request
   return ApiClient.handleRequest(request);
+}
+
+// Node.js export for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { getAllServiceData: getAllServiceData };
 }
