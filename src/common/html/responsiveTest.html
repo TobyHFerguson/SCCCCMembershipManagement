@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base target="_top">
+  <title>SCCCC - Responsive CSS Test</title>
+  <style>
+    /* ── Base ── */
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 1rem;
+      box-sizing: border-box;
+    }
+    h1 { margin-top: 0; font-size: 1.4rem; }
+    h2 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem; border-bottom: 1px solid #ccc; padding-bottom: 0.25rem; }
+    section { margin-bottom: 2rem; }
+
+    /* ── @media breakpoint indicator ── */
+    .media-test-box {
+      padding: 2rem;
+      margin: 1rem 0;
+      text-align: center;
+      font-size: 1.5rem;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+    /* Default: desktop (>900px) */
+    .media-test-box { background-color: #90EE90; }
+    .media-test-box::after { content: "Desktop (>900px)"; }
+
+    @media (max-width: 900px) {
+      .media-test-box { background-color: #ADD8E6; }
+      .media-test-box::after { content: "Tablet (601-900px)"; }
+    }
+    @media (max-width: 600px) {
+      .media-test-box { background-color: #FFB6C1; }
+      .media-test-box::after { content: "Mobile (\u2264600px)"; }
+    }
+    @media (max-width: 600px) and (orientation: portrait) {
+      .media-test-box { background-color: #DDA0DD; }
+      .media-test-box::after { content: "Mobile Portrait (\u2264600px portrait)"; }
+    }
+
+    /* ── Responsive grid (3 → 2 → 1 column, no JS) ── */
+    .grid-test {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+    @media (max-width: 900px) {
+      .grid-test { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .grid-test { grid-template-columns: 1fr; }
+    }
+    .grid-cell {
+      padding: 1rem;
+      border-radius: 6px;
+      text-align: center;
+      font-size: 0.85rem;
+    }
+    .grid-cell:nth-child(1) { background-color: #ffd700; }
+    .grid-cell:nth-child(2) { background-color: #ff8c00; }
+    .grid-cell:nth-child(3) { background-color: #ff6347; }
+    .grid-cell:nth-child(4) { background-color: #40e0d0; }
+    .grid-cell:nth-child(5) { background-color: #7b68ee; }
+    .grid-cell:nth-child(6) { background-color: #3cb371; }
+    .grid-label {
+      font-size: 0.8rem;
+      color: #333;
+      text-align: center;
+      margin-top: 0.25rem;
+    }
+    .grid-label::before { content: "Active layout: "; font-weight: bold; }
+    /* desktop */
+    .grid-label::after { content: "3 columns (>900px)"; }
+    @media (max-width: 900px) { .grid-label::after { content: "2 columns (601-900px)"; } }
+    @media (max-width: 600px) { .grid-label::after { content: "1 column (\u2264600px)"; } }
+
+    /* ── Container query ── */
+    .container-query-test {
+      container-type: inline-size;
+      border: 1px dashed #999;
+      padding: 0.5rem;
+      border-radius: 6px;
+    }
+    .container-query-inner {
+      padding: 1rem;
+      border-radius: 6px;
+      text-align: center;
+      font-size: 1rem;
+    }
+    @container (max-width: 500px) {
+      .container-query-inner {
+        background-color: coral;
+      }
+      .container-query-inner::after { content: " — Container \u2264500px (coral)"; }
+    }
+    @container (min-width: 501px) {
+      .container-query-inner {
+        background-color: lightgreen;
+      }
+      .container-query-inner::after { content: " — Container >500px (lightgreen)"; }
+    }
+
+    /* ── Diagnostic panel ── */
+    #diag {
+      background-color: #f5f5f5;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 1rem;
+      font-family: monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+    #diag table { border-collapse: collapse; width: 100%; }
+    #diag td { padding: 0.15rem 0.5rem; }
+    #diag td:first-child { font-weight: bold; color: #444; white-space: nowrap; }
+
+    /* ── View Source ── */
+    pre#view-source {
+      background-color: #1e1e1e;
+      color: #d4d4d4;
+      padding: 1rem;
+      border-radius: 6px;
+      overflow: auto;
+      font-size: 0.75rem;
+      max-height: 300px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <h1>SCCCC Responsive CSS Diagnostic Page</h1>
+  <p>This page is served via <code>HtmlService.createHtmlOutputFromFile()</code> (static, no template processing).
+     It validates that CSS <code>@media</code> queries work correctly inside the GAS iframe sandbox.</p>
+
+  <!-- Section 1: @media breakpoint indicator -->
+  <section>
+    <h2>1. @media Breakpoint Indicator</h2>
+    <p>The box below changes color and label as the viewport width crosses breakpoints.
+       No JavaScript — CSS only.</p>
+    <div class="media-test-box"></div>
+  </section>
+
+  <!-- Section 2: Responsive grid -->
+  <section>
+    <h2>2. Responsive Grid (3 → 2 → 1 column via @media)</h2>
+    <div class="grid-test">
+      <div class="grid-cell">Cell 1</div>
+      <div class="grid-cell">Cell 2</div>
+      <div class="grid-cell">Cell 3</div>
+      <div class="grid-cell">Cell 4</div>
+      <div class="grid-cell">Cell 5</div>
+      <div class="grid-cell">Cell 6</div>
+    </div>
+    <p class="grid-label"></p>
+  </section>
+
+  <!-- Section 3: Container query -->
+  <section>
+    <h2>3. CSS Container Query Test</h2>
+    <p>Resize the box below by dragging the right edge (or resize the window).
+       When the container is wider than 500 px it turns green; narrower turns coral.</p>
+    <div class="container-query-test" style="resize: horizontal; overflow: auto; min-width: 200px; max-width: 100%;">
+      <div class="container-query-inner">Container Query result</div>
+    </div>
+  </section>
+
+  <!-- Section 4: Diagnostic info panel -->
+  <section>
+    <h2>4. Diagnostic Info Panel</h2>
+    <div id="diag">
+      <table>
+        <tr><td>window.innerWidth × innerHeight</td><td id="d-inner">—</td></tr>
+        <tr><td>window.screen.width × screen.height</td><td id="d-screen">—</td></tr>
+        <tr><td>document.documentElement.clientWidth</td><td id="d-client">—</td></tr>
+        <tr><td>matchMedia max-width: 900px</td><td id="d-mq-900">—</td></tr>
+        <tr><td>matchMedia max-width: 600px</td><td id="d-mq-600">—</td></tr>
+        <tr><td>matchMedia max-width: 600px + portrait</td><td id="d-mq-600p">—</td></tr>
+        <tr><td>CSS viewport vs innerWidth aligned?</td><td id="d-align">—</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- Section 5: View Source -->
+  <section>
+    <h2>5. View Source — rendered &lt;style&gt; content</h2>
+    <p>Verify that <code>@media</code> text was delivered un-mangled by GAS.</p>
+    <pre id="view-source">Loading…</pre>
+  </section>
+
+  <script>
+    function updateDiag() {
+      var iw = window.innerWidth, ih = window.innerHeight;
+      var sw = window.screen.width, sh = window.screen.height;
+      var cw = document.documentElement.clientWidth;
+      var mq900 = window.matchMedia('(max-width: 900px)').matches;
+      var mq600 = window.matchMedia('(max-width: 600px)').matches;
+      var mq600p = window.matchMedia('(max-width: 600px) and (orientation: portrait)').matches;
+
+      document.getElementById('d-inner').textContent = iw + ' × ' + ih;
+      document.getElementById('d-screen').textContent = sw + ' × ' + sh;
+      document.getElementById('d-client').textContent = cw;
+      document.getElementById('d-mq-900').textContent = mq900 ? 'YES (≤900px)' : 'NO (>900px)';
+      document.getElementById('d-mq-600').textContent = mq600 ? 'YES (≤600px)' : 'NO (>600px)';
+      document.getElementById('d-mq-600p').textContent = mq600p ? 'YES' : 'NO';
+
+      // Key question: does @media use innerWidth or something else?
+      var expectedBreakpoint = mq600 ? 600 : (mq900 ? 900 : null);
+      var alignText;
+      if (expectedBreakpoint === null) {
+        alignText = 'Desktop — innerWidth (' + iw + ') > 900. @media confirms desktop. ✔';
+      } else if (mq600 && iw <= 600) {
+        alignText = 'Mobile — innerWidth (' + iw + ') ≤ 600. @media + innerWidth agree. ✔';
+      } else if (mq900 && iw <= 900) {
+        alignText = 'Tablet — innerWidth (' + iw + ') ≤ 900. @media + innerWidth agree. ✔';
+      } else {
+        alignText = 'MISMATCH — innerWidth (' + iw + ') does not match active @media breakpoint. ✘';
+      }
+      document.getElementById('d-align').textContent = alignText;
+    }
+
+    function renderViewSource() {
+      var styleEl = document.querySelector('style');
+      var pre = document.getElementById('view-source');
+      if (styleEl) {
+        pre.textContent = styleEl.textContent;
+      } else {
+        pre.textContent = '(no <style> element found)';
+      }
+    }
+
+    // Run on load
+    updateDiag();
+    renderViewSource();
+
+    // Live updates on resize
+    window.addEventListener('resize', updateDiag);
+  </script>
+</body>
+</html>
