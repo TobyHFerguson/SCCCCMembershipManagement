@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: monospace; padding: 1rem; }
+    .pass { color: green; }
+    .fail { color: red; }
+    #results div { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <h2>GAS JS Feature Test</h2>
+  <div id="results"></div>
+
+  <h3>Interactive Test</h3>
+  <input type="text" id="testInput" oninput="onTestInput()" placeholder="Type here...">
+  <div id="inputResult">Waiting for input...</div>
+
+  <script>
+    var results = document.getElementById('results');
+
+    function report(name, passed, detail) {
+      var div = document.createElement('div');
+      div.className = passed ? 'pass' : 'fail';
+      div.textContent = (passed ? 'PASS' : 'FAIL') + ': ' + name + (detail ? ' — ' + detail : '');
+      results.appendChild(div);
+    }
+
+    // Test 1: var (should always work)
+    try {
+      var testVar = 'hello';
+      report('var declaration', testVar === 'hello');
+    } catch(e) { report('var declaration', false, e.message); }
+
+    // Test 2: const inside script top-level
+    try {
+      const testConst = 42;
+      report('const (top-level)', testConst === 42);
+    } catch(e) { report('const (top-level)', false, e.message); }
+
+    // Test 3: let inside script top-level
+    try {
+      let testLet = 99;
+      report('let (top-level)', testLet === 99);
+    } catch(e) { report('let (top-level)', false, e.message); }
+
+    // Test 4: Arrow function
+    try {
+      var arrowFn = function(x) { return x * 2; };
+      report('arrow fn (control - regular)', arrowFn(3) === 6);
+    } catch(e) { report('arrow fn (control)', false, e.message); }
+
+    try {
+      var arrowFn2 = (x) => x * 2;
+      report('arrow function =>', arrowFn2(3) === 6);
+    } catch(e) { report('arrow function =>', false, e.message); }
+
+    // Test 5: Template literal
+    try {
+      var name = 'world';
+      var tpl = `hello ${name}`;
+      report('template literal', tpl === 'hello world');
+    } catch(e) { report('template literal', false, e.message); }
+
+    // Test 6: Default parameter
+    try {
+      function withDefault(a, b) { if (b === undefined) b = 10; return a + b; }
+      report('default param (control - manual)', withDefault(5) === 15);
+    } catch(e) { report('default param (control)', false, e.message); }
+
+    try {
+      function withDefaultReal(a, b = 10) { return a + b; }
+      report('default parameter (b = 10)', withDefaultReal(5) === 15);
+    } catch(e) { report('default parameter (b = 10)', false, e.message); }
+
+    // Test 7: Destructuring
+    try {
+      var obj = {x: 1, y: 2};
+      var x = obj.x;
+      var y = obj.y;
+      report('destructuring (control - manual)', x === 1 && y === 2);
+    } catch(e) { report('destructuring (control)', false, e.message); }
+
+    try {
+      var obj2 = {a: 10, b: 20};
+      var {a, b} = obj2;
+      report('destructuring {a, b}', a === 10 && b === 20);
+    } catch(e) { report('destructuring {a, b}', false, e.message); }
+
+    // Test 8: for...of
+    try {
+      var arr = [1, 2, 3];
+      var sum = 0;
+      for (var item of arr) { sum += item; }
+      report('for...of', sum === 6);
+    } catch(e) { report('for...of', false, e.message); }
+
+    // Test 9: Promise
+    try {
+      var p = new Promise(function(resolve) { resolve(true); });
+      report('Promise constructor', typeof p.then === 'function');
+    } catch(e) { report('Promise constructor', false, e.message); }
+
+    // Test 10: Spread
+    try {
+      var arr1 = [1, 2];
+      var arr2 = [0, ...arr1, 3];
+      report('spread [...arr]', arr2.length === 4 && arr2[1] === 1);
+    } catch(e) { report('spread [...arr]', false, e.message); }
+
+    // Test 11: Object.entries
+    try {
+      var entries = Object.entries({x: 1});
+      report('Object.entries', entries[0][0] === 'x' && entries[0][1] === 1);
+    } catch(e) { report('Object.entries', false, e.message); }
+
+    // Test 12: Multi-line template literal with expressions
+    try {
+      var items = ['a', 'b'];
+      var html = `<ul>
+${items.map(i => `<li>${i}</li>`).join('')}
+</ul>`;
+      report('multi-line template + map + arrow', html.indexOf('<li>a</li>') >= 0);
+    } catch(e) { report('multi-line template + map + arrow', false, e.message); }
+
+    // Test 12b: Template literal with <style> tag inside
+    try {
+      var cssHtml = `<style>.test-class { color: red; }</style><div class="test-class">styled</div>`;
+      report('template literal with style tag', cssHtml.indexOf('<style>') >= 0);
+    } catch(e) { report('template literal with style tag', false, e.message); }
+
+    // Test 12c: Large template literal with style block (multi-line)
+    try {
+      var bigCss = `
+        <style>
+          .container { padding: 1rem; }
+          .header { font-size: 2rem; }
+          #data-table td { max-width: 12.5rem; }
+        </style>
+        <div class="container">
+          <h2>Test</h2>
+          <table id="data-table"><thead><tr><th>Col</th></tr></thead></table>
+        </div>
+      `;
+      report('large template with style block', bigCss.indexOf('</style>') >= 0);
+    } catch(e) { report('large template with style block', false, e.message); }
+
+    // Test 13: Function defined after tests but referenced via hoisting
+    report('function hoisting (onTestInput)', typeof onTestInput === 'function');
+
+    // The function referenced by oninput
+    function onTestInput() {
+      document.getElementById('inputResult').textContent = 'Input value: ' + document.getElementById('testInput').value;
+    }
+
+    report('--- All tests complete ---', true);
+  </script>
+</body>
+</html>

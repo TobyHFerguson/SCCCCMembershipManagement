@@ -18,10 +18,22 @@ function doGet(e) {
             .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // JS feature diagnostic page — what does createHtmlOutputFromFile allow?
+    if (e && e.parameter && e.parameter.page === 'js-test') {
+        return HtmlService.createHtmlOutputFromFile('common/html/jsTest')
+            .setTitle('SCCCC - JS Feature Test');
+    }
+
     // Responsive CSS diagnostic page — served via static pipeline (no template processing)
     if (e && e.parameter && e.parameter.page === 'responsive-test') {
         return HtmlService.createHtmlOutputFromFile('common/html/responsiveTest')
             .setTitle('SCCCC - Responsive CSS Test');
+    }
+
+    // Static SPA test page — served via static pipeline (no template processing)
+    if (e && e.parameter && e.parameter.page === 'app-test') {
+        return HtmlService.createHtmlOutputFromFile('common/html/app')
+            .setTitle('SCCCC Services (Static SPA Test)');
     }
 
     // Configure logger for web app execution
