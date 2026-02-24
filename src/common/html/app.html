@@ -801,7 +801,10 @@
             handleVerifyCode();
         });
 
-        // Initial setup
+        // Initial setup — attach input listener programmatically
+        // (inline oninput may be stripped by GAS HTML sanitization)
+        emailInput.addEventListener('input', validateEmailInput);
+
         document.addEventListener('DOMContentLoaded', function() {
             validateEmailInput();
             enableForm(emailForm);
@@ -1086,10 +1089,19 @@
 
         // Render Directory Service
         function renderDirectoryService(data, container) {
+            // CDN URLs extracted to variables — GAS Caja sanitizer can
+            // mangle '://' inside inline string literals (treats as JS comment)
+            var cdnBase = 'https:' + '//cdn.datatables.net';
+            var jqueryUrl = 'https:' + '//code.jquery.com/jquery-3.6.0.min.js';
+            var dtCssUrl = cdnBase + '/1.11.5/css/jquery.dataTables.min.css';
+            var dtRespCssUrl = cdnBase + '/responsive/2.2.9/css/responsive.dataTables.min.css';
+            var dtJsUrl = cdnBase + '/1.11.5/js/jquery.dataTables.min.js';
+            var dtRespJsUrl = cdnBase + '/responsive/2.2.9/js/dataTables.responsive.min.js';
+
             container.classList.add('directory-service-container');
 
-            loadStylesheet('https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css');
-            loadStylesheet('https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css');
+            loadStylesheet(dtCssUrl);
+            loadStylesheet(dtRespCssUrl);
 
             container.innerHTML = `
                 <style>
@@ -1214,11 +1226,11 @@
                 </div>
             `;
 
-            loadScript('https://code.jquery.com/jquery-3.6.0.min.js')
+            loadScript(jqueryUrl)
                 .then(() => {
                     return Promise.all([
-                        loadScript('https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js'),
-                        loadScript('https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js')
+                        loadScript(dtJsUrl),
+                        loadScript(dtRespJsUrl)
                     ]);
                 })
                 .then(() => {
