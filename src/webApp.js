@@ -24,6 +24,12 @@ function doGet(e) {
             .setTitle('SCCCC - Responsive CSS Test');
     }
 
+    // Static SPA test page — served via static pipeline (no template processing)
+    if (e && e.parameter && e.parameter.page === 'app-test') {
+        return HtmlService.createHtmlOutputFromFile('common/html/app')
+            .setTitle('SCCCC Services (Static SPA Test)');
+    }
+
     // Configure logger for web app execution
     AppLogger.configure();
     AppLogger.info('WebApp', 'doGet() called');

@@ -1,0 +1,2759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base target="_top">
+    <title>SCCCC Services</title>
+    <style>
+        /* Base Styles (for Desktop) */
+        html {
+            font-size: 16px;
+            /* Default/Desktop base font size - 1rem = 16px */
+            box-sizing: border-box;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: inherit;
+            /* Inherit box-sizing globally */
+        }
+
+        body {
+            font-family: sans-serif;
+            display: flex;
+            /* Flexbox for centering on desktop */
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: white;
+            width: 25rem;
+            /* 400px / 16px = 25rem */
+            padding: 1.25rem;
+            /* 20px / 16px = 1.25rem */
+            border: 0.0625rem solid #ccc;
+            /* 1px / 16px = 0.0625rem */
+            border-radius: 0.5rem;
+            /* 8px / 16px = 0.5rem */
+            box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+            /* 0 4px 8px */
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            /* Desktop h2: 1.8 * 16px = 28.8px */
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 1.25rem;
+            /* 20px / 16px = 1.25rem */
+        }
+
+        input[type=email],
+        button {
+            width: 100%;
+            padding: 0.75rem 1.25rem;
+            /* 12px 20px */
+            margin-bottom: 0.625rem;
+            /* 10px / 16px = 0.625rem */
+            display: block;
+            /* Ensures they stack */
+            border: 0.0625rem solid #ccc;
+            border-radius: 0.25rem;
+            /* 4px / 16px = 0.25rem */
+            font-size: 1rem;
+            /* Base font size for inputs/buttons (1 * 16px = 16px) */
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #007bff;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+
+        /* Style for disabled form visual feedback */
+        .form-disabled {
+            opacity: 0.7;
+            /* Faded appearance */
+            pointer-events: none;
+            /* Prevents cursor events on the form wrapper */
+        }
+
+        /* Ensure disabled inputs/buttons still have their default disabled styles */
+        .form-disabled input,
+        .form-disabled button,
+        .form-disabled select,
+        .form-disabled textarea {
+            cursor: not-allowed;
+        }
+
+        .message {
+            margin-top: 0.625rem;
+            /* 10px / 16px = 0.625rem */
+            font-size: 0.9rem;
+            /* 0.9 * 16px = 14.4px */
+            text-align: left;
+        }
+
+        .success {
+            color: #007bff;
+        }
+
+        .error {
+            color: red;
+        }
+
+        /* Data Tables Styles */
+        #data-table {
+            width: 100%;
+            /* Ensure the table fills its container */
+            border-collapse: collapse;
+        }
+
+        #data-table th,
+        #data-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        #data-table th {
+            background-color: #f2f2f2;
+        }
+
+        /* Navigation links (Back to Services, etc.) */
+        .nav-back-link {
+            display: block;
+            margin-top: 1.5rem;
+            text-align: center;
+            color: #007bff;
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 0.95rem;
+        }
+
+        .nav-back-link:hover {
+            color: #0056b3;
+        }
+
+        /* Verification code UI styles (from verificationCodeInput.html) */
+        .code-input-container {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .code-input {
+            width: 2.5rem;
+            height: 3rem;
+            font-size: 1.5rem;
+            text-align: center;
+            border: 0.0625rem solid #ccc;
+            border-radius: 0.25rem;
+            padding: 0;
+        }
+
+        .code-input:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 0 0.125rem rgba(0, 123, 255, 0.25);
+        }
+
+        .verification-step {
+            display: none;
+        }
+
+        .verification-step.active {
+            display: block;
+        }
+
+        .back-link {
+            display: block;
+            margin-top: 1rem;
+            text-align: center;
+            color: #007bff;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .resend-link {
+            display: block;
+            margin-top: 1rem;
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .resend-link a {
+            color: #007bff;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .resend-link a.disabled {
+            color: #999;
+            cursor: not-allowed;
+            text-decoration: none;
+        }
+
+        /* --- Responsive Styles (@media queries) --- */
+
+        /* Tablet Styles */
+        @media (max-width: 900px) {
+            html {
+                font-size: 17px;
+                /* Tablet base font: 1rem = 17px */
+            }
+
+            .container {
+                width: 80%;
+                /* Wider on tablet, still centered */
+                max-width: 37.5rem;
+                padding: 1.5625rem;
+            }
+
+            h2 {
+                font-size: 2.0rem;
+                /* Tablet h2: 2.0 * 17px = 34px */
+            }
+
+            .nav-back-link {
+                font-size: 1rem;
+                margin-top: 1.25rem;
+            }
+        }
+
+        /* Mobile Portrait Styles */
+        @media (max-width: 600px) and (orientation: portrait) {
+            html {
+                font-size: 18px;
+                /* Mobile Portrait base font: 1rem = 18px */
+            }
+
+            body {
+                display: block;
+                /* Override flex for mobile portrait layout */
+                padding: 0.9375rem;
+            }
+
+            .container {
+                width: 95%;
+                margin: 0 auto;
+                /* Center container on mobile block layout */
+                padding: 0.9375rem;
+            }
+
+            h2 {
+                font-size: 2.2rem;
+                /* Mobile Portrait h2: 2.2 * 18px = 39.6px */
+                margin-bottom: 0.9375rem;
+            }
+
+            input[type=email],
+            button {
+                padding: 1rem;
+                font-size: 1.1rem;
+            }
+
+            .message {
+                font-size: 1rem;
+            }
+
+            .nav-back-link {
+                font-size: 1rem;
+                margin-top: 1.25rem;
+            }
+        }
+
+        /* Mobile Landscape Styles */
+        @media (max-width: 600px) and (orientation: landscape) {
+            html {
+                font-size: 17.5px;
+                /* A distinct base size for mobile landscape */
+            }
+
+            body {
+                display: block;
+                /* Typically block layout for wider content */
+                padding: 0.8rem;
+            }
+
+            .container {
+                width: 90%;
+                /* Wider than portrait, narrower than tablet */
+                max-width: 50rem;
+                margin: 0 auto;
+                padding: 1rem;
+            }
+
+            h2 {
+                font-size: 2.1rem;
+                text-align: center;
+                margin-bottom: 1rem;
+            }
+
+            .nav-back-link {
+                font-size: 1rem;
+                margin-top: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="app-container">
+        <h2>SCCCC Services</h2>
+
+        <!-- Step 1: Email Input -->
+        <div id="step1" class="verification-step active">
+            <h2>Request Verification Code</h2>
+
+            <form id="emailForm">
+                <input type="email" id="email" placeholder="Enter your email address" required
+                    autocomplete="email" oninput="validateEmailInput()">
+                <button type="submit" id="sendCodeButton" disabled>Send Verification Code</button>
+                <div id="emailMessage" class="message"></div>
+            </form>
+        </div>
+
+        <!-- Step 2: Code Input -->
+        <div id="step2" class="verification-step">
+            <h2>Enter Verification Code</h2>
+            <p style="text-align: center; color: #666; font-size: 0.9rem;">
+                We've sent a 6-digit code to <span id="displayEmail"></span>
+            <br><br>
+            Copy/Paste (or type) it into the fields below:
+        </p>
+
+            <form id="codeForm">
+                <div class="code-input-container">
+                    <input type="text" class="code-input" id="code1" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" autofocus>
+                    <input type="text" class="code-input" id="code2" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                    <input type="text" class="code-input" id="code3" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                    <input type="text" class="code-input" id="code4" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                    <input type="text" class="code-input" id="code5" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                    <input type="text" class="code-input" id="code6" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                </div>
+                <button type="submit" id="verifyButton" disabled>Verify Code</button>
+                <div id="codeMessage" class="message"></div>
+            </form>
+
+            <div class="resend-link">
+                Didn't receive the code? <a id="resendLink" onclick="handleResendCode()">Resend code</a>
+                <span id="resendCountdown" style="display: none;"></span>
+            </div>
+
+            <a class="back-link" onclick="showStep1()">← Use a different email</a>
+        </div>
+    </div>
+
+    <script>
+        // =============================================================
+        // Auth State (top-level vars — no const/let at top level)
+        // =============================================================
+        var userEmail = '';
+        var resendDisabled = false;
+        var resendCountdownSeconds = 0;
+        var resendTimer = null;
+
+        // DOM Elements (auth)
+        var emailInput = document.getElementById('email');
+        var sendCodeButton = document.getElementById('sendCodeButton');
+        var emailMessageDiv = document.getElementById('emailMessage');
+        var emailForm = document.getElementById('emailForm');
+        var codeForm = document.getElementById('codeForm');
+        var verifyButton = document.getElementById('verifyButton');
+        var codeMessageDiv = document.getElementById('codeMessage');
+        var displayEmailSpan = document.getElementById('displayEmail');
+        var resendLink = document.getElementById('resendLink');
+        var resendCountdown = document.getElementById('resendCountdown');
+        var codeInputs = [
+            document.getElementById('code1'),
+            document.getElementById('code2'),
+            document.getElementById('code3'),
+            document.getElementById('code4'),
+            document.getElementById('code5'),
+            document.getElementById('code6')
+        ];
+
+        // =============================================================
+        // SVG icons for services
+        // =============================================================
+        var serviceIcons = {
+            directory: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>',
+            email: '<svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>',
+            groups: '<svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>',
+            profile: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM7.07 18.28c.43-.9 3.05-1.78 4.93-1.78s4.51.88 4.93 1.78C15.57 19.36 13.86 20 12 20s-3.57-.64-4.93-1.72zm11.29-1.45c-1.43-1.74-4.9-2.33-6.36-2.33s-4.93.59-6.36 2.33C4.62 15.49 4 13.82 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 1.82-.62 3.49-1.64 4.83zM12 6c-1.94 0-3.5 1.56-3.5 3.5S10.06 13 12 13s3.5-1.56 3.5-3.5S13.94 6 12 6zm0 5c-.83 0-1.5-.67-1.5-1.5S11.17 8 12 8s1.5.67 1.5 1.5S12.83 11 12 11z"/></svg>',
+            voting: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>'
+        };
+
+        // =============================================================
+        // Form Utilities
+        // =============================================================
+
+        /**
+         * Disables all input, button, select, and textarea elements within a given form,
+         * and optionally adds a CSS class for visual feedback.
+         * @param {HTMLElement} formElement The form to disable.
+         */
+        function disableForm(formElement) {
+            if (!formElement) {
+                console.warn("Attempted to disable a non-existent form element.");
+                return;
+            }
+
+            for (let i = 0; i < formElement.elements.length; i++) {
+                const element = formElement.elements[i];
+                if (element.tagName === 'INPUT' || element.tagName === 'BUTTON' ||
+                    element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') {
+                    element.disabled = true;
+                }
+            }
+
+            formElement.classList.add('form-disabled');
+            formElement.dataset.customDisabled = 'true';
+        }
+
+        /**
+         * Enables all input, button, select, and textarea elements within a given form,
+         * and removes the visual disabled class.
+         * @param {HTMLElement} formElement The form to enable.
+         * @param {string[]} [exceptions=[]] An optional array of element IDs to skip enabling.
+         */
+        function enableForm(formElement, exceptions = []) {
+            if (!formElement) {
+                console.warn("Attempted to enable a non-existent form element.");
+                return;
+            }
+
+            if (formElement.dataset.customDisabled === 'true') {
+                for (let i = 0; i < formElement.elements.length; i++) {
+                    const element = formElement.elements[i];
+                    if (exceptions.includes(element.id)) {
+                        continue;
+                    }
+
+                    if (element.tagName === 'INPUT' || element.tagName === 'BUTTON' ||
+                        element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') {
+                        element.disabled = false;
+                    }
+                }
+                formElement.classList.remove('form-disabled');
+                delete formElement.dataset.customDisabled;
+            }
+        }
+
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // =============================================================
+        // Auth Step Navigation
+        // =============================================================
+
+        function showStep1() {
+            document.getElementById('step1').classList.add('active');
+            document.getElementById('step2').classList.remove('active');
+            clearCodeInputs();
+            hideMessage(codeMessageDiv);
+        }
+
+        function showStep2() {
+            document.getElementById('step1').classList.remove('active');
+            document.getElementById('step2').classList.add('active');
+            displayEmailSpan.textContent = userEmail;
+            codeInputs[0].focus();
+        }
+
+        // =============================================================
+        // Auth Input Validation
+        // =============================================================
+
+        function validateEmailInput() {
+            sendCodeButton.disabled = !emailInput.checkValidity() || emailForm.dataset.customDisabled === 'true';
+        }
+
+        function validateCodeInputs() {
+            const code = getCodeValue();
+            verifyButton.disabled = code.length !== 6 || !/^\d{6}$/.test(code);
+        }
+
+        function getCodeValue() {
+            return codeInputs.map(input => input.value).join('');
+        }
+
+        function clearCodeInputs() {
+            codeInputs.forEach(input => {
+                input.value = '';
+            });
+            verifyButton.disabled = true;
+        }
+
+        // =============================================================
+        // Auth Message Display
+        // =============================================================
+
+        function displayMessage(div, message, isError) {
+            isError = isError === undefined ? false : isError;
+            div.style.display = 'block';
+            div.className = 'message ' + (isError ? 'error' : 'success');
+            div.innerHTML = message;
+        }
+
+        function hideMessage(div) {
+            div.style.display = 'none';
+            div.innerHTML = '';
+            div.className = 'message';
+        }
+
+        // =============================================================
+        // Auth Code Input Handlers
+        // =============================================================
+
+        codeInputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                const value = e.target.value;
+
+                if (value && !/^\d$/.test(value)) {
+                    e.target.value = '';
+                    return;
+                }
+
+                if (value && index < 5) {
+                    codeInputs[index + 1].focus();
+                }
+
+                validateCodeInputs();
+
+                if (value && index === 5) {
+                    const code = getCodeValue();
+                    if (code.length === 6 && /^\d{6}$/.test(code)) {
+                        setTimeout(() => {
+                            if (!verifyButton.disabled) {
+                                verifyButton.click();
+                            }
+                        }, 100);
+                    }
+                }
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                    codeInputs[index - 1].focus();
+                }
+
+                if (e.key === 'ArrowLeft' && index > 0) {
+                    codeInputs[index - 1].focus();
+                }
+                if (e.key === 'ArrowRight' && index < 5) {
+                    codeInputs[index + 1].focus();
+                }
+            });
+
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pastedData = (e.clipboardData || window.clipboardData).getData('text');
+                const digits = pastedData.replace(/\D/g, '').slice(0, 6);
+
+                digits.split('').forEach((digit, i) => {
+                    if (codeInputs[i]) {
+                        codeInputs[i].value = digit;
+                    }
+                });
+
+                const lastIndex = Math.min(digits.length, 6) - 1;
+                if (lastIndex >= 0) {
+                    codeInputs[Math.min(lastIndex, 5)].focus();
+                }
+
+                validateCodeInputs();
+
+                if (digits.length === 6) {
+                    setTimeout(() => {
+                        if (!verifyButton.disabled) {
+                            verifyButton.click();
+                        }
+                    }, 100);
+                }
+            });
+        });
+
+        // =============================================================
+        // Auth Resend Countdown
+        // =============================================================
+
+        function startResendCountdown() {
+            resendDisabled = true;
+            resendCountdownSeconds = 60;
+            resendLink.classList.add('disabled');
+            resendLink.onclick = null;
+            updateResendUI();
+
+            resendTimer = setInterval(() => {
+                resendCountdownSeconds--;
+                updateResendUI();
+
+                if (resendCountdownSeconds <= 0) {
+                    clearInterval(resendTimer);
+                    resendDisabled = false;
+                    resendLink.classList.remove('disabled');
+                    resendLink.onclick = handleResendCode;
+                    resendCountdown.style.display = 'none';
+                    resendLink.textContent = 'Resend code';
+                }
+            }, 1000);
+        }
+
+        function updateResendUI() {
+            if (resendCountdownSeconds > 0) {
+                resendLink.textContent = '';
+                resendCountdown.style.display = 'inline';
+                resendCountdown.textContent = ` (available in ${resendCountdownSeconds}s)`;
+            }
+        }
+
+        // =============================================================
+        // Auth API Handlers
+        // =============================================================
+
+        function handleSendCode() {
+            userEmail = emailInput.value.trim().toLowerCase();
+
+            disableForm(emailForm);
+            displayMessage(emailMessageDiv, 'Sending verification code...', false);
+
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler(function(response) {
+                        enableForm(emailForm);
+                        if (response && response.success) {
+                            if (response.email) {
+                                userEmail = response.email;
+                                displayEmailSpan.textContent = userEmail;
+                            }
+                            hideMessage(emailMessageDiv);
+                            showStep2();
+                            startResendCountdown();
+                        } else {
+                            const errorMessage = response && response.error ? response.error : 'Failed to send verification code.';
+                            displayMessage(emailMessageDiv, 'Error: ' + errorMessage, true);
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        enableForm(emailForm);
+                        displayMessage(emailMessageDiv, 'Error: ' + error.message, true);
+                    })
+                    .sendVerificationCode(userEmail);
+            } else {
+                enableForm(emailForm);
+                displayMessage(emailMessageDiv, 'Error: google.script.run is not defined.', true);
+            }
+        }
+
+        /**
+         * Handle verification code submission.
+         * On success, calls getAllServiceData(token) for bulk pre-fetch, then renders home page.
+         */
+        function handleVerifyCode() {
+            const code = getCodeValue();
+
+            disableForm(codeForm);
+            displayMessage(codeMessageDiv, 'Verifying...', false);
+
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler(function(response) {
+                        if (response && response.success) {
+                            displayMessage(codeMessageDiv, 'Verified! Loading services...', false);
+
+                            if (response.token) {
+                                try {
+                                    sessionStorage.setItem('authToken', response.token);
+                                    sessionStorage.setItem('authenticatedEmail', response.email);
+                                } catch (e) {
+                                    console.warn('Could not store auth token in sessionStorage:', e);
+                                }
+                            }
+
+                            // Fetch ALL service data in one call for instant navigation
+                            google.script.run
+                                .withSuccessHandler(function(allData) {
+                                    document.title = 'SCCCC Services';
+
+                                    try {
+                                        sessionStorage.setItem('allServiceData', JSON.stringify(allData));
+                                        sessionStorage.setItem('cachedServices', JSON.stringify(allData.homePageServices));
+                                    } catch (e) {
+                                        console.warn('Could not store service data in sessionStorage:', e);
+                                    }
+
+                                    const container = document.getElementById('app-container');
+                                    if (container && window.renderHomePage) {
+                                        const html = window.renderHomePage(allData.homePageServices, response.email);
+                                        container.innerHTML = html;
+                                    } else {
+                                        console.error('Container or renderHomePage not found');
+                                    }
+                                })
+                                .withFailureHandler(function(error) {
+                                    displayMessage(codeMessageDiv, 'Error loading services: ' + error.message, true);
+                                    enableForm(codeForm);
+                                })
+                                .getAllServiceData(response.token);
+                        } else {
+                            enableForm(codeForm);
+                            if (response && response.errorCode === 'AUTO_RESENT') {
+                                if (response.email) {
+                                    userEmail = response.email;
+                                    displayEmailSpan.textContent = userEmail;
+                                }
+                                hideMessage(emailMessageDiv);
+                                displayMessage(codeMessageDiv, response.error || 'Verification failed. A new verification code has been sent to your email.', false);
+                                clearCodeInputs();
+                                startResendCountdown();
+                                codeInputs[0].focus();
+                            } else {
+                                const errorMessage = response && response.error ? response.error : 'Verification failed.';
+                                displayMessage(codeMessageDiv, 'Error: ' + errorMessage, true);
+                                clearCodeInputs();
+                                codeInputs[0].focus();
+                            }
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        enableForm(codeForm);
+                        displayMessage(codeMessageDiv, 'Error: ' + error.message, true);
+                        clearCodeInputs();
+                        codeInputs[0].focus();
+                    })
+                    .verifyCode(userEmail, code);
+            } else {
+                enableForm(codeForm);
+                displayMessage(codeMessageDiv, 'Error: google.script.run is not defined.', true);
+            }
+        }
+
+        function handleResendCode() {
+            if (resendDisabled) return;
+
+            disableForm(codeForm);
+            displayMessage(codeMessageDiv, 'Resending verification code...', false);
+
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler(function(response) {
+                        enableForm(codeForm);
+                        if (response && response.success) {
+                            if (response.email) {
+                                userEmail = response.email;
+                                displayEmailSpan.textContent = userEmail;
+                            }
+                            displayMessage(codeMessageDiv, 'A new code has been sent to your email.', false);
+                            startResendCountdown();
+                            clearCodeInputs();
+                            codeInputs[0].focus();
+                        } else {
+                            const errorMessage = response && response.error ? response.error : 'Failed to resend code.';
+                            displayMessage(codeMessageDiv, 'Error: ' + errorMessage, true);
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        enableForm(codeForm);
+                        displayMessage(codeMessageDiv, 'Error: ' + error.message, true);
+                    })
+                    .sendVerificationCode(userEmail);
+            } else {
+                enableForm(codeForm);
+                displayMessage(codeMessageDiv, 'Error: google.script.run is not defined.', true);
+            }
+        }
+
+        // Auth Form Submissions
+        emailForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            hideMessage(emailMessageDiv);
+            handleSendCode();
+        });
+
+        codeForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            hideMessage(codeMessageDiv);
+            handleVerifyCode();
+        });
+
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', function() {
+            validateEmailInput();
+            enableForm(emailForm);
+        });
+
+        // =============================================================
+        // Navigation Functions
+        // =============================================================
+
+        /**
+         * Navigate back to the services home page.
+         * Tries allServiceData cache first (new), then cachedServices (fallback), then server.
+         */
+        function navigateToHomePage() {
+            let email = '';
+            let cachedServices = null;
+
+            try {
+                email = sessionStorage.getItem('authenticatedEmail') || '';
+                // Try allServiceData first (new bulk cache)
+                const allDataJson = sessionStorage.getItem('allServiceData');
+                if (allDataJson) {
+                    const allData = JSON.parse(allDataJson);
+                    cachedServices = allData.homePageServices;
+                }
+                // Fall back to cachedServices (existing cache)
+                if (!cachedServices) {
+                    const cachedServicesJson = sessionStorage.getItem('cachedServices');
+                    if (cachedServicesJson) {
+                        cachedServices = JSON.parse(cachedServicesJson);
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not read from sessionStorage:', e);
+            }
+
+            if (cachedServices && Array.isArray(cachedServices) && cachedServices.length > 0) {
+                renderHomePageFromCache(email, cachedServices);
+                document.title = 'SCCCC Services - Home';
+                return;
+            }
+
+            // Fallback to server call if no cached services
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                const container = document.getElementById('app-container');
+                if (container) {
+                    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">Loading services...</div>';
+                }
+
+                google.script.run
+                    .withSuccessHandler(function(data) {
+                        document.title = 'SCCCC Services - Home';
+
+                        if (container && window.renderHomePage) {
+                            const html = window.renderHomePage(data.services, email);
+                            container.innerHTML = html;
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        if (container) {
+                            container.innerHTML = '<div style="text-align: center; padding: 2rem; color: red;">Error loading services: ' + error.message + '</div>';
+                        }
+                    })
+                    .getHomePageContent(email);
+            } else {
+                console.error('google.script.run is not available');
+            }
+        }
+
+        /**
+         * Render the home page directly from cached services (no server call)
+         */
+        function renderHomePageFromCache(email, services) {
+            document.title = 'SCCCC Services - Home';
+
+            const container = document.getElementById('app-container');
+            if (container && window.renderHomePage) {
+                const html = window.renderHomePage(services, email);
+                container.innerHTML = html;
+            } else {
+                console.error('Container or renderHomePage not found');
+            }
+        }
+
+        /**
+         * Load a service from the cached home page view.
+         * Reads from pre-fetched allServiceData cache for instant navigation.
+         * Falls back to server call on cache miss.
+         */
+        function loadServiceFromHomePage(serviceId) {
+            let serviceName = serviceId.replace('Service', ' Service');
+            try {
+                const cachedServicesJson = sessionStorage.getItem('cachedServices');
+                if (cachedServicesJson) {
+                    const services = JSON.parse(cachedServicesJson);
+                    const service = services.find(s => s.id === serviceId);
+                    if (service && service.name) {
+                        serviceName = service.name;
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not read cached services:', e);
+            }
+
+            document.title = serviceName + ' - SCCCC Services';
+
+            const container = document.getElementById('app-container');
+            if (container) {
+                container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">Loading ' + serviceName + '...</div>';
+            }
+
+            // Read from pre-fetched cache — INSTANT, no server round-trip
+            try {
+                const allDataJson = sessionStorage.getItem('allServiceData');
+                if (allDataJson) {
+                    const allData = JSON.parse(allDataJson);
+                    const serviceData = allData.services[serviceId];
+                    if (serviceData) {
+                        if (container && window.renderService) {
+                            window.renderService(serviceId, serviceData, container);
+                        }
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not read cached service data:', e);
+            }
+
+            // Fallback: if cache miss, call server (shouldn't happen in normal flow)
+            let email = '';
+            try {
+                email = sessionStorage.getItem('authenticatedEmail') || '';
+            } catch (e) {
+                console.warn('Could not read from sessionStorage:', e);
+            }
+
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler(function(data) {
+                        console.log('loadServiceFromHomePage: Received data for', serviceId, ':', data);
+                        if (container && window.renderService) {
+                            window.renderService(serviceId, data, container);
+                        } else {
+                            console.error('Container or renderService not found');
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        console.error('loadServiceFromHomePage: Error loading service:', error);
+                        if (container) {
+                            container.innerHTML = '<div style="text-align: center; padding: 2rem; color: red;">Error loading service: ' + error.message + '</div>';
+                        }
+                    })
+                    .getServiceContent(email, serviceId);
+            } else {
+                if (container) {
+                    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: red;">Error: google.script.run is not available.</div>';
+                }
+            }
+        }
+
+        /**
+         * Handle sign out — clears all session data and reloads to show auth UI.
+         */
+        function handleSignOutFromCache() {
+            try {
+                sessionStorage.removeItem('allServiceData');
+                sessionStorage.removeItem('authToken');
+                sessionStorage.removeItem('authenticatedEmail');
+                sessionStorage.removeItem('cachedServices');
+            } catch (e) {
+                console.warn('Could not clear sessionStorage:', e);
+            }
+
+            // Reload the page to return to the static auth UI
+            window.location.reload();
+        }
+
+        // Make navigation functions globally available
+        window.navigateToHomePage = navigateToHomePage;
+        window.loadHomePage = navigateToHomePage; // Alias for compatibility
+
+        // =============================================================
+        // Home Page Renderer
+        // =============================================================
+
+        // Render the home page with services
+        function renderHomePage(services, email) {
+            const html = `
+                <style>
+                    .service-list { display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; }
+                    .service-card { display: flex; align-items: center; padding: 1rem; background-color: #f8f9fa; border: 0.0625rem solid #ddd; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s ease; text-decoration: none; color: inherit; }
+                    .service-card:hover { background-color: #e9ecef; border-color: #007bff; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.1); }
+                    .service-card:active { background-color: #dee2e6; }
+                    .service-icon { width: 3rem; height: 3rem; display: flex; align-items: center; justify-content: center; background-color: #007bff; border-radius: 0.5rem; margin-right: 1rem; flex-shrink: 0; }
+                    .service-icon svg { width: 1.5rem; height: 1.5rem; fill: white; }
+                    .service-info { flex: 1; }
+                    .service-name { font-size: 1.1rem; font-weight: 600; margin: 0 0 0.25rem 0; color: #333; }
+                    .service-description { font-size: 0.9rem; color: #666; margin: 0; }
+                    .service-arrow { color: #999; font-size: 1.2rem; margin-left: 0.5rem; }
+                    .welcome-header { text-align: center; margin-bottom: 1.5rem; }
+                    .welcome-message { font-size: 0.9rem; color: #666; margin-top: 0.5rem; }
+                    .sign-out-link { display: block; margin-top: 1.5rem; text-align: center; color: #666; font-size: 0.9rem; cursor: pointer; text-decoration: underline; }
+                    .sign-out-link:hover { color: #007bff; }
+                    @media (max-width: 600px) and (orientation: portrait) {
+                        .service-card { padding: 1.2rem; }
+                        .service-icon { width: 2.5rem; height: 2.5rem; }
+                        .service-icon svg { width: 1.25rem; height: 1.25rem; }
+                        .service-name { font-size: 1rem; }
+                        .service-description { font-size: 0.85rem; }
+                    }
+                    @media (max-width: 900px) {
+                        .service-card { padding: 1.1rem; }
+                    }
+                </style>
+                <div class="welcome-header">
+                    <h2>SCCCC Services</h2>
+                    <p class="welcome-message">Signed in as ${escapeHtml(email)}</p>
+                </div>
+                <div id="serviceList" class="service-list">
+                    ${services.map(service => `
+                        <div class="service-card" onclick="window.loadServiceFromHomePage('${escapeHtml(service.id)}')" role="button" tabindex="0">
+                            <div class="service-icon">${serviceIcons[service.icon] || serviceIcons.profile}</div>
+                            <div class="service-info">
+                                <h3 class="service-name">${escapeHtml(service.name)}</h3>
+                                <p class="service-description">${escapeHtml(service.description)}</p>
+                            </div>
+                            <span class="service-arrow">›</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <a class="sign-out-link" onclick="window.handleSignOutFromCache()">Sign out</a>
+            `;
+
+            // Cache services for quick navigation
+            try {
+                sessionStorage.setItem('cachedServices', JSON.stringify(services));
+            } catch (e) {
+                console.warn('Could not cache services:', e);
+            }
+
+            return html;
+        }
+
+        // =============================================================
+        // Script/Stylesheet Loaders
+        // =============================================================
+
+        /**
+         * Load external script dynamically (scripts in innerHTML don't execute reliably)
+         */
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                if (document.querySelector(`script[src="${src}"]`)) {
+                    resolve();
+                    return;
+                }
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        /**
+         * Load external stylesheet dynamically
+         */
+        function loadStylesheet(href) {
+            if (document.querySelector(`link[href="${href}"]`)) {
+                return;
+            }
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = href;
+            document.head.appendChild(link);
+        }
+
+        // =============================================================
+        // Service Renderers
+        // =============================================================
+
+        // Render Directory Service
+        function renderDirectoryService(data, container) {
+            container.classList.add('directory-service-container');
+
+            loadStylesheet('https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css');
+            loadStylesheet('https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css');
+
+            container.innerHTML = `
+                <style>
+                    /* CRITICAL: Override base .container width for DirectoryService */
+                    .container.directory-service-container {
+                        width: 95% !important;
+                        max-width: none !important;
+                        min-width: 50rem !important;
+                    }
+
+                    @media (max-width: 900px) {
+                        .container.directory-service-container {
+                            width: 90% !important;
+                            max-width: 60rem !important;
+                        }
+                        .directory-container {
+                            padding: 0.875rem;
+                        }
+                    }
+
+                    @media (max-width: 600px) and (orientation: landscape) {
+                        .container.directory-service-container {
+                            width: 95% !important;
+                            overflow-x: auto;
+                        }
+                        .directory-container {
+                            padding: 0.75rem;
+                        }
+                    }
+
+                    @media (max-width: 600px) and (orientation: portrait) {
+                        .container.directory-service-container {
+                            width: 100% !important;
+                            min-width: auto !important;
+                            padding: 0.5rem !important;
+                        }
+                        .directory-container {
+                            padding: 0.75rem;
+                        }
+                        .directory-container h2 {
+                            font-size: 1.5rem;
+                        }
+                        #data-table td,
+                        #data-table th {
+                            max-width: 9.375rem;
+                        }
+                    }
+
+                    .directory-container {
+                        padding: 1rem;
+                        max-width: 100%;
+                        overflow-x: auto;
+                    }
+
+                    .directory-container h2 {
+                        margin-top: 0;
+                        margin-bottom: 1.25rem;
+                        text-align: center;
+                    }
+
+                    .directory-table-wrapper {
+                        width: 100%;
+                        overflow-x: auto;
+                        margin-bottom: 1rem;
+                    }
+
+                    #data-table {
+                        width: 100% !important;
+                        max-width: 100%;
+                    }
+
+                    .dataTables_wrapper {
+                        width: 100%;
+                        max-width: 100%;
+                    }
+
+                    .dataTables_length,
+                    .dataTables_filter {
+                        margin-bottom: 0.75rem;
+                    }
+
+                    .dataTables_info,
+                    .dataTables_paginate {
+                        margin-top: 0.75rem;
+                    }
+
+                    .back-link {
+                        display: inline-block;
+                        margin-top: 1rem;
+                        color: #007bff;
+                        text-decoration: none;
+                        font-weight: 500;
+                    }
+
+                    .back-link:hover {
+                        text-decoration: underline;
+                    }
+
+                    /* Ensure table cells don't cause overflow */
+                    #data-table td,
+                    #data-table th {
+                        word-wrap: break-word;
+                        max-width: 12.5rem;
+                    }
+                </style>
+                <div class="directory-container">
+                    <h2>SCCCC Directory</h2>
+                    <div class="directory-table-wrapper">
+                        <table id="data-table" class="display">
+                            <thead>
+                                <tr>
+                                    <th>First</th>
+                                    <th>Last</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <a href="#" class="back-link" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                </div>
+            `;
+
+            loadScript('https://code.jquery.com/jquery-3.6.0.min.js')
+                .then(() => {
+                    return Promise.all([
+                        loadScript('https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js'),
+                        loadScript('https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js')
+                    ]);
+                })
+                .then(() => {
+                    const rawTableData = data.directoryEntries || [];
+
+                    const tableData = rawTableData.map(function(entry) {
+                        return [
+                            entry.First || '',
+                            entry.Last || '',
+                            entry.email || entry.Email || '',
+                            entry.phone || entry.Phone || ''
+                        ];
+                    });
+
+                    try {
+                        window.jQuery('#data-table').DataTable({
+                            data: tableData,
+                            columns: [
+                                { title: 'First', data: 0 },
+                                { title: 'Last', data: 1 },
+                                {
+                                    title: 'Email',
+                                    data: 2,
+                                    render: function(data, type, row) {
+                                        return data ? '<a href="mailto:' + data + '">' + data + '</a>' : '';
+                                    }
+                                },
+                                {
+                                    title: 'Phone',
+                                    data: 3,
+                                    render: function(data, type, row) {
+                                        return data ? '<a href="tel:' + data + '">' + data + '</a>' : '';
+                                    }
+                                }
+                            ],
+                            responsive: true,
+                            pageLength: 25,
+                            order: [[1, 'asc'], [0, 'asc']],
+                            autoWidth: false
+                        });
+                    } catch (error) {
+                        console.error('Directory: Error initializing DataTable:', error);
+                        container.innerHTML += '<p style="color: red;">Error initializing directory table: ' + error.message + '</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Directory: Error loading scripts:', error);
+                    container.innerHTML += '<p style="color: red;">Error loading DataTables library</p>';
+                });
+        }
+
+        // Generic service renderer - used for services not yet fully migrated
+        function renderGenericService(serviceName, data, container) {
+            container.innerHTML = `
+                <div style="padding: 1rem;">
+                    <h2>${escapeHtml(serviceName)}</h2>
+                    <p>Service data loaded. This service needs a custom renderer.</p>
+                    <pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>
+                    <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                </div>
+            `;
+        }
+
+        // GroupManagementService renderer
+        function renderGroupManagementService(data, container) {
+            console.log('renderGroupManagementService:', data);
+
+            const subscriptions = data.subscriptions || [];
+            const deliveryOptions = data.deliveryOptions || {};
+
+            const subscriptionRows = subscriptions.map(sub => {
+                const optionsHTML = Object.entries(deliveryOptions).map(([valueKey, [displayValue, tooltip]]) => {
+                    const selected = sub.deliveryValue === valueKey ? 'selected' : '';
+                    return `<option value="${escapeHtml(valueKey)}" ${selected} data-tooltip="${escapeHtml(tooltip)}" title="${escapeHtml(tooltip)}">${escapeHtml(displayValue)}</option>`;
+                }).join('');
+
+                return `
+                    <div class="subscription-row" data-group-name="${escapeHtml(sub.groupName)}" data-group-email="${escapeHtml(sub.groupEmail)}" data-original-delivery-value="${escapeHtml(sub.deliveryValue)}">
+                        <span class="group-name">${escapeHtml(sub.groupName)}</span>
+                        <div class="delivery-select-container">
+                            <select class="delivery-select" name="${escapeHtml(sub.groupEmail)}">
+                                ${optionsHTML}
+                            </select>
+                            <div class="custom-tooltip" id="tooltip-${escapeHtml(sub.groupEmail)}"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <style>
+                    #subscriptionForm {
+                        margin: 0 auto;
+                        padding: 20px;
+                        border-radius: 8px;
+                        box-shadow: none;
+                        width: 100%;
+                        max-width: 600px;
+                        display: grid;
+                        grid-template-columns: auto 1fr;
+                        gap: 10px;
+                        align-items: center;
+                    }
+
+                    .subscription-row {
+                        display: contents;
+                        border-bottom: 1px solid #eee;
+                        padding-bottom: 8px;
+                        margin-bottom: 8px;
+                    }
+
+                    .subscription-row:last-child {
+                        border-bottom: none;
+                        margin-bottom: 0;
+                        padding-bottom: 0;
+                    }
+
+                    .group-name {
+                        text-align: left;
+                        padding-right: 10px;
+                    }
+
+                    .delivery-select-container {
+                        position: relative;
+                        text-align: left;
+                    }
+
+                    .delivery-select {
+                        width: 100%;
+                        padding: 8px;
+                        border: 1px solid #ccc;
+                        border-radius: 4px;
+                        box-sizing: border-box;
+                    }
+
+                    .custom-tooltip {
+                        position: absolute;
+                        background-color: rgba(0, 0, 0, 0.8);
+                        color: #f9f9f9;
+                        padding: 5px 8px;
+                        border-radius: 3px;
+                        font-size: 0.8em;
+                        z-index: 10;
+                        display: none;
+                        white-space: nowrap;
+                        top: 100%;
+                        left: 0;
+                        transform: translateY(5px);
+                        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+                    }
+
+                    .buttons-container {
+                        grid-column: 1 / 3;
+                        margin-top: 20px;
+                        text-align: center;
+                    }
+
+                    .message {
+                        grid-column: 1 / 3;
+                        margin-top: 10px;
+                        padding: 10px;
+                        border-radius: 4px;
+                        display: none;
+                        text-align: center;
+                    }
+
+                    .message.success {
+                        background-color: #d4edda;
+                        color: #155724;
+                        border: 1px solid #c3e6cb;
+                    }
+
+                    .message.error {
+                        background-color: #f8d7da;
+                        color: #721c24;
+                        border: 1px solid #f5c6cb;
+                    }
+                </style>
+
+                <div style="padding: 1rem;">
+                    <h2>Manage Your SCCCC Group Subscriptions</h2>
+
+                    <form id="subscriptionForm">
+                        ${subscriptionRows}
+
+                        <div class="buttons-container">
+                            <button type="button" id="resetButton">Reset</button>
+                            <button type="submit" id="applyButton" disabled>Apply Changes</button>
+                        </div>
+
+                        <div id="submissionMessage" class="message"></div>
+                    </form>
+
+                    <p style="margin-top: 2rem;">
+                        <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                    </p>
+                </div>
+            `;
+
+            initializeGroupManagementForm();
+        }
+
+        // Initialize GroupManagement form interactions
+        function initializeGroupManagementForm() {
+            const subscriptionForm = document.getElementById('subscriptionForm');
+            const deliverySelects = document.querySelectorAll('.delivery-select');
+            const tooltipDelay = 50;
+            const resetButton = document.getElementById('resetButton');
+            const applyButton = document.getElementById('applyButton');
+            const submissionMessage = document.getElementById('submissionMessage');
+
+            let changesMade = false;
+            const originalSubscriptions = {};
+
+            deliverySelects.forEach(select => {
+                const row = select.closest('.subscription-row');
+                const groupEmail = row.dataset.groupEmail;
+                const originalDeliveryValue = row.dataset.originalDeliveryValue;
+                const selectedOption = select.options[select.selectedIndex];
+                const originalDeliveryName = selectedOption.textContent;
+                originalSubscriptions[groupEmail] = { name: originalDeliveryName, value: originalDeliveryValue };
+            });
+
+            function checkChanges() {
+                changesMade = false;
+                deliverySelects.forEach(select => {
+                    const groupEmail = select.name;
+                    const selectedValue = select.value;
+                    if (originalSubscriptions[groupEmail] && originalSubscriptions[groupEmail].value !== selectedValue) {
+                        changesMade = true;
+                    }
+                });
+                applyButton.disabled = !changesMade;
+                if (changesMade) {
+                    clearMessage();
+                }
+            }
+
+            function displayMessage(message, type) {
+                submissionMessage.textContent = message;
+                submissionMessage.classList.remove('success', 'error');
+                submissionMessage.classList.add(type);
+                submissionMessage.style.display = 'block';
+            }
+
+            function clearMessage() {
+                submissionMessage.textContent = '';
+                submissionMessage.classList.remove('success', 'error');
+                submissionMessage.style.display = 'none';
+            }
+
+            deliverySelects.forEach(select => {
+                select.addEventListener('change', checkChanges);
+            });
+
+            deliverySelects.forEach(select => {
+                let tooltipTimeout;
+                const tooltipId = `tooltip-${select.name}`;
+                const tooltipElement = document.getElementById(tooltipId);
+
+                select.addEventListener('mouseenter', () => {
+                    const selectedOption = select.options[select.selectedIndex];
+                    if (selectedOption && selectedOption.dataset.tooltip) {
+                        tooltipTimeout = setTimeout(() => {
+                            tooltipElement.textContent = selectedOption.dataset.tooltip;
+                            tooltipElement.style.display = 'block';
+                        }, tooltipDelay);
+                    }
+                });
+
+                select.addEventListener('mouseleave', () => {
+                    clearTimeout(tooltipTimeout);
+                    tooltipElement.style.display = 'none';
+                });
+
+                select.addEventListener('blur', () => {
+                    clearTimeout(tooltipTimeout);
+                    tooltipElement.style.display = 'none';
+                });
+            });
+
+            resetButton.addEventListener('click', function() {
+                clearMessage();
+                deliverySelects.forEach(select => {
+                    const groupEmail = select.name;
+                    if (originalSubscriptions[groupEmail]) {
+                        select.value = originalSubscriptions[groupEmail].value;
+                    }
+                });
+                changesMade = false;
+                applyButton.disabled = true;
+            });
+
+            subscriptionForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const updatedSubscriptions = [];
+                deliverySelects.forEach(select => {
+                    const groupEmail = select.name;
+                    const newDeliveryValue = select.value;
+                    if (originalSubscriptions[groupEmail] && originalSubscriptions[groupEmail].value !== newDeliveryValue) {
+                        updatedSubscriptions.push({
+                            groupEmail: groupEmail,
+                            deliveryValue: newDeliveryValue
+                        });
+                    }
+                });
+
+                if (updatedSubscriptions.length === 0) {
+                    displayMessage('No changes to apply.', 'error');
+                    return;
+                }
+
+                disableForm(subscriptionForm);
+                displayMessage('Updating subscriptions...', 'success');
+
+                google.script.run
+                    .withSuccessHandler(function(response) {
+                        enableForm(subscriptionForm);
+                        const result = typeof response === 'string' ? JSON.parse(response) : response;
+                        if (result.success) {
+                            displayMessage(result.message, 'success');
+                            updatedSubscriptions.forEach(updated => {
+                                const select = document.querySelector(`.delivery-select[name="${updated.groupEmail}"]`);
+                                if (select) {
+                                    const row = select.closest('.subscription-row');
+                                    row.dataset.originalDeliveryValue = updated.deliveryValue;
+                                    const selectedOption = select.options[select.selectedIndex];
+                                    originalSubscriptions[updated.groupEmail] = {
+                                        name: selectedOption.textContent,
+                                        value: updated.deliveryValue
+                                    };
+                                }
+                            });
+                            changesMade = false;
+                            applyButton.disabled = true;
+                            // Invalidate cached service data so next navigation fetches fresh data
+                            try {
+                                const allDataJson = sessionStorage.getItem('allServiceData');
+                                if (allDataJson) {
+                                    const allData = JSON.parse(allDataJson);
+                                    delete allData.services['GroupManagementService'];
+                                    sessionStorage.setItem('allServiceData', JSON.stringify(allData));
+                                }
+                            } catch (e) { console.warn('Could not update cache:', e); }
+                        } else {
+                            displayMessage(result.message || 'Update failed', 'error');
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        enableForm(subscriptionForm);
+                        displayMessage('Error updating subscriptions: ' + error.message, 'error');
+                    })
+                    .updateUserSubscriptions(updatedSubscriptions, sessionStorage.getItem('authToken'));
+            });
+        }
+
+        // ProfileManagementService renderer
+        function renderProfileManagementService(data, container) {
+            console.log('renderProfileManagementService:', data);
+
+            if (!data.profile) {
+                container.innerHTML = `
+                    <div style="padding: 1rem;">
+                        <h2>Error</h2>
+                        <p>Profile data not available</p>
+                        <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                    </div>
+                `;
+                return;
+            }
+
+            const profile = data.profile;
+
+            container.innerHTML = `
+                <style>
+                    #profileForm {
+                        margin: 0 auto;
+                        padding: 1.25rem;
+                        max-width: 37.5rem;
+                    }
+
+                    .profile-container {
+                        max-width: 100%;
+                        margin: 0 auto;
+                    }
+
+                    .form-grid {
+                        display: grid;
+                        grid-template-columns: 9.375rem 1fr;
+                        gap: 0.9375rem 1.25rem;
+                        align-items: center;
+                    }
+
+                    .section-header {
+                        grid-column: 1 / -1;
+                        font-size: 1.3rem;
+                        font-weight: 600;
+                        margin-top: 1.875rem;
+                        margin-bottom: 0.9375rem;
+                        padding-bottom: 0.5rem;
+                        border-bottom: 0.125rem solid #007bff;
+                        color: #333;
+                    }
+
+                    .section-header:first-child {
+                        margin-top: 0;
+                    }
+
+                    #profileForm label.field-label {
+                        text-align: right;
+                        padding-right: 0.9375rem;
+                        font-weight: 600;
+                        color: #555;
+                    }
+
+                    #profileForm input[type="text"],
+                    #profileForm input[type="email"],
+                    #profileForm input[type="tel"] {
+                        padding: 0.625rem 0.75rem;
+                        border: 0.0625rem solid #ccc;
+                        border-radius: 0.25rem;
+                        font-size: 1rem;
+                        width: 100%;
+                        box-sizing: border-box;
+                    }
+
+                    #profileForm input:disabled {
+                        background-color: #f8f9fa;
+                        color: #6c757d;
+                        cursor: not-allowed;
+                        border-color: #dee2e6;
+                    }
+
+                    #profileForm input:focus:not(:disabled) {
+                        outline: none;
+                        border-color: #007bff;
+                        box-shadow: 0 0 0 0.1875rem rgba(0, 123, 255, 0.1);
+                    }
+
+                    .checkbox-row {
+                        grid-column: 1 / -1;
+                        display: grid;
+                        grid-template-columns: 9.375rem 1fr;
+                        gap: 1.25rem;
+                        align-items: center;
+                        padding: 0.5rem 0;
+                    }
+
+                    .checkbox-row label.field-label {
+                        text-align: right;
+                        padding-right: 0.9375rem;
+                        font-weight: 600;
+                        color: #555;
+                    }
+
+                    .checkbox-content {
+                        display: flex;
+                        align-items: center;
+                        gap: 0.625rem;
+                    }
+
+                    .checkbox-content input[type="checkbox"] {
+                        width: 1.25rem;
+                        height: 1.25rem;
+                        cursor: pointer;
+                        margin: 0;
+                        flex-shrink: 0;
+                    }
+
+                    .checkbox-content label {
+                        font-weight: normal;
+                        color: #333;
+                        cursor: pointer;
+                        user-select: none;
+                        margin: 0;
+                    }
+
+                    .buttons-container {
+                        grid-column: 1 / -1;
+                        margin-top: 1.875rem;
+                        display: flex;
+                        gap: 0.9375rem;
+                        justify-content: center;
+                    }
+
+                    .buttons-container button {
+                        padding: 0.75rem 1.875rem;
+                        font-size: 1rem;
+                        font-weight: 600;
+                        border-radius: 0.25rem;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        min-width: 7.5rem;
+                    }
+
+                    #resetButton {
+                        background-color: #6c757d;
+                        color: white;
+                        border: none;
+                    }
+
+                    #resetButton:hover {
+                        background-color: #5a6268;
+                    }
+
+                    #applyButton {
+                        background-color: #007bff;
+                        color: white;
+                        border: none;
+                    }
+
+                    #applyButton:hover:not(:disabled) {
+                        background-color: #0056b3;
+                    }
+
+                    #applyButton:disabled {
+                        background-color: #ccc;
+                        cursor: not-allowed;
+                        opacity: 0.6;
+                    }
+
+                    .message {
+                        grid-column: 1 / -1;
+                        margin-top: 0.9375rem;
+                        padding: 0.75rem;
+                        border-radius: 0.25rem;
+                        display: none;
+                        text-align: center;
+                        font-weight: 500;
+                    }
+
+                    .message.success {
+                        background-color: #d4edda;
+                        color: #155724;
+                        border: 0.0625rem solid #c3e6cb;
+                    }
+
+                    .message.error {
+                        background-color: #f8d7da;
+                        color: #721c24;
+                        border: 0.0625rem solid #f5c6cb;
+                    }
+
+                    .back-link {
+                        display: block;
+                        margin-top: 1.875rem;
+                        text-align: center;
+                        color: #007bff;
+                        text-decoration: none;
+                        font-weight: 500;
+                    }
+
+                    .back-link:hover {
+                        text-decoration: underline;
+                    }
+
+                    /* Responsive: Tablet */
+                    @media (max-width: 900px) {
+                        #profileForm {
+                            max-width: 34.375rem;
+                            padding: 1.125rem;
+                        }
+
+                        .form-grid,
+                        .checkbox-row {
+                            grid-template-columns: 8.125rem 1fr;
+                            gap: 0.75rem 1.125rem;
+                        }
+
+                        .section-header {
+                            font-size: 1.25rem;
+                        }
+
+                        .buttons-container button {
+                            padding: 0.6875rem 1.75rem;
+                        }
+                    }
+
+                    /* Responsive: Mobile Landscape */
+                    @media (max-width: 600px) and (orientation: landscape) {
+                        #profileForm {
+                            padding: 1rem;
+                            max-width: 31.25rem;
+                        }
+
+                        .form-grid,
+                        .checkbox-row {
+                            grid-template-columns: 7.5rem 1fr;
+                            gap: 0.625rem 1rem;
+                        }
+
+                        .section-header {
+                            font-size: 1.2rem;
+                        }
+
+                        .buttons-container button {
+                            padding: 0.75rem 1.5625rem;
+                            min-width: 6.875rem;
+                        }
+                    }
+
+                    /* Responsive: Mobile Portrait - single column */
+                    @media (max-width: 600px) and (orientation: portrait) {
+                        #profileForm {
+                            padding: 0.9375rem;
+                            max-width: 100%;
+                        }
+
+                        .profile-container {
+                            padding: 0 0.5rem;
+                        }
+
+                        .form-grid,
+                        .checkbox-row {
+                            grid-template-columns: 1fr;
+                            gap: 0.625rem;
+                        }
+
+                        #profileForm label.field-label,
+                        .checkbox-row label.field-label {
+                            text-align: left;
+                            padding-right: 0;
+                            margin-bottom: 0.3125rem;
+                        }
+
+                        .section-header {
+                            font-size: 1.2rem;
+                            margin-top: 1.5625rem;
+                            margin-bottom: 0.75rem;
+                        }
+
+                        .checkbox-content {
+                            gap: 0.75rem;
+                        }
+
+                        .checkbox-content input[type="checkbox"] {
+                            width: 1.5rem;
+                            height: 1.5rem;
+                        }
+
+                        .buttons-container {
+                            flex-direction: column;
+                            gap: 0.625rem;
+                        }
+
+                        .buttons-container button {
+                            width: 100%;
+                            padding: 0.875rem;
+                        }
+                    }
+                </style>
+
+                <div class="profile-container" style="padding: 1rem;">
+                    <h2 style="text-align: center; margin-bottom: 1.875rem;">Manage Your Profile</h2>
+
+                    <form id="profileForm">
+                        <div class="section-header">Membership Information</div>
+
+                        <div class="form-grid">
+                            <label for="status" class="field-label">Status:</label>
+                            <input type="text" id="status" name="status" value="${escapeHtml(profile.Status || '')}" disabled>
+
+                            <label for="joined" class="field-label">Joined:</label>
+                            <input type="text" id="joined" name="joined" value="${escapeHtml(profile.JoinedFormatted || '')}" disabled>
+
+                            <label for="expires" class="field-label">Expires:</label>
+                            <input type="text" id="expires" name="expires" value="${escapeHtml(profile.ExpiresFormatted || '')}" disabled>
+
+                            <label for="renewedOn" class="field-label">Renewed On:</label>
+                            <input type="text" id="renewedOn" name="renewedOn" value="${escapeHtml(profile.RenewedOnFormatted || '')}" disabled>
+                        </div>
+
+                        <div class="section-header">Contact Information</div>
+
+                        <div class="form-grid">
+                            <label for="email" class="field-label">Email:</label>
+                            <input type="email" id="email" name="email" value="${escapeHtml(profile.Email || data.email || '')}" disabled>
+
+                            <label for="firstName" class="field-label">First Name:</label>
+                            <input type="text" id="firstName" name="firstName" value="${escapeHtml(profile.First || '')}" required>
+
+                            <label for="lastName" class="field-label">Last Name:</label>
+                            <input type="text" id="lastName" name="lastName" value="${escapeHtml(profile.Last || '')}" required>
+
+                            <label for="phone" class="field-label">Phone:</label>
+                            <input type="tel" id="phone" name="phone" value="${escapeHtml(profile.Phone || '')}">
+                        </div>
+
+                        <div class="section-header">Directory Sharing Preferences</div>
+
+                        <div class="checkbox-row">
+                            <label class="field-label">Share Name:</label>
+                            <div class="checkbox-content">
+                                <input type="checkbox" id="directoryShareName" name="directoryShareName" ${profile['Directory Share Name'] ? 'checked' : ''}>
+                                <label for="directoryShareName">Make my name visible in member directory</label>
+                            </div>
+                        </div>
+
+                        <div class="checkbox-row">
+                            <label class="field-label">Share Email:</label>
+                            <div class="checkbox-content">
+                                <input type="checkbox" id="directoryShareEmail" name="directoryShareEmail" ${profile['Directory Share Email'] ? 'checked' : ''}>
+                                <label for="directoryShareEmail">Make my email visible in member directory</label>
+                            </div>
+                        </div>
+
+                        <div class="checkbox-row">
+                            <label class="field-label">Share Phone:</label>
+                            <div class="checkbox-content">
+                                <input type="checkbox" id="directorySharePhone" name="directorySharePhone" ${profile['Directory Share Phone'] ? 'checked' : ''}>
+                                <label for="directorySharePhone">Make my phone visible in member directory</label>
+                            </div>
+                        </div>
+
+                        <div class="buttons-container">
+                            <button type="button" id="resetButton">Reset</button>
+                            <button type="submit" id="applyButton" disabled>Apply Changes</button>
+                        </div>
+
+                        <div id="profileMessage" class="message"></div>
+                    </form>
+
+                    <a href="#" class="back-link" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                </div>
+            `;
+
+            initializeProfileManagementForm(profile);
+        }
+
+        // Initialize ProfileManagement form
+        function initializeProfileManagementForm(originalProfile) {
+            const form = document.getElementById('profileForm');
+            const resetButton = document.getElementById('resetButton');
+            const applyButton = document.getElementById('applyButton');
+            const message = document.getElementById('profileMessage');
+
+            const firstNameInput = document.getElementById('firstName');
+            const lastNameInput = document.getElementById('lastName');
+            const phoneInput = document.getElementById('phone');
+            const nameCheckbox = document.getElementById('directoryShareName');
+            const emailCheckbox = document.getElementById('directoryShareEmail');
+            const phoneCheckbox = document.getElementById('directorySharePhone');
+
+            const originalValues = {
+                First: originalProfile.First || '',
+                Last: originalProfile.Last || '',
+                Phone: originalProfile.Phone || '',
+                'Directory Share Name': !!originalProfile['Directory Share Name'],
+                'Directory Share Email': !!originalProfile['Directory Share Email'],
+                'Directory Share Phone': !!originalProfile['Directory Share Phone']
+            };
+
+            function allFieldsValid() {
+                const firstValid = firstNameInput.value.trim() !== '';
+                const lastValid = lastNameInput.value.trim() !== '';
+                const phoneValid = phoneInput.value.trim() !== '';
+
+                if (!firstValid || !lastValid || !phoneValid) {
+                    console.log('Validation failed: empty field', { firstValid, lastValid, phoneValid });
+                    return false;
+                }
+                return true;
+            }
+
+            function formatPhoneNumber(value) {
+                const digits = value.replace(/\D/g, '');
+                if (digits.length === 0) return '';
+                if (digits.length <= 3) return `(${digits}`;
+                if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+                return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+            }
+
+            function checkChanges() {
+                const changed = (
+                    firstNameInput.value !== originalValues.First ||
+                    lastNameInput.value !== originalValues.Last ||
+                    phoneInput.value !== originalValues.Phone ||
+                    nameCheckbox.checked !== originalValues['Directory Share Name'] ||
+                    emailCheckbox.checked !== originalValues['Directory Share Email'] ||
+                    phoneCheckbox.checked !== originalValues['Directory Share Phone']
+                );
+                const isValid = allFieldsValid();
+                console.log('checkChanges:', { changed, isValid });
+                applyButton.disabled = !(changed && isValid);
+            }
+
+            function displayMessage(msg, type) {
+                message.textContent = msg;
+                message.classList.remove('success', 'error');
+                message.classList.add(type);
+                message.style.display = 'block';
+            }
+
+            function clearMessage() {
+                message.textContent = '';
+                message.classList.remove('success', 'error');
+                message.style.display = 'none';
+            }
+
+            function enforceNamePrerequisite(triggerCheckbox) {
+                if ((triggerCheckbox === emailCheckbox || triggerCheckbox === phoneCheckbox) &&
+                    triggerCheckbox.checked && !nameCheckbox.checked) {
+                    nameCheckbox.checked = true;
+                }
+            }
+
+            firstNameInput.addEventListener('input', checkChanges);
+            lastNameInput.addEventListener('input', checkChanges);
+
+            phoneInput.addEventListener('input', function(e) {
+                console.log('Phone input event');
+                const cursorPos = e.target.selectionStart;
+                const oldValue = e.target.value;
+                const oldLength = oldValue.length;
+
+                const formatted = formatPhoneNumber(oldValue);
+                const newLength = formatted.length;
+                const diff = newLength - oldLength;
+
+                e.target.value = formatted;
+
+                e.target.setSelectionRange(cursorPos + diff, cursorPos + diff);
+
+                checkChanges();
+            });
+
+            phoneInput.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+                const formatted = formatPhoneNumber(pastedText);
+                phoneInput.value = formatted;
+                checkChanges();
+            });
+
+            nameCheckbox.addEventListener('change', function() {
+                if (!nameCheckbox.checked) {
+                    emailCheckbox.checked = false;
+                    phoneCheckbox.checked = false;
+                }
+                checkChanges();
+            });
+
+            emailCheckbox.addEventListener('change', function() {
+                enforceNamePrerequisite(emailCheckbox);
+                checkChanges();
+            });
+
+            phoneCheckbox.addEventListener('change', function() {
+                enforceNamePrerequisite(phoneCheckbox);
+                checkChanges();
+            });
+
+            resetButton.addEventListener('click', function() {
+                firstNameInput.value = originalValues.First;
+                lastNameInput.value = originalValues.Last;
+                phoneInput.value = originalValues.Phone;
+                nameCheckbox.checked = originalValues['Directory Share Name'];
+                emailCheckbox.checked = originalValues['Directory Share Email'];
+                phoneCheckbox.checked = originalValues['Directory Share Phone'];
+                clearMessage();
+                applyButton.disabled = true;
+            });
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const updatedProfile = {
+                    First: firstNameInput.value,
+                    Last: lastNameInput.value,
+                    Phone: phoneInput.value,
+                    'Directory Share Name': nameCheckbox.checked,
+                    'Directory Share Email': emailCheckbox.checked,
+                    'Directory Share Phone': phoneCheckbox.checked
+                };
+
+                disableForm(form);
+                displayMessage('Saving profile...', 'success');
+
+                google.script.run
+                    .withSuccessHandler(function(response) {
+                        enableForm(form);
+                        const result = typeof response === 'string' ? JSON.parse(response) : response;
+                        if (result.success) {
+                            displayMessage(result.message || 'Profile updated successfully', 'success');
+                            Object.assign(originalValues, updatedProfile);
+                            applyButton.disabled = true;
+                            // Invalidate cached service data so next navigation fetches fresh data
+                            try {
+                                const allDataJson = sessionStorage.getItem('allServiceData');
+                                if (allDataJson) {
+                                    const allData = JSON.parse(allDataJson);
+                                    delete allData.services['ProfileManagementService'];
+                                    sessionStorage.setItem('allServiceData', JSON.stringify(allData));
+                                }
+                            } catch (e) { console.warn('Could not update cache:', e); }
+                        } else {
+                            displayMessage(result.message || 'Save failed', 'error');
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        enableForm(form);
+                        displayMessage('Error saving profile: ' + error.message, 'error');
+                    })
+                    .updateProfile(sessionStorage.getItem('authToken'), updatedProfile);
+            });
+        }
+
+        // EmailChangeService renderer
+        function renderEmailChangeService(data, container) {
+            console.log('renderEmailChangeService:', data);
+
+            container.innerHTML = `
+                <style>
+                    .email-change-container {
+                        margin: 0 auto;
+                        padding: 20px;
+                        max-width: 500px;
+                    }
+
+                    .email-change-step {
+                        display: none;
+                    }
+
+                    .email-change-step.active {
+                        display: block;
+                    }
+
+                    .email-change-container label {
+                        display: block;
+                        margin-top: 15px;
+                        font-weight: bold;
+                    }
+
+                    .email-change-container input[type="email"] {
+                        width: 100%;
+                        padding: 8px;
+                        margin-top: 5px;
+                        border: 1px solid #ccc;
+                        border-radius: 4px;
+                        box-sizing: border-box;
+                    }
+
+                    .code-input-container {
+                        display: flex;
+                        justify-content: center;
+                        gap: 0.5rem;
+                        margin: 1.5rem 0;
+                    }
+
+                    .code-input {
+                        width: 2.5rem;
+                        height: 3rem;
+                        font-size: 1.5rem;
+                        text-align: center;
+                        border: 1px solid #ccc;
+                        border-radius: 4px;
+                        padding: 0;
+                    }
+
+                    .code-input:focus {
+                        border-color: #007bff;
+                        outline: none;
+                        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+                    }
+
+                    .code-separator {
+                        font-size: 1.5rem;
+                        line-height: 3rem;
+                        color: #666;
+                    }
+
+                    .buttons-container {
+                        margin-top: 20px;
+                        text-align: center;
+                    }
+
+                    .message {
+                        margin-top: 15px;
+                        padding: 10px;
+                        border-radius: 4px;
+                        display: none;
+                        text-align: center;
+                    }
+
+                    .message.success {
+                        background-color: #d4edda;
+                        color: #155724;
+                    }
+
+                    .message.error {
+                        background-color: #f8d7da;
+                        color: #721c24;
+                    }
+
+                    .back-link {
+                        display: block;
+                        margin-top: 1rem;
+                        text-align: center;
+                        color: #007bff;
+                        cursor: pointer;
+                        text-decoration: underline;
+                    }
+                </style>
+
+                <div class="email-change-container">
+                    <h2>Change Your Email Address</h2>
+
+                    <!-- Step 1: Email Entry -->
+                    <div id="emailStep" class="email-change-step active">
+                        <form id="emailChangeForm">
+                            <label for="currentEmail">Current Email:</label>
+                            <input type="email" id="currentEmail" value="${escapeHtml(data.currentEmail || '')}" readonly>
+
+                            <label for="newEmail">New Email:</label>
+                            <input type="email" id="newEmail" name="newEmail" required>
+
+                            <label for="confirmEmail">Confirm New Email:</label>
+                            <input type="email" id="confirmEmail" name="confirmEmail" required>
+
+                            <div class="buttons-container">
+                                <button type="submit" id="submitButton">Request Email Change</button>
+                            </div>
+
+                            <div id="emailChangeMessage" class="message"></div>
+                        </form>
+                    </div>
+
+                    <!-- Step 2: Verification Code Entry -->
+                    <div id="verificationStep" class="email-change-step">
+                        <p style="text-align: center; color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                            We've sent a 6-digit code to <strong><span id="displayNewEmail"></span></strong>
+                        </p>
+
+                        <form id="verificationForm">
+                            <div class="code-input-container">
+                                <input type="text" class="code-input" id="code1" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" autofocus>
+                                <input type="text" class="code-input" id="code2" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                                <input type="text" class="code-input" id="code3" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                                <input type="text" class="code-input" id="code4" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                                <input type="text" class="code-input" id="code5" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                                <input type="text" class="code-input" id="code6" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                            </div>
+
+                            <div class="buttons-container">
+                                <button type="submit" id="verifyButton" disabled>Verify and Change Email</button>
+                            </div>
+
+                            <div id="verificationMessage" class="message"></div>
+                        </form>
+
+                        <a class="back-link" id="backToEmailLink">← Use a different email</a>
+                    </div>
+
+                    <!-- Step 3: Success -->
+                    <div id="successStep" class="email-change-step">
+                        <div class="message success" style="display: block;">
+                            <strong>Email changed successfully!</strong>
+                            <p style="margin-top: 0.5rem;">Your email has been updated in all systems.</p>
+                        </div>
+
+                        <div class="buttons-container" style="margin-top: 2rem;">
+                            <button onclick="window.navigateToHomePage()">Return to Services</button>
+                        </div>
+                    </div>
+
+                    <p style="margin-top: 2rem; text-align: center;">
+                        <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                    </p>
+                </div>
+            `;
+
+            initializeEmailChangeForm(data);
+        }
+
+        // Initialize EmailChange form
+        function initializeEmailChangeForm(data) {
+            let pendingNewEmail = '';
+            let pendingVerificationCode = '';
+
+            const emailStep = document.getElementById('emailStep');
+            const form = document.getElementById('emailChangeForm');
+            const newEmail = document.getElementById('newEmail');
+            const confirmEmail = document.getElementById('confirmEmail');
+            const submitButton = document.getElementById('submitButton');
+            const emailMessage = document.getElementById('emailChangeMessage');
+
+            const verificationStep = document.getElementById('verificationStep');
+            const verificationForm = document.getElementById('verificationForm');
+            const displayNewEmail = document.getElementById('displayNewEmail');
+            const verifyButton = document.getElementById('verifyButton');
+            const verificationMessage = document.getElementById('verificationMessage');
+            const backToEmailLink = document.getElementById('backToEmailLink');
+            const codeInputs = [
+                document.getElementById('code1'),
+                document.getElementById('code2'),
+                document.getElementById('code3'),
+                document.getElementById('code4'),
+                document.getElementById('code5'),
+                document.getElementById('code6')
+            ];
+
+            const successStep = document.getElementById('successStep');
+
+            submitButton.disabled = true;
+
+            function showStep(step) {
+                emailStep.classList.remove('active');
+                verificationStep.classList.remove('active');
+                successStep.classList.remove('active');
+
+                if (step === 'email') {
+                    emailStep.classList.add('active');
+                } else if (step === 'verification') {
+                    verificationStep.classList.add('active');
+                    displayNewEmail.textContent = pendingNewEmail;
+                    codeInputs[0].focus();
+                } else if (step === 'success') {
+                    successStep.classList.add('active');
+                }
+            }
+
+            function displayMessage(element, msg, type) {
+                element.textContent = msg;
+                element.classList.remove('success', 'error');
+                element.classList.add(type);
+                element.style.display = 'block';
+            }
+
+            function clearMessage(element) {
+                element.textContent = '';
+                element.classList.remove('success', 'error');
+                element.style.display = 'none';
+            }
+
+            function checkEmailsMatch() {
+                const newEmailValue = newEmail.value.trim();
+                const confirmEmailValue = confirmEmail.value.trim();
+
+                if (newEmailValue && confirmEmailValue && newEmailValue === confirmEmailValue) {
+                    submitButton.disabled = false;
+                    setTimeout(() => {
+                        if (newEmail.value.trim() === confirmEmail.value.trim() && !submitButton.disabled) {
+                            submitButton.click();
+                        }
+                    }, 300);
+                } else {
+                    submitButton.disabled = true;
+                }
+            }
+
+            function getCodeValue() {
+                return codeInputs.map(input => input.value).join('');
+            }
+
+            function clearCodeInputs() {
+                codeInputs.forEach(input => {
+                    input.value = '';
+                });
+                verifyButton.disabled = true;
+            }
+
+            function validateCodeInputs() {
+                const code = getCodeValue();
+                verifyButton.disabled = code.length !== 6 || !/^\d{6}$/.test(code);
+            }
+
+            [newEmail, confirmEmail].forEach(input => {
+                input.addEventListener('input', function() {
+                    clearMessage(emailMessage);
+                    checkEmailsMatch();
+                });
+
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (!submitButton.disabled) {
+                            submitButton.click();
+                        }
+                    }
+                });
+            });
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                if (newEmail.value !== confirmEmail.value) {
+                    displayMessage(emailMessage, 'Email addresses do not match', 'error');
+                    return;
+                }
+
+                pendingNewEmail = newEmail.value.trim();
+
+                disableForm(form);
+                displayMessage(emailMessage, 'Sending verification code...', 'success');
+
+                console.log('Sending verification code request');
+
+                let authToken = '';
+                try {
+                    authToken = sessionStorage.getItem('authToken') || '';
+                } catch (e) {
+                    console.error('Could not read authToken from sessionStorage:', e);
+                }
+
+                if (!authToken) {
+                    enableForm(form);
+                    displayMessage(emailMessage, 'Authentication required. Please sign in again.', 'error');
+                    return;
+                }
+
+                const request = {
+                    action: 'emailChange.sendVerificationCode',
+                    params: {
+                        newEmail: pendingNewEmail
+                    },
+                    token: authToken
+                };
+
+                console.log('Request:', request);
+
+                google.script.run
+                    .withSuccessHandler(function(responseJson) {
+                        console.log('sendVerificationCode response:', responseJson);
+                        enableForm(form);
+
+                        const response = typeof responseJson === 'string' ? JSON.parse(responseJson) : responseJson;
+
+                        if (response.success) {
+                            showStep('verification');
+                            clearMessage(emailMessage);
+                        } else {
+                            displayMessage(emailMessage, response.error || 'Request failed', 'error');
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        console.error('sendVerificationCode error:', error);
+                        enableForm(form);
+                        displayMessage(emailMessage, 'Error: ' + error.message, 'error');
+                    })
+                    .handleApiRequest(request);
+            });
+
+            codeInputs.forEach((input, index) => {
+                input.addEventListener('input', (e) => {
+                    const value = e.target.value;
+
+                    if (value && !/^\d$/.test(value)) {
+                        e.target.value = '';
+                        return;
+                    }
+
+                    if (value && index < 5) {
+                        codeInputs[index + 1].focus();
+                    }
+
+                    validateCodeInputs();
+
+                    if (value && index === 5) {
+                        const code = getCodeValue();
+                        if (code.length === 6 && /^\d{6}$/.test(code)) {
+                            setTimeout(() => {
+                                if (!verifyButton.disabled) {
+                                    verifyButton.click();
+                                }
+                            }, 100);
+                        }
+                    }
+                });
+
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                        codeInputs[index - 1].focus();
+                    }
+
+                    if (e.key === 'ArrowLeft' && index > 0) {
+                        codeInputs[index - 1].focus();
+                    }
+                    if (e.key === 'ArrowRight' && index < 5) {
+                        codeInputs[index + 1].focus();
+                    }
+                });
+
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const pastedData = (e.clipboardData || window.clipboardData).getData('text');
+                    const digits = pastedData.replace(/\D/g, '').slice(0, 6);
+
+                    digits.split('').forEach((digit, i) => {
+                        if (codeInputs[i]) {
+                            codeInputs[i].value = digit;
+                        }
+                    });
+
+                    const lastIndex = Math.min(digits.length, 6) - 1;
+                    if (lastIndex >= 0) {
+                        codeInputs[Math.min(lastIndex, 5)].focus();
+                    }
+
+                    validateCodeInputs();
+
+                    if (digits.length === 6) {
+                        setTimeout(() => {
+                            if (!verifyButton.disabled) {
+                                verifyButton.click();
+                            }
+                        }, 100);
+                    }
+                });
+            });
+
+            verificationForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const code = getCodeValue();
+                pendingVerificationCode = code;
+
+                disableForm(verificationForm);
+                displayMessage(verificationMessage, 'Verifying code and changing email (this may take a minute or two)...', 'success');
+
+                let authToken = '';
+                try {
+                    authToken = sessionStorage.getItem('authToken') || '';
+                } catch (e) {
+                    console.error('Could not read authToken from sessionStorage:', e);
+                }
+
+                if (!authToken) {
+                    enableForm(verificationForm);
+                    displayMessage(verificationMessage, 'Authentication required. Please sign in again.', 'error');
+                    return;
+                }
+
+                const request = {
+                    action: 'emailChange.verifyAndChangeEmail',
+                    params: {
+                        newEmail: pendingNewEmail,
+                        verificationCode: code
+                    },
+                    token: authToken
+                };
+
+                console.log('Verify and change email request:', request);
+
+                google.script.run
+                    .withSuccessHandler(function(responseJson) {
+                        console.log('verifyAndChangeEmail response:', responseJson);
+                        enableForm(verificationForm);
+
+                        const response = typeof responseJson === 'string' ? JSON.parse(responseJson) : responseJson;
+
+                        if (response.success) {
+                            if (response.data && response.data.failedCount > 0) {
+                                const failedGroups = response.data.groupResults
+                                    .filter(r => !r.success)
+                                    .map(r => r.groupName + ': ' + r.error)
+                                    .join('\n');
+
+                                displayMessage(verificationMessage,
+                                    'Email changed with warnings:\n' + response.data.message + '\n\nFailed groups:\n' + failedGroups,
+                                    'error');
+                            } else {
+                                showStep('success');
+
+                                try {
+                                    sessionStorage.setItem('authenticatedEmail', pendingNewEmail);
+                                    // Invalidate cached service data so next navigation fetches fresh data
+                                    const allDataJson = sessionStorage.getItem('allServiceData');
+                                    if (allDataJson) {
+                                        const allData = JSON.parse(allDataJson);
+                                        delete allData.services['EmailChangeService'];
+                                        sessionStorage.setItem('allServiceData', JSON.stringify(allData));
+                                    }
+                                } catch (e) {
+                                    console.warn('Could not update sessionStorage:', e);
+                                }
+                            }
+                        } else {
+                            displayMessage(verificationMessage, response.error || 'Verification failed', 'error');
+                            clearCodeInputs();
+                            codeInputs[0].focus();
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        console.error('verifyAndChangeEmail error:', error);
+                        enableForm(verificationForm);
+                        displayMessage(verificationMessage, 'Error: ' + error.message, 'error');
+                        clearCodeInputs();
+                        codeInputs[0].focus();
+                    })
+                    .handleApiRequest(request);
+            });
+
+            backToEmailLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                showStep('email');
+                clearCodeInputs();
+                clearMessage(verificationMessage);
+                form.reset();
+                submitButton.disabled = true;
+            });
+        }
+
+        // VotingService renderer
+        function renderVotingService(data, container) {
+            console.log('renderVotingService:', data);
+
+            const elections = data.elections || [];
+
+            const electionsHTML = elections.length === 0
+                ? '<p>There are no active elections at this time.</p>'
+                : elections.map(election => {
+                    const statusClass = election.status === 'Active' ? 'active' : 'inactive';
+                    return `
+                        <div class="election ${statusClass}">
+                            <h3>${escapeHtml(election.title)}</h3>
+                            ${election.opens ? `<p><strong>Opens:</strong> ${escapeHtml(new Date(election.opens).toLocaleString())}</p>` : ''}
+                            ${election.closes ? `<p><strong>Closes:</strong> ${escapeHtml(new Date(election.closes).toLocaleString())}</p>` : ''}
+                            <p><strong>Status:</strong> ${escapeHtml(election.status)}</p>
+                            ${election.url ? `<p><a href="${escapeHtml(election.url)}" target="_blank" class="vote-button">Vote Now</a></p>` : ''}
+                        </div>
+                    `;
+                }).join('');
+
+            container.innerHTML = `
+                <style>
+                    .elections-container {
+                        margin: 0 auto;
+                        padding: 20px;
+                        max-width: 800px;
+                    }
+
+                    .election {
+                        border: 1px solid #ddd;
+                        border-radius: 8px;
+                        padding: 20px;
+                        margin-bottom: 20px;
+                        background-color: #fff;
+                    }
+
+                    .election.active {
+                        border-color: #28a745;
+                        background-color: #f0fff4;
+                    }
+
+                    .election.inactive {
+                        background-color: #f8f9fa;
+                    }
+
+                    .election h3 {
+                        margin-top: 0;
+                        color: #333;
+                    }
+
+                    .vote-button {
+                        display: inline-block;
+                        padding: 10px 20px;
+                        background-color: #007bff;
+                        color: white;
+                        text-decoration: none;
+                        border-radius: 4px;
+                        font-weight: bold;
+                    }
+
+                    .vote-button:hover {
+                        background-color: #0056b3;
+                    }
+                </style>
+
+                <div class="elections-container">
+                    <h2>SCCCC Voting</h2>
+                    ${electionsHTML}
+                    <p style="margin-top: 2rem;">
+                        <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                    </p>
+                </div>
+            `;
+        }
+
+        // Main service renderer - routes to specific service renderers
+        function renderService(serviceId, data, container) {
+            console.log('renderService:', serviceId, data);
+
+            if (!data) {
+                container.innerHTML = `
+                    <div style="padding: 1rem;">
+                        <h2>Error</h2>
+                        <p>Service data not available</p>
+                        <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                    </div>
+                `;
+                return;
+            }
+
+            if (data.error) {
+                container.innerHTML = `
+                    <div style="padding: 1rem;">
+                        <h2>Error</h2>
+                        <p>${escapeHtml(data.error)}</p>
+                        <a href="#" onclick="window.navigateToHomePage(); return false;">← Back to Services</a>
+                    </div>
+                `;
+                return;
+            }
+
+            switch(serviceId) {
+                case 'DirectoryService':
+                    renderDirectoryService(data, container);
+                    break;
+                case 'GroupManagementService':
+                    renderGroupManagementService(data, container);
+                    break;
+                case 'ProfileManagementService':
+                    renderProfileManagementService(data, container);
+                    break;
+                case 'EmailChangeService':
+                    renderEmailChangeService(data, container);
+                    break;
+                case 'VotingService':
+                    renderVotingService(data, container);
+                    break;
+                default:
+                    renderGenericService(serviceId, data, container);
+                    break;
+            }
+        }
+
+        // =============================================================
+        // Window Exports
+        // =============================================================
+        window.renderHomePage = renderHomePage;
+        window.renderService = renderService;
+        window.loadServiceFromHomePage = loadServiceFromHomePage;
+        window.handleSignOutFromCache = handleSignOutFromCache;
+        window.navigateToHomePage = navigateToHomePage;
+    </script>
+</body>
+</html>
