@@ -127,98 +127,7 @@ function verifyCode(email, code, service) {
 }
 
 /**
- * Get service data for authenticated user
- * Called after successful verification code validation
- * 
- * For SPA architecture, this returns pure data (not HTML). The client will render the HTML.
- * 
- * LOGGING: This function logs both business audit (who accessed what) and system logs
- * for all service executions to support debugging and compliance.
- * 
- * @param {string} email - Authenticated user email
- * @param {string} service - Service name (e.g., 'DirectoryService')
- * @returns {Record<string, any>} Service-specific data for client-side rendering (JUSTIFIED: each service returns different data shape)
- */
-function getServiceContent(email, service) {
-  console.log('getServiceContent(', email, service, ')');
-  
-  // Configure logger for this execution
-  AppLogger.configure();
-  
-  // Create logger for this service execution
-  const logger = new ServiceLogger(service, email);
-  const auditEntries = [];
-  
-  // Log service access start
-  AppLogger.info('WebApp', `getServiceContent() called for service=${service}, user=${email}`);
-  
-  const webService = /** @type {any} */ (WebServices[service]);
-  if (!webService) {
-    console.error('Invalid service:', service);
-    
-    // Log error
-    const errorEntry = logger.logError('getServiceContent', 'Invalid service specified: ' + service);
-    auditEntries.push(errorEntry);
-    _persistAuditEntries(auditEntries);
-    
-    return { error: 'Invalid service specified' };
-  }
-  
-  // Debug logging
-  console.log(`webService.Api:`, webService.Api);
-  console.log(`Api keys:`, webService.Api ? Object.keys(webService.Api) : 'Api undefined');
-  console.log(`typeof webService.Api.getData:`, webService.Api ? typeof webService.Api.getData : 'Api undefined');
-  
-  // Call service's API to get data (not HTML)
-  // Access service namespace directly (e.g., GroupManagementService.Api.getData)
-  // Note: webService IS the service namespace (e.g., GroupManagementService)
-  if (webService.Api && typeof webService.Api.getData === 'function') {
-    console.log(`Calling ${service}.Api.getData(${email})`);
-    try {
-      const data = webService.Api.getData(email);
-      console.log(`${service}.Api.getData returned:`, data);
-      
-      // Log successful access
-      const accessEntry = logger.logServiceAccess('getData');
-      auditEntries.push(accessEntry);
-      _persistAuditEntries(auditEntries);
-      
-      AppLogger.info('WebApp', `getServiceContent() completed successfully for service=${service}, user=${email}`);
-      
-      return data;
-    } catch (error) {
-      console.error(`Error in ${service}.Api.getData:`, error);
-      
-      // Log error
-      const errorEntry = logger.logError('getData', error);
-      auditEntries.push(errorEntry);
-      _persistAuditEntries(auditEntries);
-      
-      return { 
-        error: `Failed to load ${service}: ${error.message}`,
-        serviceName: service 
-      };
-    }
-  }
-  
-  // All services must have Api.getData() - no legacy fallback
-  console.error(`Service ${service} has no Api.getData() method`);
-  
-  // Log error
-  const errorEntry = logger.logError('getServiceContent', 'Service has no Api.getData() method');
-  auditEntries.push(errorEntry);
-  _persistAuditEntries(auditEntries);
-  
-  return {
-    serviceName: webService.name || service,
-    error: 'Service data not available'
-  };
-}
-
-/**
  * Helper function to persist audit entries
- * Internal helper for getServiceContent logging
- * 
  * @param {AuditLogEntry[]} auditEntries - Audit entries to persist
  * @private
  */
@@ -236,24 +145,6 @@ function _persistAuditEntries(auditEntries) {
     // Log error but don't fail the operation
     AppLogger.error('WebApp', 'Failed to persist audit entries', error);
   }
-}
-
-/**
- * Render home page HTML content for authenticated user
- * Called after successful verification code validation to show available services
- * 
- * For SPA architecture, this returns pure data (not HTML). The client will render the HTML.
- * 
- * @param {string} email - Authenticated user email
- * @returns {{services: Array}} Services data for client-side rendering
- */
-function getHomePageContent(email) {
-  console.log('getHomePageContent(', email, ')');
-  
-  // Return just the data - client will render the HTML
-  return {
-    services: Common.HomePage.Manager.getAvailableServices()
-  };
 }
 
 /**
@@ -310,30 +201,6 @@ function getAllServiceData(token) {
     services: services,
     homePageServices: homePageServices
   };
-}
-
-/**
- * Render verification page HTML content for sign-out flow
- * Returns the initial verification code input page
- * 
- * @returns {string} HTML content for the verification page
- */
-function getVerificationPageContent() {
-  try {
-    // Create template for just the content (no layout wrapper)
-    // This is used for container replacement when signing out
-    const template = HtmlService.createTemplateFromFile('common/auth/verificationCodeInput');
-    template.service = ''; // No specific service for verification page
-    
-    // Evaluate and return just the inner HTML content
-    const content = template.evaluate().getContent();
-    return content;
-  } catch (error) {
-    console.error('getVerificationPageContent() ERROR:', error.message);
-    console.error('Error stack:', error.stack);
-    // Return a fallback error message that will at least show something to the user
-    return '<div style="padding: 2rem; text-align: center; color: red;">Error loading verification page: ' + error.message + '<br><br>Please refresh the page.</div>';
-  }
 }
 
 /**

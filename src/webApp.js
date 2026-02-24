@@ -1,11 +1,7 @@
-const VERIFICATION_CODE_INPUT = 'common/auth/verificationCodeInput.html'; // Name of the HTML file for verification code input
-const _LAYOUT_FILE = 'common/html/_Layout.html'; // Name of the layout file
-
 // @ts-check
 /**
  * Main entry point for SCCCC Services web application.
- * Always returns the verification code request page which bootstraps the SPA.
- * No query parameters required - this is the single entry point.
+ * Serves the static SPA app.html page.
  * 
  * @param {GoogleAppsScript.Events.DoGet} e 
  * @returns {GoogleAppsScript.HTML.HtmlOutput | GoogleAppsScript.Content.TextOutput}
@@ -18,47 +14,17 @@ function doGet(e) {
             .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // JS feature diagnostic page — what does createHtmlOutputFromFile allow?
-    if (e && e.parameter && e.parameter.page === 'js-test') {
-        return HtmlService.createHtmlOutputFromFile('common/html/jsTest')
-            .setTitle('SCCCC - JS Feature Test');
-    }
-
     // Responsive CSS diagnostic page — served via static pipeline (no template processing)
     if (e && e.parameter && e.parameter.page === 'responsive-test') {
         return HtmlService.createHtmlOutputFromFile('common/html/responsiveTest')
             .setTitle('SCCCC - Responsive CSS Test');
     }
 
-    // Static SPA test page — served via static pipeline (no template processing)
-    if (e && e.parameter && e.parameter.page === 'app-test') {
-        return HtmlService.createHtmlOutputFromFile('common/html/app')
-            .setTitle('SCCCC Services (Static SPA Test)');
-    }
-
-    // Configure logger for web app execution
+    // Main SPA — static HTML page
     AppLogger.configure();
     AppLogger.info('WebApp', 'doGet() called');
-    
-    const scriptProperties = PropertiesService.getScriptProperties();
-    const mobileBreakpoint = scriptProperties.getProperty('MOBILE_BREAKPOINT') || '767';
-    const tabletMinBreakpoint = scriptProperties.getProperty('TABLET_MIN_BREAKPOINT') || '768';
-    const tabletMaxBreakpoint = scriptProperties.getProperty('TABLET_MAX_BREAKPOINT') || '1032';
-    
-    const template = HtmlService.createTemplateFromFile(_LAYOUT_FILE);
-    template.breakpoints = {
-        mobile: mobileBreakpoint,
-        tabletMin: tabletMinBreakpoint,
-        tabletMax: tabletMaxBreakpoint
-    };
-    template.include = _includeHtml;
-    template.contentFileName = VERIFICATION_CODE_INPUT;
-    
-    const output = template.evaluate()
-        .setTitle('SCCCC Services - Request Verification Code')
-    
-    AppLogger.info('WebApp', 'doGet() completed successfully');
-    return output;
+    return HtmlService.createHtmlOutputFromFile('common/html/app')
+        .setTitle('SCCCC Services');
 }
 function doPost(e) {
     return createTextResponse('doPost() unimplemented');
@@ -70,43 +36,3 @@ function createTextResponse(text) {
     )
 }
 
-/**
- * Helper function to include other HTML files within a template.
- * This function should be passed as a template variable (e.g., template.include = includeHtml;)
- * from doGet() to be accessible in the HTML.
- *
- * @param {string} filename The name of the HTML file (e.g., '_Header', '_Footer')
- * @returns {string} The evaluated HTML content of the included file.
- */
-function _includeHtml(filename) {
-  // HtmlService.createTemplateFromFile() processes the *included* file as a template too.
-  const partialTemplate = HtmlService.createTemplateFromFile(filename);
-
-  // When a helper function like 'includeHtml' is called from within an HTML template,
-  // 'this' inside 'includeHtml' refers to the template object's context (i.e., 'template' from doGet).
-  // We need to copy all variables from the parent template to the partial template
-  // so that the partials can access variables like breakpoints, etc.
-  const data = this; 
-  for (const key in data) {
-    partialTemplate[key] = data[key];
-  }
-
-  return partialTemplate.evaluate().getContent(); // Get the string content
-}
-//TODO #138 - make this run at start up
-// Don't forget your setInitialBreakpoints() function to set up Script Properties:
-/*
-function setInitialBreakpoints() {
-  const scriptProperties = PropertiesService.getScriptProperties();
-  if (!scriptProperties.getProperty('MOBILE_SCREEN_BREAKPOINT')) {
-    scriptProperties.setProperty('MOBILE_SCREEN_BREAKPOINT', '430');
-  }
-  if (!scriptProperties.getProperty('TABLET_SCREEN_BREAKPOINT')) {
-    scriptProperties.setProperty('TABLET_SCREEN_BREAKPOINT', '1023');
-  }
-  if (!scriptProperties.getProperty('SERVICE_NAME')) {
-    scriptProperties.setProperty('SERVICE_NAME', 'Access Management');
-  }
-  Logger.log("Initial breakpoints and service name set.");
-}
-*/

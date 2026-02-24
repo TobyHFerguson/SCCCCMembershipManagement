@@ -739,9 +739,6 @@ function _verifyGlobalEndpoints(checks) {
   const endpoints = [
     'sendVerificationCode',
     'verifyCode',
-    'getServiceContent',
-    'getHomePageContent',
-    'getVerificationPageContent',
     'refreshSession',
     'handleApiRequest',
     'updateUserSubscriptions',
