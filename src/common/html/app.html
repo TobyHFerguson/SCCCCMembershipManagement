@@ -730,7 +730,8 @@
 
         /**
          * Handle verification code submission.
-         * On success, calls getAllServiceData(token) for bulk pre-fetch, then renders home page.
+         * On success, uses bundled serviceData from verifyCode response (Phase 5 optimization).
+         * Falls back to a separate getAllServiceData() call if serviceData is missing or errored.
          */
         function handleVerifyCode() {
             const code = getCodeValue();
@@ -753,31 +754,52 @@
                                 }
                             }
 
-                            // Fetch ALL service data in one call for instant navigation
-                            google.script.run
-                                .withSuccessHandler(function(allData) {
-                                    document.title = 'SCCCC Services';
+                            // Use bundled service data if available (Phase 5: eliminates extra round-trip)
+                            if (response.serviceData && !response.serviceData.error) {
+                                const allData = response.serviceData;
+                                document.title = 'SCCCC Services';
 
-                                    try {
-                                        sessionStorage.setItem('allServiceData', JSON.stringify(allData));
-                                        sessionStorage.setItem('cachedServices', JSON.stringify(allData.homePageServices));
-                                    } catch (e) {
-                                        console.warn('Could not store service data in sessionStorage:', e);
-                                    }
+                                try {
+                                    sessionStorage.setItem('allServiceData', JSON.stringify(allData));
+                                    sessionStorage.setItem('cachedServices', JSON.stringify(allData.homePageServices));
+                                } catch (e) {
+                                    console.warn('Could not store service data in sessionStorage:', e);
+                                }
 
-                                    const container = document.getElementById('app-container');
-                                    if (container && window.renderHomePage) {
-                                        const html = window.renderHomePage(allData.homePageServices, response.email);
-                                        container.innerHTML = html;
-                                    } else {
-                                        console.error('Container or renderHomePage not found');
-                                    }
-                                })
-                                .withFailureHandler(function(error) {
-                                    displayMessage(codeMessageDiv, 'Error loading services: ' + error.message, true);
-                                    enableForm(codeForm);
-                                })
-                                .getAllServiceData(response.token);
+                                const container = document.getElementById('app-container');
+                                if (container && window.renderHomePage) {
+                                    const html = window.renderHomePage(allData.homePageServices, response.email);
+                                    container.innerHTML = html;
+                                } else {
+                                    console.error('Container or renderHomePage not found');
+                                }
+                            } else {
+                                // Fallback: fetch service data separately (defensive)
+                                google.script.run
+                                    .withSuccessHandler(function(allData) {
+                                        document.title = 'SCCCC Services';
+
+                                        try {
+                                            sessionStorage.setItem('allServiceData', JSON.stringify(allData));
+                                            sessionStorage.setItem('cachedServices', JSON.stringify(allData.homePageServices));
+                                        } catch (e) {
+                                            console.warn('Could not store service data in sessionStorage:', e);
+                                        }
+
+                                        const container = document.getElementById('app-container');
+                                        if (container && window.renderHomePage) {
+                                            const html = window.renderHomePage(allData.homePageServices, response.email);
+                                            container.innerHTML = html;
+                                        } else {
+                                            console.error('Container or renderHomePage not found');
+                                        }
+                                    })
+                                    .withFailureHandler(function(error) {
+                                        displayMessage(codeMessageDiv, 'Error loading services: ' + error.message, true);
+                                        enableForm(codeForm);
+                                    })
+                                    .getAllServiceData(response.token);
+                            }
                         } else {
                             enableForm(codeForm);
                             if (response && response.errorCode === 'AUTO_RESENT') {

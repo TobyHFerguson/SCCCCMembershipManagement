@@ -12,10 +12,13 @@
  * 6. Service data shapes - each service slot matches getData() return shape
  * 7. AppLogger.configure() - called on entry
  * 8. Audit persistence - _persistAuditEntries is called
+ * 9. verifyCode with bundled service data - serviceData included in successful verification
  */
 
 /** @type {jest.Mock} */
 var mockGetEmailFromMUT;
+/** @type {jest.Mock} */
+var mockGetMultiUseToken;
 /** @type {jest.Mock} */
 var mockGetAvailableServices;
 /** @type {jest.Mock} */
@@ -37,13 +40,15 @@ beforeEach(() => {
   jest.resetModules();
 
   mockGetEmailFromMUT = jest.fn().mockReturnValue('user@example.com');
+  mockGetMultiUseToken = jest.fn().mockReturnValue('mock-session-token');
   mockGetAvailableServices = jest.fn().mockReturnValue(mockHomePageServices);
   mockPersistAuditEntries = jest.fn();
   mockLogServiceAccess = jest.fn().mockReturnValue({ Type: 'ServiceAccess', Outcome: 'success' });
 
   // Mock TokenManager
   global.TokenManager = /** @type {any} */ ({
-    getEmailFromMUT: mockGetEmailFromMUT
+    getEmailFromMUT: mockGetEmailFromMUT,
+    getMultiUseToken: mockGetMultiUseToken
   });
 
   // Mock AppLogger
@@ -63,6 +68,7 @@ beforeEach(() => {
   // Mock ServiceLogger
   global.ServiceLogger = jest.fn().mockImplementation(() => ({
     logServiceAccess: mockLogServiceAccess,
+    logOperation: jest.fn().mockReturnValue({ Type: 'Operation', Outcome: 'success' }),
     logError: jest.fn().mockReturnValue({ Type: 'Error', Outcome: 'fail' })
   }));
 
@@ -332,5 +338,77 @@ describe('getAllServiceData - audit persistence', () => {
     const { getAllServiceData } = loadEndpoints();
     getAllServiceData('valid-token');
     expect(global.ServiceLogger).toHaveBeenCalledWith('AllServices', 'user@example.com');
+  });
+});
+
+// ==================== 9. verifyCode with bundled service data ====================
+
+describe('verifyCode with bundled service data', () => {
+  beforeEach(() => {
+    // Set up VerificationCode.verify to succeed by default
+    global.VerificationCode.verify = jest.fn().mockReturnValue({ success: true });
+  });
+
+  test('successful verification includes serviceData in response', () => {
+    const { verifyCode } = loadEndpoints();
+
+    const result = verifyCode('user@example.com', '123456', 'GroupManagementService');
+
+    expect(result.success).toBe(true);
+    expect(result.token).toBe('mock-session-token');
+    expect(result.serviceData).toBeDefined();
+    expect(result.serviceData).not.toHaveProperty('error');
+    expect(result.serviceData).toHaveProperty('email', 'user@example.com');
+    expect(result.serviceData).toHaveProperty('services');
+    expect(result.serviceData).toHaveProperty('homePageServices');
+  });
+
+  test('failed verification does not include serviceData', () => {
+    global.VerificationCode.verify = jest.fn().mockReturnValue({
+      success: false,
+      error: 'Invalid code',
+      errorCode: 'INVALID_CODE'
+    });
+    const { verifyCode } = loadEndpoints();
+
+    const result = verifyCode('user@example.com', 'wrong-code', 'GroupManagementService');
+
+    expect(result.success).toBe(false);
+    expect(result).not.toHaveProperty('serviceData');
+  });
+
+  test('serviceData error does not break verification - still returns success with token', () => {
+    // Make all service getData calls throw
+    global.DirectoryService.Api.getData.mockImplementation(() => { throw new Error('Sheets unavailable'); });
+    global.GroupManagementService.Api.getData.mockImplementation(() => { throw new Error('Sheets unavailable'); });
+    global.ProfileManagementService.Api.getData.mockImplementation(() => { throw new Error('Sheets unavailable'); });
+    global.EmailChangeService.Api.getData.mockImplementation(() => { throw new Error('Sheets unavailable'); });
+    global.VotingService.Api.getData.mockImplementation(() => { throw new Error('Sheets unavailable'); });
+    const { verifyCode } = loadEndpoints();
+
+    const result = verifyCode('user@example.com', '123456', 'GroupManagementService');
+
+    // Verification still succeeds even if service data fetch errors
+    expect(result.success).toBe(true);
+    expect(result.token).toBe('mock-session-token');
+    // serviceData should be present but contain error info (from partial failure handling)
+    expect(result.serviceData).toBeDefined();
+  });
+
+  test('bundled serviceData contains all 5 services', () => {
+    const { verifyCode } = loadEndpoints();
+
+    const result = verifyCode('user@example.com', '123456', 'DirectoryService');
+
+    expect(Object.keys(result.serviceData.services)).toEqual(
+      expect.arrayContaining([
+        'DirectoryService',
+        'GroupManagementService',
+        'ProfileManagementService',
+        'EmailChangeService',
+        'VotingService'
+      ])
+    );
+    expect(Object.keys(result.serviceData.services)).toHaveLength(5);
   });
 });
