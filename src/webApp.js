@@ -18,6 +18,12 @@ function doGet(e) {
             .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // Responsive CSS diagnostic page — served via static pipeline (no template processing)
+    if (e && e.parameter && e.parameter.page === 'responsive-test') {
+        return HtmlService.createHtmlOutputFromFile('common/html/responsiveTest')
+            .setTitle('SCCCC - Responsive CSS Test');
+    }
+
     // Configure logger for web app execution
     AppLogger.configure();
     AppLogger.info('WebApp', 'doGet() called');
