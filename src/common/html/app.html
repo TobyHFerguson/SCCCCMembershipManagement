@@ -77,6 +77,7 @@
             min-height: 100dvh;
             margin: 0;
             padding: 1rem;
+            background-color: var(--color-bg-light);
         }
 
         .container {
@@ -84,7 +85,6 @@
             background-color: white;
             width: min(95%, var(--container-max));
             padding: 1.25rem;
-            border: 0.0625rem solid var(--color-border);
             border-radius: var(--radius-md);
             box-shadow: var(--shadow-md);
         }
@@ -99,6 +99,12 @@
         /* ============================================
            Form Elements
            ============================================ */
+        input,
+        select,
+        textarea {
+            font-size: 16px;
+        }
+
         input[type=email],
         button {
             width: 100%;
@@ -107,7 +113,7 @@
             display: block;
             border: 0.0625rem solid var(--color-border);
             border-radius: var(--radius-sm);
-            font-size: 1rem;
+            font-size: 16px;
         }
 
         button {
@@ -355,16 +361,19 @@
         @media (max-width: 600px) and (orientation: portrait) {
             body {
                 justify-content: flex-start;
-                padding-top: 2rem;
+                padding: 0;
             }
 
             .container {
-                width: 95%;
-                padding: 1rem;
+                width: 100%;
+                border-radius: 0;
+                box-shadow: none;
+                padding: 1.25rem;
             }
 
             input[type=email],
             button {
+                font-size: 1.125rem;
                 padding: 1rem;
             }
 
@@ -480,6 +489,9 @@
             document.getElementById('code5'),
             document.getElementById('code6')
         ];
+
+        // Save initial auth HTML for sign-out restoration (avoids reload)
+        var initialAuthHTML = document.getElementById('app-container').innerHTML;
 
         // =============================================================
         // SVG icons for services
@@ -618,73 +630,119 @@
         // Auth Code Input Handlers
         // =============================================================
 
-        codeInputs.forEach((input, index) => {
-            input.addEventListener('input', (e) => {
-                const value = e.target.value;
+        /**
+         * Initialize (or re-initialize) auth UI DOM references and event listeners.
+         * Called on page load and again after sign-out restores the auth HTML.
+         */
+        function initAuthUI() {
+            // Re-query DOM elements (needed after innerHTML restore)
+            emailInput = document.getElementById('email');
+            sendCodeButton = document.getElementById('sendCodeButton');
+            emailMessageDiv = document.getElementById('emailMessage');
+            emailForm = document.getElementById('emailForm');
+            codeForm = document.getElementById('codeForm');
+            verifyButton = document.getElementById('verifyButton');
+            codeMessageDiv = document.getElementById('codeMessage');
+            displayEmailSpan = document.getElementById('displayEmail');
+            resendLink = document.getElementById('resendLink');
+            resendCountdown = document.getElementById('resendCountdown');
+            codeInputs = [
+                document.getElementById('code1'),
+                document.getElementById('code2'),
+                document.getElementById('code3'),
+                document.getElementById('code4'),
+                document.getElementById('code5'),
+                document.getElementById('code6')
+            ];
 
-                if (value && !/^\d$/.test(value)) {
-                    e.target.value = '';
-                    return;
-                }
+            // Code input listeners
+            codeInputs.forEach((input, index) => {
+                input.addEventListener('input', (e) => {
+                    const value = e.target.value;
 
-                if (value && index < 5) {
-                    codeInputs[index + 1].focus();
-                }
+                    if (value && !/^\d$/.test(value)) {
+                        e.target.value = '';
+                        return;
+                    }
 
-                validateCodeInputs();
+                    if (value && index < 5) {
+                        codeInputs[index + 1].focus();
+                    }
 
-                if (value && index === 5) {
-                    const code = getCodeValue();
-                    if (code.length === 6 && /^\d{6}$/.test(code)) {
+                    validateCodeInputs();
+
+                    if (value && index === 5) {
+                        const code = getCodeValue();
+                        if (code.length === 6 && /^\d{6}$/.test(code)) {
+                            setTimeout(() => {
+                                if (!verifyButton.disabled) {
+                                    verifyButton.click();
+                                }
+                            }, 100);
+                        }
+                    }
+                });
+
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                        codeInputs[index - 1].focus();
+                    }
+
+                    if (e.key === 'ArrowLeft' && index > 0) {
+                        codeInputs[index - 1].focus();
+                    }
+                    if (e.key === 'ArrowRight' && index < 5) {
+                        codeInputs[index + 1].focus();
+                    }
+                });
+
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const pastedData = (e.clipboardData || window.clipboardData).getData('text');
+                    const digits = pastedData.replace(/\D/g, '').slice(0, 6);
+
+                    digits.split('').forEach((digit, i) => {
+                        if (codeInputs[i]) {
+                            codeInputs[i].value = digit;
+                        }
+                    });
+
+                    const lastIndex = Math.min(digits.length, 6) - 1;
+                    if (lastIndex >= 0) {
+                        codeInputs[Math.min(lastIndex, 5)].focus();
+                    }
+
+                    validateCodeInputs();
+
+                    if (digits.length === 6) {
                         setTimeout(() => {
                             if (!verifyButton.disabled) {
                                 verifyButton.click();
                             }
                         }, 100);
                     }
-                }
-            });
-
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && !e.target.value && index > 0) {
-                    codeInputs[index - 1].focus();
-                }
-
-                if (e.key === 'ArrowLeft' && index > 0) {
-                    codeInputs[index - 1].focus();
-                }
-                if (e.key === 'ArrowRight' && index < 5) {
-                    codeInputs[index + 1].focus();
-                }
-            });
-
-            input.addEventListener('paste', (e) => {
-                e.preventDefault();
-                const pastedData = (e.clipboardData || window.clipboardData).getData('text');
-                const digits = pastedData.replace(/\D/g, '').slice(0, 6);
-
-                digits.split('').forEach((digit, i) => {
-                    if (codeInputs[i]) {
-                        codeInputs[i].value = digit;
-                    }
                 });
-
-                const lastIndex = Math.min(digits.length, 6) - 1;
-                if (lastIndex >= 0) {
-                    codeInputs[Math.min(lastIndex, 5)].focus();
-                }
-
-                validateCodeInputs();
-
-                if (digits.length === 6) {
-                    setTimeout(() => {
-                        if (!verifyButton.disabled) {
-                            verifyButton.click();
-                        }
-                    }, 100);
-                }
             });
-        });
+
+            // Form submit listeners
+            emailForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                hideMessage(emailMessageDiv);
+                handleSendCode();
+            });
+
+            codeForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                hideMessage(codeMessageDiv);
+                handleVerifyCode();
+            });
+
+            // Email input validation listener
+            emailInput.addEventListener('input', validateEmailInput);
+        }
+
+        // Initial call
+        initAuthUI();
 
         // =============================================================
         // Auth Resend Countdown
@@ -898,23 +956,6 @@
             }
         }
 
-        // Auth Form Submissions
-        emailForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            hideMessage(emailMessageDiv);
-            handleSendCode();
-        });
-
-        codeForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            hideMessage(codeMessageDiv);
-            handleVerifyCode();
-        });
-
-        // Initial setup — attach input listener programmatically
-        // (inline oninput may be stripped by GAS HTML sanitization)
-        emailInput.addEventListener('input', validateEmailInput);
-
         document.addEventListener('DOMContentLoaded', function() {
             validateEmailInput();
             enableForm(emailForm);
@@ -1076,7 +1117,7 @@
         }
 
         /**
-         * Handle sign out — clears all session data and reloads to show auth UI.
+         * Handle sign out — clears session data and restores the auth UI in-place.
          */
         function handleSignOutFromCache() {
             try {
@@ -1088,8 +1129,21 @@
                 console.warn('Could not clear sessionStorage:', e);
             }
 
-            // Reload the page to return to the static auth UI
-            window.location.reload();
+            // Reset auth state
+            userEmail = '';
+            resendDisabled = false;
+            resendCountdownSeconds = 0;
+            if (resendTimer) { clearInterval(resendTimer); resendTimer = null; }
+
+            // Restore initial auth UI (no reload needed)
+            var container = document.getElementById('app-container');
+            container.innerHTML = initialAuthHTML;
+            document.title = 'SCCCC Services';
+
+            // Re-initialize DOM references and event listeners
+            initAuthUI();
+            validateEmailInput();
+            enableForm(emailForm);
         }
 
         // Make navigation functions globally available
@@ -1238,24 +1292,16 @@
                 <style>
                     /* Override base .container width for DirectoryService via custom property */
                     .container.directory-service-container {
-                        --container-max: none;
-                        min-width: 50rem;
+                        --container-max: 64rem;
                     }
 
                     @media (max-width: 900px) {
-                        .container.directory-service-container {
-                            --container-max: 60rem;
-                        }
                         .directory-container {
                             padding: 0.875rem;
                         }
                     }
 
                     @media (max-width: 600px) and (orientation: landscape) {
-                        .container.directory-service-container {
-                            width: 95%;
-                            overflow-x: auto;
-                        }
                         .directory-container {
                             padding: 0.75rem;
                         }
@@ -1264,22 +1310,16 @@
                     @media (max-width: 600px) and (orientation: portrait) {
                         .container.directory-service-container {
                             width: 100%;
-                            min-width: auto;
                             padding: 0.5rem;
                         }
                         .directory-container {
                             padding: 0.75rem;
-                        }
-                        #data-table td,
-                        #data-table th {
-                            max-width: 9.375rem;
                         }
                     }
 
                     .directory-container {
                         padding: 1rem;
                         max-width: 100%;
-                        overflow-x: auto;
                     }
 
                     .directory-container h2 {
@@ -1324,12 +1364,6 @@
                         text-decoration: underline;
                     }
 
-                    /* Ensure table cells don't cause overflow */
-                    #data-table td,
-                    #data-table th {
-                        word-wrap: break-word;
-                        max-width: 12.5rem;
-                    }
                 </style>
                 <div class="directory-container">
                     <h2>SCCCC Directory</h2>
@@ -1390,10 +1424,16 @@
                                     }
                                 }
                             ],
+                            columnDefs: [
+                                { targets: 0, width: '15%', responsivePriority: 2 },
+                                { targets: 1, width: '20%', responsivePriority: 1 },
+                                { targets: 2, width: '40%', responsivePriority: 3 },
+                                { targets: 3, width: '25%', responsivePriority: 4 }
+                            ],
                             responsive: true,
                             pageLength: 25,
                             order: [[1, 'asc'], [0, 'asc']],
-                            autoWidth: false
+                            autoWidth: true
                         });
                     } catch (error) {
                         console.error('Directory: Error initializing DataTable:', error);
@@ -1446,6 +1486,7 @@
 
             container.innerHTML = `
                 <style>
+                    .container { --container-max: 40rem; }
                     #subscriptionForm {
                         margin: 0 auto;
                         padding: 1.25rem;
@@ -1724,6 +1765,7 @@
 
             container.innerHTML = `
                 <style>
+                    .container { --container-max: 40rem; }
                     #profileForm {
                         margin: 0 auto;
                         padding: 1.25rem;
@@ -2675,6 +2717,7 @@
 
             container.innerHTML = `
                 <style>
+                    .container { --container-max: 52rem; }
                     .elections-container {
                         margin: 0 auto;
                         padding: 1.25rem;
