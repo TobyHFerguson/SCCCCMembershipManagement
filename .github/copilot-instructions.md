@@ -149,7 +149,7 @@ Each service follows this namespace pattern:
 
 **Core Principles**:
 1. **Server returns JSON data ONLY** - never return HTML from `getServiceContent()`
-2. **Client renders HTML from data** - all rendering in `_Header.html` renderer functions
+2. **Client renders HTML from data** - all rendering in `app.html` renderer functions
 3. **Scripts in innerHTML don't execute** - use `loadScript()` for external libraries
 4. **Always escape user data** - use `escapeHtml()` to prevent XSS
 5. **Remove Date objects** before returning from `Service.Api.getData()` - GAS cannot serialize them
@@ -167,29 +167,29 @@ Each service follows this namespace pattern:
 
 ### Responsive CSS Framework
 
-**CRITICAL**: Use the existing responsive CSS framework in `src/common/html/_Header.html`. **DO NOT** duplicate responsive logic.
+**CRITICAL**: All responsive CSS lives in `src/common/html/app.html`. **DO NOT** duplicate responsive logic.
 
 **Key Points**:
-- GAS does NOT support `@media` queries - use class-based selectors instead
-- Classes applied to `<html>` element: `is-mobile-portrait`, `is-mobile-landscape`, `is-tablet`
-- Desktop = no class (default styles)
-- Use `rem` units for sizes (base font-size scales per device)
+- Standard `@media` queries work (app is served via `HtmlService.createHtmlOutputFromFile()` in IFRAME sandbox)
+- Three breakpoints: tablet (`max-width: 900px`), mobile portrait (`max-width: 600px` + `orientation: portrait`), mobile landscape (`max-width: 600px` + `orientation: landscape`)
+- Desktop = default styles (no media query)
+- Use `rem` units for sizes (root font-size scales fluidly via `clamp()`)
+- Use CSS custom properties (design tokens) for colors, radii, shadows, and typography scale
+- Service renderers override container width via `--container-max` custom property (not `!important`)
 
 **Pattern**:
 ```css
-/* Desktop defaults (no class prefix) */
-#form { display: grid; grid-template-columns: 150px 1fr; }
+/* Desktop defaults */
+#form { display: grid; grid-template-columns: 9.375rem 1fr; }
 
 /* Tablet */
-html.is-tablet #form { grid-template-columns: 130px 1fr; }
-
-/* Mobile Landscape */
-html.is-mobile-landscape #form { grid-template-columns: 120px 1fr; }
+@media (max-width: 900px) {
+    #form { grid-template-columns: 8.125rem 1fr; }
+}
 
 /* Mobile Portrait - single column */
-html.is-mobile-portrait #form { 
-  grid-template-columns: 1fr; 
-  gap: 10px; 
+@media (max-width: 600px) and (orientation: portrait) {
+    #form { grid-template-columns: 1fr; gap: 0.625rem; }
 }
 ```
 
@@ -366,8 +366,7 @@ const result = manager.processPaidTransactions(txns, members, schedule);
 - `src/webapp_endpoints.js` - Global functions callable from web UIs via `google.script.run`
 - `src/webApp.js` - doGet router dispatching to service handlers
 - `src/common/data/data_access.js` - `Common.Data.Access` namespace for data retrieval
-- `src/common/html/_Header.html` - Shared responsive CSS framework
-- `src/common/html/_Layout.html` - Master HTML template
+- `src/common/html/app.html` - SPA shell with auth, navigation, service renderers, and responsive CSS
 
 **Services** (examples):
 - `src/services/MembershipManagement/Manager.js` - Pure membership logic (testable)

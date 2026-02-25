@@ -65,7 +65,7 @@ ServiceName.Api.anotherHandler = function() { ... };
 
 ### 3. Client-Side Rendering
 
-**All HTML generation happens in `_Header.html`** using renderer functions:
+**All HTML generation happens in `app.html`** using renderer functions:
 
 ```javascript
 function renderServiceName(data, container) {
@@ -122,7 +122,7 @@ Router calls: renderDirectoryService(data, container)
 
 ### The `.container` Class System
 
-**Background**: The base CSS framework in `_Header.html` defines a constrained `.container` class:
+**Background**: The base CSS framework in `app.html` defines a constrained `.container` class:
 ```css
 .container {
     width: 25rem;  /* 400px - suitable for forms */
@@ -254,7 +254,7 @@ function getServiceContent(email, service) {
 }
 ```
 
-**Step 2: Client-side Renderer** (`_Header.html`)
+**Step 2: Client-side Renderer** (`app.html`)
 
 ```javascript
 // Add renderer function
@@ -929,7 +929,7 @@ console.log('Initialization complete');
 
 **Issue**: "Back to Services doesn't work"
 - **Cause**: `window.navigateToHomePage` not defined
-- **Fix**: Ensure `_Header.html` is loaded (should always be present)
+- **Fix**: Ensure `app.html` is loaded (should always be present)
 
 ## Migration Checklist
 
@@ -959,13 +959,12 @@ When migrating a service to SPA architecture:
 ## Files Modified
 
 - `src/webapp_endpoints.js` - Server-side data endpoints
-- `src/common/html/_Header.html` - Client-side renderers and utilities
-- `src/common/html/serviceHomePage.html` - Home page (template only for doGet)
+- `src/common/html/app.html` - Client-side renderers, utilities, and SPA shell
 - Individual service files (for data retrieval, not rendering)
 
 ## References
 
-- Home page renderer: `renderHomePage()` in `_Header.html`
-- Service router: `renderService()` in `_Header.html`
-- Example: `renderDirectoryService()` in `_Header.html`
-- Utilities: `loadScript()`, `loadStylesheet()`, `escapeHtml()` in `_Header.html`
+- Home page renderer: `renderHomePage()` in `app.html`
+- Service router: `renderService()` in `app.html`
+- Example: `renderDirectoryService()` in `app.html`
+- Utilities: `loadScript()`, `loadStylesheet()`, `escapeHtml()` in `app.html`

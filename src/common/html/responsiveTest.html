@@ -105,6 +105,74 @@
       .container-query-inner::after { content: " — Container >500px (lightgreen)"; }
     }
 
+    /* ── dvh unit test ── */
+    .dvh-test {
+      height: 10dvh;
+      background-color: #87CEEB;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+    .dvh-fallback {
+      height: 10vh;
+      background-color: #FFB347;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      font-weight: bold;
+      margin-top: 0.5rem;
+    }
+
+    /* ── @layer test ── */
+    @layer base, override;
+    @layer base {
+      .layer-test { background-color: #FF6347; color: white; padding: 1rem; border-radius: 6px; text-align: center; font-weight: bold; }
+    }
+    @layer override {
+      .layer-test { background-color: #90EE90; color: #333; }
+    }
+
+    /* ── :has() selector test ── */
+    .has-test-wrapper {
+      padding: 1rem;
+      border: 2px solid #ccc;
+      border-radius: 6px;
+      transition: background-color 0.2s;
+    }
+    .has-test-wrapper:has(input:checked) {
+      background-color: #d4edda;
+      border-color: #28a745;
+    }
+
+    /* ── prefers-reduced-motion test ── */
+    .motion-test {
+      width: 3rem;
+      height: 3rem;
+      background-color: #7b68ee;
+      border-radius: 50%;
+      animation: bounce 1s infinite alternate;
+    }
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to { transform: translateY(-1.5rem); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .motion-test {
+        animation: none;
+        background-color: #3cb371;
+      }
+      .motion-label::after { content: " — reduced motion active (green circle, no animation)"; }
+    }
+
+    /* ── clamp() on various elements ── */
+    .clamp-text { font-size: clamp(0.875rem, 0.75rem + 0.5vw, 1.25rem); }
+    .clamp-padding { padding: clamp(0.5rem, 1vw, 2rem); background-color: #f0f0f0; border-radius: 6px; }
+    .clamp-gap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(0.25rem, 1vw, 1.5rem); }
+    .clamp-gap-cell { background-color: #dda0dd; padding: 0.75rem; border-radius: 6px; text-align: center; }
+
     /* ── Diagnostic panel ── */
     #diag {
       background-color: #f5f5f5;
@@ -170,9 +238,63 @@
     </div>
   </section>
 
-  <!-- Section 4: Diagnostic info panel -->
+  <!-- Section 4: dvh unit test -->
   <section>
-    <h2>4. Diagnostic Info Panel</h2>
+    <h2>4. Dynamic Viewport Height (dvh) Test</h2>
+    <p>Blue box uses <code>10dvh</code>. Orange box uses <code>10vh</code> as a comparison.
+       On mobile, the blue box should account for the browser address bar; the orange box may not.
+       If dvh is unsupported, the blue box will have no height.</p>
+    <div class="dvh-test">10dvh</div>
+    <div class="dvh-fallback">10vh (reference)</div>
+  </section>
+
+  <!-- Section 5: @layer test -->
+  <section>
+    <h2>5. CSS @layer Test</h2>
+    <p>If <code>@layer</code> is supported, the box below should be <strong>green</strong> (the
+       <code>override</code> layer wins). If unsupported, it will be <strong>red</strong> (last
+       declaration wins without layers, but layer order reverses this).</p>
+    <div class="layer-test">@layer result (should be green)</div>
+  </section>
+
+  <!-- Section 6: :has() selector test -->
+  <section>
+    <h2>6. CSS :has() Selector Test</h2>
+    <p>Check the checkbox. If <code>:has()</code> is supported, the border of the wrapper
+       will turn green and the background will change.</p>
+    <div class="has-test-wrapper">
+      <label>
+        <input type="checkbox"> Toggle :has() test (wrapper should turn green when checked)
+      </label>
+    </div>
+  </section>
+
+  <!-- Section 7: prefers-reduced-motion test -->
+  <section>
+    <h2>7. prefers-reduced-motion Test</h2>
+    <p>The circle below bounces when motion is unrestricted (purple). If your OS has
+       reduced motion enabled, it should be a static green circle.</p>
+    <div class="motion-test"></div>
+    <p class="motion-label">Motion preference detected</p>
+  </section>
+
+  <!-- Section 8: clamp() on various properties -->
+  <section>
+    <h2>8. clamp() Beyond Font Sizes</h2>
+    <p>Tests <code>clamp()</code> on padding, gap, and text. Resize the window to see fluid scaling.</p>
+    <p class="clamp-text">This text uses <code>clamp(0.875rem, 0.75rem + 0.5vw, 1.25rem)</code> for font-size.</p>
+    <div class="clamp-padding">This box uses <code>clamp(0.5rem, 1vw, 2rem)</code> for padding.</div>
+    <div class="clamp-gap-grid" style="margin-top: 0.5rem;">
+      <div class="clamp-gap-cell">A</div>
+      <div class="clamp-gap-cell">B</div>
+      <div class="clamp-gap-cell">C</div>
+    </div>
+    <p style="font-size: 0.8rem; color: #666; margin-top: 0.25rem;">Grid gap uses <code>clamp(0.25rem, 1vw, 1.5rem)</code></p>
+  </section>
+
+  <!-- Section 9: Diagnostic info panel -->
+  <section>
+    <h2>9. Diagnostic Info Panel</h2>
     <div id="diag">
       <table>
         <tr><td>window.innerWidth × innerHeight</td><td id="d-inner">—</td></tr>
@@ -182,13 +304,20 @@
         <tr><td>matchMedia max-width: 600px</td><td id="d-mq-600">—</td></tr>
         <tr><td>matchMedia max-width: 600px + portrait</td><td id="d-mq-600p">—</td></tr>
         <tr><td>CSS viewport vs innerWidth aligned?</td><td id="d-align">—</td></tr>
+        <tr><td colspan="2" style="padding-top: 0.75rem; font-weight: bold; color: #007bff;">Modern CSS Feature Detection</td></tr>
+        <tr><td>dvh units</td><td id="d-dvh">—</td></tr>
+        <tr><td>@layer</td><td id="d-layer">—</td></tr>
+        <tr><td>:has() selector</td><td id="d-has">—</td></tr>
+        <tr><td>prefers-reduced-motion</td><td id="d-motion">—</td></tr>
+        <tr><td>clamp() in padding</td><td id="d-clamp">—</td></tr>
+        <tr><td>container queries</td><td id="d-container">—</td></tr>
       </table>
     </div>
   </section>
 
   <!-- Section 5: View Source -->
   <section>
-    <h2>5. View Source — rendered &lt;style&gt; content</h2>
+    <h2>10. View Source — rendered &lt;style&gt; content</h2>
     <p>Verify that <code>@media</code> text was delivered un-mangled by GAS.</p>
     <pre id="view-source">Loading…</pre>
   </section>
@@ -236,10 +365,56 @@
 
     // Run on load
     updateDiag();
+    detectFeatures();
     renderViewSource();
 
     // Live updates on resize
     window.addEventListener('resize', updateDiag);
+
+    function detectFeatures() {
+      // dvh: create a test element and check computed height
+      var dvhEl = document.querySelector('.dvh-test');
+      var dvhH = dvhEl ? dvhEl.offsetHeight : 0;
+      document.getElementById('d-dvh').textContent = dvhH > 0 ? 'YES (' + dvhH + 'px height)' : 'NO (no height rendered)';
+
+      // @layer: check if the .layer-test background is green (#90EE90) not red (#FF6347)
+      var layerEl = document.querySelector('.layer-test');
+      if (layerEl) {
+        var layerBg = getComputedStyle(layerEl).backgroundColor;
+        // rgb(144, 238, 144) = #90EE90 green, rgb(255, 99, 71) = #FF6347 red
+        var isGreen = layerBg.indexOf('144') !== -1 && layerBg.indexOf('238') !== -1;
+        document.getElementById('d-layer').textContent = isGreen ? 'YES (override layer wins)' : 'NO (layers not applied)';
+      }
+
+      // :has(): check if the test wrapper responds to checkbox state
+      var hasSupported = false;
+      try {
+        hasSupported = CSS.supports('selector(:has(> input))');
+      } catch (e) {
+        // CSS.supports with selector() may not be available; fall back to DOM test
+        hasSupported = document.querySelector('.has-test-wrapper:has(input)') !== null;
+      }
+      document.getElementById('d-has').textContent = hasSupported ? 'YES' : 'NO';
+
+      // prefers-reduced-motion: check if matchMedia recognizes it
+      var motionMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
+      document.getElementById('d-motion').textContent = motionMQ.matches ? 'YES (reduce active)' : 'YES (no-preference active)';
+
+      // clamp(): check if computed padding differs from fallback
+      var clampEl = document.querySelector('.clamp-padding');
+      if (clampEl) {
+        var pad = parseFloat(getComputedStyle(clampEl).paddingLeft);
+        document.getElementById('d-clamp').textContent = pad > 0 ? 'YES (' + pad.toFixed(1) + 'px computed)' : 'NO';
+      }
+
+      // container queries: check if .container-query-inner has background-color set
+      var cqEl = document.querySelector('.container-query-inner');
+      if (cqEl) {
+        var cqBg = getComputedStyle(cqEl).backgroundColor;
+        var hasBg = cqBg !== 'rgba(0, 0, 0, 0)' && cqBg !== 'transparent';
+        document.getElementById('d-container').textContent = hasBg ? 'YES (' + cqBg + ')' : 'NO (no container style applied)';
+      }
+    }
   </script>
 </body>
 </html>

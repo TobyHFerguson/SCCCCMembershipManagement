@@ -64,7 +64,7 @@ ServiceName.Api.getData = function(email) {
 };
 ```
 
-### Client Layer (`_Header.html`)
+### Client Layer (`app.html`)
 All rendering happens client-side:
 ```javascript
 function renderServiceName(data, container) {
@@ -109,7 +109,7 @@ function renderServiceName(data, container) {
 
 ### 3. **Improved Maintainability**
 - Clear separation: server (data) vs client (presentation)
-- All renderers in one file (`_Header.html`)
+- All renderers in one file (`app.html`)
 - Consistent patterns across services
 
 ### 4. **Enhanced Security**
@@ -147,7 +147,7 @@ For each service, test:
 
 ### Core Infrastructure
 - `src/webapp_endpoints.js` - Service data endpoints
-- `src/common/html/_Header.html` - All client renderers (+600 lines)
+- `src/common/html/app.html` - All client renderers (+600 lines)
 - `src/common/auth/verificationCodeInput.html` - Updated to render home page
 
 ### Service API Files
@@ -176,7 +176,7 @@ ServiceName.Api.getData = function(email) {
 };
 ```
 
-### 2. Client Side (`_Header.html`)
+### 2. Client Side (`app.html`)
 ```javascript
 function renderServiceName(data, container) {
   // 1. Build HTML from data
@@ -195,7 +195,7 @@ function initializeServiceNameForm() {
 }
 ```
 
-### 3. Router (`_Header.html`)
+### 3. Router (`app.html`)
 ```javascript
 case 'ServiceName':
   renderServiceName(data, container);
@@ -248,7 +248,7 @@ None at this time. All services rendering correctly.
 
 ### Adding a New Service
 1. Create `Service.Api.getData(email)` method
-2. Add renderer function to `_Header.html`
+2. Add renderer function to `app.html`
 3. Add case to `renderService()` switch
 4. Test data flow: server → client → render
 
