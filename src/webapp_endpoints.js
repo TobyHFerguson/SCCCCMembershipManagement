@@ -81,7 +81,7 @@ function sendVerificationCode(email, service) {
  * @param {string} email - User email
  * @param {string} code - Verification code
  * @param {string} service - Service name
- * @returns {{success: boolean, token?: string, email?: string, service?: string, error?: string, errorCode?: string}}
+ * @returns {{success: boolean, token?: string, email?: string, service?: string, serviceData?: Record<string, any>, error?: string, errorCode?: string}} Result with token and bundled service data on success (JUSTIFIED: serviceData contains heterogeneous per-service data shapes)
  */
 function verifyCode(email, code, service) {
   console.log('verifyCode(', email, code, ')');
@@ -117,12 +117,21 @@ function verifyCode(email, code, service) {
   const token = TokenManager.getMultiUseToken(email);
   
   console.log('verifyCode: success, returning token for in-place content swap');
-  
+
+  // Bundle service data into the response to eliminate a round-trip (Phase 5 optimization)
+  let serviceData;
+  try {
+    serviceData = getAllServiceData(token);
+  } catch (err) {
+    serviceData = { error: 'Failed to load service data: ' + err.message };
+  }
+
   return {
     success: true,
     token: token,
     email: email,
-    service: service
+    service: service,
+    serviceData: serviceData
   };
 }
 
@@ -286,5 +295,5 @@ function handleApiRequest(request) {
 
 // Node.js export for testing
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { getAllServiceData: getAllServiceData };
+  module.exports = { getAllServiceData: getAllServiceData, verifyCode: verifyCode };
 }
