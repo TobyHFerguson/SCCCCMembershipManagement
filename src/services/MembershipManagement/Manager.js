@@ -352,6 +352,39 @@ MembershipManagement.Manager = class {
   }
 
   /**
+   * Classify pending transactions as stuck if they've been pending for longer than the threshold.
+   * A transaction is pending when SC3 Status is '' and Payable Status does NOT start with 'paid'.
+   * A stuck transaction gets SC3 Status = 'Stuck' and SC3 Timestamp = today.
+   *
+   * Stuck transactions are still eligible for processing if their Payable Status later changes to paid.
+   *
+   * @param {ValidatedTransaction[]} transactions - All transactions
+   * @param {Date} now - Current date/time for threshold comparison
+   * @param {number} [thresholdMs=21600000] - Stuck threshold in ms (default: 6 hours)
+   * @returns {{newlyStuck: ValidatedTransaction[], recordsChanged: boolean}}
+   */
+  classifyStuckTransactions(transactions, now, thresholdMs = 6 * 60 * 60 * 1000) {
+    const newlyStuck = [];
+    let recordsChanged = false;
+
+    for (const txn of transactions) {
+      if (txn['SC3 Status'] !== '') continue;
+      if (txn['Payable Status'] && txn['Payable Status'].toLowerCase().startsWith('paid')) continue;
+      if (!txn.Timestamp) continue;
+
+      const elapsed = now.getTime() - txn.Timestamp.getTime();
+      if (elapsed > thresholdMs) {
+        txn['SC3 Status'] = 'Stuck';
+        txn['SC3 Timestamp'] = this._today;
+        newlyStuck.push(txn);
+        recordsChanged = true;
+      }
+    }
+
+    return { newlyStuck, recordsChanged };
+  }
+
+  /**
    * Process paid transactions and update membership data
    * @param {ValidatedTransaction[]} transactions - Array of validated transaction instances
    * @param {ValidatedMember[]} membershipData - Array of ValidatedMember instances
@@ -369,7 +402,9 @@ MembershipManagement.Manager = class {
         return;
       }
       if (!txn["Payable Status"] || !txn["Payable Status"].toLowerCase().startsWith("paid")) {
-        hasPendingPayments = true; // if any transaction is not marked as paid, we have pending payments
+        if (txn['SC3 Status'] !== 'Stuck') {
+          hasPendingPayments = true; // if any non-stuck transaction is not marked as paid, we have pending payments
+        }
         return;
       }
       
