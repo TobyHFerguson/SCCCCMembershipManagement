@@ -1564,6 +1564,33 @@ function resetQueueItem(itemId) {
 
 ---
 
+### One-Time Schema Migration
+
+#### Migrate Transaction Schema (`migrateTransactionSchema`)
+
+This function migrates the Transactions sheet from the legacy `Processed` column format to the new `SC3 Timestamp` + `SC3 Status` two-column format.
+
+**When to run:** Once, on the production spreadsheet, after the new code has been deployed. Do NOT run in development unless testing.
+
+**What it does:**
+1. Checks if `SC3 Status` column already exists — if so, aborts (idempotent)
+2. Renames the `Processed` column to `SC3 Timestamp`
+3. Inserts a new `SC3 Status` column immediately after `SC3 Timestamp`
+4. Backfills `SC3 Status` for every row:
+   - If `SC3 Timestamp` has a date → `'Processed'`
+   - If `SC3 Timestamp` is blank → `''` (Initial)
+5. Logs a summary via `AppLogger`
+
+**To run:**
+1. Open the spreadsheet
+2. Go to **Extensions > Apps Script**
+3. In the Script Editor, type `migrateTransactionSchema()` in the run box and click ▶ Run
+4. Check the Execution Log for the summary message
+
+**Safety:** The function is idempotent — running it twice does nothing on the second run (it detects the `SC3 Status` column and exits early).
+
+---
+
 ### Backup and Recovery
 
 #### Export Critical Data

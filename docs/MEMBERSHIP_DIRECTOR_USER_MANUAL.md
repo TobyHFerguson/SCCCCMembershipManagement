@@ -323,6 +323,36 @@ Located in spreadsheet menu bar: **Membership Management**
 
 ---
 
+#### Mark Selected as Abandoned
+
+**What:** Marks one or more stuck transactions as Abandoned so they are no longer retried  
+
+**When to use:**
+- A payment is stuck in "Stuck" or "Initial" state and cannot be resolved (e.g. duplicate entry, test payment, or payment that will never complete)
+- Membership Director wants to clean up the Transactions sheet by closing out unresolvable transactions
+
+**Prerequisites:**
+- Must be on the **Transactions** sheet
+- Select one or more data rows (not the header row)
+
+**What happens:**
+1. Reads the `SC3 Status` of each selected row
+2. If status is `''` (Initial) or `'Stuck'`: sets `SC3 Status = 'Abandoned'` and records the timestamp
+3. If status is already `'Processed'` or `'Abandoned'`: skips that row
+4. Shows a summary dialog: "Marked N transaction(s) as Abandoned. Skipped M already-processed/abandoned."
+
+**Steps:**
+1. Open the Transactions sheet
+2. Select the row(s) you want to mark as Abandoned
+3. Click **Membership Management > Mark Selected as Abandoned**
+4. Review the summary dialog
+
+**Time:** A few seconds
+
+**Important Note:** Abandoning a transaction is irreversible via the menu. If a transaction is incorrectly marked Abandoned, edit the `SC3 Status` cell in the Transactions sheet directly.
+
+---
+
 #### Process Expirations
 
 **What:** Generates expiration queue entries for due dates  

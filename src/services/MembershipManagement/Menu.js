@@ -3,6 +3,7 @@ MembershipManagement.Menu = {
         const ui = SpreadsheetApp.getUi();
         ui.createMenu('Membership Management')
             .addItem('Process Transactions', processTransactions.name)
+            .addItem('Mark Selected as Abandoned', markSelectedAsAbandoned.name)
             .addItem('Process Expirations', generateExpiringMembersList.name)
             .addSeparator()
             .addItem('Find possible renewals', findPossibleRenewalsFromMenu.name)
@@ -119,6 +120,114 @@ function processMigrations() {
             AppLogger.info('MembershipManagement', '[processMigrations] Completed');
         },
         'Process Migrations'
+    )();
+}
+
+function markSelectedAsAbandoned() {
+    return wrapMenuFunction_(
+        function() {
+            const sheet = SpreadsheetApp.getActiveSheet();
+            if (sheet.getName() !== 'Transactions') {
+                SpreadsheetApp.getUi().alert('Please navigate to the Transactions sheet first.');
+                return { note: 'Wrong sheet' };
+            }
+
+            const range = SpreadsheetApp.getActiveRange();
+            if (!range || range.getRow() < 2) {
+                SpreadsheetApp.getUi().alert('Please select one or more transaction rows (not the header).');
+                return { note: 'Invalid selection' };
+            }
+
+            const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+            const statusCol = headers.indexOf('SC3 Status');
+            const timestampCol = headers.indexOf('SC3 Timestamp');
+
+            if (statusCol === -1 || timestampCol === -1) {
+                SpreadsheetApp.getUi().alert('SC3 Status or SC3 Timestamp column not found. Has the schema migration been run?');
+                return { note: 'Columns not found' };
+            }
+
+            const startRow = range.getRow();
+            const numRows = range.getNumRows();
+            const now = new Date();
+            let abandoned = 0;
+            let skipped = 0;
+
+            const statusValues = sheet.getRange(startRow, statusCol + 1, numRows, 1).getValues();
+            const timestampValues = sheet.getRange(startRow, timestampCol + 1, numRows, 1).getValues();
+
+            for (let i = 0; i < numRows; i++) {
+                const currentStatus = statusValues[i][0];
+                if (currentStatus === 'Processed' || currentStatus === 'Abandoned') {
+                    skipped++;
+                    continue;
+                }
+                statusValues[i][0] = 'Abandoned';
+                timestampValues[i][0] = now;
+                abandoned++;
+            }
+
+            if (abandoned > 0) {
+                sheet.getRange(startRow, statusCol + 1, numRows, 1).setValues(statusValues);
+                sheet.getRange(startRow, timestampCol + 1, numRows, 1).setValues(timestampValues);
+            }
+
+            const summary = `Marked ${abandoned} transaction(s) as Abandoned. Skipped ${skipped} already-processed/abandoned.`;
+            AppLogger.info('MembershipManagement', `Menu: Mark Selected as Abandoned - ${summary}`);
+            SpreadsheetApp.getUi().alert('Mark as Abandoned', summary, SpreadsheetApp.getUi().ButtonSet.OK);
+            return { note: summary };
+        },
+        'Mark Selected as Abandoned'
+    )();
+}
+
+function migrateTransactionSchema() {
+    return wrapMenuFunction_(
+        function() {
+            const sheet = SheetAccess.getSheet('Transactions');
+            const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+            if (headers.includes('SC3 Status')) {
+                const msg = 'Migration already complete — SC3 Status column exists.';
+                AppLogger.info('MembershipManagement', `[migrateTransactionSchema] ${msg}`);
+                return { note: msg };
+            }
+
+            const processedCol = headers.indexOf('Processed');
+            if (processedCol === -1) {
+                const msg = 'Error: Processed column not found.';
+                AppLogger.warn('MembershipManagement', `[migrateTransactionSchema] ${msg}`);
+                return { note: msg };
+            }
+
+            // Rename Processed → SC3 Timestamp
+            sheet.getRange(1, processedCol + 1).setValue('SC3 Timestamp');
+            AppLogger.info('MembershipManagement', '[migrateTransactionSchema] Renamed Processed → SC3 Timestamp');
+
+            // Insert SC3 Status column immediately after SC3 Timestamp
+            sheet.insertColumnAfter(processedCol + 1);
+            sheet.getRange(1, processedCol + 2).setValue('SC3 Status');
+            AppLogger.info('MembershipManagement', '[migrateTransactionSchema] Inserted SC3 Status column');
+
+            // Backfill SC3 Status based on SC3 Timestamp values
+            const lastRow = sheet.getLastRow();
+            let processedCount = 0;
+            if (lastRow >= 2) {
+                const timestamps = sheet.getRange(2, processedCol + 1, lastRow - 1, 1).getValues();
+                const statuses = timestamps.map(function(row) {
+                    const val = row[0];
+                    const isProcessed = val && val !== '';
+                    if (isProcessed) processedCount++;
+                    return [isProcessed ? 'Processed' : ''];
+                });
+                sheet.getRange(2, processedCol + 2, lastRow - 1, 1).setValues(statuses);
+            }
+
+            const summary = `Migration complete. Renamed column, added SC3 Status. ${processedCount} transactions marked Processed, ${Math.max(0, lastRow - 1 - processedCount)} left as Initial.`;
+            AppLogger.info('MembershipManagement', `[migrateTransactionSchema] ${summary}`);
+            return { note: summary };
+        },
+        'Migrate Transaction Schema'
     )();
 }
 
