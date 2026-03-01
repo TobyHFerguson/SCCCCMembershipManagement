@@ -590,7 +590,8 @@ interface TransactionData {
     Payment?: string;  // e.g., "1 year", "2 years"
     Directory?: string;  // e.g., "Share Name, Share Email, Share Phone"
     'Payable Status'?: string;  // e.g., "Paid", "Pending"
-    Processed?: Date | string | null;  // Date when transaction was processed
+    'SC3 Timestamp'?: Date | string | null;  // Date when SC3 status was set
+    'SC3 Status'?: string;  // Transaction status: "", "Processed", "Stuck", or "Abandoned"
     Timestamp?: Date | string | null;  // Transaction timestamp
     'Member ID'?: string | null;  // Member ID in format SC3-XXXXX (optional, null for new members)
 }
@@ -673,8 +674,10 @@ declare var ValidatedTransaction: {
         payment: string,
         directory: string,
         payableStatus: string,
-        processed: Date | string | null,
-        timestamp: Date | string | null
+        sc3Timestamp: Date | string | null,
+        timestamp: Date | string | null,
+        memberId?: string | null,
+        sc3Status?: string
     ): ValidatedTransaction;
 
     /** Static factory - never throws, returns null on failure */
@@ -714,7 +717,8 @@ interface ValidatedTransaction {
     Payment: string;
     Directory: string;
     'Payable Status': string;
-    Processed: Date | null;
+    'SC3 Timestamp': Date | null;
+    'SC3 Status': string;
     Timestamp: Date | null;
 
     /** 1-based sheet row index, set by fromRow() for write-back targeting */

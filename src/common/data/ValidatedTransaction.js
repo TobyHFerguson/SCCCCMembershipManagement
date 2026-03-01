@@ -27,13 +27,14 @@ var ValidatedTransaction = (function() {
    * @param {string} payment - Payment type (optional, e.g., "1 year", "2 years")
    * @param {string} directory - Directory sharing preferences (optional, e.g., "Share Name, Share Email, Share Phone")
    * @param {string} payableStatus - Payment status (optional, e.g., "Paid", "Pending")
-   * @param {Date | string | null} processed - Date when transaction was processed (optional)
+   * @param {Date | string | null} sc3Timestamp - Date when SC3 status was set (optional)
+   * @param {string} [sc3Status] - Transaction status: "", "Processed", "Stuck", or "Abandoned" (optional, defaults to "")
    * @param {Date | string | null} timestamp - Transaction timestamp (optional)
    * @param {string | null} [memberId] - Member ID in format SC3-XXXXX (optional, null for new members)
    * @param {{'Are you 18 years of age or older?'?: *, Privacy?: *, 'Membership Agreement'?: *, 'Payable Order ID'?: *, 'Payable Total'?: *, 'Payable Payment Method'?: *, 'Payable Transaction ID'?: *, 'Payable Last Updated'?: *}} [passthrough] - Additional sheet columns stored as-is for round-trip persistence
    */
   class ValidatedTransaction {
-    constructor(emailAddress, firstName, lastName, phone, payment, directory, payableStatus, processed, timestamp, memberId = null, passthrough = {}) {
+    constructor(emailAddress, firstName, lastName, phone, payment, directory, payableStatus, sc3Timestamp, timestamp, memberId = null, sc3Status = '', passthrough = {}) {
       // Validate email address (required)
       if (typeof emailAddress !== 'string' || emailAddress.trim() === '') {
         throw new Error(`ValidatedTransaction email address is required, got: ${typeof emailAddress} "${emailAddress}"`);
@@ -59,10 +60,18 @@ var ValidatedTransaction = (function() {
         throw new Error(`ValidatedTransaction phone must be in format (NNN) NNN-NNNN, got: "${trimmedPhone}"`);
       }
       
-      // Validate processed date if present (optional, but must be valid Date if provided)
-      if (processed !== null && processed !== undefined && processed !== '') {
-        if (!(processed instanceof Date) || isNaN(processed.getTime())) {
-          throw new Error(`ValidatedTransaction processed date must be valid Date if provided, got: ${processed}`);
+      // Validate sc3Timestamp date if present (optional, but must be valid Date if provided)
+      if (sc3Timestamp !== null && sc3Timestamp !== undefined && sc3Timestamp !== '') {
+        if (!(sc3Timestamp instanceof Date) || isNaN(sc3Timestamp.getTime())) {
+          throw new Error(`ValidatedTransaction SC3 Timestamp must be valid Date if provided, got: ${sc3Timestamp}`);
+        }
+      }
+
+      // Validate sc3Status if provided (must be one of the allowed values)
+      if (sc3Status !== null && sc3Status !== undefined && sc3Status !== '') {
+        const validStatuses = ['Processed', 'Stuck', 'Abandoned'];
+        if (!validStatuses.includes(sc3Status)) {
+          throw new Error(`ValidatedTransaction SC3 Status must be one of "", "Processed", "Stuck", "Abandoned", got: "${sc3Status}"`);
         }
       }
       
@@ -89,13 +98,17 @@ var ValidatedTransaction = (function() {
       /** @type {string} */
       this['Payable Status'] = String(payableStatus || '').trim();
       
-      // Handle optional processed date
+      // Handle optional SC3 Timestamp date
       /** @type {Date|null} */
-      if (processed === null || processed === undefined || processed === '') {
-        this.Processed = null;
+      if (sc3Timestamp === null || sc3Timestamp === undefined || sc3Timestamp === '') {
+        this['SC3 Timestamp'] = null;
       } else {
-        this.Processed = processed;
+        this['SC3 Timestamp'] = sc3Timestamp;
       }
+
+      // Handle SC3 Status string
+      /** @type {string} */
+      this['SC3 Status'] = (sc3Status === null || sc3Status === undefined) ? '' : sc3Status;
       
       // Handle optional timestamp
       /** @type {Date|null} */
@@ -128,9 +141,9 @@ var ValidatedTransaction = (function() {
 
     /**
      * Convert ValidatedTransaction to array format for spreadsheet persistence
-     * Column order matches HEADERS constant (all 18 sheet columns)
+     * Column order matches HEADERS constant (all 19 sheet columns)
      * 
-     * @returns {Array<string|Date|number|null>} Array with 18 elements matching sheet columns
+     * @returns {Array<string|Date|number|null>} Array with 19 elements matching sheet columns
      */
     toArray() {
       return [
@@ -150,7 +163,8 @@ var ValidatedTransaction = (function() {
         this['Payable Payment Method'],
         this['Payable Transaction ID'],
         this['Payable Last Updated'],
-        this.Processed,
+        this['SC3 Timestamp'],
+        this['SC3 Status'],
         this['Member ID']
       ];
     }
@@ -177,7 +191,8 @@ var ValidatedTransaction = (function() {
         'Payable Payment Method',
         'Payable Transaction ID',
         'Payable Last Updated',
-        'Processed',
+        'SC3 Timestamp',
+        'SC3 Status',
         'Member ID'
       ];
     }
@@ -209,7 +224,8 @@ var ValidatedTransaction = (function() {
         const payment = rowObj['Payment'];
         const directory = rowObj['Directory'];
         const payableStatus = rowObj['Payable Status'];
-        const processed = rowObj['Processed'];
+        const sc3Timestamp = rowObj['SC3 Timestamp'];
+        const sc3Status = rowObj['SC3 Status'] || '';
         const timestamp = rowObj['Timestamp'];
         const memberId = rowObj['Member ID'];
         
@@ -228,8 +244,8 @@ var ValidatedTransaction = (function() {
         // Construct ValidatedTransaction (throws on validation failure)
         const txn = new ValidatedTransaction(
           emailAddress, firstName, lastName, phone, payment,
-          directory, payableStatus, processed, timestamp,
-          memberId, passthrough
+          directory, payableStatus, sc3Timestamp, timestamp,
+          memberId, sc3Status, passthrough
         );
 
         // Store original row metadata for selective write-back

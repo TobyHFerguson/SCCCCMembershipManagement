@@ -197,8 +197,8 @@ describe('Audit Contract Tests', () => {
   describe('processPaidTransactions - business event processor', () => {
     it('generates exactly one Join audit entry per new member', () => {
       const txns = [
-        { 'Email Address': 'new1@test.com', 'First Name': 'John', 'Last Name': 'Doe', Phone: '123', Payment: '1 year', 'Payable Status': 'Paid', Processed: null },
-        { 'Email Address': 'new2@test.com', 'First Name': 'Jane', 'Last Name': 'Smith', Phone: '456', Payment: '2 year', 'Payable Status': 'Paid', Processed: null }
+        { 'Email Address': 'new1@test.com', 'First Name': 'John', 'Last Name': 'Doe', Phone: '123', Payment: '1 year', 'Payable Status': 'Paid', 'SC3 Status': '', 'SC3 Timestamp': null },
+        { 'Email Address': 'new2@test.com', 'First Name': 'Jane', 'Last Name': 'Smith', Phone: '456', Payment: '2 year', 'Payable Status': 'Paid', 'SC3 Status': '', 'SC3 Timestamp': null }
       ];
       
       const membershipData = [];
@@ -219,7 +219,7 @@ describe('Audit Contract Tests', () => {
 
     it('generates exactly one Renew audit entry per renewed member', () => {
       const txns = [
-        { 'Email Address': 'existing@test.com', 'First Name': 'John', 'Last Name': 'Doe', Phone: '123', Payment: '1 year', 'Payable Status': 'Paid', Processed: null }
+        { 'Email Address': 'existing@test.com', 'First Name': 'John', 'Last Name': 'Doe', Phone: '123', Payment: '1 year', 'Payable Status': 'Paid', 'SC3 Status': '', 'SC3 Timestamp': null }
       ];
       
       const membershipData = [
@@ -238,8 +238,8 @@ describe('Audit Contract Tests', () => {
 
     it('generates no audit entries for unpaid or processed transactions (not business events)', () => {
       const txns = [
-        { 'Email Address': 'unpaid@test.com', 'First Name': 'Un', 'Last Name': 'Paid', 'Payable Status': 'Pending', Processed: null },
-        { 'Email Address': 'processed@test.com', 'First Name': 'Pro', 'Last Name': 'Cessed', 'Payable Status': 'Paid', Processed: '2024-01-01' }
+        { 'Email Address': 'unpaid@test.com', 'First Name': 'Un', 'Last Name': 'Paid', 'Payable Status': 'Pending', 'SC3 Status': '', 'SC3 Timestamp': null },
+        { 'Email Address': 'processed@test.com', 'First Name': 'Pro', 'Last Name': 'Cessed', 'Payable Status': 'Paid', 'SC3 Status': 'Processed', 'SC3 Timestamp': new Date('2024-01-01') }
       ];
       
       const membershipData = [];
@@ -254,8 +254,8 @@ describe('Audit Contract Tests', () => {
 
     it('generates exactly one failure audit entry per transaction error', () => {
       const txns = [
-        { 'Email Address': 'good@test.com', 'First Name': 'Good', 'Last Name': 'User', Payment: '1 year', 'Payable Status': 'Paid', Processed: null },
-        { 'Email Address': 'bad@test.com', 'First Name': 'Bad', 'Last Name': 'User', Payment: '1 year', 'Payable Status': 'Paid', Processed: null }
+        { 'Email Address': 'good@test.com', 'First Name': 'Good', 'Last Name': 'User', Payment: '1 year', 'Payable Status': 'Paid', 'SC3 Status': '', 'SC3 Timestamp': null },
+        { 'Email Address': 'bad@test.com', 'First Name': 'Bad', 'Last Name': 'User', Payment: '1 year', 'Payable Status': 'Paid', 'SC3 Status': '', 'SC3 Timestamp': null }
       ];
       
       const membershipData = [];
@@ -288,7 +288,7 @@ describe('Audit Contract Tests', () => {
   describe('Audit entry schema validation', () => {
     it('all audit entries have required fields: Type, Outcome, Note/Error, Timestamp', () => {
       const txns = [
-        { 'Email Address': 'test@test.com', 'First Name': 'Test', 'Last Name': 'User', Payment: '1 year', 'Payable Status': 'Paid', Processed: null }
+        { 'Email Address': 'test@test.com', 'First Name': 'Test', 'Last Name': 'User', Payment: '1 year', 'Payable Status': 'Paid', 'SC3 Status': '', 'SC3 Timestamp': null }
       ];
       
       const membershipData = [];

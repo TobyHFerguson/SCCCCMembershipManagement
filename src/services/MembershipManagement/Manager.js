@@ -365,7 +365,7 @@ MembershipManagement.Manager = class {
     let hasPendingPayments = false;
     
     transactions.forEach((txn, i) => {
-      if (txn.Processed) { // skip it if it's already been processed
+      if (txn['SC3 Status'] === 'Processed' || txn['SC3 Status'] === 'Abandoned') { // skip it if it's already been processed
         return;
       }
       if (!txn["Payable Status"] || !txn["Payable Status"].toLowerCase().startsWith("paid")) {
@@ -518,7 +518,8 @@ MembershipManagement.Manager = class {
         }
         
         this._sendEmailFun(message);
-        txn.Processed = this._today;
+        txn['SC3 Timestamp'] = this._today;
+        txn['SC3 Status'] = 'Processed';
         recordsChanged = true;
         
         // Generate audit log entry (skip if we already logged it above)

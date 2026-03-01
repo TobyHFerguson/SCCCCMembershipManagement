@@ -48,7 +48,7 @@ describe('ValidatedTransaction Class', () => {
       expect(txn.Payment).toBe('1 year');
       expect(txn.Directory).toBe('Share Name, Share Email, Share Phone');
       expect(txn['Payable Status']).toBe('Paid');
-      expect(txn.Processed).toBe(processed);
+      expect(txn['SC3 Timestamp']).toBe(processed);
       expect(txn.Timestamp).toBe(timestamp);
     });
     
@@ -72,7 +72,7 @@ describe('ValidatedTransaction Class', () => {
       expect(txn.Payment).toBe('');
       expect(txn.Directory).toBe('');
       expect(txn['Payable Status']).toBe('');
-      expect(txn.Processed).toBe(null);
+      expect(txn['SC3 Timestamp']).toBe(null);
       expect(txn.Timestamp).toBe(null);
     });
     
@@ -184,14 +184,42 @@ describe('ValidatedTransaction Class', () => {
       )).toThrow('last name is required');
     });
     
-    test('should throw error for invalid processed date if provided', () => {
+    test('should throw error for invalid SC3 Timestamp if provided', () => {
       expect(() => new ValidatedTransaction(
         'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', 'not-a-date', null
-      )).toThrow('processed date must be valid Date if provided');
+      )).toThrow('SC3 Timestamp must be valid Date if provided');
       
       expect(() => new ValidatedTransaction(
         'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', new Date('invalid'), null
-      )).toThrow('processed date must be valid Date if provided');
+      )).toThrow('SC3 Timestamp must be valid Date if provided');
+    });
+
+    test('should throw error for invalid SC3 Status if provided', () => {
+      expect(() => new ValidatedTransaction(
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', null, null, null, 'invalid-status'
+      )).toThrow('SC3 Status must be one of');
+      
+      expect(() => new ValidatedTransaction(
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', null, null, null, 'processed'
+      )).toThrow('SC3 Status must be one of');
+    });
+
+    test('should accept valid SC3 Status values', () => {
+      expect(() => new ValidatedTransaction(
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', null, null, null, ''
+      )).not.toThrow();
+      
+      expect(() => new ValidatedTransaction(
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', null, null, null, 'Processed'
+      )).not.toThrow();
+      
+      expect(() => new ValidatedTransaction(
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', null, null, null, 'Stuck'
+      )).not.toThrow();
+      
+      expect(() => new ValidatedTransaction(
+        'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', null, null, null, 'Abandoned'
+      )).not.toThrow();
     });
     
     test('should throw error for invalid timestamp if provided', () => {
@@ -204,21 +232,21 @@ describe('ValidatedTransaction Class', () => {
       )).toThrow('timestamp must be valid Date if provided');
     });
     
-    test('should accept null/empty processed date', () => {
+    test('should accept null/empty SC3 Timestamp', () => {
       const txn1 = new ValidatedTransaction(
         'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', null, null
       );
-      expect(txn1.Processed).toBe(null);
+      expect(txn1['SC3 Timestamp']).toBe(null);
       
       const txn2 = new ValidatedTransaction(
         'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', undefined, null
       );
-      expect(txn2.Processed).toBe(null);
+      expect(txn2['SC3 Timestamp']).toBe(null);
       
       const txn3 = new ValidatedTransaction(
         'test@example.com', 'John', 'Doe', '(555) 555-5555', '', '', '', '', null
       );
-      expect(txn3.Processed).toBe(null);
+      expect(txn3['SC3 Timestamp']).toBe(null);
     });
     
     test('should accept null/empty timestamp', () => {
@@ -384,7 +412,7 @@ describe('ValidatedTransaction Class', () => {
       'Payment',
       'Directory',
       'Payable Status',
-      'Processed',
+      'SC3 Timestamp',
       'Timestamp'
     ];
     
@@ -430,14 +458,14 @@ describe('ValidatedTransaction Class', () => {
       expect(txn.Phone).toBe('(555) 555-1234');
       expect(txn.Payment).toBe('1 year');
       expect(txn['Payable Status']).toBe('Paid');
-      expect(txn.Processed).toBe(processed);
+      expect(txn['SC3 Timestamp']).toBe(processed);
       expect(txn.Timestamp).toBe(timestamp);
       
       // Verify write-back metadata
       expect(txn._sheetRowIndex).toBe(2);
       expect(txn._originalValues).toBeDefined();
       expect(txn._originalValues['Email Address']).toBe('test@example.com');
-      expect(txn._originalValues['Processed']).toBe(processed);
+      expect(txn._originalValues['SC3 Timestamp']).toBe(processed);
       expect(txn._originalValues['Timestamp']).toBe(timestamp);
     });
     
@@ -550,14 +578,14 @@ describe('ValidatedTransaction Class', () => {
       expect(txn.Payment).toBe('');
       expect(txn.Directory).toBe('');
       expect(txn['Payable Status']).toBe('');
-      expect(txn.Processed).toBe(null);
+      expect(txn['SC3 Timestamp']).toBe(null);
       expect(txn.Timestamp).toBe(null);
     });
 
     test('should work correctly when sheet columns are in different order than HEADERS (column-order independence)', () => {
       // Arrange: Use ALL 18 HEADERS columns in REVERSED order
       const shuffledHeaders = [...ValidatedTransaction.HEADERS].reverse();
-      // shuffledHeaders = ['Member ID', 'Processed', 'Payable Last Updated', ..., 'Timestamp']
+      // shuffledHeaders = ['Member ID', 'SC3 Status', 'SC3 Timestamp', 'Payable Last Updated', ..., 'Timestamp']
 
       const processed = new Date('2023-12-15');
       const timestamp = new Date('2023-12-01');
@@ -580,7 +608,8 @@ describe('ValidatedTransaction Class', () => {
         'Payable Payment Method': 'Credit Card',
         'Payable Transaction ID': 'TXN-456',
         'Payable Last Updated': '2023-12-15',
-        'Processed': processed,
+        'SC3 Timestamp': processed,
+        'SC3 Status': '',
         'Member ID': 'SC3-A7K3M'
       };
 
@@ -599,7 +628,7 @@ describe('ValidatedTransaction Class', () => {
       expect(txn.Payment).toBe('2 years');
       expect(txn.Directory).toBe('Share Name, Share Email');
       expect(txn['Payable Status']).toBe('Paid');
-      expect(txn.Processed).toBe(processed);
+      expect(txn['SC3 Timestamp']).toBe(processed);
       expect(txn.Timestamp).toBe(timestamp);
 
       // Verify passthrough fields preserved
@@ -616,7 +645,7 @@ describe('ValidatedTransaction Class', () => {
       expect(txn._sheetRowIndex).toBe(3);
       expect(txn._originalValues['Email Address']).toBe('shuffled@example.com');
       expect(txn._originalValues['Phone']).toBe('(831) 555-4321');
-      expect(txn._originalValues['Processed']).toBe(processed);
+      expect(txn._originalValues['SC3 Timestamp']).toBe(processed);
       expect(txn._originalValues['Timestamp']).toBe(timestamp);
 
       // Verify instance type preservation
@@ -634,7 +663,7 @@ describe('ValidatedTransaction Class', () => {
         'Payment',
         'Directory',
         'Payable Status',
-        'Processed',
+        'SC3 Timestamp',
         'Timestamp'
       ];
       
@@ -669,7 +698,7 @@ describe('ValidatedTransaction Class', () => {
       'Payment',
       'Directory',
       'Payable Status',
-      'Processed',
+      'SC3 Timestamp',
       'Timestamp'
     ];
     
@@ -837,7 +866,8 @@ describe('ValidatedTransaction Class', () => {
         '',                                     // Payable Payment Method
         '',                                     // Payable Transaction ID
         '',                                     // Payable Last Updated
-        processed,                              // Processed
+        processed,                              // SC3 Timestamp
+        '',                                     // SC3 Status
         'SC3-A7K3M'                             // Member ID
       ]);
     });
@@ -857,7 +887,7 @@ describe('ValidatedTransaction Class', () => {
       
       const array = txn.toArray();
       
-      expect(array.length).toBe(18);
+      expect(array.length).toBe(19);
       expect(array[0]).toBe(null);              // Timestamp
       expect(array[1]).toBe('test@example.com'); // Email Address
       expect(array[5]).toBe('');                // Directory
@@ -866,8 +896,9 @@ describe('ValidatedTransaction Class', () => {
       expect(array[8]).toBe('(555) 555-5555'); // Phone
       expect(array[9]).toBe('');                // Payment
       expect(array[12]).toBe('');               // Payable Status
-      expect(array[16]).toBe(null);             // Processed
-      expect(array[17]).toBe(null);             // Member ID
+      expect(array[16]).toBe(null);             // SC3 Timestamp
+      expect(array[17]).toBe('');               // SC3 Status
+      expect(array[18]).toBe(null);             // Member ID
     });
     
   });
@@ -896,7 +927,8 @@ describe('ValidatedTransaction Class', () => {
         'Credit Card',                          // Payable Payment Method
         'TXN-12345',                            // Payable Transaction ID
         '2023-12-10',                           // Payable Last Updated
-        processed,                              // Processed
+        processed,                              // SC3 Timestamp
+        '',                                     // SC3 Status
         'SC3-A7K3M'                             // Member ID
       ];
       
@@ -931,12 +963,13 @@ describe('ValidatedTransaction Class', () => {
         'Payable Payment Method',
         'Payable Transaction ID',
         'Payable Last Updated',
-        'Processed',
+        'SC3 Timestamp',
+        'SC3 Status',
         'Member ID'
       ]);
     });
     
-    test('should have 18 headers matching toArray() output length', () => {
+    test('should have 19 headers matching toArray() output length', () => {
       const txn = new ValidatedTransaction(
         'test@example.com',
         'John',
@@ -951,7 +984,7 @@ describe('ValidatedTransaction Class', () => {
       
       const array = txn.toArray();
       expect(array.length).toBe(ValidatedTransaction.HEADERS.length);
-      expect(array.length).toBe(18);
+      expect(array.length).toBe(19);
     });
     
   });
@@ -993,7 +1026,8 @@ describe('ValidatedTransaction Class', () => {
         '',                                     // Payable Payment Method
         '',                                     // Payable Transaction ID
         '',                                     // Payable Last Updated
-        null                                    // Processed
+        null,                                   // SC3 Timestamp
+        ''                                      // SC3 Status
       ];
       
       const txn = ValidatedTransaction.fromRow(row, headers, 2, null);
@@ -1082,7 +1116,7 @@ describe('ValidatedTransaction Class', () => {
 
     test('should write only changed cells to the correct row and column', () => {
       // Sheet has columns in a specific order
-      const sheetHeaders = ['Timestamp', 'Email Address', 'First Name', 'Last Name', 'Phone', 'Payable Status', 'Processed'];
+      const sheetHeaders = ['Timestamp', 'Email Address', 'First Name', 'Last Name', 'Phone', 'Payable Status', 'SC3 Timestamp'];
       const timestamp = new Date('2023-12-01');
 
       // Simulate a transaction read from sheet row 6 (1-based)
@@ -1091,35 +1125,35 @@ describe('ValidatedTransaction Class', () => {
 
       // Manager sets Processed on this transaction
       const processedDate = new Date('2024-01-20');
-      txn.Processed = processedDate;
+      txn['SC3 Timestamp'] = processedDate;
 
       const changeCount = ValidatedTransaction.writeChangedCells(mockSheet, [txn], sheetHeaders);
 
       expect(changeCount).toBe(1);
-      // 'Processed' is column 7 in sheetHeaders (1-based), row 6
+      // 'SC3 Timestamp' is column 7 in sheetHeaders (1-based), row 6
       expect(mockSheet.getRange).toHaveBeenCalledWith(6, 7);
       expect(mockRange.setValue).toHaveBeenCalledWith(processedDate);
     });
 
     test('should handle columns in any order (not depend on HEADERS order)', () => {
       // Sheet columns in DIFFERENT order than ValidatedTransaction.HEADERS
-      const sheetHeaders = ['Processed', 'Phone', 'First Name', 'Last Name', 'Email Address', 'Timestamp', 'Payable Status'];
+      const sheetHeaders = ['SC3 Timestamp', 'Phone', 'First Name', 'Last Name', 'Email Address', 'Timestamp', 'Payable Status'];
       const originalRow = [null, '(555) 555-1234', 'John', 'Doe', 'test@example.com', new Date('2023-12-01'), 'Paid'];
       const txn = ValidatedTransaction.fromRow(originalRow, sheetHeaders, 4, null);
 
       const processedDate = new Date('2024-01-20');
-      txn.Processed = processedDate;
+      txn['SC3 Timestamp'] = processedDate;
 
       const changeCount = ValidatedTransaction.writeChangedCells(mockSheet, [txn], sheetHeaders);
 
       expect(changeCount).toBe(1);
-      // 'Processed' is column 1 in this reordered sheet (1-based), row 4
+      // 'SC3 Timestamp' is column 1 in this reordered sheet (1-based), row 4
       expect(mockSheet.getRange).toHaveBeenCalledWith(4, 1);
       expect(mockRange.setValue).toHaveBeenCalledWith(processedDate);
     });
 
     test('should NOT write unchanged cells', () => {
-      const sheetHeaders = ['Email Address', 'First Name', 'Last Name', 'Phone', 'Payable Status', 'Processed'];
+      const sheetHeaders = ['Email Address', 'First Name', 'Last Name', 'Phone', 'Payable Status', 'SC3 Timestamp'];
       const originalRow = ['test@example.com', 'John', 'Doe', '(555) 555-1234', 'Paid', null];
       const txn = ValidatedTransaction.fromRow(originalRow, sheetHeaders, 3, null);
 
@@ -1132,7 +1166,7 @@ describe('ValidatedTransaction Class', () => {
 
     test('should write to correct row for each transaction (no row shift)', () => {
       // Simulate: rows 2, 3, 5 are valid (row 4 was invalid and filtered out)
-      const sheetHeaders = ['Email Address', 'First Name', 'Last Name', 'Phone', 'Payable Status', 'Processed'];
+      const sheetHeaders = ['Email Address', 'First Name', 'Last Name', 'Phone', 'Payable Status', 'SC3 Timestamp'];
 
       const row2 = ['a@test.com', 'A', 'Test', '(555) 111-1111', 'Paid', null];
       const row3 = ['b@test.com', 'B', 'Test', '(555) 222-2222', 'Paid', null];
@@ -1144,7 +1178,7 @@ describe('ValidatedTransaction Class', () => {
 
       // Only txn5 gets processed (others are already processed or unpaid in real scenario)
       const processedDate = new Date('2024-01-20');
-      txn5.Processed = processedDate;
+      txn5['SC3 Timestamp'] = processedDate;
 
       const changeCount = ValidatedTransaction.writeChangedCells(
         mockSheet, [txn2, txn3, txn5], sheetHeaders
@@ -1152,16 +1186,16 @@ describe('ValidatedTransaction Class', () => {
 
       expect(changeCount).toBe(1);
       // Must write to ROW 5, not row 4 (which would happen with old bulk write)
-      expect(mockSheet.getRange).toHaveBeenCalledWith(5, 6); // row 5, col 6 (Processed)
+      expect(mockSheet.getRange).toHaveBeenCalledWith(5, 6); // row 5, col 6 (SC3 Timestamp)
       expect(mockRange.setValue).toHaveBeenCalledWith(processedDate);
     });
 
     test('should skip transactions without _sheetRowIndex', () => {
-      const sheetHeaders = ['Email Address', 'Phone', 'Payable Status', 'Processed'];
+      const sheetHeaders = ['Email Address', 'Phone', 'Payable Status', 'SC3 Timestamp'];
 
       // Manually create a transaction without metadata
       const txn = new ValidatedTransaction('test@example.com', 'A', 'B', '(555) 555-1234', '', '', 'Paid', null, null);
-      txn.Processed = new Date('2024-01-20');
+      txn['SC3 Timestamp'] = new Date('2024-01-20');
 
       const changeCount = ValidatedTransaction.writeChangedCells(mockSheet, [txn], sheetHeaders);
 
@@ -1170,18 +1204,18 @@ describe('ValidatedTransaction Class', () => {
     });
 
     test('should handle multiple changed fields in one transaction', () => {
-      const sheetHeaders = ['Email Address', 'First Name', 'Last Name', 'Phone', 'Payable Status', 'Processed', 'Timestamp'];
+      const sheetHeaders = ['Email Address', 'First Name', 'Last Name', 'Phone', 'Payable Status', 'SC3 Timestamp', 'Timestamp'];
       const originalRow = ['test@example.com', 'John', 'Doe', '(555) 555-1234', 'Paid', null, null];
       const txn = ValidatedTransaction.fromRow(originalRow, sheetHeaders, 7, null);
 
       const now = new Date('2024-01-20');
-      txn.Processed = now;
+      txn['SC3 Timestamp'] = now;
       txn.Timestamp = now;
 
       const changeCount = ValidatedTransaction.writeChangedCells(mockSheet, [txn], sheetHeaders);
 
       expect(changeCount).toBe(2);
-      expect(mockSheet.getRange).toHaveBeenCalledWith(7, 6); // Processed col
+      expect(mockSheet.getRange).toHaveBeenCalledWith(7, 6); // SC3 Timestamp col
       expect(mockSheet.getRange).toHaveBeenCalledWith(7, 7); // Timestamp col
     });
   });
