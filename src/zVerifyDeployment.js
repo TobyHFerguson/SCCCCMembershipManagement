@@ -893,7 +893,7 @@ function _verifySheetAccess(checks) {
     'Transactions',
     'ActionSpecs',
     'ExpirySchedule',
-    'PublicGroups',
+    'GroupDefinitions',
   ];
 
   for (const sheetName of criticalSheets) {
@@ -910,6 +910,13 @@ function _verifySheetAccess(checks) {
     const members = DataAccess.getMembers();
     if (!Array.isArray(members)) {
       throw new Error('DataAccess.getMembers() did not return an array');
+    }
+  });
+
+  _safeCheck(checks, category, 'DataAccess.getGroupDefinitions()', () => {
+    const defs = DataAccess.getGroupDefinitions();
+    if (!Array.isArray(defs)) {
+      throw new Error('DataAccess.getGroupDefinitions() did not return an array');
     }
   });
 
