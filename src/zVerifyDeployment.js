@@ -334,6 +334,12 @@ function _verifyAdminDirectoryApi(checks) {
     // result.groups may be undefined if the org has no groups, which is fine
     console.log(`  👥 Groups accessible (found ${result.groups ? result.groups.length : 0} in sample)`);
   });
+
+  _safeCheck(checks, category, 'GroupSubscription.listMembers exists', () => {
+    if (typeof GroupSubscription.listMembers !== 'function') {
+      throw new Error('GroupSubscription.listMembers is not a function');
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------
