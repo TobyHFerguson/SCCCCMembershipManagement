@@ -2783,4 +2783,215 @@ describe('Manager tests', () => {
       });
     });
   });
+
+  // ─── Stuck transaction detection ───────────────────────────────────────────
+  describe('Stuck transaction detection', () => {
+    const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+    let manager;
+    const now = new Date('2025-06-01T12:00:00Z');
+    const today = '2025-06-01';
+
+    beforeEach(() => {
+      const groups = [{ Email: 'test@sc3.club' }];
+      const groupManager = { groupAddFun: jest.fn(), groupRemoveFun: jest.fn(), groupEmailReplaceFun: jest.fn() };
+      manager = new MembershipManagement.Manager(actionSpecs, groups, groupManager, undefined, today);
+    });
+
+    it('marks a pending transaction as Stuck when pending for more than 6 hours', () => {
+      const txn = TestData.paidTransaction({
+        'Payable Status': 'pending',
+        'SC3 Status': '',
+        Timestamp: new Date(now.getTime() - SIX_HOURS_MS - 1)
+      });
+      const { newlyStuck, recordsChanged } = manager.classifyStuckTransactions([txn], now);
+      expect(txn['SC3 Status']).toBe('Stuck');
+      expect(txn['SC3 Timestamp']).toEqual(MembershipManagement.Utils.dateOnly(new Date(today)));
+      expect(newlyStuck).toHaveLength(1);
+      expect(recordsChanged).toBe(true);
+    });
+
+    it('leaves a pending transaction Initial when pending for less than 6 hours', () => {
+      const txn = TestData.paidTransaction({
+        'Payable Status': 'pending',
+        'SC3 Status': '',
+        Timestamp: new Date(now.getTime() - SIX_HOURS_MS + 1000)
+      });
+      const { newlyStuck, recordsChanged } = manager.classifyStuckTransactions([txn], now);
+      expect(txn['SC3 Status']).toBe('');
+      expect(newlyStuck).toHaveLength(0);
+      expect(recordsChanged).toBe(false);
+    });
+
+    it('leaves a pending transaction Initial when pending for exactly 6 hours (boundary — threshold is >, not >=)', () => {
+      const txn = TestData.paidTransaction({
+        'Payable Status': 'pending',
+        'SC3 Status': '',
+        Timestamp: new Date(now.getTime() - SIX_HOURS_MS)
+      });
+      const { newlyStuck, recordsChanged } = manager.classifyStuckTransactions([txn], now);
+      expect(txn['SC3 Status']).toBe('');
+      expect(newlyStuck).toHaveLength(0);
+      expect(recordsChanged).toBe(false);
+    });
+
+    it('does not re-classify an already-Stuck transaction (idempotent)', () => {
+      const txn = TestData.paidTransaction({
+        'Payable Status': 'pending',
+        'SC3 Status': 'Stuck',
+        Timestamp: new Date(now.getTime() - SIX_HOURS_MS - 1)
+      });
+      const { newlyStuck, recordsChanged } = manager.classifyStuckTransactions([txn], now);
+      expect(txn['SC3 Status']).toBe('Stuck');
+      expect(newlyStuck).toHaveLength(0);
+      expect(recordsChanged).toBe(false);
+    });
+
+    it('does not mark an already-Processed transaction as Stuck', () => {
+      const txn = TestData.paidTransaction({
+        'Payable Status': 'paid',
+        'SC3 Status': 'Processed',
+        Timestamp: new Date(now.getTime() - SIX_HOURS_MS - 1)
+      });
+      const { newlyStuck, recordsChanged } = manager.classifyStuckTransactions([txn], now);
+      expect(txn['SC3 Status']).toBe('Processed');
+      expect(newlyStuck).toHaveLength(0);
+      expect(recordsChanged).toBe(false);
+    });
+
+    it('does not mark an already-Abandoned transaction as Stuck', () => {
+      const txn = TestData.paidTransaction({
+        'Payable Status': 'pending',
+        'SC3 Status': 'Abandoned',
+        Timestamp: new Date(now.getTime() - SIX_HOURS_MS - 1)
+      });
+      const { newlyStuck, recordsChanged } = manager.classifyStuckTransactions([txn], now);
+      expect(txn['SC3 Status']).toBe('Abandoned');
+      expect(newlyStuck).toHaveLength(0);
+      expect(recordsChanged).toBe(false);
+    });
+
+    it('does not mark a paid transaction as Stuck even if more than 6 hours old', () => {
+      const txn = TestData.paidTransaction({
+        'Payable Status': 'paid',
+        'SC3 Status': '',
+        Timestamp: new Date(now.getTime() - SIX_HOURS_MS - 1)
+      });
+      const { newlyStuck, recordsChanged } = manager.classifyStuckTransactions([txn], now);
+      expect(txn['SC3 Status']).toBe('');
+      expect(newlyStuck).toHaveLength(0);
+      expect(recordsChanged).toBe(false);
+    });
+
+    it('does not mark a transaction with null Timestamp as Stuck', () => {
+      const txn = TestData.paidTransaction({
+        'Payable Status': 'pending',
+        'SC3 Status': '',
+        Timestamp: null
+      });
+      const { newlyStuck, recordsChanged } = manager.classifyStuckTransactions([txn], now);
+      expect(txn['SC3 Status']).toBe('');
+      expect(newlyStuck).toHaveLength(0);
+      expect(recordsChanged).toBe(false);
+    });
+
+    it('respects a custom threshold parameter', () => {
+      const customThresholdMs = 2 * 60 * 60 * 1000; // 2 hours
+      const txn = TestData.paidTransaction({
+        'Payable Status': 'pending',
+        'SC3 Status': '',
+        Timestamp: new Date(now.getTime() - customThresholdMs - 1)
+      });
+      const { newlyStuck, recordsChanged } = manager.classifyStuckTransactions([txn], now, customThresholdMs);
+      expect(txn['SC3 Status']).toBe('Stuck');
+      expect(newlyStuck).toHaveLength(1);
+      expect(recordsChanged).toBe(true);
+    });
+
+    it('returns the correct { newlyStuck, recordsChanged } shape', () => {
+      const txn1 = TestData.paidTransaction({
+        'Payable Status': 'pending',
+        'SC3 Status': '',
+        Timestamp: new Date(now.getTime() - SIX_HOURS_MS - 1)
+      });
+      const txn2 = TestData.paidTransaction({
+        'Payable Status': 'pending',
+        'SC3 Status': '',
+        Timestamp: new Date(now.getTime() - 1000)
+      });
+      const result = manager.classifyStuckTransactions([txn1, txn2], now);
+      expect(result).toEqual({ newlyStuck: [txn1], recordsChanged: true });
+    });
+
+    it('a Stuck transaction with Payable Status = paid can still be processed by processPaidTransactions', () => {
+      const txn = TestData.paidTransaction({
+        'Payable Status': 'paid',
+        'SC3 Status': 'Stuck',
+        'Email Address': 'stuck@example.com',
+        'First Name': 'Stuck',
+        'Last Name': 'User',
+        Timestamp: new Date(now.getTime() - SIX_HOURS_MS - 1)
+      });
+      const members = [];
+      const schedule = [];
+      const result = manager.processPaidTransactions([txn], members, schedule);
+      expect(txn['SC3 Status']).toBe('Processed');
+      expect(result.recordsChanged).toBe(true);
+    });
+
+    it('Stuck transactions do NOT set hasPendingPayments = true in processPaidTransactions', () => {
+      const stuckTxn = TestData.paidTransaction({
+        'Payable Status': 'pending',
+        'SC3 Status': 'Stuck',
+        Timestamp: new Date(now.getTime() - SIX_HOURS_MS - 1)
+      });
+      const result = manager.processPaidTransactions([stuckTxn], [], []);
+      expect(result.hasPendingPayments).toBe(false);
+    });
+
+    it('mix of states: only Initial unpaid older than 6 hours gets marked Stuck', () => {
+      const stuckCandidate = TestData.paidTransaction({
+        'Payable Status': 'pending',
+        'SC3 Status': '',
+        'Email Address': 'stuck@example.com',
+        Timestamp: new Date(now.getTime() - SIX_HOURS_MS - 1)
+      });
+      const recentInitial = TestData.paidTransaction({
+        'Payable Status': 'pending',
+        'SC3 Status': '',
+        'Email Address': 'recent@example.com',
+        Timestamp: new Date(now.getTime() - 1000)
+      });
+      const alreadyStuck = TestData.paidTransaction({
+        'Payable Status': 'pending',
+        'SC3 Status': 'Stuck',
+        'Email Address': 'alreadystuck@example.com',
+        Timestamp: new Date(now.getTime() - SIX_HOURS_MS - 1)
+      });
+      const processed = TestData.paidTransaction({
+        'Payable Status': 'paid',
+        'SC3 Status': 'Processed',
+        'Email Address': 'processed@example.com',
+        Timestamp: new Date(now.getTime() - SIX_HOURS_MS - 1)
+      });
+      const paidOld = TestData.paidTransaction({
+        'Payable Status': 'paid',
+        'SC3 Status': '',
+        'Email Address': 'paid@example.com',
+        Timestamp: new Date(now.getTime() - SIX_HOURS_MS - 1)
+      });
+
+      const { newlyStuck, recordsChanged } = manager.classifyStuckTransactions(
+        [stuckCandidate, recentInitial, alreadyStuck, processed, paidOld], now
+      );
+
+      expect(newlyStuck).toHaveLength(1);
+      expect(newlyStuck[0]['Email Address']).toBe('stuck@example.com');
+      expect(stuckCandidate['SC3 Status']).toBe('Stuck');
+      expect(recentInitial['SC3 Status']).toBe('');
+      expect(alreadyStuck['SC3 Status']).toBe('Stuck');
+      expect(processed['SC3 Status']).toBe('Processed');
+      expect(paidOld['SC3 Status']).toBe('');
+      expect(recordsChanged).toBe(true);
+    });
+  });
 });
