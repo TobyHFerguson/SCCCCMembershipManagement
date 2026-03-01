@@ -764,6 +764,44 @@ interface ValidatedBootstrap {
     toArray(): Array<string | boolean>;
 }
 
+// Flat ValidatedGroupDefinition class (type-safe GroupDefinitions rows)
+// Declared as `var` (not `class`) so tests can assign to `global.ValidatedGroupDefinition`
+declare var ValidatedGroupDefinition: {
+    new(name: string, email: string, aliases: string, subscription: string, type: string, members: string, managers: string, note: string): ValidatedGroupDefinition;
+
+    /** Static factory - never throws, returns null on failure */
+    fromRow(
+        rowArray: Array<any>,
+        headers: string[],
+        rowNumber: number,
+        errorCollector?: { errors: string[], rowNumbers: number[] }
+    ): ValidatedGroupDefinition | null;
+
+    /** Batch validation with consolidated email alert */
+    validateRows(
+        rows: Array<Array<any>>,
+        headers: string[],
+        context: string
+    ): ValidatedGroupDefinition[];
+
+    /** Column headers constant */
+    HEADERS: string[];
+};
+
+interface ValidatedGroupDefinition {
+    Name: string;
+    Email: string;
+    Aliases: string;
+    Subscription: string;
+    Type: string;
+    Members: string;
+    Managers: string;
+    Note: string;
+
+    /** Convert to array for serialization/testing (NOT for sheet persistence) */
+    toArray(): string[];
+}
+
 // Flat ValidatedPublicGroup class (type-safe PublicGroups rows)
 // Declared as `var` (not `class`) so tests can assign to `global.ValidatedPublicGroup`
 declare var ValidatedPublicGroup: {
@@ -1086,6 +1124,9 @@ declare var DataAccess: {
 
     /** Gets public groups configuration as validated objects */
     getPublicGroups: () => ValidatedPublicGroup[];
+
+    /** Gets group definitions from GroupDefinitions sheet as validated objects */
+    getGroupDefinitions: () => ValidatedGroupDefinition[];
 
     /** Gets a specific member by email address */
     getMember: (email: string) => ValidatedMember | undefined;

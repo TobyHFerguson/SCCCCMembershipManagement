@@ -102,13 +102,17 @@ var DataAccess = {
         }
         return actionSpecs;
     },
-    getPublicGroups: () => {
-        const allData = SheetAccess.getDataAsArrays('PublicGroups');
+    getGroupDefinitions: () => {
+        const allData = SheetAccess.getDataAsArrays('GroupDefinitions');
         if (allData.length === 0) { return []; }
         const headers = allData[0];
         const rows = allData.slice(1);
         if (rows.length === 0) { return []; }
-        return ValidatedPublicGroup.validateRows(rows, headers, 'DataAccess.getPublicGroups');
+        return ValidatedGroupDefinition.validateRows(rows, headers, 'DataAccess.getGroupDefinitions');
+    },
+    getPublicGroups: () => {
+        const definitions = DataAccess.getGroupDefinitions();
+        return definitions.map(d => new ValidatedPublicGroup(d.Name, d.Email, d.Subscription));
     },
     getMember: (email) => {
         email = email.toLowerCase();
