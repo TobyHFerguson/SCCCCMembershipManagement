@@ -51,9 +51,12 @@ function processTransactions() {
             
             // Show user-friendly message
             if (result.processed > 0) {
-                const msg = `Processed ${result.processed} transaction(s):\n` +
+                let msg = `Processed ${result.processed} transaction(s):\n` +
                            `  • ${result.joins} new member(s)\n` +
                            `  • ${result.renewals} renewal(s)`;
+                if (result.stuckCount > 0) {
+                    msg += `\n  • ${result.stuckCount} stuck transaction(s) - Membership Director notification attempted`;
+                }
                 if (result.errors && result.errors.length > 0) {
                     SpreadsheetApp.getUi().alert('Transactions Processed with Errors', 
                         msg + `\n  • ${result.errors.length} error(s) - check System Logs`, 
@@ -61,6 +64,10 @@ function processTransactions() {
                 } else {
                     SpreadsheetApp.getUi().alert('Transactions Processed', msg, SpreadsheetApp.getUi().ButtonSet.OK);
                 }
+            } else if (result.stuckCount > 0) {
+                SpreadsheetApp.getUi().alert('Stuck Transactions Detected',
+                    `${result.stuckCount} stuck transaction(s) detected.\nMembership Director notification attempted (check System Logs for details).`,
+                    SpreadsheetApp.getUi().ButtonSet.OK);
             } else if (result.errors && result.errors.length > 0) {
                 SpreadsheetApp.getUi().alert('Transaction Errors', 
                     `No transactions processed successfully.\n${result.errors.length} error(s) - check System Logs`, 

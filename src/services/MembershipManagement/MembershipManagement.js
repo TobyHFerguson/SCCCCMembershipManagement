@@ -92,12 +92,46 @@ MembershipManagement.processTransactions = function () {
     }
     
     SheetAccess.setData('ExpirySchedule', expiryScheduleData);
-    
+  }
+
+  // Classify stuck transactions (pending for more than 6 hours)
+  const stuckResult = manager.classifyStuckTransactions(transactions, new Date());
+
+  // Persist transaction changes if either processPaidTransactions or classifyStuckTransactions changed records
+  if (recordsChanged || stuckResult.recordsChanged) {
     // Only mark transactions as processed AFTER member data is successfully persisted
     // Write back only changed cells using header-based column lookup and original row indices
     // This avoids row-shift bugs (from filtered invalid rows) and column-order bugs
     const txnChangeCount = ValidatedTransaction.writeChangedCells(transactionSheet, transactions, headers);
     AppLogger.info('MembershipManagement', `processTransactions: Updated ${txnChangeCount} cells in Transactions`);
+  }
+
+  // Send email to Membership Director if any transactions are newly stuck
+  if (stuckResult.newlyStuck.length > 0) {
+    try {
+      const recipientEmail = Properties.getProperty('MEMBERSHIP_DIRECTOR_EMAIL');
+      if (!recipientEmail) {
+        AppLogger.error('MembershipManagement', 'processTransactions: MEMBERSHIP_DIRECTOR_EMAIL property is not set — cannot send stuck transaction alert');
+      } else {
+        const docUrl = Properties.getProperty('STUCK_TRANSACTION_DOC');
+        const docLine = docUrl
+          ? `For instructions on how to resolve stuck transactions, see:\n${docUrl}`
+          : 'Note: No instruction document URL is configured. Ask the system administrator to set the STUCK_TRANSACTION_DOC property.';
+
+        const txnList = stuckResult.newlyStuck.map(txn =>
+          `- Row ${txn._sheetRowIndex}: ${txn['Email Address']}, Order ID: ${txn['Payable Order ID'] || 'N/A'}, Submitted: ${txn.Timestamp ? txn.Timestamp.toLocaleString() : 'unknown'}`
+        ).join('\n');
+
+        MailApp.sendEmail({
+          to: recipientEmail,
+          subject: `ALERT: ${stuckResult.newlyStuck.length} stuck transaction(s) detected`,
+          body: `${stuckResult.newlyStuck.length} transaction(s) have been stuck (pending for more than 6 hours) and may require manual intervention.\n\nStuck Transactions:\n${txnList}\n\n${docLine}\n\nThis is an automated message from the SC3 Membership Management system.`
+        });
+        AppLogger.info('MembershipManagement', `processTransactions: Sent stuck transaction alert email to ${recipientEmail} for ${stuckResult.newlyStuck.length} transaction(s)`);
+      }
+    } catch (e) {
+      AppLogger.error('MembershipManagement', `processTransactions: Failed to send stuck transaction alert email: ${e.message}`, { stack: e.stack });
+    }
   }
   
   // Count operation types from audit entries
@@ -116,11 +150,12 @@ MembershipManagement.processTransactions = function () {
     joins,
     renewals,
     errors: errors.length,
-    hasPendingPayments
+    hasPendingPayments,
+    stuckCount: stuckResult.newlyStuck.length
   });
   
   errors.forEach(e => AppLogger.error('MembershipManagement', `Transaction on row ${e.txnNum} ${e.email} had an error: ${e.message}`, { stack: e.stack }));
-  return { processed, joins, renewals, hasPendingPayments, errors };
+  return { processed, joins, renewals, hasPendingPayments, errors, stuckCount: stuckResult.newlyStuck.length };
 }
 
 MembershipManagement.processMigrations = function () {
