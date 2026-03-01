@@ -91,7 +91,8 @@ const makeSampleRow = (overrides = {}) => {
     'Payable Payment Method': 'Credit Card',
     'Payable Transaction ID': 'TXN-001',
     'Payable Last Updated': '2024-01-15',
-    'Processed': null
+    'SC3 Timestamp': null,
+    'SC3 Status': ''
   };
   const merged = { ...defaults, ...overrides };
   return SAMPLE_HEADERS.map(h => merged[h]);
@@ -293,7 +294,8 @@ describe('DataAccess.getTransactionsForUpdate', () => {
     const result = global.DataAccess.getTransactionsForUpdate();
 
     // Simulate processing: mark transaction as processed
-    result.transactions[0].Processed = new Date('2024-02-01');
+    result.transactions[0]['SC3 Timestamp'] = new Date('2024-02-01');
+    result.transactions[0]['SC3 Status'] = 'Processed';
 
     // Write back changed cells
     const changeCount = ValidatedTransaction.writeChangedCells(
@@ -302,8 +304,8 @@ describe('DataAccess.getTransactionsForUpdate', () => {
       result.headers
     );
 
-    // Should have written exactly 1 cell (Processed)
-    expect(changeCount).toBe(1);
+    // Should have written exactly 2 cells (SC3 Timestamp and SC3 Status)
+    expect(changeCount).toBe(2);
   });
 
 });

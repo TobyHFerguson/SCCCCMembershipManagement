@@ -88,14 +88,15 @@ const TestData = {
       "Payment": "1 year",
       Phone: '(123) 456-7890',
       Directory: 'share name',
-      Processed: null,
+      'SC3 Timestamp': null,
+      'SC3 Status': '',
       Timestamp: null,
       'Member ID': null
     };
     const data = { ...defaults, ...overrides };
     
     // Convert string dates to Date objects for ValidatedTransaction
-    const processed = data.Processed ? (typeof data.Processed === 'string' ? new Date(data.Processed) : data.Processed) : null;
+    const sc3Timestamp = data['SC3 Timestamp'] ? (typeof data['SC3 Timestamp'] === 'string' ? new Date(data['SC3 Timestamp']) : data['SC3 Timestamp']) : null;
     const timestamp = data.Timestamp ? (typeof data.Timestamp === 'string' ? new Date(data.Timestamp) : data.Timestamp) : null;
     
     return /** @type {any} */ (new ValidatedTransaction(
@@ -106,9 +107,10 @@ const TestData = {
       data.Payment,
       data.Directory,
       data["Payable Status"],
-      processed,
+      sc3Timestamp,
       timestamp,
-      data['Member ID']
+      data['Member ID'],
+      data['SC3 Status'] || ''
     ));
   },
 
@@ -195,7 +197,7 @@ const transactionsFixture = {
     TestData.paidTransaction({ "Payable Status": "pending", "Email Address": "test2@example.com", "First Name": "Test", "Last Name": "User2" }),
   ],
   paidAndProcessed: [
-    TestData.paidTransaction({ "Payable Status": "paid", "Email Address": "test3@example.com", "First Name": "Test", "Last Name": "User3", Processed: new Date("2025-06-15") }),
+    TestData.paidTransaction({ "Payable Status": "paid", "Email Address": "test3@example.com", "First Name": "Test", "Last Name": "User3", 'SC3 Timestamp': new Date("2025-06-15"), 'SC3 Status': 'Processed' }),
   ],
   get paid() { 
     return [
