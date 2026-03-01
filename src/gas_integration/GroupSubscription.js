@@ -46,6 +46,33 @@ GroupSubscription.listGroupsFor = function (email) {
   return allGroups;
 }
 
+/**
+ * List all members of a Google Group, handling pagination.
+ *
+ * @param {string} groupEmail - The group email address
+ * @returns {Array<{email: string, role: string, type: string, delivery_settings: string}>} All members
+ */
+GroupSubscription.listMembers = function (groupEmail) {
+  let allMembers = [];
+  const maxResults = 200;
+  let pageToken = null;
+
+  do {
+    const page = AdminDirectory.Members.list(groupEmail, {
+      pageToken: pageToken,
+      maxResults: maxResults,
+    });
+    if (page && page.members) {
+      allMembers = allMembers.concat(page.members);
+      pageToken = page.nextPageToken;
+    } else {
+      pageToken = null;
+    }
+  } while (pageToken);
+
+  return allMembers;
+};
+
 GroupSubscription.getMember = function (groupEmail, memberEmail) {
   try {
     const member = AdminDirectory.Members.get(groupEmail, memberEmail)
