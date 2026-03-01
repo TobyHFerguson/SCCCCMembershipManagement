@@ -28,9 +28,9 @@ var ValidatedTransaction = (function() {
    * @param {string} directory - Directory sharing preferences (optional, e.g., "Share Name, Share Email, Share Phone")
    * @param {string} payableStatus - Payment status (optional, e.g., "Paid", "Pending")
    * @param {Date | string | null} sc3Timestamp - Date when SC3 status was set (optional)
-   * @param {string} [sc3Status] - Transaction status: "", "Processed", "Stuck", or "Abandoned" (optional, defaults to "")
    * @param {Date | string | null} timestamp - Transaction timestamp (optional)
    * @param {string | null} [memberId] - Member ID in format SC3-XXXXX (optional, null for new members)
+   * @param {string} [sc3Status] - Transaction status: "", "Processed", "Stuck", or "Abandoned" (optional, defaults to "")
    * @param {{'Are you 18 years of age or older?'?: *, Privacy?: *, 'Membership Agreement'?: *, 'Payable Order ID'?: *, 'Payable Total'?: *, 'Payable Payment Method'?: *, 'Payable Transaction ID'?: *, 'Payable Last Updated'?: *}} [passthrough] - Additional sheet columns stored as-is for round-trip persistence
    */
   class ValidatedTransaction {
