@@ -1234,6 +1234,55 @@ MembershipManagement.Manager = class {
   }
 
   /**
+   * Pure function: Remove an email address from the Members and Managers fields
+   * of all group definitions. Non-mutating; returns new objects where changed.
+   * Idempotent: removing an email that is already absent leaves the entry unchanged.
+   *
+   * @param {Array<{Name: string, Email: string, Aliases: string, Subscription: string, Type: string, Members: string, Managers: string, Note: string}>} groupDefs - All group definitions
+   * @param {string} email - The email address to remove (case-insensitive)
+   * @returns {{ updatedDefs: Array<{Name: string, Email: string, Aliases: string, Subscription: string, Type: string, Members: string, Managers: string, Note: string}>, groupEmailsWithMember: string[] }}
+   *   updatedDefs: new array of group defs with email removed from Members/Managers
+   *   groupEmailsWithMember: group Email values where the member was found and removed
+   */
+  static removeEmailFromGroupDefinitions(groupDefs, email) {
+    const emailLower = email.toLowerCase().trim();
+    const groupEmailsWithMember = [];
+
+    const updatedDefs = groupDefs.map(gd => {
+      /**
+       * Filter the target email out of a comma-separated field string.
+       * @param {string} fieldVal
+       * @returns {string}
+       */
+      const filterField = (fieldVal) =>
+        (fieldVal || '').split(',')
+          .map(e => e.trim())
+          .filter(e => e && e.toLowerCase() !== emailLower)
+          .join(', ');
+
+      const originalMembersCount = (gd.Members || '').split(',').filter(e => e.trim()).length;
+      const originalManagersCount = (gd.Managers || '').split(',').filter(e => e.trim()).length;
+
+      const newMembers = filterField(gd.Members);
+      const newManagers = filterField(gd.Managers);
+
+      const newMembersCount = newMembers ? newMembers.split(',').filter(e => e.trim()).length : 0;
+      const newManagersCount = newManagers ? newManagers.split(',').filter(e => e.trim()).length : 0;
+
+      const memberChanged = newMembersCount < originalMembersCount;
+      const managerChanged = newManagersCount < originalManagersCount;
+
+      if (memberChanged || managerChanged) {
+        groupEmailsWithMember.push(gd.Email);
+        return { ...gd, Members: newMembers, Managers: newManagers };
+      }
+      return gd;
+    });
+
+    return { updatedDefs, groupEmailsWithMember };
+  }
+
+  /**
    * Pure function: Rebuild queue after processing, removing succeeded/dead items, keeping retry items
    * @param {MembershipManagement.FIFOItem[]} originalQueue - Original queue before processing
    * @param {number[]} processedIndices - Indices of items that were selected for processing

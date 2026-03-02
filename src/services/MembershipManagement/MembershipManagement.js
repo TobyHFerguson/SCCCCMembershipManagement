@@ -496,6 +496,45 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
       maxAttempts: scriptMaxAttempts 
     });
 
+    // GAS: Remove successfully-expired members from Group Definitions sheet and from any
+    // Google Groups where they are explicitly listed (invitation / manual groups).
+    // Auto-subscription group removal is handled above via item.groups in the FIFO.
+    if (!opts.dryRun && result.processed.length > 0) {
+      try {
+        // Use a plain-object type so the spread objects returned by removeEmailFromGroupDefinitions
+        // are assignable. SheetAccess.setData only needs property access, not class methods.
+        /** @type {Array<{Name: string, Email: string, Aliases: string, Subscription: string, Type: string, Members: string, Managers: string, Note: string}>} */
+        let groupDefs = /** @type {any} */ (DataAccess.getGroupDefinitions()); // JUSTIFIED: down-cast to plain-object type for structural compatibility with removeEmailFromGroupDefinitions return value
+        const expiredEmails = result.processed.map(item => item.email);
+        let totalGroupsAffected = 0;
+        for (const expiredEmail of expiredEmails) {
+          const { updatedDefs, groupEmailsWithMember } =
+            MembershipManagement.Manager.removeEmailFromGroupDefinitions(groupDefs, expiredEmail);
+          for (const groupEmail of groupEmailsWithMember) {
+            try {
+              groupRemoveFun(expiredEmail, groupEmail);
+            } catch (e) {
+              AppLogger.warn('MembershipManagement',
+                `Could not remove ${expiredEmail} from group ${groupEmail} during group definition cleanup`,
+                { error: String(e) });
+            }
+          }
+          if (groupEmailsWithMember.length > 0) {
+            groupDefs = updatedDefs;
+            totalGroupsAffected += groupEmailsWithMember.length;
+          }
+        }
+        if (totalGroupsAffected > 0) {
+          SheetAccess.setData('GroupDefinitions', groupDefs);
+          AppLogger.info('MembershipManagement',
+            `Removed expired members from ${totalGroupsAffected} Group Definitions entries for ${expiredEmails.join(', ')}`);
+        }
+      } catch (e) {
+        AppLogger.error('MembershipManagement',
+          'Failed to update Group Definitions after expiry processing', { error: String(e) });
+      }
+    }
+
     // Separate dead items from reattempt items
     const deadItems = result.failed.filter(item => item.dead);
     const reattemptItems = result.failed.filter(item => !item.dead);

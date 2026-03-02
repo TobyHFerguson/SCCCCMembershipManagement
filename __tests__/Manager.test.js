@@ -621,6 +621,155 @@ describe('Manager tests', () => {
     });
   });
 
+  describe('removeEmailFromGroupDefinitions', () => {
+    /**
+     * Factory for plain group-def-like objects (mimics ValidatedGroupDefinition shape)
+     * @param {object} overrides
+     */
+    function makeGroupDef(overrides = {}) {
+      return {
+        Name: 'Test Group',
+        Email: 'testgroup@sc3.club',
+        Aliases: '',
+        Subscription: 'invitation',
+        Type: 'Discussion',
+        Members: '',
+        Managers: '',
+        Note: '',
+        ...overrides
+      };
+    }
+
+    it('returns updatedDefs and groupEmailsWithMember when email not found', () => {
+      const defs = [
+        makeGroupDef({ Name: 'Board', Email: 'board@sc3.club', Members: 'alice@sc3.club', Managers: 'bob@sc3.club' })
+      ];
+      const result = MembershipManagement.Manager.removeEmailFromGroupDefinitions(defs, 'nobody@sc3.club');
+      expect(result).toHaveProperty('updatedDefs');
+      expect(result).toHaveProperty('groupEmailsWithMember');
+      expect(result.groupEmailsWithMember).toHaveLength(0);
+      expect(result.updatedDefs[0].Members).toBe('alice@sc3.club');
+      expect(result.updatedDefs[0].Managers).toBe('bob@sc3.club');
+    });
+
+    it('removes email from Members field', () => {
+      const defs = [
+        makeGroupDef({ Email: 'riders@sc3.club', Members: 'alice@sc3.club, expired@sc3.club, bob@sc3.club' })
+      ];
+      const result = MembershipManagement.Manager.removeEmailFromGroupDefinitions(defs, 'expired@sc3.club');
+      expect(result.updatedDefs[0].Members).not.toContain('expired@sc3.club');
+      expect(result.updatedDefs[0].Members).toContain('alice@sc3.club');
+      expect(result.updatedDefs[0].Members).toContain('bob@sc3.club');
+      expect(result.groupEmailsWithMember).toContain('riders@sc3.club');
+    });
+
+    it('removes email from Managers field', () => {
+      const defs = [
+        makeGroupDef({ Email: 'team@sc3.club', Members: 'Everyone', Managers: 'lead@sc3.club, expired@sc3.club' })
+      ];
+      const result = MembershipManagement.Manager.removeEmailFromGroupDefinitions(defs, 'expired@sc3.club');
+      expect(result.updatedDefs[0].Managers).not.toContain('expired@sc3.club');
+      expect(result.updatedDefs[0].Managers).toContain('lead@sc3.club');
+      expect(result.updatedDefs[0].Members).toBe('Everyone');
+      expect(result.groupEmailsWithMember).toContain('team@sc3.club');
+    });
+
+    it('removes email from both Members and Managers when present in both', () => {
+      const defs = [
+        makeGroupDef({ Email: 'all@sc3.club', Members: 'expired@sc3.club, alice@sc3.club', Managers: 'expired@sc3.club, bob@sc3.club' })
+      ];
+      const result = MembershipManagement.Manager.removeEmailFromGroupDefinitions(defs, 'expired@sc3.club');
+      expect(result.updatedDefs[0].Members).not.toContain('expired@sc3.club');
+      expect(result.updatedDefs[0].Managers).not.toContain('expired@sc3.club');
+      expect(result.updatedDefs[0].Members).toContain('alice@sc3.club');
+      expect(result.updatedDefs[0].Managers).toContain('bob@sc3.club');
+      expect(result.groupEmailsWithMember).toContain('all@sc3.club');
+    });
+
+    it('sets Members to empty string when email is the only entry', () => {
+      const defs = [
+        makeGroupDef({ Email: 'solo@sc3.club', Members: 'expired@sc3.club' })
+      ];
+      const result = MembershipManagement.Manager.removeEmailFromGroupDefinitions(defs, 'expired@sc3.club');
+      expect(result.updatedDefs[0].Members).toBe('');
+      expect(result.groupEmailsWithMember).toContain('solo@sc3.club');
+    });
+
+    it('is case-insensitive in email matching', () => {
+      const defs = [
+        makeGroupDef({ Email: 'group@sc3.club', Members: 'Expired@SC3.CLUB, alice@sc3.club' })
+      ];
+      const result = MembershipManagement.Manager.removeEmailFromGroupDefinitions(defs, 'expired@sc3.club');
+      expect(result.updatedDefs[0].Members).not.toMatch(/expired@sc3\.club/i);
+      expect(result.updatedDefs[0].Members).toContain('alice@sc3.club');
+      expect(result.groupEmailsWithMember).toContain('group@sc3.club');
+    });
+
+    it('handles entries with extra whitespace around commas', () => {
+      const defs = [
+        makeGroupDef({ Email: 'group@sc3.club', Members: '  alice@sc3.club , expired@sc3.club  ,  bob@sc3.club  ' })
+      ];
+      const result = MembershipManagement.Manager.removeEmailFromGroupDefinitions(defs, 'expired@sc3.club');
+      expect(result.updatedDefs[0].Members).not.toContain('expired@sc3.club');
+      expect(result.updatedDefs[0].Members).toContain('alice@sc3.club');
+      expect(result.updatedDefs[0].Members).toContain('bob@sc3.club');
+    });
+
+    it('is non-mutating: original groupDefs objects are not modified', () => {
+      const defs = [
+        makeGroupDef({ Email: 'group@sc3.club', Members: 'expired@sc3.club, alice@sc3.club' })
+      ];
+      const originalMembers = defs[0].Members;
+      MembershipManagement.Manager.removeEmailFromGroupDefinitions(defs, 'expired@sc3.club');
+      expect(defs[0].Members).toBe(originalMembers);
+    });
+
+    it('is idempotent: calling twice gives same result', () => {
+      const defs = [
+        makeGroupDef({ Email: 'group@sc3.club', Members: 'expired@sc3.club, alice@sc3.club' })
+      ];
+      const result1 = MembershipManagement.Manager.removeEmailFromGroupDefinitions(defs, 'expired@sc3.club');
+      const result2 = MembershipManagement.Manager.removeEmailFromGroupDefinitions(result1.updatedDefs, 'expired@sc3.club');
+      expect(result2.updatedDefs[0].Members).toBe(result1.updatedDefs[0].Members);
+      expect(result2.groupEmailsWithMember).toHaveLength(0);
+    });
+
+    it('does not affect groups where email is not listed', () => {
+      const defs = [
+        makeGroupDef({ Name: 'Group A', Email: 'groupa@sc3.club', Members: 'expired@sc3.club', Managers: '' }),
+        makeGroupDef({ Name: 'Group B', Email: 'groupb@sc3.club', Members: 'alice@sc3.club', Managers: 'bob@sc3.club' })
+      ];
+      const result = MembershipManagement.Manager.removeEmailFromGroupDefinitions(defs, 'expired@sc3.club');
+      expect(result.groupEmailsWithMember).toEqual(['groupa@sc3.club']);
+      expect(result.updatedDefs[1].Members).toBe('alice@sc3.club');
+      expect(result.updatedDefs[1].Managers).toBe('bob@sc3.club');
+    });
+
+    it('does not mistake a similar but different email', () => {
+      const defs = [
+        makeGroupDef({ Email: 'group@sc3.club', Members: 'notexpired@sc3.club, alice@sc3.club' })
+      ];
+      const result = MembershipManagement.Manager.removeEmailFromGroupDefinitions(defs, 'expired@sc3.club');
+      expect(result.updatedDefs[0].Members).toContain('notexpired@sc3.club');
+      expect(result.groupEmailsWithMember).toHaveLength(0);
+    });
+
+    it('returns all defs unmodified when groupDefs is empty', () => {
+      const result = MembershipManagement.Manager.removeEmailFromGroupDefinitions([], 'expired@sc3.club');
+      expect(result.updatedDefs).toEqual([]);
+      expect(result.groupEmailsWithMember).toEqual([]);
+    });
+
+    it('does not include group in groupEmailsWithMember when email only appears in Managers', () => {
+      // Still should be included — checking it IS included when in Managers only
+      const defs = [
+        makeGroupDef({ Email: 'group@sc3.club', Members: 'Everyone', Managers: 'expired@sc3.club' })
+      ];
+      const result = MembershipManagement.Manager.removeEmailFromGroupDefinitions(defs, 'expired@sc3.club');
+      expect(result.groupEmailsWithMember).toContain('group@sc3.club');
+    });
+  });
+
   describe('processMigrations', () => {
     describe('Active Members only', () => {
       let migrators;
