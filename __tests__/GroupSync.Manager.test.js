@@ -17,6 +17,8 @@
  * 10. computeActions combined - Combined scenarios and multi-group
  * 11. computeActions summary  - Summary counts
  * 12. formatActionsSummary    - Human-readable output
+ * 13. findInvalidMemberEmails - Detect malformed/non-active emails in definitions
+ * 14. removeEmailsFromDesiredState - Filter invalid emails from computed state
  */
 
 jest.mock('../src/common/config/Properties.js', () => ({}));
@@ -1153,3 +1155,240 @@ describe('formatActionsSummary', () => {
     expect(lines.some(l => /no changes/i.test(l))).toBe(true);
   });
 });
+
+// ============================================================================
+// 13. findInvalidMemberEmails
+// ============================================================================
+
+describe('findInvalidMemberEmails', () => {
+  function makeGroupDef(overrides = {}) {
+    return {
+      Name: 'Test Group',
+      Email: 'testgroup@sc3.club',
+      Aliases: '',
+      Subscription: 'invitation',
+      Type: 'Discussion',
+      Members: '',
+      Managers: '',
+      ...overrides,
+    };
+  }
+
+  const activeEmailSet = new Set(['alice@example.com', 'bob@sc3.club']);
+  const allMemberEmailSet = new Set(['alice@example.com', 'bob@sc3.club', 'expired@example.com']);
+
+  // --- Keywords are ignored ---
+
+  test('Members keyword in Members column is skipped', () => {
+    const defs = [makeGroupDef({ Members: 'Members' })];
+    const result = Manager.findInvalidMemberEmails(defs, activeEmailSet, allMemberEmailSet);
+    expect(result).toHaveLength(0);
+  });
+
+  test('Everyone keyword is skipped', () => {
+    const defs = [makeGroupDef({ Members: 'Everyone' })];
+    const result = Manager.findInvalidMemberEmails(defs, activeEmailSet, allMemberEmailSet);
+    expect(result).toHaveLength(0);
+  });
+
+  test('Anyone keyword is skipped', () => {
+    const defs = [makeGroupDef({ Members: 'Anyone' })];
+    const result = Manager.findInvalidMemberEmails(defs, activeEmailSet, allMemberEmailSet);
+    expect(result).toHaveLength(0);
+  });
+
+  // --- Group-name references are ignored ---
+
+  test('Group-name reference in Members is skipped', () => {
+    const defs = [
+      makeGroupDef({ Name: 'Officers', Email: 'officers@sc3.club', Members: '' }),
+      makeGroupDef({ Name: 'Board', Email: 'board@sc3.club', Members: 'Officers' }),
+    ];
+    const result = Manager.findInvalidMemberEmails(defs, activeEmailSet, allMemberEmailSet);
+    expect(result).toHaveLength(0);
+  });
+
+  // --- Known group emails and aliases are skipped ---
+
+  test('Known group email in Members is skipped', () => {
+    const defs = [
+      makeGroupDef({ Name: 'Officers', Email: 'officers@sc3.club', Members: '' }),
+      makeGroupDef({ Name: 'Board', Email: 'board@sc3.club', Members: 'officers@sc3.club' }),
+    ];
+    const result = Manager.findInvalidMemberEmails(defs, new Set(), new Set());
+    expect(result).toHaveLength(0);
+  });
+
+  test('Known alias in Members is skipped', () => {
+    const defs = [
+      makeGroupDef({ Name: 'Officers', Email: 'officers@sc3.club', Aliases: 'off@sc3.club', Members: '' }),
+      makeGroupDef({ Name: 'Board', Email: 'board@sc3.club', Members: 'off@sc3.club' }),
+    ];
+    const result = Manager.findInvalidMemberEmails(defs, new Set(), new Set());
+    expect(result).toHaveLength(0);
+  });
+
+  // --- Valid active members are not flagged ---
+
+  test('Active member email is not flagged', () => {
+    const defs = [makeGroupDef({ Members: 'alice@example.com' })];
+    const result = Manager.findInvalidMemberEmails(defs, activeEmailSet, allMemberEmailSet);
+    expect(result).toHaveLength(0);
+  });
+
+  test('External email not in roster is not flagged', () => {
+    const defs = [makeGroupDef({ Members: 'external@other.org' })];
+    const result = Manager.findInvalidMemberEmails(defs, activeEmailSet, allMemberEmailSet);
+    expect(result).toHaveLength(0);
+  });
+
+  // --- Non-active member detection ---
+
+  test('Non-active member email is flagged with reason "non-active member"', () => {
+    const defs = [makeGroupDef({ Members: 'expired@example.com' })];
+    const result = Manager.findInvalidMemberEmails(defs, activeEmailSet, allMemberEmailSet);
+    expect(result).toHaveLength(1);
+    expect(result[0].email).toBe('expired@example.com');
+    expect(result[0].reason).toBe('non-active member');
+    expect(result[0].groupName).toBe('Test Group');
+    expect(result[0].field).toBe('Members');
+  });
+
+  test('Non-active member in Managers column is flagged', () => {
+    const defs = [makeGroupDef({ Managers: 'expired@example.com' })];
+    const result = Manager.findInvalidMemberEmails(defs, activeEmailSet, allMemberEmailSet);
+    expect(result).toHaveLength(1);
+    expect(result[0].field).toBe('Managers');
+  });
+
+  // --- Malformed email detection ---
+
+  test('Malformed email string is flagged with reason "malformed email"', () => {
+    const defs = [makeGroupDef({ Members: 'not-an-email' })];
+    // normalizeEmail appends @sc3.club, so 'not-an-email' → 'not-an-email@sc3.club' (valid)
+    // Use something with a space to get truly malformed
+    const defs2 = [makeGroupDef({ Members: 'bad email@example.com' })];
+    const result = Manager.findInvalidMemberEmails(defs2, new Set(), new Set());
+    expect(result).toHaveLength(1);
+    expect(result[0].reason).toBe('malformed email');
+  });
+
+  test('Entry without @ gets @sc3.club appended and is not flagged as malformed', () => {
+    // 'rides' → 'rides@sc3.club' which is a valid email format (not in roster, so not flagged)
+    const defs = [makeGroupDef({ Members: 'rides' })];
+    const result = Manager.findInvalidMemberEmails(defs, new Set(), new Set());
+    expect(result).toHaveLength(0);
+  });
+
+  // --- Multiple invalid emails across multiple groups ---
+
+  test('Multiple invalid emails across groups are all reported', () => {
+    const defs = [
+      makeGroupDef({ Name: 'Group A', Email: 'a@sc3.club', Members: 'expired@example.com' }),
+      makeGroupDef({ Name: 'Group B', Email: 'b@sc3.club', Members: 'expired@example.com, alice@example.com' }),
+    ];
+    const result = Manager.findInvalidMemberEmails(defs, activeEmailSet, allMemberEmailSet);
+    // expired@example.com appears in both groups — reported once per group
+    expect(result).toHaveLength(2);
+    const groupNames = result.map(r => r.groupName);
+    expect(groupNames).toContain('Group A');
+    expect(groupNames).toContain('Group B');
+  });
+
+  // --- Case insensitivity ---
+
+  test('Email matching is case-insensitive', () => {
+    const defs = [makeGroupDef({ Members: 'EXPIRED@EXAMPLE.COM' })];
+    const result = Manager.findInvalidMemberEmails(defs, activeEmailSet, allMemberEmailSet);
+    expect(result).toHaveLength(1);
+    expect(result[0].email).toBe('expired@example.com');
+  });
+});
+
+// ============================================================================
+// 14. removeEmailsFromDesiredState
+// ============================================================================
+
+describe('removeEmailsFromDesiredState', () => {
+  function makeState(overrides = {}) {
+    return {
+      groupEmail: 'g@sc3.club',
+      groupName: 'G',
+      desiredMembers: ['alice@sc3.club', 'bob@sc3.club'],
+      desiredManagers: ['carol@sc3.club'],
+      warnings: [],
+      usedMembersKeyword: false,
+      ...overrides,
+    };
+  }
+
+  test('Removes matching email from desiredMembers', () => {
+    const state = makeState();
+    const map = new Map([['g@sc3.club', state]]);
+    const result = Manager.removeEmailsFromDesiredState(map, new Set(['bob@sc3.club']));
+    expect(result.get('g@sc3.club').desiredMembers).toEqual(['alice@sc3.club']);
+  });
+
+  test('Removes matching email from desiredManagers', () => {
+    const state = makeState();
+    const map = new Map([['g@sc3.club', state]]);
+    const result = Manager.removeEmailsFromDesiredState(map, new Set(['carol@sc3.club']));
+    expect(result.get('g@sc3.club').desiredManagers).toEqual([]);
+  });
+
+  test('Removes from both desiredMembers and desiredManagers', () => {
+    const state = makeState({ desiredManagers: ['alice@sc3.club', 'carol@sc3.club'] });
+    const map = new Map([['g@sc3.club', state]]);
+    const result = Manager.removeEmailsFromDesiredState(map, new Set(['alice@sc3.club']));
+    expect(result.get('g@sc3.club').desiredMembers).toEqual(['bob@sc3.club']);
+    expect(result.get('g@sc3.club').desiredManagers).toEqual(['carol@sc3.club']);
+  });
+
+  test('null desiredMembers remains null', () => {
+    const state = makeState({ desiredMembers: null });
+    const map = new Map([['g@sc3.club', state]]);
+    const result = Manager.removeEmailsFromDesiredState(map, new Set(['alice@sc3.club']));
+    expect(result.get('g@sc3.club').desiredMembers).toBeNull();
+  });
+
+  test('null desiredManagers remains null', () => {
+    const state = makeState({ desiredManagers: null });
+    const map = new Map([['g@sc3.club', state]]);
+    const result = Manager.removeEmailsFromDesiredState(map, new Set(['carol@sc3.club']));
+    expect(result.get('g@sc3.club').desiredManagers).toBeNull();
+  });
+
+  test('Does not mutate original map', () => {
+    const state = makeState();
+    const map = new Map([['g@sc3.club', state]]);
+    Manager.removeEmailsFromDesiredState(map, new Set(['alice@sc3.club']));
+    expect(map.get('g@sc3.club').desiredMembers).toEqual(['alice@sc3.club', 'bob@sc3.club']);
+  });
+
+  test('Empty emailsToRemove returns equivalent state', () => {
+    const state = makeState();
+    const map = new Map([['g@sc3.club', state]]);
+    const result = Manager.removeEmailsFromDesiredState(map, new Set());
+    expect(result.get('g@sc3.club').desiredMembers).toEqual(['alice@sc3.club', 'bob@sc3.club']);
+    expect(result.get('g@sc3.club').desiredManagers).toEqual(['carol@sc3.club']);
+  });
+
+  test('Multiple groups all filtered correctly', () => {
+    const map = new Map([
+      ['a@sc3.club', makeState({ groupEmail: 'a@sc3.club', desiredMembers: ['bad@sc3.club', 'good@sc3.club'], desiredManagers: [] })],
+      ['b@sc3.club', makeState({ groupEmail: 'b@sc3.club', desiredMembers: ['good@sc3.club'], desiredManagers: ['bad@sc3.club'] })],
+    ]);
+    const result = Manager.removeEmailsFromDesiredState(map, new Set(['bad@sc3.club']));
+    expect(result.get('a@sc3.club').desiredMembers).toEqual(['good@sc3.club']);
+    expect(result.get('b@sc3.club').desiredManagers).toEqual([]);
+    expect(result.get('b@sc3.club').desiredMembers).toEqual(['good@sc3.club']);
+  });
+
+  test('Email matching is case-insensitive', () => {
+    const state = makeState({ desiredMembers: ['alice@sc3.club'] });
+    const map = new Map([['g@sc3.club', state]]);
+    const result = Manager.removeEmailsFromDesiredState(map, new Set(['ALICE@SC3.CLUB']));
+    expect(result.get('g@sc3.club').desiredMembers).toEqual([]);
+  });
+});
+

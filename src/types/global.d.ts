@@ -1734,9 +1734,19 @@ declare namespace GroupSync {
             warnings: string[];
             summary: SyncSummary;
         }): string[];
+        static findInvalidMemberEmails(
+            groupDefinitions: ValidatedGroupDefinition[],
+            activeEmailSet: Set<string>,
+            allMemberEmailSet: Set<string>
+        ): InvalidEmailEntry[];
+        static removeEmailsFromDesiredState(
+            desiredState: Map<string, DesiredGroupState>,
+            emailsToRemove: Set<string>
+        ): Map<string, DesiredGroupState>;
     }
     namespace Internal {
         function getActiveEmails_(): string[];
+        function getAllMemberEmails_(): string[];
         function fetchActualState_(groupEmails: string[]): Map<string, ActualMember[]>;
         function executeActions_(actions: SyncAction[]): {
             succeeded: SyncAction[];
@@ -1756,6 +1766,13 @@ interface DesiredGroupState {
     desiredManagers: string[] | null;
     warnings: string[];
     usedMembersKeyword: boolean;
+}
+
+interface InvalidEmailEntry {
+    email: string;
+    reason: 'malformed email' | 'non-active member';
+    groupName: string;
+    field: 'Members' | 'Managers';
 }
 
 interface ActualMember {
