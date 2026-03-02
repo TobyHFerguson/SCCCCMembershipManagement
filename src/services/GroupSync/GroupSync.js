@@ -136,7 +136,7 @@ GroupSync.Internal.runSync_ = function (dryRun) {
     // Prepend Members keyword notice to the dry-run report when applicable
     if (membersKeywordGroups.length > 0) {
         const notice = '⚠️ Members keyword: the following group(s) will be populated with ALL active members (' +
-            activeEmails.length + ' members):\n  - ' + membersKeywordGroups.join('\n  - ');
+            activeEmails.length + ' members):\n  - ' + membersKeywordGroups.join('\n  - ') + '\n';
         summaryLines.unshift(notice);
     }
 
