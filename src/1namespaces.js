@@ -36,6 +36,7 @@ const EmailChangeService = {
 const EmailService = { Menu: {} }
 const DocsService = { Internal: {} };
 const MembershipManagement = { Internal: {}, Utils: {} }
+const GroupSync = { Internal: {}, Menu: {} };
 const DirectoryService = {
     name: 'Directory Service',
     service: 'DirectoryService',
@@ -93,6 +94,7 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         DocsService,
         MembershipManagement,
-        DirectoryService
+        DirectoryService,
+        GroupSync
     };
 }

@@ -16,6 +16,7 @@
     DocsService.Menu.create();
     EmailService.Menu.create();
     VotingService.Menu.create();
+    GroupSync.Menu.create();
 }
 
 /**
