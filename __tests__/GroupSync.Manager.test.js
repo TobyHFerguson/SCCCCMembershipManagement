@@ -1258,6 +1258,9 @@ describe('findInvalidMemberEmails', () => {
     const defs = [makeGroupDef({ Managers: 'expired@example.com' })];
     const result = Manager.findInvalidMemberEmails(defs, activeEmailSet, allMemberEmailSet);
     expect(result).toHaveLength(1);
+    expect(result[0].email).toBe('expired@example.com');
+    expect(result[0].reason).toBe('non-active member');
+    expect(result[0].groupName).toBe('Test Group');
     expect(result[0].field).toBe('Managers');
   });
 
