@@ -188,7 +188,7 @@ describe('parseEntryList', () => {
 
 describe('resolveToEmails', () => {
   test('empty entry list returns empty result', () => {
-    const result = Manager.resolveToEmails([], [], new Set());
+    const result = Manager.resolveToEmails([], [], [], new Set());
     expect(result.emails).toEqual([]);
     expect(result.warnings).toEqual([]);
   });
@@ -197,24 +197,25 @@ describe('resolveToEmails', () => {
     const result = Manager.resolveToEmails(
       ['toby@gmail.com', 'zara@test.com', 'alice@sc3.club'],
       [],
+      [],
       new Set()
     );
     expect(result.emails).toEqual(['alice@sc3.club', 'toby@gmail.com', 'zara@test.com']);
   });
 
   test('bare email name (no @) gets @sc3.club appended', () => {
-    const result = Manager.resolveToEmails(['board_announcements'], [], new Set());
+    const result = Manager.resolveToEmails(['board_announcements'], [], [], new Set());
     expect(result.emails).toEqual(['board_announcements@sc3.club']);
   });
 
   test('Everyone keyword is documentary only — resolves to no emails', () => {
-    const result = Manager.resolveToEmails(['Everyone'], [], new Set());
+    const result = Manager.resolveToEmails(['Everyone'], [], [], new Set());
     expect(result.emails).toEqual([]);
     expect(result.warnings).toEqual([]);
   });
 
   test('Anyone keyword is documentary only — resolves to no emails', () => {
-    const result = Manager.resolveToEmails(['Anyone'], [], new Set());
+    const result = Manager.resolveToEmails(['Anyone'], [], [], new Set());
     expect(result.emails).toEqual([]);
     expect(result.warnings).toEqual([]);
   });
@@ -223,7 +224,7 @@ describe('resolveToEmails', () => {
     const groups = [
       makeGroup({ Name: 'Officers', Email: 'officers@sc3.club', Subscription: 'invitation', Type: 'Role', Members: 'alice@sc3.club, bob@sc3.club' }),
     ];
-    const result = Manager.resolveToEmails(['Officers'], groups, new Set());
+    const result = Manager.resolveToEmails(['Officers'], groups, [], new Set());
     expect(result.emails).toEqual(['alice@sc3.club', 'bob@sc3.club']);
   });
 
@@ -233,7 +234,7 @@ describe('resolveToEmails', () => {
       makeGroup({ Name: 'A', Email: 'a@sc3.club', Subscription: 'invitation', Type: 'Role', Members: 'B' }),
       makeGroup({ Name: 'B', Email: 'b@sc3.club', Subscription: 'invitation', Type: 'Role', Members: 'carol@sc3.club' }),
     ];
-    const result = Manager.resolveToEmails(['A'], groups, new Set());
+    const result = Manager.resolveToEmails(['A'], groups, [], new Set());
     expect(result.emails).toEqual(['carol@sc3.club']);
   });
 
@@ -245,7 +246,7 @@ describe('resolveToEmails', () => {
       makeGroup({ Name: 'C', Email: 'c@sc3.club', Subscription: 'invitation', Type: 'Role', Members: 'D' }),
       makeGroup({ Name: 'D', Email: 'd@sc3.club', Subscription: 'invitation', Type: 'Role', Members: 'dave@sc3.club' }),
     ];
-    const result = Manager.resolveToEmails(['A'], groups, new Set());
+    const result = Manager.resolveToEmails(['A'], groups, [], new Set());
     expect(result.emails).toEqual(['dave@sc3.club']);
     expect(result.warnings).toEqual([]);
   });
@@ -256,7 +257,7 @@ describe('resolveToEmails', () => {
       makeGroup({ Name: 'B', Email: 'b@sc3.club', Subscription: 'invitation', Type: 'Role', Members: 'A, bob@sc3.club' }),
     ];
     // Resolve starting with 'A'
-    const result = Manager.resolveToEmails(['A'], groups, new Set());
+    const result = Manager.resolveToEmails(['A'], groups, [], new Set());
     // Should contain alice and bob (non-cyclic members)
     expect(result.emails).toContain('alice@sc3.club');
     expect(result.emails).toContain('bob@sc3.club');
@@ -271,7 +272,7 @@ describe('resolveToEmails', () => {
       makeGroup({ Name: 'Announce', Email: 'announce@sc3.club', Subscription: 'auto', Type: 'Announcement', Members: 'Everyone' }),
       makeGroup({ Name: 'Combo', Email: 'combo@sc3.club', Subscription: 'invitation', Type: 'Discussion', Members: 'Announce, alice@sc3.club' }),
     ];
-    const result = Manager.resolveToEmails(['Combo'], groups, new Set());
+    const result = Manager.resolveToEmails(['Combo'], groups, [], new Set());
     // Everyone resolved to nothing; only alice from the direct entry
     expect(result.emails).toEqual(['alice@sc3.club']);
   });
@@ -283,6 +284,7 @@ describe('resolveToEmails', () => {
     const result = Manager.resolveToEmails(
       ['Officers', 'external@gmail.com', 'Everyone'],
       groups,
+      [],
       new Set()
     );
     // Should include alice (from Officers) and external@gmail.com; Everyone is skipped
@@ -297,6 +299,7 @@ describe('resolveToEmails', () => {
     const result = Manager.resolveToEmails(
       ['alice@sc3.club', 'G', 'bob@sc3.club'],
       groups,
+      [],
       new Set()
     );
     expect(result.emails).toEqual(['alice@sc3.club', 'bob@sc3.club']);
@@ -308,8 +311,67 @@ describe('resolveToEmails', () => {
     const groups = [
       makeGroup({ Name: 'Officers', Email: 'officers@sc3.club', Subscription: 'invitation', Type: 'Role', Members: 'alice@sc3.club' }),
     ];
-    const result = Manager.resolveToEmails(['OFFICERS'], groups, new Set());
+    const result = Manager.resolveToEmails(['OFFICERS'], groups, [], new Set());
     expect(result.emails).toEqual(['alice@sc3.club']);
+  });
+
+  test('Members keyword resolves to all activeEmails', () => {
+    const activeEmails = ['alice@sc3.club', 'bob@sc3.club', 'carol@sc3.club'];
+    const result = Manager.resolveToEmails(['Members'], [], activeEmails, new Set());
+    expect(result.emails).toEqual(['alice@sc3.club', 'bob@sc3.club', 'carol@sc3.club']);
+    expect(result.usedMembersKeyword).toBe(true);
+    expect(result.warnings).toEqual([]);
+  });
+
+  test('Members keyword is case-insensitive', () => {
+    const activeEmails = ['alice@sc3.club'];
+    const resultLower = Manager.resolveToEmails(['members'], [], activeEmails, new Set());
+    const resultUpper = Manager.resolveToEmails(['MEMBERS'], [], activeEmails, new Set());
+    const resultMixed = Manager.resolveToEmails(['Members'], [], activeEmails, new Set());
+    expect(resultLower.usedMembersKeyword).toBe(true);
+    expect(resultUpper.usedMembersKeyword).toBe(true);
+    expect(resultMixed.usedMembersKeyword).toBe(true);
+  });
+
+  test('Members keyword with empty activeEmails resolves to no emails', () => {
+    const result = Manager.resolveToEmails(['Members'], [], [], new Set());
+    expect(result.emails).toEqual([]);
+    expect(result.usedMembersKeyword).toBe(true);
+  });
+
+  test('Members keyword mixed with direct emails — result is deduplicated and sorted', () => {
+    const activeEmails = ['alice@sc3.club', 'bob@sc3.club'];
+    // alice also listed directly — should appear only once
+    const result = Manager.resolveToEmails(['Members', 'alice@sc3.club', 'carol@sc3.club'], [], activeEmails, new Set());
+    expect(result.emails).toEqual(['alice@sc3.club', 'bob@sc3.club', 'carol@sc3.club']);
+    expect(result.usedMembersKeyword).toBe(true);
+  });
+
+  test('Everyone and Anyone still resolve to no emails (Members keyword does not affect them)', () => {
+    const activeEmails = ['alice@sc3.club'];
+    const everyoneResult = Manager.resolveToEmails(['Everyone'], [], activeEmails, new Set());
+    const anyoneResult = Manager.resolveToEmails(['Anyone'], [], activeEmails, new Set());
+    expect(everyoneResult.emails).toEqual([]);
+    expect(everyoneResult.usedMembersKeyword).toBe(false);
+    expect(anyoneResult.emails).toEqual([]);
+    expect(anyoneResult.usedMembersKeyword).toBe(false);
+  });
+
+  test('Members keyword in a nested group reference propagates usedMembersKeyword', () => {
+    // GroupA references GroupB; GroupB has 'Members' in its Members column
+    const activeEmails = ['alice@sc3.club', 'bob@sc3.club'];
+    const groups = [
+      makeGroup({ Name: 'GroupA', Email: 'groupa@sc3.club', Subscription: 'invitation', Type: 'Role', Members: 'GroupB' }),
+      makeGroup({ Name: 'GroupB', Email: 'groupb@sc3.club', Subscription: 'invitation', Type: 'Role', Members: 'Members' }),
+    ];
+    const result = Manager.resolveToEmails(['GroupA'], groups, activeEmails, new Set());
+    expect(result.emails).toEqual(['alice@sc3.club', 'bob@sc3.club']);
+    expect(result.usedMembersKeyword).toBe(true);
+  });
+
+  test('non-Members entries have usedMembersKeyword=false', () => {
+    const result = Manager.resolveToEmails(['alice@sc3.club', 'bob@sc3.club'], [], [], new Set());
+    expect(result.usedMembersKeyword).toBe(false);
   });
 });
 
@@ -433,9 +495,64 @@ describe('computeDesiredState', () => {
     expect(state).toHaveProperty('desiredMembers');
     expect(state).toHaveProperty('desiredManagers');
     expect(state).toHaveProperty('warnings');
+    expect(state).toHaveProperty('usedMembersKeyword');
     expect(state.groupEmail).toBe('announce@sc3.club');
     expect(state.groupName).toBe('Announce');
     expect(Array.isArray(state.warnings)).toBe(true);
+    expect(typeof state.usedMembersKeyword).toBe('boolean');
+  });
+
+  test('Members keyword in invitation group: desiredMembers = activeEmails, usedMembersKeyword=true', () => {
+    const activeEmails = ['alice@sc3.club', 'bob@sc3.club'];
+    const groups = [
+      makeGroup({
+        Name: 'AllMembers',
+        Email: 'all@sc3.club',
+        Subscription: 'invitation',
+        Type: 'Discussion',
+        Members: 'Members',
+        Managers: '',
+      }),
+    ];
+    const result = Manager.computeDesiredState(groups, activeEmails);
+    const state = result.get('all@sc3.club');
+    expect(state.desiredMembers).toEqual(['alice@sc3.club', 'bob@sc3.club']);
+    expect(state.usedMembersKeyword).toBe(true);
+  });
+
+  test('Members keyword ignored for auto group (syncMembers=false): usedMembersKeyword=false', () => {
+    // Auto groups don't sync members, so Members keyword in Members column has no effect
+    const activeEmails = ['alice@sc3.club'];
+    const groups = [
+      makeGroup({
+        Name: 'AutoGroup',
+        Email: 'auto@sc3.club',
+        Subscription: 'auto',
+        Type: 'Announcement',
+        Members: 'Members',
+        Managers: 'manager@sc3.club',
+      }),
+    ];
+    const result = Manager.computeDesiredState(groups, activeEmails);
+    const state = result.get('auto@sc3.club');
+    expect(state.desiredMembers).toBeNull();
+    expect(state.usedMembersKeyword).toBe(false);
+  });
+
+  test('invitation group without Members keyword: usedMembersKeyword=false', () => {
+    const groups = [
+      makeGroup({
+        Name: 'Rides',
+        Email: 'rides@sc3.club',
+        Subscription: 'invitation',
+        Type: 'Discussion',
+        Members: 'alice@sc3.club',
+        Managers: '',
+      }),
+    ];
+    const result = Manager.computeDesiredState(groups, ['alice@sc3.club', 'bob@sc3.club']);
+    const state = result.get('rides@sc3.club');
+    expect(state.usedMembersKeyword).toBe(false);
   });
 });
 
@@ -448,7 +565,7 @@ describe('Edge cases', () => {
     const groups = [
       makeGroup({ Name: 'Empty', Email: 'empty@sc3.club', Subscription: 'invitation', Type: 'Role', Members: '' }),
     ];
-    const result = Manager.resolveToEmails(['Empty'], groups, new Set());
+    const result = Manager.resolveToEmails(['Empty'], groups, [], new Set());
     expect(result.emails).toEqual([]);
   });
 
@@ -456,13 +573,13 @@ describe('Edge cases', () => {
     const groups = [
       makeGroup({ Name: 'Whitespace', Email: 'ws@sc3.club', Subscription: 'invitation', Type: 'Role', Members: '   ' }),
     ];
-    const result = Manager.resolveToEmails(['Whitespace'], groups, new Set());
+    const result = Manager.resolveToEmails(['Whitespace'], groups, [], new Set());
     expect(result.emails).toEqual([]);
   });
 
   test('reference to a group Name that does not exist is treated as bare email', () => {
     // 'UnknownGroup' not in groupDefinitions → normalizeEmail → 'unknowngroup@sc3.club'
-    const result = Manager.resolveToEmails(['UnknownGroup'], [], new Set());
+    const result = Manager.resolveToEmails(['UnknownGroup'], [], [], new Set());
     expect(result.emails).toEqual(['unknowngroup@sc3.club']);
   });
 
