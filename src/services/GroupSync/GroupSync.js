@@ -95,30 +95,71 @@ GroupSync.Internal.executeActions_ = function (actions) {
 /**
  * Main orchestration function for group membership sync.
  * Always runs a dry-run preview first and asks the user to confirm before executing.
+ *
+ * @param {boolean} [dryRun=false] - When true, previews planned actions but does not execute them.
+ *     In dry-run mode the Members-keyword confirmation dialog is suppressed; the preview report
+ *     already indicates which groups use the Members keyword.
  */
-GroupSync.Internal.runSync_ = function () {
+GroupSync.Internal.runSync_ = function (dryRun) {
     AppLogger.configure();
 
     // 1. Read group definitions
     const definitions = DataAccess.getGroupDefinitions();
 
-    // 2. Compute desired state
-    const desiredState = GroupSync.Manager.computeDesiredState(definitions);
+    // 2. Get active member emails (for 'Members' keyword resolution)
+    const activeEmails = GroupSync.Internal.getActiveEmails_();
 
-    // 3. Get group emails that need actual state
+    // 3. Compute desired state
+    const desiredState = GroupSync.Manager.computeDesiredState(definitions, activeEmails);
+
+    // 4. Get group emails that need actual state
     const groupEmails = Array.from(desiredState.keys());
 
-    // 4. Fetch actual state
+    // 5. Fetch actual state
     const actualState = GroupSync.Internal.fetchActualState_(groupEmails);
 
-    // 5. Compute actions
+    // 6. Compute actions
     const result = GroupSync.Manager.computeActions(desiredState, actualState);
 
-    // 6. Format planned actions and ask user to confirm before executing
+    // 7. Collect groups that used the Members keyword
+    /** @type {string[]} */
+    const membersKeywordGroups = [];
+    for (const state of desiredState.values()) {
+        if (state.usedMembersKeyword) {
+            membersKeywordGroups.push(state.groupName);
+        }
+    }
+
+    // 8. Format planned actions and ask user to confirm before executing
     const summaryLines = GroupSync.Manager.formatActionsSummary(result);
+
+    // Prepend Members keyword notice to the dry-run report when applicable
+    if (membersKeywordGroups.length > 0) {
+        const notice = '⚠️ Members keyword: the following group(s) will be populated with ALL active members (' +
+            activeEmails.length + ' members):\n  - ' + membersKeywordGroups.join('\n  - ');
+        summaryLines.unshift(notice);
+    }
+
     AppLogger.info('GroupSync', 'Dry run preview:\n' + summaryLines.join('\n'));
 
     const ui = SpreadsheetApp.getUi();
+
+    // 9. If any groups use the Members keyword and this is a live run, confirm with user first
+    if (!dryRun && membersKeywordGroups.length > 0) {
+        const membersConfirmed = ui.alert(
+            'Confirm: Populate Groups with ALL Members',
+            'The following groups will be populated with ALL active members (' + activeEmails.length + ' members):\n\n' +
+            '  - ' + membersKeywordGroups.join('\n  - ') +
+            '\n\nDo you want to continue?',
+            ui.ButtonSet.YES_NO
+        );
+        if (membersConfirmed !== ui.Button.YES) {
+            AppLogger.info('GroupSync', 'Sync cancelled by user (Members keyword confirmation)');
+            return;
+        }
+    }
+
+    // 10. Show dry-run preview + ask user to confirm before executing
     const confirmed = ui.alert(
         'Sync Groups — Preview',
         summaryLines.join('\n') + '\n\nProceed with sync?',
@@ -130,10 +171,15 @@ GroupSync.Internal.runSync_ = function () {
         return;
     }
 
-    // 7. Execute actions
+    if (dryRun) {
+        AppLogger.info('GroupSync', 'Dry run completed — no changes made');
+        return;
+    }
+
+    // 11. Execute actions
     const execResult = GroupSync.Internal.executeActions_(result.actions);
 
-    // 8. Create and persist audit entries for each executed action
+    // 12. Create and persist audit entries for each executed action
     const auditEntries = execResult.succeeded.map(function (action) {
         return AuditLogEntry.create(
             'GroupSync',
@@ -157,7 +203,7 @@ GroupSync.Internal.runSync_ = function () {
         AuditPersistence.persistAuditEntries(auditEntries);
     }
 
-    // 9. Show results — errors separated from successes by a blank line
+    // 13. Show results — errors separated from successes by a blank line
     AppLogger.info('GroupSync', 'Sync completed: ' + execResult.succeeded.length + ' succeeded, ' + execResult.failed.length + ' failed');
 
     const successLines = execResult.succeeded.map(function (action) {

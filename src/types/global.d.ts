@@ -1718,10 +1718,12 @@ declare namespace GroupSync {
         static resolveToEmails(
             entryList: string[],
             groupDefinitions: ValidatedGroupDefinition[],
+            activeEmails: string[],
             visited: Set<string>
-        ): { emails: string[]; warnings: string[] };
+        ): { emails: string[]; warnings: string[]; usedMembersKeyword: boolean };
         static computeDesiredState(
-            groupDefinitions: ValidatedGroupDefinition[]
+            groupDefinitions: ValidatedGroupDefinition[],
+            activeEmails: string[]
         ): Map<string, DesiredGroupState>;
         static computeActions(
             desiredState: Map<string, DesiredGroupState>,
@@ -1740,7 +1742,7 @@ declare namespace GroupSync {
             succeeded: SyncAction[];
             failed: Array<{ action: SyncAction; error: string }>;
         };
-        function runSync_(): void;
+        function runSync_(dryRun?: boolean): void;
     }
     namespace Menu {
         function create(): void;
@@ -1753,6 +1755,7 @@ interface DesiredGroupState {
     desiredMembers: string[] | null;
     desiredManagers: string[] | null;
     warnings: string[];
+    usedMembersKeyword: boolean;
 }
 
 interface ActualMember {

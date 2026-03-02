@@ -29,12 +29,14 @@ if (typeof GroupSync === 'undefined') GroupSync = {};
  * @property {string[]|null} desiredMembers - Resolved member emails, or null if members should not be synced
  * @property {string[]|null} desiredManagers - Resolved manager emails, or null if managers should not be synced
  * @property {string[]} warnings - Cycle-detection or resolution warnings
+ * @property {boolean} usedMembersKeyword - True if the 'Members' keyword was used during member resolution
  */
 
 /**
  * @typedef {Object} ResolveResult
  * @property {string[]} emails - Deduplicated, sorted array of lowercase email addresses
  * @property {string[]} warnings - Cycle-detection or other resolution warnings
+ * @property {boolean} usedMembersKeyword - True if the 'Members' keyword was encountered during resolution
  */
 
 /**
@@ -132,21 +134,24 @@ GroupSync.Manager = (function () {
      * 1. 'Everyone' or 'Anyone' (case-insensitive) → skip (documentary keywords only;
      *     auto-group members are subscribed by MembershipManagement lifecycle,
      *     manual-group members self-subscribe)
-     * 2. Matches a group Name → recursively resolve that group's Members
+     * 2. 'Members' (case-insensitive) → add all activeEmails to the result set
+     * 3. Matches a group Name → recursively resolve that group's Members
      *    - If the group Name is already in `visited` → skip (cycle detected) + warning
      *    - Uses backtracking so the same group can be visited from independent branches
-     * 3. Otherwise → treat as email (normalizeEmail)
+     * 4. Otherwise → treat as email (normalizeEmail)
      *
      * @param {string[]} entryList - Entries to resolve (output of parseEntryList)
      * @param {Array<{Name: string, Members: string, Managers: string}>} groupDefinitions - All group definitions
+     * @param {string[]} activeEmails - Active member email addresses (resolved when 'Members' keyword is encountered)
      * @param {Set<string>} visited - Group Names currently being resolved (for cycle detection)
      * @returns {ResolveResult}
      */
-    static resolveToEmails(entryList, groupDefinitions, visited) {
+    static resolveToEmails(entryList, groupDefinitions, activeEmails, visited) {
       /** @type {Set<string>} */
       const emailSet = new Set();
       /** @type {string[]} */
       const warnings = [];
+      let usedMembersKeyword = false;
 
       // Build a lookup map: lowercase group name → group definition
       /** @type {Map<string, {Name: string, Members: string, Managers: string}>} */
@@ -165,6 +170,12 @@ GroupSync.Manager = (function () {
           // Documentary keywords only — not resolved to emails.
           // 'Everyone' (auto groups): members subscribed by MembershipManagement lifecycle.
           // 'Anyone' (manual groups): members self-subscribe.
+        } else if (lower === 'members') {
+          // Resolves to all active club members
+          usedMembersKeyword = true;
+          for (const email of activeEmails) {
+            emailSet.add(email.toLowerCase());
+          }
         } else if (groupByName.has(lower)) {
           // Group reference
           if (visited.has(lower)) {
@@ -173,12 +184,15 @@ GroupSync.Manager = (function () {
             visited.add(lower);
             const referencedGroup = groupByName.get(lower);
             const childEntries = Manager.parseEntryList(referencedGroup.Members);
-            const childResult = Manager.resolveToEmails(childEntries, groupDefinitions, visited);
+            const childResult = Manager.resolveToEmails(childEntries, groupDefinitions, activeEmails, visited);
             for (const email of childResult.emails) {
               emailSet.add(email);
             }
             for (const w of childResult.warnings) {
               warnings.push(w);
+            }
+            if (childResult.usedMembersKeyword) {
+              usedMembersKeyword = true;
             }
             visited.delete(lower); // backtrack
           }
@@ -191,6 +205,7 @@ GroupSync.Manager = (function () {
       return {
         emails: Array.from(emailSet).sort(),
         warnings,
+        usedMembersKeyword,
       };
     }
 
@@ -209,9 +224,11 @@ GroupSync.Manager = (function () {
      *   type='Security' (any sub) → skipped entirely
      *
      * @param {Array<{Name: string, Email: string, Subscription: string, Type: string, Members: string, Managers: string}>} groupDefinitions - All group definitions
+     * @param {string[]} activeEmails - Active member email addresses (passed to resolveToEmails for 'Members' keyword)
      * @returns {Map<string, DesiredGroupState>}
      */
-    static computeDesiredState(groupDefinitions) {
+    static computeDesiredState(groupDefinitions, activeEmails) {
+      activeEmails = activeEmails || [];
       /** @type {Map<string, DesiredGroupState>} */
       const result = new Map();
 
@@ -247,14 +264,19 @@ GroupSync.Manager = (function () {
         let desiredMembers = null;
         /** @type {string[]|null} */
         let desiredManagers = null;
+        let usedMembersKeyword = false;
 
         if (syncMembers) {
           const membersResult = Manager.resolveToEmails(
             Manager.parseEntryList(group.Members),
             groupDefinitions,
+            activeEmails,
             new Set()
           );
           desiredMembers = membersResult.emails;
+          if (membersResult.usedMembersKeyword) {
+            usedMembersKeyword = true;
+          }
           for (const w of membersResult.warnings) allWarnings.push(w);
         }
 
@@ -262,6 +284,7 @@ GroupSync.Manager = (function () {
           const managersResult = Manager.resolveToEmails(
             Manager.parseEntryList(group.Managers),
             groupDefinitions,
+            activeEmails,
             new Set()
           );
           desiredManagers = managersResult.emails;
@@ -275,6 +298,7 @@ GroupSync.Manager = (function () {
           desiredMembers,
           desiredManagers,
           warnings: allWarnings,
+          usedMembersKeyword,
         });
       }
 
