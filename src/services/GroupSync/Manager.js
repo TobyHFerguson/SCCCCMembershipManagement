@@ -37,6 +37,38 @@ if (typeof GroupSync === 'undefined') GroupSync = {};
  * @property {string[]} warnings - Cycle-detection or other resolution warnings
  */
 
+/**
+ * @typedef {Object} ActualMember
+ * @property {string} email - Member email address
+ * @property {string} role - Role: 'MEMBER', 'MANAGER', or 'OWNER'
+ */
+
+/**
+ * @typedef {Object} SyncAction
+ * @property {string} groupEmail - Group email address
+ * @property {string} groupName - Human-readable group name
+ * @property {string} userEmail - User email address
+ * @property {'ADD'|'REMOVE'|'PROMOTE'|'DEMOTE'} action - Action to perform
+ * @property {'MEMBER'|'MANAGER'} targetRole - Target role after the action
+ */
+
+/**
+ * @typedef {Object} SyncSummary
+ * @property {number} groupsProcessed - Number of groups processed
+ * @property {number} totalActions - Total number of actions
+ * @property {number} adds - Number of ADD actions
+ * @property {number} removes - Number of REMOVE actions
+ * @property {number} promotes - Number of PROMOTE actions
+ * @property {number} demotes - Number of DEMOTE actions
+ */
+
+/**
+ * @typedef {Object} ComputeActionsResult
+ * @property {SyncAction[]} actions - List of sync actions to perform
+ * @property {string[]} warnings - Warnings from desired state resolution
+ * @property {SyncSummary} summary - Counts of each action type
+ */
+
 GroupSync.Manager = (function () {
   class Manager {
     /**
@@ -247,6 +279,216 @@ GroupSync.Manager = (function () {
       }
 
       return result;
+    }
+    /**
+     * Compute the list of add/remove/promote/demote actions needed to reconcile
+     * actual Google Group membership with the desired state.
+     *
+     * OWNERs are always sacred — they are never added, removed, promoted, or demoted.
+     * All email comparisons are case-insensitive.
+     *
+     * @param {Map<string, DesiredGroupState>} desiredState - Output of computeDesiredState
+     * @param {Map<string, ActualMember[]>} actualState - Actual membership keyed by lowercase group email
+     * @returns {ComputeActionsResult}
+     */
+    static computeActions(desiredState, actualState) {
+      /** @type {SyncAction[]} */
+      const actions = [];
+      /** @type {string[]} */
+      const warnings = [];
+
+      for (const [groupEmail, desired] of desiredState) {
+        // Collect warnings from desired state
+        for (const w of desired.warnings) {
+          warnings.push(w);
+        }
+
+        // Get actual members for this group, normalized to lowercase
+        const rawActual = actualState.get(groupEmail) || [];
+        // Track OWNER emails — they are always sacred
+        const ownerEmailSet = new Set(
+          rawActual
+            .filter(m => m.role === 'OWNER')
+            .map(m => m.email.toLowerCase())
+        );
+        // Filter out OWNERs before diffing
+        const actualNonOwners = rawActual
+          .map(m => ({ email: m.email.toLowerCase(), role: m.role }))
+          .filter(m => m.role !== 'OWNER');
+
+        const actualByEmail = new Map(actualNonOwners.map(m => [m.email, m.role]));
+
+        // ------------------------------------------------------------------
+        // Member reconciliation (only when desiredMembers is not null)
+        // ------------------------------------------------------------------
+        if (desired.desiredMembers !== null) {
+          const desiredMemberSet = new Set(desired.desiredMembers.map(e => e.toLowerCase()));
+
+          // ADD: desired member not in actual (any role) at all, and not an OWNER
+          for (const email of desiredMemberSet) {
+            if (!actualByEmail.has(email) && !ownerEmailSet.has(email)) {
+              actions.push({
+                groupEmail: desired.groupEmail,
+                groupName: desired.groupName,
+                userEmail: email,
+                action: 'ADD',
+                targetRole: 'MEMBER',
+              });
+            }
+          }
+
+          // REMOVE: actual MEMBER not in desired members and not in desiredManagers
+          // (members in desiredManagers will be promoted, not removed)
+          const desiredManagerSetForRemove =
+            desired.desiredManagers !== null
+              ? new Set(desired.desiredManagers.map(e => e.toLowerCase()))
+              : new Set();
+          for (const [email, role] of actualByEmail) {
+            if (role === 'MEMBER' && !desiredMemberSet.has(email) && !desiredManagerSetForRemove.has(email)) {
+              actions.push({
+                groupEmail: desired.groupEmail,
+                groupName: desired.groupName,
+                userEmail: email,
+                action: 'REMOVE',
+                targetRole: 'MEMBER',
+              });
+            }
+          }
+        }
+
+        // ------------------------------------------------------------------
+        // Manager reconciliation (only when desiredManagers is not null)
+        // ------------------------------------------------------------------
+        if (desired.desiredManagers !== null) {
+          const desiredManagerSet = new Set(desired.desiredManagers.map(e => e.toLowerCase()));
+          const desiredMemberSet =
+            desired.desiredMembers !== null
+              ? new Set(desired.desiredMembers.map(e => e.toLowerCase()))
+              : null;
+
+          // For each desired manager:
+          for (const email of desiredManagerSet) {
+            // OWNERs are sacred — skip
+            if (ownerEmailSet.has(email)) continue;
+            const currentRole = actualByEmail.get(email);
+            if (currentRole === undefined) {
+              // Not in actual at all → ADD as MANAGER
+              actions.push({
+                groupEmail: desired.groupEmail,
+                groupName: desired.groupName,
+                userEmail: email,
+                action: 'ADD',
+                targetRole: 'MANAGER',
+              });
+            } else if (currentRole === 'MEMBER') {
+              // In actual as MEMBER → PROMOTE
+              actions.push({
+                groupEmail: desired.groupEmail,
+                groupName: desired.groupName,
+                userEmail: email,
+                action: 'PROMOTE',
+                targetRole: 'MANAGER',
+              });
+            }
+            // currentRole === 'MANAGER' → no action needed
+          }
+
+          // For each actual MANAGER not in desired managers:
+          for (const [email, role] of actualByEmail) {
+            if (role === 'MANAGER' && !desiredManagerSet.has(email)) {
+              if (desiredMemberSet !== null) {
+                // Members are managed
+                if (desiredMemberSet.has(email)) {
+                  // Demote to regular member
+                  actions.push({
+                    groupEmail: desired.groupEmail,
+                    groupName: desired.groupName,
+                    userEmail: email,
+                    action: 'DEMOTE',
+                    targetRole: 'MEMBER',
+                  });
+                } else {
+                  // Remove entirely
+                  actions.push({
+                    groupEmail: desired.groupEmail,
+                    groupName: desired.groupName,
+                    userEmail: email,
+                    action: 'REMOVE',
+                    targetRole: 'MEMBER',
+                  });
+                }
+              } else {
+                // Members not managed — demote rather than remove
+                actions.push({
+                  groupEmail: desired.groupEmail,
+                  groupName: desired.groupName,
+                  userEmail: email,
+                  action: 'DEMOTE',
+                  targetRole: 'MEMBER',
+                });
+              }
+            }
+          }
+        }
+      }
+
+      // Build summary
+      const summary = {
+        groupsProcessed: desiredState.size,
+        totalActions: actions.length,
+        adds: actions.filter(a => a.action === 'ADD').length,
+        removes: actions.filter(a => a.action === 'REMOVE').length,
+        promotes: actions.filter(a => a.action === 'PROMOTE').length,
+        demotes: actions.filter(a => a.action === 'DEMOTE').length,
+      };
+
+      return { actions, warnings, summary };
+    }
+
+    /**
+     * Format the result of computeActions into human-readable lines for display.
+     *
+     * Warnings appear at the top.
+     * Action lines follow.
+     * Summary counts appear at the bottom.
+     * When there are no actions, a "No changes needed" line is included.
+     *
+     * @param {ComputeActionsResult} result - Output of computeActions
+     * @returns {string[]} Array of human-readable strings
+     */
+    static formatActionsSummary(result) {
+      const lines = [];
+
+      // Warnings at the top
+      for (const w of result.warnings) {
+        lines.push(`⚠️ WARNING: ${w}`);
+      }
+
+      // Actions
+      if (result.actions.length === 0) {
+        lines.push('No changes needed.');
+      } else {
+        for (const a of result.actions) {
+          if (a.action === 'ADD') {
+            lines.push(`ADD ${a.userEmail} → ${a.groupName} (${a.targetRole})`);
+          } else if (a.action === 'REMOVE') {
+            lines.push(`REMOVE ${a.userEmail} from ${a.groupName} (${a.targetRole})`);
+          } else if (a.action === 'PROMOTE') {
+            lines.push(`PROMOTE ${a.userEmail} → ${a.groupName} (${a.targetRole})`);
+          } else if (a.action === 'DEMOTE') {
+            lines.push(`DEMOTE ${a.userEmail} → ${a.groupName} (${a.targetRole})`);
+          }
+        }
+      }
+
+      // Summary counts at the bottom
+      const s = result.summary;
+      lines.push(
+        `Summary: ${s.groupsProcessed} group(s) processed, ${s.totalActions} action(s) — ` +
+          `${s.adds} add, ${s.removes} remove, ${s.promotes} promote, ${s.demotes} demote`
+      );
+
+      return lines;
     }
   }
 

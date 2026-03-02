@@ -5,13 +5,18 @@
  * Tests the pure business logic for group membership sync resolution.
  *
  * TABLE OF CONTENTS:
- * 1. normalizeEmail       - Email normalization
- * 2. isGroupReference     - Group reference detection
- * 3. isSpecialKeyword     - Special keyword detection
- * 4. parseEntryList       - Comma-separated string parsing
- * 5. resolveToEmails      - Core resolution (recursion, cycles, diamond deps)
- * 6. computeDesiredState  - Sync scope rules per Subscription/Type
- * 7. Edge cases           - Empty/whitespace fields, unknown group references
+ * 1. normalizeEmail          - Email normalization
+ * 2. isGroupReference        - Group reference detection
+ * 3. isSpecialKeyword        - Special keyword detection
+ * 4. parseEntryList          - Comma-separated string parsing
+ * 5. resolveToEmails         - Core resolution (recursion, cycles, diamond deps)
+ * 6. computeDesiredState     - Sync scope rules per Subscription/Type
+ * 7. Edge cases              - Empty/whitespace fields, unknown group references
+ * 8. computeActions members  - Member reconciliation (ADD/REMOVE, OWNERs, null)
+ * 9. computeActions managers - Manager reconciliation (ADD/PROMOTE/DEMOTE/REMOVE)
+ * 10. computeActions combined - Combined scenarios and multi-group
+ * 11. computeActions summary  - Summary counts
+ * 12. formatActionsSummary    - Human-readable output
  */
 
 jest.mock('../src/common/config/Properties.js', () => ({}));
@@ -467,5 +472,567 @@ describe('Edge cases', () => {
     ];
     const result = Manager.computeDesiredState(groups);
     expect(result.has('test@sc3.club')).toBe(true);
+  });
+});
+
+// ============================================================================
+// 8. computeActions — Member reconciliation
+// ============================================================================
+
+describe('computeActions — Member reconciliation', () => {
+  /** @type {Map<string, import('../src/services/GroupSync/Manager.js').DesiredGroupState>} */
+  const desiredState = new Map([
+    [
+      'rides@sc3.club',
+      {
+        groupEmail: 'rides@sc3.club',
+        groupName: 'Rides',
+        desiredMembers: ['alice@sc3.club', 'bob@sc3.club'],
+        desiredManagers: null,
+        warnings: [],
+      },
+    ],
+  ]);
+
+  test('Add missing members: desired has emails not in actual → ADD actions', () => {
+    const actualState = new Map([['rides@sc3.club', []]]);
+    const result = Manager.computeActions(desiredState, actualState);
+    expect(result.actions).toHaveLength(2);
+    expect(result.actions.every(a => a.action === 'ADD')).toBe(true);
+    expect(result.actions.every(a => a.targetRole === 'MEMBER')).toBe(true);
+    const emails = result.actions.map(a => a.userEmail);
+    expect(emails).toContain('alice@sc3.club');
+    expect(emails).toContain('bob@sc3.club');
+  });
+
+  test('Remove extra members: actual has MEMBER emails not in desired → REMOVE actions', () => {
+    const actualState = new Map([
+      [
+        'rides@sc3.club',
+        [
+          { email: 'alice@sc3.club', role: 'MEMBER' },
+          { email: 'bob@sc3.club', role: 'MEMBER' },
+          { email: 'extra@sc3.club', role: 'MEMBER' },
+        ],
+      ],
+    ]);
+    const result = Manager.computeActions(desiredState, actualState);
+    expect(result.actions).toHaveLength(1);
+    expect(result.actions[0].action).toBe('REMOVE');
+    expect(result.actions[0].userEmail).toBe('extra@sc3.club');
+  });
+
+  test('No changes needed: desired matches actual → empty actions', () => {
+    const actualState = new Map([
+      [
+        'rides@sc3.club',
+        [
+          { email: 'alice@sc3.club', role: 'MEMBER' },
+          { email: 'bob@sc3.club', role: 'MEMBER' },
+        ],
+      ],
+    ]);
+    const result = Manager.computeActions(desiredState, actualState);
+    expect(result.actions).toHaveLength(0);
+  });
+
+  test('OWNERs are sacred: actual OWNER not in desired → NOT removed', () => {
+    const actualState = new Map([
+      [
+        'rides@sc3.club',
+        [
+          { email: 'alice@sc3.club', role: 'MEMBER' },
+          { email: 'bob@sc3.club', role: 'MEMBER' },
+          { email: 'owner@sc3.club', role: 'OWNER' },
+        ],
+      ],
+    ]);
+    const result = Manager.computeActions(desiredState, actualState);
+    expect(result.actions).toHaveLength(0);
+    expect(result.actions.some(a => a.userEmail === 'owner@sc3.club')).toBe(false);
+  });
+
+  test('OWNERs are sacred: desired email matching OWNER → NOT added again', () => {
+    const stateWithOwnerInDesired = new Map([
+      [
+        'rides@sc3.club',
+        {
+          groupEmail: 'rides@sc3.club',
+          groupName: 'Rides',
+          desiredMembers: ['alice@sc3.club', 'owner@sc3.club'],
+          desiredManagers: null,
+          warnings: [],
+        },
+      ],
+    ]);
+    const actualState = new Map([
+      [
+        'rides@sc3.club',
+        [
+          { email: 'alice@sc3.club', role: 'MEMBER' },
+          { email: 'owner@sc3.club', role: 'OWNER' },
+        ],
+      ],
+    ]);
+    const result = Manager.computeActions(stateWithOwnerInDesired, actualState);
+    // owner@sc3.club is already OWNER — no ADD action should be generated
+    expect(result.actions).toHaveLength(0);
+    expect(result.actions.some(a => a.userEmail === 'owner@sc3.club')).toBe(false);
+  });
+
+  test('desiredMembers is null: no member reconciliation happens', () => {
+    const stateNoMembers = new Map([
+      [
+        'rides@sc3.club',
+        {
+          groupEmail: 'rides@sc3.club',
+          groupName: 'Rides',
+          desiredMembers: null,
+          desiredManagers: null,
+          warnings: [],
+        },
+      ],
+    ]);
+    const actualState = new Map([
+      ['rides@sc3.club', [{ email: 'extra@sc3.club', role: 'MEMBER' }]],
+    ]);
+    const result = Manager.computeActions(stateNoMembers, actualState);
+    expect(result.actions).toHaveLength(0);
+  });
+
+  test('Empty actual state: all desired members become ADD actions', () => {
+    const actualState = new Map(); // group not present at all
+    const result = Manager.computeActions(desiredState, actualState);
+    expect(result.actions).toHaveLength(2);
+    expect(result.actions.every(a => a.action === 'ADD')).toBe(true);
+  });
+
+  test('Case-insensitive email comparison: mixed-case actual matches desired', () => {
+    const actualState = new Map([
+      [
+        'rides@sc3.club',
+        [
+          { email: 'Alice@SC3.Club', role: 'MEMBER' },
+          { email: 'BOB@sc3.club', role: 'MEMBER' },
+        ],
+      ],
+    ]);
+    const result = Manager.computeActions(desiredState, actualState);
+    // Both match after lowercasing — no actions needed
+    expect(result.actions).toHaveLength(0);
+  });
+});
+
+// ============================================================================
+// 9. computeActions — Manager reconciliation
+// ============================================================================
+
+describe('computeActions — Manager reconciliation', () => {
+  /** @type {Map<string, import('../src/services/GroupSync/Manager.js').DesiredGroupState>} */
+  const desiredManagersOnly = new Map([
+    [
+      'announce@sc3.club',
+      {
+        groupEmail: 'announce@sc3.club',
+        groupName: 'Announcements',
+        desiredMembers: null,
+        desiredManagers: ['alice@sc3.club'],
+        warnings: [],
+      },
+    ],
+  ]);
+
+  test('Add new manager: desired manager not in actual at all → ADD as MANAGER', () => {
+    const actualState = new Map([['announce@sc3.club', []]]);
+    const result = Manager.computeActions(desiredManagersOnly, actualState);
+    expect(result.actions).toHaveLength(1);
+    expect(result.actions[0].action).toBe('ADD');
+    expect(result.actions[0].targetRole).toBe('MANAGER');
+    expect(result.actions[0].userEmail).toBe('alice@sc3.club');
+  });
+
+  test('Promote existing member: desired manager is actual MEMBER → PROMOTE', () => {
+    const actualState = new Map([
+      ['announce@sc3.club', [{ email: 'alice@sc3.club', role: 'MEMBER' }]],
+    ]);
+    const result = Manager.computeActions(desiredManagersOnly, actualState);
+    expect(result.actions).toHaveLength(1);
+    expect(result.actions[0].action).toBe('PROMOTE');
+    expect(result.actions[0].targetRole).toBe('MANAGER');
+  });
+
+  test('Already a manager: desired manager is actual MANAGER → no action', () => {
+    const actualState = new Map([
+      ['announce@sc3.club', [{ email: 'alice@sc3.club', role: 'MANAGER' }]],
+    ]);
+    const result = Manager.computeActions(desiredManagersOnly, actualState);
+    expect(result.actions).toHaveLength(0);
+  });
+
+  test('OWNER is sacred: desired manager is actual OWNER → no action', () => {
+    const stateOwnerAsDesiredManager = new Map([
+      [
+        'announce@sc3.club',
+        {
+          groupEmail: 'announce@sc3.club',
+          groupName: 'Announcements',
+          desiredMembers: null,
+          desiredManagers: ['owner@sc3.club'],
+          warnings: [],
+        },
+      ],
+    ]);
+    const actualState = new Map([
+      ['announce@sc3.club', [{ email: 'owner@sc3.club', role: 'OWNER' }]],
+    ]);
+    const result = Manager.computeActions(stateOwnerAsDesiredManager, actualState);
+    expect(result.actions).toHaveLength(0);
+  });
+
+  test('Demote extra manager (members managed): actual MANAGER in desired members → DEMOTE', () => {
+    const state = new Map([
+      [
+        'officers@sc3.club',
+        {
+          groupEmail: 'officers@sc3.club',
+          groupName: 'Officers',
+          desiredMembers: ['alice@sc3.club', 'bob@sc3.club'],
+          desiredManagers: ['alice@sc3.club'],
+          warnings: [],
+        },
+      ],
+    ]);
+    const actualState = new Map([
+      [
+        'officers@sc3.club',
+        [
+          { email: 'alice@sc3.club', role: 'MANAGER' },
+          { email: 'bob@sc3.club', role: 'MANAGER' }, // extra manager, but in desiredMembers
+        ],
+      ],
+    ]);
+    const result = Manager.computeActions(state, actualState);
+    const demotes = result.actions.filter(a => a.action === 'DEMOTE');
+    expect(demotes).toHaveLength(1);
+    expect(demotes[0].userEmail).toBe('bob@sc3.club');
+    expect(demotes[0].targetRole).toBe('MEMBER');
+  });
+
+  test('Remove extra manager (members managed): actual MANAGER not in desired members → REMOVE', () => {
+    const state = new Map([
+      [
+        'officers@sc3.club',
+        {
+          groupEmail: 'officers@sc3.club',
+          groupName: 'Officers',
+          desiredMembers: ['alice@sc3.club'],
+          desiredManagers: ['alice@sc3.club'],
+          warnings: [],
+        },
+      ],
+    ]);
+    const actualState = new Map([
+      [
+        'officers@sc3.club',
+        [
+          { email: 'alice@sc3.club', role: 'MANAGER' },
+          { email: 'extra@sc3.club', role: 'MANAGER' }, // not in desiredMembers → REMOVE
+        ],
+      ],
+    ]);
+    const result = Manager.computeActions(state, actualState);
+    const removes = result.actions.filter(a => a.action === 'REMOVE');
+    expect(removes).toHaveLength(1);
+    expect(removes[0].userEmail).toBe('extra@sc3.club');
+  });
+
+  test('Demote extra manager (members not managed): desiredMembers null → DEMOTE', () => {
+    const state = new Map([
+      [
+        'announce@sc3.club',
+        {
+          groupEmail: 'announce@sc3.club',
+          groupName: 'Announcements',
+          desiredMembers: null,
+          desiredManagers: ['alice@sc3.club'],
+          warnings: [],
+        },
+      ],
+    ]);
+    const actualState = new Map([
+      [
+        'announce@sc3.club',
+        [
+          { email: 'alice@sc3.club', role: 'MANAGER' },
+          { email: 'extra@sc3.club', role: 'MANAGER' }, // desiredMembers=null → DEMOTE
+        ],
+      ],
+    ]);
+    const result = Manager.computeActions(state, actualState);
+    const demotes = result.actions.filter(a => a.action === 'DEMOTE');
+    expect(demotes).toHaveLength(1);
+    expect(demotes[0].userEmail).toBe('extra@sc3.club');
+    expect(demotes[0].targetRole).toBe('MEMBER');
+    // Should NOT be a REMOVE
+    expect(result.actions.filter(a => a.action === 'REMOVE')).toHaveLength(0);
+  });
+
+  test('desiredManagers is null: no manager reconciliation happens', () => {
+    const state = new Map([
+      [
+        'rides@sc3.club',
+        {
+          groupEmail: 'rides@sc3.club',
+          groupName: 'Rides',
+          desiredMembers: null,
+          desiredManagers: null,
+          warnings: [],
+        },
+      ],
+    ]);
+    const actualState = new Map([
+      ['rides@sc3.club', [{ email: 'extra@sc3.club', role: 'MANAGER' }]],
+    ]);
+    const result = Manager.computeActions(state, actualState);
+    expect(result.actions).toHaveLength(0);
+  });
+});
+
+// ============================================================================
+// 10. computeActions — Combined scenarios
+// ============================================================================
+
+describe('computeActions — Combined scenarios', () => {
+  test('Both members and managers synced: invitation+Discussion group', () => {
+    const state = new Map([
+      [
+        'officers@sc3.club',
+        {
+          groupEmail: 'officers@sc3.club',
+          groupName: 'Officers',
+          desiredMembers: ['alice@sc3.club', 'bob@sc3.club'],
+          desiredManagers: ['alice@sc3.club'],
+          warnings: [],
+        },
+      ],
+    ]);
+    // Actual: carol is a stale MEMBER; alice is a MANAGER already; bob is missing
+    const actualState = new Map([
+      [
+        'officers@sc3.club',
+        [
+          { email: 'alice@sc3.club', role: 'MANAGER' },
+          { email: 'carol@sc3.club', role: 'MEMBER' },
+        ],
+      ],
+    ]);
+    const result = Manager.computeActions(state, actualState);
+    const adds = result.actions.filter(a => a.action === 'ADD');
+    const removes = result.actions.filter(a => a.action === 'REMOVE');
+    // bob should be added as MEMBER
+    expect(adds).toHaveLength(1);
+    expect(adds[0].userEmail).toBe('bob@sc3.club');
+    expect(adds[0].targetRole).toBe('MEMBER');
+    // carol should be removed
+    expect(removes).toHaveLength(1);
+    expect(removes[0].userEmail).toBe('carol@sc3.club');
+    // alice is already MANAGER → no promote/demote
+    expect(result.actions.filter(a => a.action === 'PROMOTE')).toHaveLength(0);
+    expect(result.actions.filter(a => a.action === 'DEMOTE')).toHaveLength(0);
+  });
+
+  test('Multiple groups: desiredState with 3 groups → all actions correct', () => {
+    const state = new Map([
+      [
+        'group1@sc3.club',
+        {
+          groupEmail: 'group1@sc3.club',
+          groupName: 'Group1',
+          desiredMembers: ['a@sc3.club'],
+          desiredManagers: null,
+          warnings: [],
+        },
+      ],
+      [
+        'group2@sc3.club',
+        {
+          groupEmail: 'group2@sc3.club',
+          groupName: 'Group2',
+          desiredMembers: null,
+          desiredManagers: ['b@sc3.club'],
+          warnings: [],
+        },
+      ],
+      [
+        'group3@sc3.club',
+        {
+          groupEmail: 'group3@sc3.club',
+          groupName: 'Group3',
+          desiredMembers: ['c@sc3.club'],
+          desiredManagers: ['d@sc3.club'],
+          warnings: [],
+        },
+      ],
+    ]);
+    const actualState = new Map([
+      ['group1@sc3.club', []],
+      ['group2@sc3.club', [{ email: 'b@sc3.club', role: 'MEMBER' }]],
+      ['group3@sc3.club', []],
+    ]);
+    const result = Manager.computeActions(state, actualState);
+    // group1: ADD a as MEMBER
+    expect(result.actions.some(a => a.groupEmail === 'group1@sc3.club' && a.userEmail === 'a@sc3.club' && a.action === 'ADD')).toBe(true);
+    // group2: PROMOTE b to MANAGER
+    expect(result.actions.some(a => a.groupEmail === 'group2@sc3.club' && a.userEmail === 'b@sc3.club' && a.action === 'PROMOTE')).toBe(true);
+    // group3: ADD c as MEMBER, ADD d as MANAGER
+    expect(result.actions.some(a => a.groupEmail === 'group3@sc3.club' && a.userEmail === 'c@sc3.club' && a.action === 'ADD' && a.targetRole === 'MEMBER')).toBe(true);
+    expect(result.actions.some(a => a.groupEmail === 'group3@sc3.club' && a.userEmail === 'd@sc3.club' && a.action === 'ADD' && a.targetRole === 'MANAGER')).toBe(true);
+  });
+
+  test('Auto group (managers only): desiredMembers=null, only manager actions produced', () => {
+    const state = new Map([
+      [
+        'announce@sc3.club',
+        {
+          groupEmail: 'announce@sc3.club',
+          groupName: 'Announcements',
+          desiredMembers: null,
+          desiredManagers: ['alice@sc3.club'],
+          warnings: [],
+        },
+      ],
+    ]);
+    const actualState = new Map([
+      [
+        'announce@sc3.club',
+        [
+          { email: 'stalemanager@sc3.club', role: 'MANAGER' },
+          { email: 'randommember@sc3.club', role: 'MEMBER' },
+        ],
+      ],
+    ]);
+    const result = Manager.computeActions(state, actualState);
+    // alice should be added as MANAGER
+    expect(result.actions.some(a => a.userEmail === 'alice@sc3.club' && a.action === 'ADD' && a.targetRole === 'MANAGER')).toBe(true);
+    // stalemanager should be demoted (desiredMembers=null → demote not remove)
+    expect(result.actions.some(a => a.userEmail === 'stalemanager@sc3.club' && a.action === 'DEMOTE')).toBe(true);
+    // randommember should NOT be touched (desiredMembers=null)
+    expect(result.actions.some(a => a.userEmail === 'randommember@sc3.club')).toBe(false);
+  });
+});
+
+// ============================================================================
+// 11. computeActions — Summary
+// ============================================================================
+
+describe('computeActions — Summary', () => {
+  test('Correct counts of adds, removes, promotes, demotes', () => {
+    const state = new Map([
+      [
+        'group@sc3.club',
+        {
+          groupEmail: 'group@sc3.club',
+          groupName: 'Group',
+          desiredMembers: ['a@sc3.club', 'b@sc3.club'],
+          desiredManagers: ['c@sc3.club'],
+          warnings: [],
+        },
+      ],
+    ]);
+    // a: missing → ADD MEMBER
+    // extra@sc3.club: stale MEMBER → REMOVE
+    // b: already MEMBER → no action
+    // c: MEMBER → PROMOTE to MANAGER
+    // mgr@sc3.club: extra MANAGER, not in desiredMembers → REMOVE
+    const actualState = new Map([
+      [
+        'group@sc3.club',
+        [
+          { email: 'b@sc3.club', role: 'MEMBER' },
+          { email: 'extra@sc3.club', role: 'MEMBER' },
+          { email: 'c@sc3.club', role: 'MEMBER' },
+          { email: 'mgr@sc3.club', role: 'MANAGER' },
+        ],
+      ],
+    ]);
+    const result = Manager.computeActions(state, actualState);
+    expect(result.summary.adds).toBe(1);    // a
+    expect(result.summary.removes).toBe(2); // extra (member) + mgr (manager not in desired members)
+    expect(result.summary.promotes).toBe(1); // c
+    expect(result.summary.demotes).toBe(0);
+    expect(result.summary.totalActions).toBe(4);
+  });
+
+  test('groupsProcessed matches number of entries in desiredState', () => {
+    const state = new Map([
+      ['g1@sc3.club', { groupEmail: 'g1@sc3.club', groupName: 'G1', desiredMembers: [], desiredManagers: null, warnings: [] }],
+      ['g2@sc3.club', { groupEmail: 'g2@sc3.club', groupName: 'G2', desiredMembers: [], desiredManagers: null, warnings: [] }],
+      ['g3@sc3.club', { groupEmail: 'g3@sc3.club', groupName: 'G3', desiredMembers: [], desiredManagers: null, warnings: [] }],
+    ]);
+    const result = Manager.computeActions(state, new Map());
+    expect(result.summary.groupsProcessed).toBe(3);
+  });
+});
+
+// ============================================================================
+// 12. formatActionsSummary
+// ============================================================================
+
+describe('formatActionsSummary', () => {
+  test('Produces readable strings for each action type', () => {
+    /** @type {import('../src/services/GroupSync/Manager.js').ComputeActionsResult} */
+    const result = {
+      actions: [
+        { groupEmail: 'g@sc3.club', groupName: 'MyGroup', userEmail: 'a@sc3.club', action: 'ADD', targetRole: 'MANAGER' },
+        { groupEmail: 'g@sc3.club', groupName: 'MyGroup', userEmail: 'b@sc3.club', action: 'REMOVE', targetRole: 'MEMBER' },
+        { groupEmail: 'g@sc3.club', groupName: 'MyGroup', userEmail: 'c@sc3.club', action: 'PROMOTE', targetRole: 'MANAGER' },
+        { groupEmail: 'g@sc3.club', groupName: 'MyGroup', userEmail: 'd@sc3.club', action: 'DEMOTE', targetRole: 'MEMBER' },
+      ],
+      warnings: [],
+      summary: { groupsProcessed: 1, totalActions: 4, adds: 1, removes: 1, promotes: 1, demotes: 1 },
+    };
+    const lines = Manager.formatActionsSummary(result);
+    expect(lines.some(l => l.includes('ADD') && l.includes('a@sc3.club'))).toBe(true);
+    expect(lines.some(l => l.includes('REMOVE') && l.includes('b@sc3.club'))).toBe(true);
+    expect(lines.some(l => l.includes('PROMOTE') && l.includes('c@sc3.club'))).toBe(true);
+    expect(lines.some(l => l.includes('DEMOTE') && l.includes('d@sc3.club'))).toBe(true);
+  });
+
+  test('Includes warnings at top', () => {
+    /** @type {import('../src/services/GroupSync/Manager.js').ComputeActionsResult} */
+    const result = {
+      actions: [],
+      warnings: ['Cycle detected: skipping group X'],
+      summary: { groupsProcessed: 1, totalActions: 0, adds: 0, removes: 0, promotes: 0, demotes: 0 },
+    };
+    const lines = Manager.formatActionsSummary(result);
+    expect(lines[0]).toMatch(/warning/i);
+    expect(lines[0]).toContain('Cycle detected');
+  });
+
+  test('Includes summary counts at bottom', () => {
+    /** @type {import('../src/services/GroupSync/Manager.js').ComputeActionsResult} */
+    const result = {
+      actions: [
+        { groupEmail: 'g@sc3.club', groupName: 'G', userEmail: 'a@sc3.club', action: 'ADD', targetRole: 'MEMBER' },
+      ],
+      warnings: [],
+      summary: { groupsProcessed: 1, totalActions: 1, adds: 1, removes: 0, promotes: 0, demotes: 0 },
+    };
+    const lines = Manager.formatActionsSummary(result);
+    const summaryLine = lines[lines.length - 1];
+    expect(summaryLine).toMatch(/summary/i);
+    expect(summaryLine).toContain('1');
+  });
+
+  test('Empty actions produces "No changes needed" line', () => {
+    /** @type {import('../src/services/GroupSync/Manager.js').ComputeActionsResult} */
+    const result = {
+      actions: [],
+      warnings: [],
+      summary: { groupsProcessed: 2, totalActions: 0, adds: 0, removes: 0, promotes: 0, demotes: 0 },
+    };
+    const lines = Manager.formatActionsSummary(result);
+    expect(lines.some(l => /no changes/i.test(l))).toBe(true);
   });
 });
