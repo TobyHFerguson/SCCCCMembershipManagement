@@ -71,6 +71,14 @@ if (typeof GroupSync === 'undefined') GroupSync = {};
  * @property {SyncSummary} summary - Counts of each action type
  */
 
+/**
+ * @typedef {Object} InvalidEmailEntry
+ * @property {string} email - The normalized email address that is invalid
+ * @property {'malformed email'|'non-active member'|'not a club member'} reason - Human-readable reason
+ * @property {string} groupName - Name of the group definition where the entry was found
+ * @property {string} field - Column where the entry was found: 'Members' or 'Managers'
+ */
+
 GroupSync.Manager = (function () {
   class Manager {
     /**
@@ -513,6 +521,141 @@ GroupSync.Manager = (function () {
       );
 
       return lines;
+    }
+
+    /**
+     * Basic email format validation.
+     * Returns true if the email contains at least one non-whitespace/non-at-sign
+     * character before the at-sign, a domain part, and a TLD.
+     *
+     * @param {string} email - Already-normalized (lowercased, trimmed) email address
+     * @returns {boolean}
+     */
+    static isValidEmail_(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    /**
+     * Scan raw group definitions for explicit email entries that are either
+     * malformed or refer to a non-active club member.
+     *
+     * Only explicit individual email entries are checked — the 'Members',
+     * 'Everyone', and 'Anyone' keywords and group-name references are all skipped.
+     * Known group emails and their aliases are also skipped (they are not people).
+     *
+     * Validation rules applied to each explicit email after normalization:
+     *   1. Malformed — the email does not match a basic address pattern.
+     *   2. Non-active member — the email is found in allMemberEmailSet (i.e. the
+     *      person is a known club member) but is NOT in activeEmailSet (their
+     *      membership has lapsed or is otherwise inactive).
+     *   3. Not a club member — the email is not in activeEmailSet at all (unknown
+     *      to the Members sheet, or a known ex-member with lapsed membership).
+     *
+     * @param {Array<{Name: string, Email: string, Aliases: string, Subscription: string, Type: string, Members: string, Managers: string}>} groupDefinitions
+     * @param {Set<string>} activeEmailSet - Lowercase emails of currently active members
+     * @param {Set<string>} allMemberEmailSet - Lowercase emails of ALL members (any status)
+     * @returns {InvalidEmailEntry[]}
+     */
+    static findInvalidMemberEmails(groupDefinitions, activeEmailSet, allMemberEmailSet) {
+      // Build lookups for group names, group emails, and aliases so we can skip them
+      const groupNameSet = new Set(groupDefinitions.map(g => g.Name.toLowerCase()));
+      const groupEmailSet = new Set(
+        groupDefinitions.map(g => g.Email.toLowerCase().trim()).filter(e => e)
+      );
+      const aliasSet = new Set();
+      for (const g of groupDefinitions) {
+        if (g.Aliases) {
+          for (const alias of g.Aliases.split(',').map(a => a.trim().toLowerCase()).filter(a => a)) {
+            aliasSet.add(alias);
+          }
+        }
+      }
+
+      /** @type {InvalidEmailEntry[]} */
+      const results = [];
+      /** @type {Set<string>} Avoid duplicate entries for the same email+group+field */
+      const seen = new Set();
+
+      for (const group of groupDefinitions) {
+        for (const field of ['Members', 'Managers']) {
+          const entries = Manager.parseEntryList(group[field]);
+          for (const entry of entries) {
+            const lower = entry.trim().toLowerCase();
+
+            // Skip special keywords
+            if (lower === 'members' || lower === 'everyone' || lower === 'anyone') continue;
+
+            // Skip group-name references
+            if (groupNameSet.has(lower)) continue;
+
+            // This is an explicit email entry — normalize it
+            const email = Manager.normalizeEmail(entry);
+
+            // Skip known group emails and aliases (not individual people)
+            if (groupEmailSet.has(email) || aliasSet.has(email)) continue;
+
+            const key = email + '|' + group.Name + '|' + field;
+            if (seen.has(key)) continue;
+            seen.add(key);
+
+            // Rule 1: malformed
+            if (!Manager.isValidEmail_(email)) {
+              results.push({ email, reason: 'malformed email', groupName: group.Name, field });
+              continue;
+            }
+
+            // Rule 2: non-active member (in roster but not active)
+            if (allMemberEmailSet.has(email) && !activeEmailSet.has(email)) {
+              results.push({ email, reason: 'non-active member', groupName: group.Name, field });
+              continue;
+            }
+
+            // Rule 3: not a club member at all (email not in the Members sheet)
+            if (!activeEmailSet.has(email)) {
+              results.push({ email, reason: 'not a club member', groupName: group.Name, field });
+            }
+          }
+        }
+      }
+
+      return results;
+    }
+
+    /**
+     * Return a new desired-state Map with a given set of email addresses removed
+     * from every group's desiredMembers and desiredManagers lists.
+     *
+     * Groups whose state is unaffected are returned unchanged. The original Map
+     * is never mutated.
+     *
+     * @param {Map<string, DesiredGroupState>} desiredState - Output of computeDesiredState
+     * @param {Set<string>} emailsToRemove - Lowercase email addresses to exclude
+     * @returns {Map<string, DesiredGroupState>}
+     */
+    static removeEmailsFromDesiredState(desiredState, emailsToRemove) {
+      // Normalise the exclusion set to lowercase so comparisons are case-insensitive
+      const lowerExclusions = new Set(
+        Array.from(emailsToRemove).map(e => e.toLowerCase())
+      );
+      /** @type {Map<string, DesiredGroupState>} */
+      const result = new Map();
+      for (const [groupEmail, state] of desiredState) {
+        result.set(groupEmail, {
+          groupEmail: state.groupEmail,
+          groupName: state.groupName,
+          desiredMembers:
+            state.desiredMembers === null
+              ? null
+              : state.desiredMembers.filter(e => !lowerExclusions.has(e.toLowerCase())),
+          desiredManagers:
+            state.desiredManagers === null
+              ? null
+              : state.desiredManagers.filter(e => !lowerExclusions.has(e.toLowerCase())),
+          warnings: state.warnings,
+          usedMembersKeyword: state.usedMembersKeyword,
+        });
+      }
+      return result;
     }
   }
 

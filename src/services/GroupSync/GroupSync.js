@@ -25,6 +25,16 @@ GroupSync.Internal.getActiveEmails_ = function () {
 };
 
 /**
+ * Get lowercase email addresses for ALL members regardless of status.
+ * Used to detect non-active members referenced explicitly in group definitions.
+ * @returns {string[]} Array of lowercase email strings for all members
+ */
+GroupSync.Internal.getAllMemberEmails_ = function () {
+    const members = DataAccess.getMembers();
+    return members.map(function (m) { return m.Email.toLowerCase(); });
+};
+
+/**
  * Fetch actual membership state for the given group emails.
  * Calls GroupSubscription.listMembers() for each group; failures are logged
  * and skipped so partial results are returned rather than failing entirely.
@@ -103,25 +113,62 @@ GroupSync.Internal.executeActions_ = function (actions) {
 GroupSync.Internal.runSync_ = function (dryRun) {
     AppLogger.configure();
 
+    const ui = SpreadsheetApp.getUi();
+
     // 1. Read group definitions
     const definitions = DataAccess.getGroupDefinitions();
 
     // 2. Get active member emails (for 'Members' keyword resolution)
     const activeEmails = GroupSync.Internal.getActiveEmails_();
 
-    // 3. Compute desired state
-    const desiredState = GroupSync.Manager.computeDesiredState(definitions, activeEmails);
+    // 2b. Get all member emails (for non-active member detection)
+    const allMemberEmails = GroupSync.Internal.getAllMemberEmails_();
 
-    // 4. Get group emails that need actual state
+    // 3. Validate explicit emails in definitions — detect malformed or non-active members
+    const activeEmailSet = new Set(activeEmails);
+    const allMemberEmailSet = new Set(allMemberEmails);
+    const invalidEntries = GroupSync.Manager.findInvalidMemberEmails(
+        definitions, activeEmailSet, allMemberEmailSet
+    );
+
+    /** @type {Set<string>} */
+    let emailsToExclude = new Set();
+
+    if (invalidEntries.length > 0) {
+        const lines = invalidEntries.map(function (e) {
+            return '\u2022 ' + e.email + ' in "' + e.groupName + '" (' + e.field + '): ' + e.reason;
+        });
+        const message =
+            'The following email addresses in Group Definitions are invalid:\n\n' +
+            lines.join('\n') +
+            '\n\nContinue with these addresses ignored, or Cancel to abort?';
+        const response = ui.alert('Invalid Email Addresses Found', message, ui.ButtonSet.OK_CANCEL);
+        if (response !== ui.Button.OK) {
+            AppLogger.info('GroupSync', 'Sync cancelled by user due to invalid email addresses');
+            return;
+        }
+        emailsToExclude = new Set(invalidEntries.map(function (e) { return e.email.toLowerCase(); }));
+        AppLogger.warn('GroupSync', 'Proceeding with ' + emailsToExclude.size + ' invalid email(s) excluded: ' + Array.from(emailsToExclude).join(', '));
+    }
+
+    // 4. Compute desired state
+    let desiredState = GroupSync.Manager.computeDesiredState(definitions, activeEmails);
+
+    // 5. Remove invalid emails from desired state if user chose to continue
+    if (emailsToExclude.size > 0) {
+        desiredState = GroupSync.Manager.removeEmailsFromDesiredState(desiredState, emailsToExclude);
+    }
+
+    // 6. Get group emails that need actual state
     const groupEmails = Array.from(desiredState.keys());
 
-    // 5. Fetch actual state
+    // 7. Fetch actual state
     const actualState = GroupSync.Internal.fetchActualState_(groupEmails);
 
-    // 6. Compute actions
+    // 8. Compute actions
     const result = GroupSync.Manager.computeActions(desiredState, actualState);
 
-    // 7. Collect groups that used the Members keyword
+    // 9. Collect groups that used the Members keyword
     /** @type {string[]} */
     const membersKeywordGroups = [];
     for (const state of desiredState.values()) {
@@ -130,21 +177,19 @@ GroupSync.Internal.runSync_ = function (dryRun) {
         }
     }
 
-    // 8. Format planned actions and ask user to confirm before executing
+    // 10. Format planned actions and ask user to confirm before executing
     const summaryLines = GroupSync.Manager.formatActionsSummary(result);
 
     // Prepend Members keyword notice to the dry-run report when applicable
     if (membersKeywordGroups.length > 0) {
-        const notice = '⚠️ Members keyword: the following group(s) will be populated with ALL active members (' +
+        const notice = '\u26a0\ufe0f Members keyword: the following group(s) will be populated with ALL active members (' +
             activeEmails.length + ' members):\n  - ' + membersKeywordGroups.join('\n  - ') + '\n';
         summaryLines.unshift(notice);
     }
 
     AppLogger.info('GroupSync', 'Dry run preview:\n' + summaryLines.join('\n'));
 
-    const ui = SpreadsheetApp.getUi();
-
-    // 9. If any groups use the Members keyword and this is a live run, confirm with user first
+    // 11. If any groups use the Members keyword and this is a live run, confirm with user first
     if (!dryRun && membersKeywordGroups.length > 0) {
         const membersConfirmed = ui.alert(
             'Confirm: Populate Groups with ALL Members',
@@ -159,9 +204,9 @@ GroupSync.Internal.runSync_ = function (dryRun) {
         }
     }
 
-    // 10. Show dry-run preview + ask user to confirm before executing
+    // 12. Show dry-run preview + ask user to confirm before executing
     const confirmed = ui.alert(
-        'Sync Groups — Preview',
+        'Sync Groups \u2014 Preview',
         summaryLines.join('\n') + '\n\nProceed with sync?',
         ui.ButtonSet.YES_NO
     );
@@ -172,14 +217,14 @@ GroupSync.Internal.runSync_ = function (dryRun) {
     }
 
     if (dryRun) {
-        AppLogger.info('GroupSync', 'Dry run completed — no changes made');
+        AppLogger.info('GroupSync', 'Dry run completed \u2014 no changes made');
         return;
     }
 
-    // 11. Execute actions
+    // 13. Execute actions
     const execResult = GroupSync.Internal.executeActions_(result.actions);
 
-    // 12. Create and persist audit entries for each executed action
+    // 14. Create and persist audit entries for each executed action
     const auditEntries = execResult.succeeded.map(function (action) {
         return AuditLogEntry.create(
             'GroupSync',
@@ -203,7 +248,7 @@ GroupSync.Internal.runSync_ = function (dryRun) {
         AuditPersistence.persistAuditEntries(auditEntries);
     }
 
-    // 13. Show results — errors separated from successes by a blank line
+    // 15. Show results — errors separated from successes by a blank line
     AppLogger.info('GroupSync', 'Sync completed: ' + execResult.succeeded.length + ' succeeded, ' + execResult.failed.length + ' failed');
 
     const successLines = execResult.succeeded.map(function (action) {
