@@ -4,8 +4,8 @@ The club uses Google Groups for communication to and between its members, as wel
 The Groups are:
 | Name | Email | Aliases | Subscription | Type | Members | Managers | Note |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| A Group Discussions | a_group_discussions |  | manual | Discussion | Anyone |  |  |
-| Board Announcements | board_announcements |  | auto | Announcement | Everyone | Board Discussions |  |
+| A Group Discussions | a_group_discussions |  | manual | Discussion |  |  | Anyone |
+| Board Announcements | board_announcements |  | auto | Announcement |  | Board Discussions | Everyone |
 | Board Discussions | board_discussions |  | invitation | Discussion | Officers, Directors |  |  |
 | Calendar Amins | calendar_admins |  | invitation | Security | Board Discussions,  |  | I don't believe this is needed |
 | Century Director | century |  | invitation | Role | mauranoel0107@gmail.com |  |  |
@@ -19,14 +19,14 @@ The Groups are:
 | Historian | historian |  | inivation | Role |  |  |  |
 | IT Director | it | info | invitation | Role | toby.h.ferguson@gmail.com |  |  |
 | Librarian | librarian |  | invitation | Role |  |  |  |
-| Member Discussions | member_discussions |  | auto | Dicussion | Anyone |  |  |
+| Member Discussions | member_discussions |  | manual | Dicussion |  |  | Anyone |
 | Membership | membership |  | invitation | Role | ssslm@sbcglobal.net |  |  |
 | Officers | officers |  | invitation | Discussion | President, Vice President, Treasurer, Secretary |  |  |
 | President | president |  | invitation | Role | a12gilbert@gmail.com |  |  |
 | Publicity | publicity |  | invitation | Role |  |  |  |
-| Ride Announcements | ride_announcements |  | auto | Announcement | Everyone | Ride Schedulers |  |
+| Ride Announcements | ride_announcements |  | auto | Announcement |  | Ride Schedulers | Everyone |
 | Ride Director | rides |  | invitation | Role | kmcwaid@gmail.com |  |  |
-| Ride Schedulers | rs |  | invitation | Discussion | Elsvandam@live.com, jacky6vrl@gmail.com, jeannine.gauthier@gmail.com, petronellavandam@gmail.com, pstudenkov@gmail.com, Ride Director, shaayac@gmail.com, shawn.bike.7@gmail.com, shawn.pen@me.com, tolacycledude@sbcglobal.net |  |  |
+| Ride Schedulers | rs |  | invitation | Discussion | Elsvandam@live.com, jacky6vrl@gmail.com, jeannine.gauthier@gmail.com, petronellavandam@gmail.com, pstudenkov@gmail.com, rides@sc3.club, shaayac@gmail.com, shawn.bike.7@gmail.com, shawn.pen@me.com, test.user@sc3.club, toby.h.ferguson@icloud.com, tolacycledude@sbcglobal.net |  |  |
 | Safety & Education Directo | safety |  | invitation | Role | petepearson4000@gmail.com |  |  |
 | Secretary | secretary |  | invitation | Role | beachnit@pacbell.net |  |  |
 | Social Director | social |  | invitation | Role | mauranoel0107@gmail.com |  |  |
