@@ -97,20 +97,20 @@ GroupSync.Manager = (function () {
      * Resolve an entry list to a deduplicated, sorted array of lowercase email addresses.
      *
      * Resolution rules per entry:
-     * 1. 'Everyone' (case-insensitive) → all activeEmails
-     * 2. 'Anyone'   (case-insensitive) → skip (self-service; no emails)
-     * 3. Matches a group Name          → recursively resolve that group's Members
+     * 1. 'Everyone' or 'Anyone' (case-insensitive) → skip (documentary keywords only;
+     *     auto-group members are subscribed by MembershipManagement lifecycle,
+     *     manual-group members self-subscribe)
+     * 2. Matches a group Name → recursively resolve that group's Members
      *    - If the group Name is already in `visited` → skip (cycle detected) + warning
      *    - Uses backtracking so the same group can be visited from independent branches
-     * 4. Otherwise                     → treat as email (normalizeEmail)
+     * 3. Otherwise → treat as email (normalizeEmail)
      *
      * @param {string[]} entryList - Entries to resolve (output of parseEntryList)
      * @param {Array<{Name: string, Members: string, Managers: string}>} groupDefinitions - All group definitions
-     * @param {string[]} activeEmails - All active member email addresses (already lowercase)
      * @param {Set<string>} visited - Group Names currently being resolved (for cycle detection)
      * @returns {ResolveResult}
      */
-    static resolveToEmails(entryList, groupDefinitions, activeEmails, visited) {
+    static resolveToEmails(entryList, groupDefinitions, visited) {
       /** @type {Set<string>} */
       const emailSet = new Set();
       /** @type {string[]} */
@@ -129,12 +129,10 @@ GroupSync.Manager = (function () {
 
         const lower = trimmed.toLowerCase();
 
-        if (lower === 'everyone') {
-          for (const email of activeEmails) {
-            emailSet.add(email);
-          }
-        } else if (lower === 'anyone') {
-          // Self-service groups — skip
+        if (lower === 'everyone' || lower === 'anyone') {
+          // Documentary keywords only — not resolved to emails.
+          // 'Everyone' (auto groups): members subscribed by MembershipManagement lifecycle.
+          // 'Anyone' (manual groups): members self-subscribe.
         } else if (groupByName.has(lower)) {
           // Group reference
           if (visited.has(lower)) {
@@ -143,7 +141,7 @@ GroupSync.Manager = (function () {
             visited.add(lower);
             const referencedGroup = groupByName.get(lower);
             const childEntries = Manager.parseEntryList(referencedGroup.Members);
-            const childResult = Manager.resolveToEmails(childEntries, groupDefinitions, activeEmails, visited);
+            const childResult = Manager.resolveToEmails(childEntries, groupDefinitions, visited);
             for (const email of childResult.emails) {
               emailSet.add(email);
             }
@@ -179,10 +177,9 @@ GroupSync.Manager = (function () {
      *   type='Security' (any sub) → skipped entirely
      *
      * @param {Array<{Name: string, Email: string, Subscription: string, Type: string, Members: string, Managers: string}>} groupDefinitions - All group definitions
-     * @param {string[]} activeEmails - All active member email addresses (lowercase)
      * @returns {Map<string, DesiredGroupState>}
      */
-    static computeDesiredState(groupDefinitions, activeEmails) {
+    static computeDesiredState(groupDefinitions) {
       /** @type {Map<string, DesiredGroupState>} */
       const result = new Map();
 
@@ -223,7 +220,6 @@ GroupSync.Manager = (function () {
           const membersResult = Manager.resolveToEmails(
             Manager.parseEntryList(group.Members),
             groupDefinitions,
-            activeEmails,
             new Set()
           );
           desiredMembers = membersResult.emails;
@@ -234,7 +230,6 @@ GroupSync.Manager = (function () {
           const managersResult = Manager.resolveToEmails(
             Manager.parseEntryList(group.Managers),
             groupDefinitions,
-            activeEmails,
             new Set()
           );
           desiredManagers = managersResult.emails;
