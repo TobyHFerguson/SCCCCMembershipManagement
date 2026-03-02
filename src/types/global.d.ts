@@ -1770,7 +1770,7 @@ interface DesiredGroupState {
 
 interface InvalidEmailEntry {
     email: string;
-    reason: 'malformed email' | 'non-active member';
+    reason: 'malformed email' | 'non-active member' | 'not a club member';
     groupName: string;
     field: 'Members' | 'Managers';
 }

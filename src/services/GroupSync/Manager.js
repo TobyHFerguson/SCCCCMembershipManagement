@@ -74,7 +74,7 @@ if (typeof GroupSync === 'undefined') GroupSync = {};
 /**
  * @typedef {Object} InvalidEmailEntry
  * @property {string} email - The normalized email address that is invalid
- * @property {string} reason - Human-readable reason: 'malformed email' or 'non-active member'
+ * @property {'malformed email'|'non-active member'|'not a club member'} reason - Human-readable reason
  * @property {string} groupName - Name of the group definition where the entry was found
  * @property {string} field - Column where the entry was found: 'Members' or 'Managers'
  */
@@ -548,6 +548,8 @@ GroupSync.Manager = (function () {
      *   2. Non-active member — the email is found in allMemberEmailSet (i.e. the
      *      person is a known club member) but is NOT in activeEmailSet (their
      *      membership has lapsed or is otherwise inactive).
+     *   3. Not a club member — the email is not in activeEmailSet at all (unknown
+     *      to the Members sheet, or a known ex-member with lapsed membership).
      *
      * @param {Array<{Name: string, Email: string, Aliases: string, Subscription: string, Type: string, Members: string, Managers: string}>} groupDefinitions
      * @param {Set<string>} activeEmailSet - Lowercase emails of currently active members
@@ -605,6 +607,12 @@ GroupSync.Manager = (function () {
             // Rule 2: non-active member (in roster but not active)
             if (allMemberEmailSet.has(email) && !activeEmailSet.has(email)) {
               results.push({ email, reason: 'non-active member', groupName: group.Name, field });
+              continue;
+            }
+
+            // Rule 3: not a club member at all (email not in the Members sheet)
+            if (!activeEmailSet.has(email)) {
+              results.push({ email, reason: 'not a club member', groupName: group.Name, field });
             }
           }
         }

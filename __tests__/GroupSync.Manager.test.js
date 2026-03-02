@@ -1236,10 +1236,22 @@ describe('findInvalidMemberEmails', () => {
     expect(result).toHaveLength(0);
   });
 
-  test('External email not in roster is not flagged', () => {
+  test('External email not in roster is flagged as "not a club member"', () => {
     const defs = [makeGroupDef({ Members: 'external@other.org' })];
     const result = Manager.findInvalidMemberEmails(defs, activeEmailSet, allMemberEmailSet);
-    expect(result).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0].email).toBe('external@other.org');
+    expect(result[0].reason).toBe('not a club member');
+    expect(result[0].field).toBe('Members');
+  });
+
+  test('Non-member in Managers column is flagged as "not a club member"', () => {
+    const defs = [makeGroupDef({ Managers: 'stranger@other.org' })];
+    const result = Manager.findInvalidMemberEmails(defs, activeEmailSet, allMemberEmailSet);
+    expect(result).toHaveLength(1);
+    expect(result[0].email).toBe('stranger@other.org');
+    expect(result[0].reason).toBe('not a club member');
+    expect(result[0].field).toBe('Managers');
   });
 
   // --- Non-active member detection ---
@@ -1276,11 +1288,23 @@ describe('findInvalidMemberEmails', () => {
     expect(result[0].reason).toBe('malformed email');
   });
 
-  test('Entry without @ gets @sc3.club appended and is not flagged as malformed', () => {
-    // 'rides' → 'rides@sc3.club' which is a valid email format (not in roster, so not flagged)
-    const defs = [makeGroupDef({ Members: 'rides' })];
+  test('Entry without @ that resolves to a known group email is not flagged', () => {
+    // 'rides' → 'rides@sc3.club'.  If that address is a known group email it is skipped.
+    const defs = [
+      makeGroupDef({ Name: 'Rides', Email: 'rides@sc3.club', Members: '' }),
+      makeGroupDef({ Name: 'Board', Email: 'board@sc3.club', Members: 'rides' }),
+    ];
     const result = Manager.findInvalidMemberEmails(defs, new Set(), new Set());
     expect(result).toHaveLength(0);
+  });
+
+  test('Entry without @ that is not a known group email is flagged as "not a club member"', () => {
+    // 'unknown' → 'unknown@sc3.club', not a known group email or active member
+    const defs = [makeGroupDef({ Members: 'unknown' })];
+    const result = Manager.findInvalidMemberEmails(defs, new Set(), new Set());
+    expect(result).toHaveLength(1);
+    expect(result[0].email).toBe('unknown@sc3.club');
+    expect(result[0].reason).toBe('not a club member');
   });
 
   // --- Multiple invalid emails across multiple groups ---
