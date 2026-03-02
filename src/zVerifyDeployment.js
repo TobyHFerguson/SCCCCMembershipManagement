@@ -860,7 +860,6 @@ function _verifyTriggerFunctions(checks) {
     'ballotSubmitHandler',
     'handleElectionsSheetEdit',
     'syncGroups',
-    'syncGroupsDryRun',
   ];
 
   for (const name of triggers) {

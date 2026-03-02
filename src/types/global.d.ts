@@ -1740,7 +1740,7 @@ declare namespace GroupSync {
             succeeded: SyncAction[];
             failed: Array<{ action: SyncAction; error: string }>;
         };
-        function runSync_(dryRun: boolean): void;
+        function runSync_(): void;
     }
     namespace Menu {
         function create(): void;

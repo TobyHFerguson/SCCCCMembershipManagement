@@ -94,10 +94,9 @@ GroupSync.Internal.executeActions_ = function (actions) {
 
 /**
  * Main orchestration function for group membership sync.
- *
- * @param {boolean} dryRun - If true, compute and display planned actions without executing
+ * Always runs a dry-run preview first and asks the user to confirm before executing.
  */
-GroupSync.Internal.runSync_ = function (dryRun) {
+GroupSync.Internal.runSync_ = function () {
     AppLogger.configure();
 
     // 1. Read group definitions
@@ -115,16 +114,19 @@ GroupSync.Internal.runSync_ = function (dryRun) {
     // 5. Compute actions
     const result = GroupSync.Manager.computeActions(desiredState, actualState);
 
-    // 6. Format summary
+    // 6. Format planned actions and ask user to confirm before executing
     const summaryLines = GroupSync.Manager.formatActionsSummary(result);
+    AppLogger.info('GroupSync', 'Dry run preview:\n' + summaryLines.join('\n'));
 
-    if (dryRun) {
-        AppLogger.info('GroupSync', 'Dry run results:\n' + summaryLines.join('\n'));
-        SpreadsheetApp.getUi().alert(
-            'Dry Run Results',
-            summaryLines.join('\n'),
-            SpreadsheetApp.getUi().ButtonSet.OK
-        );
+    const ui = SpreadsheetApp.getUi();
+    const confirmed = ui.alert(
+        'Sync Groups — Preview',
+        summaryLines.join('\n') + '\n\nProceed with sync?',
+        ui.ButtonSet.YES_NO
+    );
+
+    if (confirmed !== ui.Button.YES) {
+        AppLogger.info('GroupSync', 'Sync cancelled by user');
         return;
     }
 
@@ -155,17 +157,21 @@ GroupSync.Internal.runSync_ = function (dryRun) {
         AuditPersistence.persistAuditEntries(auditEntries);
     }
 
-    // 9. Log and show results dialog
+    // 9. Show results — errors separated from successes by a blank line
     AppLogger.info('GroupSync', 'Sync completed: ' + execResult.succeeded.length + ' succeeded, ' + execResult.failed.length + ' failed');
 
+    const successLines = execResult.succeeded.map(function (action) {
+        return action.action + ' ' + action.userEmail + ' in ' + action.groupName + ' (' + action.targetRole + ')';
+    });
     const failLines = execResult.failed.map(function (f) {
         return 'FAILED: ' + f.action.action + ' ' + f.action.userEmail + ' in ' + f.action.groupName + ': ' + f.error;
     });
-    const resultLines = summaryLines.concat(failLines);
 
-    SpreadsheetApp.getUi().alert(
-        'Group Sync Results',
-        resultLines.join('\n'),
-        SpreadsheetApp.getUi().ButtonSet.OK
-    );
+    let resultText = successLines.length > 0 ? successLines.join('\n') : 'No actions were executed.';
+    if (failLines.length > 0) {
+        resultText += '\n\n' + failLines.join('\n');
+    }
+    resultText += '\n\nSummary: ' + execResult.succeeded.length + ' succeeded, ' + execResult.failed.length + ' failed.';
+
+    ui.alert('Group Sync Results', resultText, ui.ButtonSet.OK);
 };
