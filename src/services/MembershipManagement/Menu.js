@@ -13,6 +13,8 @@ MembershipManagement.Menu = {
             .addItem('Generate Prefill Template', generatePrefillTemplate_.name)
             .addSeparator()
             .addItem('Process Migrations', processMigrations.name)
+            .addSeparator()
+            .addItem('Sync Groups', 'syncGroups')
             .addToUi();
     }
 }

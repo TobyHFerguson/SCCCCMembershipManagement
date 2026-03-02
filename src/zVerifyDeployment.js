@@ -565,6 +565,7 @@ function _verifyNamespaces(checks) {
     'DocsService',
     'GroupSubscription',
     'WebServices',
+    'GroupSync',
   ];
 
   for (const name of topLevel) {
@@ -583,6 +584,8 @@ function _verifyNamespaces(checks) {
     { name: 'VotingService.Trigger', parent: 'VotingService', prop: 'Trigger' },
     { name: 'EmailService.Menu', parent: 'EmailService', prop: 'Menu' },
     { name: 'DocsService.Internal', parent: 'DocsService', prop: 'Internal' },
+    { name: 'GroupSync.Internal', parent: 'GroupSync', prop: 'Internal' },
+    { name: 'GroupSync.Menu', parent: 'GroupSync', prop: 'Menu' },
   ];
 
   for (const { name, parent, prop } of nested) {
@@ -633,6 +636,8 @@ function _buildNamespaceRefs() {
   if (typeof GroupSubscription !== 'undefined') refs['GroupSubscription'] = GroupSubscription;
   // @ts-ignore
   if (typeof WebServices !== 'undefined') refs['WebServices'] = WebServices;
+  // @ts-ignore
+  if (typeof GroupSync !== 'undefined') refs['GroupSync'] = GroupSync;
 
   return refs;
 }
@@ -854,6 +859,7 @@ function _verifyTriggerFunctions(checks) {
     'handleEditEvent',
     'ballotSubmitHandler',
     'handleElectionsSheetEdit',
+    'syncGroups',
   ];
 
   for (const name of triggers) {

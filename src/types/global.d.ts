@@ -1704,3 +1704,75 @@ declare var Properties: {
 
 declare function handleApiRequest(request: { action: string; params?: Record<string, unknown>; token?: string } | null): string;
 declare function getAllServiceData(token: string): { email: string; services: Record<string, Record<string, any>>; homePageServices: Array<any> } | { error: string; errorCode: string };
+
+// ============================================================================
+// GroupSync namespace (GAS integration layer)
+// ============================================================================
+
+declare namespace GroupSync {
+    class Manager {
+        static normalizeEmail(entry: string): string;
+        static isGroupReference(entry: string, groupNameSet: Set<string>): boolean;
+        static isSpecialKeyword(entry: string): boolean;
+        static parseEntryList(commaString: string): string[];
+        static resolveToEmails(
+            entryList: string[],
+            groupDefinitions: ValidatedGroupDefinition[],
+            visited: Set<string>
+        ): { emails: string[]; warnings: string[] };
+        static computeDesiredState(
+            groupDefinitions: ValidatedGroupDefinition[]
+        ): Map<string, DesiredGroupState>;
+        static computeActions(
+            desiredState: Map<string, DesiredGroupState>,
+            actualState: Map<string, ActualMember[]>
+        ): { actions: SyncAction[]; warnings: string[]; summary: SyncSummary };
+        static formatActionsSummary(result: {
+            actions: SyncAction[];
+            warnings: string[];
+            summary: SyncSummary;
+        }): string[];
+    }
+    namespace Internal {
+        function getActiveEmails_(): string[];
+        function fetchActualState_(groupEmails: string[]): Map<string, ActualMember[]>;
+        function executeActions_(actions: SyncAction[]): {
+            succeeded: SyncAction[];
+            failed: Array<{ action: SyncAction; error: string }>;
+        };
+        function runSync_(): void;
+    }
+    namespace Menu {
+        function create(): void;
+    }
+}
+
+interface DesiredGroupState {
+    groupEmail: string;
+    groupName: string;
+    desiredMembers: string[] | null;
+    desiredManagers: string[] | null;
+    warnings: string[];
+}
+
+interface ActualMember {
+    email: string;
+    role: string;
+}
+
+interface SyncAction {
+    groupEmail: string;
+    groupName: string;
+    userEmail: string;
+    action: 'ADD' | 'REMOVE' | 'PROMOTE' | 'DEMOTE';
+    targetRole: 'MEMBER' | 'MANAGER';
+}
+
+interface SyncSummary {
+    groupsProcessed: number;
+    totalActions: number;
+    adds: number;
+    removes: number;
+    promotes: number;
+    demotes: number;
+}
