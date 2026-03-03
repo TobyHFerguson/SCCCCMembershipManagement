@@ -88,6 +88,8 @@ npm run prod:deploy-live    # Production deploy with git versioning
 - Modify production configuration without review
 
 **ALWAYS (SCCCCMembershipManagement-specific)**:
+- **Interactive sessions (Copilot Chat / inline chat)**: Stop after `npm run validate-all` passes and wait for an explicit instruction before committing or pushing. Do not commit or push automatically.
+- **Autonomous agents working a GitHub issue via PR**: Committing and pushing is expected — proceed normally.
 - Run `npm run validate-all` BEFORE every commit (typecheck + verify-rules + tests)
 - Wait for **both** CI and Deploy & Verify workflows to pass on your PR before considering work complete
 - Use `npm run {env}:*` scripts for deployment (never run clasp commands directly)
