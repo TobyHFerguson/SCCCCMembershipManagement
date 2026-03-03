@@ -317,6 +317,30 @@ describe('Manager tests', () => {
       expect(consoleSpy).toHaveBeenCalledWith("Expiry2 - test2@example.com");
     })
 
+    it('Expiry1 type produces a message with groups null (not an Expiry4 removal)', () => {
+      // Expiry1 is a reminder email only — the member is not yet expired.
+      // groups must be null so the GAS wrapper can distinguish it from Expiry4.
+      const scheduleWithExpiry1 = [
+        TestData.expiryScheduleEntry({ Date: today, Type: utils.ActionType.Expiry1, Email: 'test1@example.com' })
+      ];
+      const result = manager.generateExpiringMembersList(activeMembers, scheduleWithExpiry1, PREFILL_FORM_TEMPLATE);
+      expect(result.messages).toHaveLength(1);
+      expect(result.messages[0].email).toBe('test1@example.com');
+      expect(result.messages[0].groups).toBeNull();
+    });
+
+    it('Expiry3 type produces a message with groups null (not an Expiry4 removal)', () => {
+      // Expiry3 is a final reminder — the member is still active.
+      // groups must be null so the GAS wrapper can distinguish it from Expiry4.
+      const scheduleWithExpiry3 = [
+        TestData.expiryScheduleEntry({ Date: today, Type: utils.ActionType.Expiry3, Email: 'test3@example.com' })
+      ];
+      const result = manager.generateExpiringMembersList(activeMembers, scheduleWithExpiry3, PREFILL_FORM_TEMPLATE);
+      expect(result.messages).toHaveLength(1);
+      expect(result.messages[0].email).toBe('test3@example.com');
+      expect(result.messages[0].groups).toBeNull();
+    });
+
     it('should log if a member to be expired isnt active', () => {
       activeMembers[0].Status = 'Inactive';
       expirySchedule = [
@@ -450,6 +474,74 @@ describe('Manager tests', () => {
           Note: expect.stringContaining('Successfully processed expiration for test2@example.com')
         });
       })
+
+      // -----------------------------------------------------------------------
+      // Tests documenting the Expiry4-vs-Expiry1-3 groups invariant.
+      //
+      // The GAS wrapper (MembershipManagement.processExpirationFIFO) determines
+      // which members are "fully expired" (Expiry4) by inspecting item.groups
+      // BEFORE calling processExpiredMembers — because this method clears the
+      // field as groups are removed.  These tests pin that contract.
+      // -----------------------------------------------------------------------
+
+      it('clears the groups field to empty string on a successfully processed Expiry4 item', () => {
+        // Expiry4 items enter the FIFO with a non-empty groups field.
+        const expiry4Item = TestData.fifoItem({
+          email: 'expired@example.com',
+          groups: groups.map(g => g.Email).join(',')
+        });
+        const res = manager.processExpiredMembers([expiry4Item], sendEmailFun, groupManager.groupRemoveFun);
+
+        expect(res.processed).toHaveLength(1);
+        // The field must be empty so that subsequent filtering on item.groups
+        // (to identify Expiry4 items) cannot be performed post-hoc.
+        expect(res.processed[0].groups).toBe('');
+      });
+
+      it('does not call groupRemoveFun for an Expiry1-3 item whose groups field is empty', () => {
+        // Expiry1/2/3 items enter the FIFO with groups === '' (the default from
+        // generateExpiringMembersList, which sets groups: null for non-Expiry4,
+        // stored as '' in the sheet).
+        const expiry13Item = TestData.fifoItem({
+          email: 'remindee@example.com',
+          groups: ''
+        });
+        const res = manager.processExpiredMembers([expiry13Item], sendEmailFun, groupManager.groupRemoveFun);
+
+        expect(res.processed).toHaveLength(1);
+        expect(groupManager.groupRemoveFun).not.toHaveBeenCalled();
+        expect(res.processed[0].groups).toBe('');
+      });
+
+      it('in a mixed batch, only the Expiry4 item triggers group removal', () => {
+        // Simulate exactly what the FIFO holds in a batch that contains both
+        // Expiry1-3 reminder items and an Expiry4 final-expiry item.
+        const expiry4Item = TestData.fifoItem({
+          id: 'expiry4',
+          email: 'fullexpired@example.com',
+          groups: groups.map(g => g.Email).join(',')
+        });
+        const expiry1Item = TestData.fifoItem({
+          id: 'expiry1',
+          email: 'reminder@example.com',
+          groups: ''
+        });
+
+        const res = manager.processExpiredMembers(
+          [expiry4Item, expiry1Item], sendEmailFun, groupManager.groupRemoveFun
+        );
+
+        expect(res.processed).toHaveLength(2);
+        // groupRemoveFun called only for the Expiry4 item's groups
+        expect(groupManager.groupRemoveFun).toHaveBeenCalledTimes(groups.length);
+        groupManager.groupRemoveFun.mock.calls.forEach(([email]) => {
+          expect(email).toBe('fullexpired@example.com');
+        });
+        // Both processed items have groups cleared/empty
+        const processedById = Object.fromEntries(res.processed.map(i => [i.id, i]));
+        expect(processedById['expiry4'].groups).toBe('');
+        expect(processedById['expiry1'].groups).toBe('');
+      });
     });
     describe('input validation and error handling', () => {
       it('should throw an error if the first argument is not an array', () => {

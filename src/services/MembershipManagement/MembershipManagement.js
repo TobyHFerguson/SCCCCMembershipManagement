@@ -491,21 +491,32 @@ MembershipManagement.processExpirationFIFO = function (opts = {}) {
     const sendEmailFun = MembershipManagement.Internal.getEmailSender_();
     const groupRemoveFun = MembershipManagement.Internal.getGroupRemover_();
 
+    // Capture which eligible items are Expiry4 (fully expired) BEFORE processExpiredMembers
+    // clears the groups field. Only Expiry4 items have a non-empty groups field, which is
+    // the signal that the member's Status will be set to 'Expired' in the Members sheet.
+    // Expiry1-3 items send notification emails only; they must NOT trigger Group Definition removal.
+    const fullyExpiredEmailSet = new Set(
+      eligibleItems.filter(item => item.groups).map(item => item.email)
+    );
+
     // PURE (with injected side effects): Process batch
     const result = manager.processExpiredMembers(eligibleItems, sendEmailFun, groupRemoveFun, { 
       maxAttempts: scriptMaxAttempts 
     });
 
-    // GAS: Remove successfully-expired members from Group Definitions sheet and from any
-    // Google Groups where they are explicitly listed (invitation / manual groups).
-    // Auto-subscription group removal is handled above via item.groups in the FIFO.
+    // GAS: Remove successfully fully-expired members (Expiry4 only) from Group Definitions
+    // sheet and from any Google Groups where they are explicitly listed (invitation / manual
+    // groups). Auto-subscription group removal is handled above via item.groups in the FIFO.
+    // Expiry1-3 members are NOT removed — they are still active members receiving reminders.
     if (!opts.dryRun && result.processed.length > 0) {
       try {
         // Use a plain-object type so the spread objects returned by removeEmailFromGroupDefinitions
         // are assignable. SheetAccess.setData only needs property access, not class methods.
         /** @type {Array<{Name: string, Email: string, Aliases: string, Subscription: string, Type: string, Members: string, Managers: string, Note: string}>} */
         let groupDefs = /** @type {any} */ (DataAccess.getGroupDefinitions()); // JUSTIFIED: down-cast to plain-object type for structural compatibility with removeEmailFromGroupDefinitions return value
-        const expiredEmails = result.processed.map(item => item.email);
+        const expiredEmails = result.processed
+          .filter(item => fullyExpiredEmailSet.has(item.email))
+          .map(item => item.email);
         let totalGroupsAffected = 0;
         for (const expiredEmail of expiredEmails) {
           const { updatedDefs, groupEmailsWithMember } =
