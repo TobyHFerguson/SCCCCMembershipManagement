@@ -20,6 +20,9 @@
  * 13. findInvalidMemberEmails - Detect malformed/non-active emails in definitions
  * 14. removeEmailsFromDesiredState - Filter invalid emails from computed state
  * 15. removeEmailsFromActualState  - Filter ignored emails from actual state
+ * 16. findInvalidAliases      - Detect malformed/non-sc3 aliases in group definitions
+ * 17. computeDesiredState aliases - desiredAliases populated correctly
+ * 18. computeAliasActions    - Compute ADD/REMOVE alias actions
  */
 
 jest.mock('../src/common/config/Properties.js', () => ({}));
@@ -1499,3 +1502,303 @@ describe('removeEmailsFromActualState', () => {
   });
 });
 
+
+// ============================================================================
+// 16. findInvalidAliases
+// ============================================================================
+
+describe('findInvalidAliases', () => {
+  function makeGroupDef(overrides = {}) {
+    return {
+      Name: 'Test Group',
+      Email: 'testgroup@sc3.club',
+      Aliases: '',
+      Subscription: 'auto',
+      Type: 'Discussion',
+      Members: '',
+      Managers: '',
+      ...overrides,
+    };
+  }
+
+  test('returns empty array when no groups have aliases', () => {
+    const defs = [makeGroupDef({ Aliases: '' })];
+    expect(Manager.findInvalidAliases(defs)).toHaveLength(0);
+  });
+
+  test('valid @sc3.club alias is not flagged', () => {
+    const defs = [makeGroupDef({ Aliases: 'alias@sc3.club' })];
+    expect(Manager.findInvalidAliases(defs)).toHaveLength(0);
+  });
+
+  test('bare name (no @) is treated as @sc3.club and is valid', () => {
+    const defs = [makeGroupDef({ Aliases: 'board-news' })];
+    expect(Manager.findInvalidAliases(defs)).toHaveLength(0);
+  });
+
+  test('non-sc3 domain is flagged as "non-sc3 domain"', () => {
+    const defs = [makeGroupDef({ Aliases: 'board@gmail.com' })];
+    const result = Manager.findInvalidAliases(defs);
+    expect(result).toHaveLength(1);
+    expect(result[0].alias).toBe('board@gmail.com');
+    expect(result[0].reason).toBe('non-sc3 domain');
+    expect(result[0].groupName).toBe('Test Group');
+  });
+
+  test('malformed alias is flagged as "malformed alias"', () => {
+    const defs = [makeGroupDef({ Aliases: 'not-an-email' })];
+    // A bare name without @ gets @sc3.club appended → 'not-an-email@sc3.club' — valid
+    // But something like 'bad@' (has @ but no valid domain) is malformed
+    const defsWithMalformed = [makeGroupDef({ Aliases: 'bad@' })];
+    const result = Manager.findInvalidAliases(defsWithMalformed);
+    expect(result).toHaveLength(1);
+    expect(result[0].reason).toBe('malformed alias');
+  });
+
+  test('multiple aliases: one valid, one non-sc3 domain', () => {
+    const defs = [makeGroupDef({ Aliases: 'good@sc3.club, bad@other.org' })];
+    const result = Manager.findInvalidAliases(defs);
+    expect(result).toHaveLength(1);
+    expect(result[0].alias).toBe('bad@other.org');
+    expect(result[0].reason).toBe('non-sc3 domain');
+  });
+
+  test('multiple aliases: one valid, one malformed', () => {
+    const defs = [makeGroupDef({ Aliases: 'good@sc3.club, bad@' })];
+    const result = Manager.findInvalidAliases(defs);
+    expect(result).toHaveLength(1);
+    expect(result[0].reason).toBe('malformed alias');
+  });
+
+  test('multiple groups with mixed aliases', () => {
+    const defs = [
+      makeGroupDef({ Name: 'Group A', Aliases: 'a@sc3.club, wrong@gmail.com' }),
+      makeGroupDef({ Name: 'Group B', Aliases: 'b@sc3.club' }),
+    ];
+    const result = Manager.findInvalidAliases(defs);
+    expect(result).toHaveLength(1);
+    expect(result[0].groupName).toBe('Group A');
+  });
+
+  test('empty Aliases field produces no results', () => {
+    const defs = [makeGroupDef({ Aliases: '' })];
+    expect(Manager.findInvalidAliases(defs)).toHaveLength(0);
+  });
+
+  test('alias normalized to @sc3.club (bare name) is valid', () => {
+    const defs = [makeGroupDef({ Aliases: 'rides-list' })];
+    expect(Manager.findInvalidAliases(defs)).toHaveLength(0);
+  });
+
+  test('case-insensitive domain comparison: @SC3.CLUB is valid', () => {
+    const defs = [makeGroupDef({ Aliases: 'alias@SC3.CLUB' })];
+    expect(Manager.findInvalidAliases(defs)).toHaveLength(0);
+  });
+
+  test('groups with no Aliases field (undefined) do not throw', () => {
+    const def = { Name: 'Group', Email: 'group@sc3.club', Subscription: 'auto', Type: 'Discussion', Members: '', Managers: '' };
+    expect(() => Manager.findInvalidAliases([def])).not.toThrow();
+  });
+});
+
+// ============================================================================
+// 17. computeDesiredState - desiredAliases populated correctly
+// ============================================================================
+
+describe('computeDesiredState - desiredAliases', () => {
+  function makeGroupDef(overrides = {}) {
+    return {
+      Name: 'Test Group',
+      Email: 'testgroup@sc3.club',
+      Aliases: '',
+      Subscription: 'auto',
+      Type: 'Discussion',
+      Members: '',
+      Managers: 'manager@sc3.club',
+      ...overrides,
+    };
+  }
+
+  test('desiredAliases is an empty array when Aliases is empty', () => {
+    const defs = [makeGroupDef({ Aliases: '' })];
+    const state = Manager.computeDesiredState(defs, []);
+    const groupState = state.get('testgroup@sc3.club');
+    expect(groupState).toBeDefined();
+    expect(groupState.desiredAliases).toEqual([]);
+  });
+
+  test('valid @sc3.club aliases are included in desiredAliases', () => {
+    const defs = [makeGroupDef({ Aliases: 'alias@sc3.club' })];
+    const state = Manager.computeDesiredState(defs, []);
+    const groupState = state.get('testgroup@sc3.club');
+    expect(groupState.desiredAliases).toContain('alias@sc3.club');
+  });
+
+  test('bare name alias is normalized to @sc3.club in desiredAliases', () => {
+    const defs = [makeGroupDef({ Aliases: 'test-alias' })];
+    const state = Manager.computeDesiredState(defs, []);
+    const groupState = state.get('testgroup@sc3.club');
+    expect(groupState.desiredAliases).toContain('test-alias@sc3.club');
+  });
+
+  test('non-sc3 domain aliases are excluded from desiredAliases', () => {
+    const defs = [makeGroupDef({ Aliases: 'alias@gmail.com' })];
+    const state = Manager.computeDesiredState(defs, []);
+    const groupState = state.get('testgroup@sc3.club');
+    expect(groupState.desiredAliases).toHaveLength(0);
+  });
+
+  test('malformed aliases are excluded from desiredAliases', () => {
+    const defs = [makeGroupDef({ Aliases: 'bad@' })];
+    const state = Manager.computeDesiredState(defs, []);
+    const groupState = state.get('testgroup@sc3.club');
+    expect(groupState.desiredAliases).toHaveLength(0);
+  });
+
+  test('multiple valid aliases are all included, sorted', () => {
+    const defs = [makeGroupDef({ Aliases: 'z-alias@sc3.club, a-alias@sc3.club' })];
+    const state = Manager.computeDesiredState(defs, []);
+    const groupState = state.get('testgroup@sc3.club');
+    expect(groupState.desiredAliases).toEqual(['a-alias@sc3.club', 'z-alias@sc3.club']);
+  });
+
+  test('desiredAliases is present on security groups that are skipped (not in state)', () => {
+    const defs = [makeGroupDef({ Type: 'Security', Aliases: 'alias@sc3.club' })];
+    const state = Manager.computeDesiredState(defs, []);
+    // Security groups are excluded entirely
+    expect(state.size).toBe(0);
+  });
+
+  test('desiredAliases duplicates are deduplicated', () => {
+    const defs = [makeGroupDef({ Aliases: 'alias@sc3.club, alias@sc3.club' })];
+    const state = Manager.computeDesiredState(defs, []);
+    const groupState = state.get('testgroup@sc3.club');
+    expect(groupState.desiredAliases).toHaveLength(1);
+  });
+
+  test('aliases are lowercased in desiredAliases', () => {
+    const defs = [makeGroupDef({ Aliases: 'Alias@SC3.CLUB' })];
+    const state = Manager.computeDesiredState(defs, []);
+    const groupState = state.get('testgroup@sc3.club');
+    expect(groupState.desiredAliases).toContain('alias@sc3.club');
+  });
+});
+
+// ============================================================================
+// 18. computeAliasActions
+// ============================================================================
+
+describe('computeAliasActions', () => {
+  /** @param {Partial<DesiredGroupState>} overrides */
+  function makeDesiredState(overrides = {}) {
+    return {
+      groupEmail: 'group@sc3.club',
+      groupName: 'My Group',
+      desiredMembers: null,
+      desiredManagers: null,
+      desiredAliases: [],
+      warnings: [],
+      usedMembersKeyword: false,
+      ...overrides,
+    };
+  }
+
+  test('returns empty actions when desired and actual aliases match', () => {
+    const desiredState = new Map([
+      ['group@sc3.club', makeDesiredState({ desiredAliases: ['alias@sc3.club'] })],
+    ]);
+    const actualAliases = new Map([['group@sc3.club', ['alias@sc3.club']]]);
+    const result = Manager.computeAliasActions(desiredState, actualAliases);
+    expect(result.aliasActions).toHaveLength(0);
+  });
+
+  test('ADD action when desired alias is not in actual', () => {
+    const desiredState = new Map([
+      ['group@sc3.club', makeDesiredState({ desiredAliases: ['new-alias@sc3.club'] })],
+    ]);
+    const actualAliases = new Map([['group@sc3.club', []]]);
+    const result = Manager.computeAliasActions(desiredState, actualAliases);
+    expect(result.aliasActions).toHaveLength(1);
+    expect(result.aliasActions[0].action).toBe('ADD');
+    expect(result.aliasActions[0].alias).toBe('new-alias@sc3.club');
+    expect(result.aliasActions[0].groupEmail).toBe('group@sc3.club');
+    expect(result.aliasActions[0].groupName).toBe('My Group');
+  });
+
+  test('REMOVE action when actual alias is not in desired', () => {
+    const desiredState = new Map([
+      ['group@sc3.club', makeDesiredState({ desiredAliases: [] })],
+    ]);
+    const actualAliases = new Map([['group@sc3.club', ['old-alias@sc3.club']]]);
+    const result = Manager.computeAliasActions(desiredState, actualAliases);
+    expect(result.aliasActions).toHaveLength(1);
+    expect(result.aliasActions[0].action).toBe('REMOVE');
+    expect(result.aliasActions[0].alias).toBe('old-alias@sc3.club');
+  });
+
+  test('ADD and REMOVE when actual and desired differ', () => {
+    const desiredState = new Map([
+      ['group@sc3.club', makeDesiredState({ desiredAliases: ['new@sc3.club'] })],
+    ]);
+    const actualAliases = new Map([['group@sc3.club', ['old@sc3.club']]]);
+    const result = Manager.computeAliasActions(desiredState, actualAliases);
+    const adds = result.aliasActions.filter(a => a.action === 'ADD');
+    const removes = result.aliasActions.filter(a => a.action === 'REMOVE');
+    expect(adds).toHaveLength(1);
+    expect(removes).toHaveLength(1);
+    expect(adds[0].alias).toBe('new@sc3.club');
+    expect(removes[0].alias).toBe('old@sc3.club');
+  });
+
+  test('no actions when desiredAliases is empty and actual is empty', () => {
+    const desiredState = new Map([
+      ['group@sc3.club', makeDesiredState({ desiredAliases: [] })],
+    ]);
+    const actualAliases = new Map([['group@sc3.club', []]]);
+    const result = Manager.computeAliasActions(desiredState, actualAliases);
+    expect(result.aliasActions).toHaveLength(0);
+  });
+
+  test('group not in actualAliases map gets all desired as ADD', () => {
+    const desiredState = new Map([
+      ['group@sc3.club', makeDesiredState({ desiredAliases: ['a@sc3.club', 'b@sc3.club'] })],
+    ]);
+    const actualAliases = new Map();
+    const result = Manager.computeAliasActions(desiredState, actualAliases);
+    expect(result.aliasActions.filter(a => a.action === 'ADD')).toHaveLength(2);
+  });
+
+  test('alias comparison is case-insensitive', () => {
+    const desiredState = new Map([
+      ['group@sc3.club', makeDesiredState({ desiredAliases: ['alias@sc3.club'] })],
+    ]);
+    const actualAliases = new Map([['group@sc3.club', ['ALIAS@SC3.CLUB']]]);
+    const result = Manager.computeAliasActions(desiredState, actualAliases);
+    expect(result.aliasActions).toHaveLength(0);
+  });
+
+  test('handles multiple groups independently', () => {
+    const desiredState = new Map([
+      ['a@sc3.club', makeDesiredState({ groupEmail: 'a@sc3.club', desiredAliases: ['a-new@sc3.club'] })],
+      ['b@sc3.club', makeDesiredState({ groupEmail: 'b@sc3.club', desiredAliases: [] })],
+    ]);
+    const actualAliases = new Map([
+      ['a@sc3.club', []],
+      ['b@sc3.club', ['b-old@sc3.club']],
+    ]);
+    const result = Manager.computeAliasActions(desiredState, actualAliases);
+    expect(result.aliasActions.filter(a => a.action === 'ADD')).toHaveLength(1);
+    expect(result.aliasActions.filter(a => a.action === 'REMOVE')).toHaveLength(1);
+  });
+
+  test('summary counts are correct', () => {
+    const desiredState = new Map([
+      ['group@sc3.club', makeDesiredState({ desiredAliases: ['new@sc3.club'] })],
+    ]);
+    const actualAliases = new Map([['group@sc3.club', ['old@sc3.club']]]);
+    const result = Manager.computeAliasActions(desiredState, actualAliases);
+    expect(result.aliasSummary.aliasAdds).toBe(1);
+    expect(result.aliasSummary.aliasRemoves).toBe(1);
+    expect(result.aliasSummary.totalAliasActions).toBe(2);
+  });
+});

@@ -23,16 +23,6 @@
 if (typeof GroupSync === 'undefined') GroupSync = {};
 
 /**
- * @typedef {Object} DesiredGroupState
- * @property {string} groupEmail - Lowercase group email address
- * @property {string} groupName - Human-readable group name
- * @property {string[]|null} desiredMembers - Resolved member emails, or null if members should not be synced
- * @property {string[]|null} desiredManagers - Resolved manager emails, or null if managers should not be synced
- * @property {string[]} warnings - Cycle-detection or resolution warnings
- * @property {boolean} usedMembersKeyword - True if the 'Members' keyword was used during member resolution
- */
-
-/**
  * @typedef {Object} ResolveResult
  * @property {string[]} emails - Deduplicated, sorted array of lowercase email addresses
  * @property {string[]} warnings - Cycle-detection or other resolution warnings
@@ -231,7 +221,7 @@ GroupSync.Manager = (function () {
      *   subscription='invitation' → syncMembers=true, syncManagers=true only if Managers non-empty
      *   type='Security' (any sub) → skipped entirely
      *
-     * @param {Array<{Name: string, Email: string, Subscription: string, Type: string, Members: string, Managers: string}>} groupDefinitions - All group definitions
+     * @param {Array<{Name: string, Email: string, Aliases: string, Subscription: string, Type: string, Members: string, Managers: string}>} groupDefinitions - All group definitions
      * @param {string[]} activeEmails - Active member email addresses (passed to resolveToEmails for 'Members' keyword)
      * @returns {Map<string, DesiredGroupState>}
      */
@@ -300,11 +290,25 @@ GroupSync.Manager = (function () {
         }
 
         const groupEmail = group.Email.toLowerCase().trim();
+
+        // Compute desired aliases: parse Aliases field, normalize, filter to valid @sc3.club only
+        const aliasEntries = Manager.parseEntryList(group.Aliases || '');
+        /** @type {Set<string>} */
+        const aliasSet = new Set();
+        for (const entry of aliasEntries) {
+          const normalized = Manager.normalizeEmail(entry);
+          if (Manager.isValidEmail_(normalized) && normalized.endsWith('@sc3.club')) {
+            aliasSet.add(normalized.toLowerCase());
+          }
+        }
+        const desiredAliases = Array.from(aliasSet).sort();
+
         result.set(groupEmail, {
           groupEmail,
           groupName: group.Name,
           desiredMembers,
           desiredManagers,
+          desiredAliases,
           warnings: allWarnings,
           usedMembersKeyword,
         });
@@ -651,6 +655,7 @@ GroupSync.Manager = (function () {
             state.desiredManagers === null
               ? null
               : state.desiredManagers.filter(e => !lowerExclusions.has(e.toLowerCase())),
+          desiredAliases: state.desiredAliases || [],
           warnings: state.warnings,
           usedMembersKeyword: state.usedMembersKeyword,
         });
@@ -686,6 +691,88 @@ GroupSync.Manager = (function () {
         );
       }
       return result;
+    }
+
+    /**
+     * Scan raw group definitions for alias entries that are either malformed or
+     * belong to a non-sc3 domain.
+     *
+     * Validation rules applied to each alias after normalization:
+     *   1. Malformed — the alias does not match a basic address pattern.
+     *   2. Non-sc3 domain — the alias is valid but not in the @sc3.club domain.
+     *
+     * @param {Array<{Name: string, Aliases: string}>} groupDefinitions
+     * @returns {InvalidAliasEntry[]}
+     */
+    static findInvalidAliases(groupDefinitions) {
+      /** @type {InvalidAliasEntry[]} */
+      const results = [];
+      /** @type {Set<string>} Avoid duplicate entries for the same alias+group */
+      const seen = new Set();
+
+      for (const group of groupDefinitions) {
+        const entries = Manager.parseEntryList(group.Aliases || '');
+        for (const entry of entries) {
+          const normalized = Manager.normalizeEmail(entry);
+          const key = normalized + '|' + group.Name;
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          if (!Manager.isValidEmail_(normalized)) {
+            results.push({ alias: normalized, reason: 'malformed alias', groupName: group.Name });
+            continue;
+          }
+
+          if (!normalized.endsWith('@sc3.club')) {
+            results.push({ alias: normalized, reason: 'non-sc3 domain', groupName: group.Name });
+          }
+        }
+      }
+
+      return results;
+    }
+
+    /**
+     * Compute the list of ADD/REMOVE alias actions needed to reconcile the
+     * actual Google Group aliases with the desired state.
+     *
+     * All alias comparisons are case-insensitive.
+     *
+     * @param {Map<string, DesiredGroupState>} desiredState - Output of computeDesiredState
+     * @param {Map<string, string[]>} actualAliasState - Actual aliases keyed by lowercase group email
+     * @returns {ComputeAliasActionsResult}
+     */
+    static computeAliasActions(desiredState, actualAliasState) {
+      /** @type {AliasAction[]} */
+      const aliasActions = [];
+
+      for (const [groupEmail, desired] of desiredState) {
+        const actualRaw = actualAliasState.get(groupEmail) || [];
+        const actualSet = new Set(actualRaw.map(a => a.toLowerCase()));
+        const desiredSet = new Set((desired.desiredAliases || []).map(a => a.toLowerCase()));
+
+        // ADD: desired alias not in actual
+        for (const alias of desiredSet) {
+          if (!actualSet.has(alias)) {
+            aliasActions.push({ groupEmail: desired.groupEmail, groupName: desired.groupName, alias, action: 'ADD' });
+          }
+        }
+
+        // REMOVE: actual alias not in desired
+        for (const alias of actualSet) {
+          if (!desiredSet.has(alias)) {
+            aliasActions.push({ groupEmail: desired.groupEmail, groupName: desired.groupName, alias, action: 'REMOVE' });
+          }
+        }
+      }
+
+      const aliasSummary = {
+        totalAliasActions: aliasActions.length,
+        aliasAdds: aliasActions.filter(a => a.action === 'ADD').length,
+        aliasRemoves: aliasActions.filter(a => a.action === 'REMOVE').length,
+      };
+
+      return { aliasActions, aliasSummary };
     }
   }
 

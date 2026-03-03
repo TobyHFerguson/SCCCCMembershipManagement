@@ -60,6 +60,59 @@ GroupSync.Internal.fetchActualState_ = function (groupEmails) {
 };
 
 /**
+ * Fetch actual alias state for the given group emails.
+ * Calls GroupSubscription.listAliases() for each group; failures are logged
+ * and skipped so partial results are returned rather than failing entirely.
+ *
+ * @param {string[]} groupEmails - Group email addresses to fetch
+ * @returns {Map<string, string[]>} Map from group email to alias list
+ */
+GroupSync.Internal.fetchActualAliasState_ = function (groupEmails) {
+    /** @type {Map<string, string[]>} */
+    const result = new Map();
+    for (const groupEmail of groupEmails) {
+        try {
+            const aliases = GroupSubscription.listAliases(groupEmail);
+            result.set(groupEmail, aliases);
+        } catch (error) {
+            AppLogger.error('GroupSync', 'Failed to fetch aliases for group ' + groupEmail + ': ' + error.message);
+            // Partial results — continue with other groups
+        }
+    }
+    return result;
+};
+
+/**
+ * Execute alias add/remove actions against Google Groups.
+ * Each action is wrapped in try-catch so failures don't abort the entire run.
+ *
+ * @param {AliasAction[]} aliasActions - List of alias actions to execute
+ * @returns {{ succeeded: AliasAction[], failed: Array<{action: AliasAction, error: string}> }}
+ */
+GroupSync.Internal.executeAliasActions_ = function (aliasActions) {
+    /** @type {AliasAction[]} */
+    const succeeded = [];
+    /** @type {Array<{action: AliasAction, error: string}>} */
+    const failed = [];
+
+    for (const action of aliasActions) {
+        try {
+            if (action.action === 'ADD') {
+                GroupSubscription.addAlias(action.groupEmail, action.alias);
+            } else if (action.action === 'REMOVE') {
+                GroupSubscription.removeAlias(action.groupEmail, action.alias);
+            }
+            succeeded.push(action);
+        } catch (error) {
+            AppLogger.error('GroupSync', 'Alias ' + action.action + ' failed for ' + action.alias + ' in ' + action.groupEmail + ': ' + error.message);
+            failed.push({ action: action, error: error.message });
+        }
+    }
+
+    return { succeeded: succeeded, failed: failed };
+};
+
+/**
  * Execute sync actions against Google Groups via the GroupSubscription adapter.
  * Each action is wrapped in try-catch so failures don't abort the entire run.
  *
@@ -151,6 +204,39 @@ GroupSync.Internal.runSync_ = function (dryRun) {
         AppLogger.warn('GroupSync', 'Proceeding with ' + emailsToExclude.size + ' invalid email(s) excluded: ' + Array.from(emailsToExclude).join(', '));
     }
 
+    // 3b. Validate aliases — detect malformed or non-sc3 domain aliases
+    const invalidAliases = GroupSync.Manager.findInvalidAliases(definitions);
+    const malformedAliases = invalidAliases.filter(function (a) { return a.reason === 'malformed alias'; });
+    const wrongDomainAliases = invalidAliases.filter(function (a) { return a.reason === 'non-sc3 domain'; });
+
+    if (malformedAliases.length > 0) {
+        const lines = malformedAliases.map(function (a) {
+            return '\u2022 ' + a.alias + ' in "' + a.groupName + '"';
+        });
+        ui.alert(
+            'Malformed Aliases Found',
+            'The following aliases in Group Definitions are malformed and will be skipped:\n\n' + lines.join('\n'),
+            ui.ButtonSet.OK
+        );
+        AppLogger.warn('GroupSync', 'Skipping ' + malformedAliases.length + ' malformed alias(es)');
+    }
+
+    if (wrongDomainAliases.length > 0) {
+        const lines = wrongDomainAliases.map(function (a) {
+            return '\u2022 ' + a.alias + ' in "' + a.groupName + '"';
+        });
+        const message =
+            'The following aliases are not in the @sc3.club domain:\n\n' +
+            lines.join('\n') +
+            '\n\nContinue with these aliases ignored, or Cancel to abort?';
+        const response = ui.alert('Invalid Alias Domains Found', message, ui.ButtonSet.OK_CANCEL);
+        if (response !== ui.Button.OK) {
+            AppLogger.info('GroupSync', 'Sync cancelled by user due to invalid alias domains');
+            return;
+        }
+        AppLogger.warn('GroupSync', 'Proceeding with ' + wrongDomainAliases.length + ' non-sc3 alias(es) excluded');
+    }
+
     // 4. Compute desired state
     let desiredState = GroupSync.Manager.computeDesiredState(definitions, activeEmails);
 
@@ -170,8 +256,14 @@ GroupSync.Internal.runSync_ = function (dryRun) {
         ? GroupSync.Manager.removeEmailsFromActualState(actualState, emailsToExclude)
         : actualState;
 
-    // 8. Compute actions
+    // 7c. Fetch actual alias state
+    const actualAliasState = GroupSync.Internal.fetchActualAliasState_(groupEmails);
+
+    // 8. Compute membership actions
     const result = GroupSync.Manager.computeActions(desiredState, filteredActualState);
+
+    // 8b. Compute alias actions
+    const aliasResult = GroupSync.Manager.computeAliasActions(desiredState, actualAliasState);
 
     // 9. Collect groups that used the Members keyword
     /** @type {string[]} */
@@ -184,6 +276,19 @@ GroupSync.Internal.runSync_ = function (dryRun) {
 
     // 10. Format planned actions and ask user to confirm before executing
     const summaryLines = GroupSync.Manager.formatActionsSummary(result);
+
+    // Append alias action summary lines
+    if (aliasResult.aliasActions.length > 0) {
+        summaryLines.push('');
+        summaryLines.push('Alias changes:');
+        for (const a of aliasResult.aliasActions) {
+            summaryLines.push(a.action + ' alias ' + a.alias + ' \u2192 ' + a.groupName);
+        }
+        summaryLines.push(
+            'Alias summary: ' + aliasResult.aliasSummary.aliasAdds + ' add, ' +
+            aliasResult.aliasSummary.aliasRemoves + ' remove'
+        );
+    }
 
     // Prepend Members keyword notice to the dry-run report when applicable
     if (membersKeywordGroups.length > 0) {
@@ -226,8 +331,11 @@ GroupSync.Internal.runSync_ = function (dryRun) {
         return;
     }
 
-    // 13. Execute actions
+    // 13. Execute membership actions
     const execResult = GroupSync.Internal.executeActions_(result.actions);
+
+    // 13b. Execute alias actions
+    const aliasExecResult = GroupSync.Internal.executeAliasActions_(aliasResult.aliasActions);
 
     // 14. Create and persist audit entries for each executed action
     const auditEntries = execResult.succeeded.map(function (action) {
@@ -248,13 +356,32 @@ GroupSync.Internal.runSync_ = function (dryRun) {
             JSON.stringify({ groupEmail: f.action.groupEmail, action: f.action.action, userEmail: f.action.userEmail })
         ));
     });
+    aliasExecResult.succeeded.forEach(function (action) {
+        auditEntries.push(AuditLogEntry.create(
+            'GroupSync',
+            'success',
+            'ALIAS ' + action.action + ' ' + action.alias + ' in ' + action.groupName,
+            undefined,
+            JSON.stringify({ groupEmail: action.groupEmail, action: 'ALIAS_' + action.action, alias: action.alias })
+        ));
+    });
+    aliasExecResult.failed.forEach(function (f) {
+        auditEntries.push(AuditLogEntry.create(
+            'GroupSync',
+            'fail',
+            'ALIAS ' + f.action.action + ' ' + f.action.alias + ' in ' + f.action.groupName,
+            f.error,
+            JSON.stringify({ groupEmail: f.action.groupEmail, action: 'ALIAS_' + f.action.action, alias: f.action.alias })
+        ));
+    });
 
     if (auditEntries.length > 0) {
         AuditPersistence.persistAuditEntries(auditEntries);
     }
 
     // 15. Show results — errors separated from successes by a blank line
-    AppLogger.info('GroupSync', 'Sync completed: ' + execResult.succeeded.length + ' succeeded, ' + execResult.failed.length + ' failed');
+    AppLogger.info('GroupSync', 'Sync completed: ' + execResult.succeeded.length + ' succeeded, ' + execResult.failed.length + ' failed; ' +
+        'aliases: ' + aliasExecResult.succeeded.length + ' succeeded, ' + aliasExecResult.failed.length + ' failed');
 
     const successLines = execResult.succeeded.map(function (action) {
         return action.action + ' ' + action.userEmail + ' in ' + action.groupName + ' (' + action.targetRole + ')';
@@ -262,12 +389,25 @@ GroupSync.Internal.runSync_ = function (dryRun) {
     const failLines = execResult.failed.map(function (f) {
         return 'FAILED: ' + f.action.action + ' ' + f.action.userEmail + ' in ' + f.action.groupName + ': ' + f.error;
     });
+    const aliasSuccessLines = aliasExecResult.succeeded.map(function (action) {
+        return 'ALIAS ' + action.action + ' ' + action.alias + ' in ' + action.groupName;
+    });
+    const aliasFailLines = aliasExecResult.failed.map(function (f) {
+        return 'ALIAS FAILED: ' + f.action.action + ' ' + f.action.alias + ' in ' + f.action.groupName + ': ' + f.error;
+    });
 
-    let resultText = successLines.length > 0 ? successLines.join('\n') : 'No actions were executed.';
+    let resultText = successLines.length > 0 ? successLines.join('\n') : 'No membership actions were executed.';
+    if (aliasSuccessLines.length > 0) {
+        resultText += '\n\n' + aliasSuccessLines.join('\n');
+    }
     if (failLines.length > 0) {
         resultText += '\n\n' + failLines.join('\n');
     }
-    resultText += '\n\nSummary: ' + execResult.succeeded.length + ' succeeded, ' + execResult.failed.length + ' failed.';
+    if (aliasFailLines.length > 0) {
+        resultText += '\n\n' + aliasFailLines.join('\n');
+    }
+    resultText += '\n\nSummary: ' + execResult.succeeded.length + ' membership action(s) succeeded, ' + execResult.failed.length + ' failed; ' +
+        aliasExecResult.succeeded.length + ' alias action(s) succeeded, ' + aliasExecResult.failed.length + ' failed.';
 
     ui.alert('Group Sync Results', resultText, ui.ButtonSet.OK);
 };
