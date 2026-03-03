@@ -131,3 +131,61 @@ GroupSubscription.changeMembersEmail = function (groupEmail, originalEmail, newE
     this.removeMember(groupEmail, originalEmail)
   }
 }
+
+/**
+ * List all email aliases for a Google Group.
+ *
+ * @param {string} groupEmail - The group email address
+ * @returns {string[]} Array of alias email addresses (lowercase)
+ */
+GroupSubscription.listAliases = function (groupEmail) {
+  try {
+    const response = AdminDirectory.Groups.Aliases.list(groupEmail);
+    if (response && response.aliases) {
+      return response.aliases.map(function (a) { return a.alias.toLowerCase(); });
+    }
+    return [];
+  } catch (e) {
+    if (e.message.includes('Resource Not Found:')) {
+      return [];
+    }
+    e.message += ` when listing aliases for group ${groupEmail}`;
+    throw e;
+  }
+};
+
+/**
+ * Add an email alias to a Google Group.
+ *
+ * @param {string} groupEmail - The group email address
+ * @param {string} alias - The alias email address to add
+ */
+GroupSubscription.addAlias = function (groupEmail, alias) {
+  try {
+    AdminDirectory.Groups.Aliases.insert({ alias: alias }, groupEmail);
+  } catch (e) {
+    if (e.message.includes('Entity already exists')) {
+      return;
+    }
+    e.message += ` when adding alias ${alias} to group ${groupEmail}`;
+    throw e;
+  }
+};
+
+/**
+ * Remove an email alias from a Google Group.
+ *
+ * @param {string} groupEmail - The group email address
+ * @param {string} alias - The alias email address to remove
+ */
+GroupSubscription.removeAlias = function (groupEmail, alias) {
+  try {
+    AdminDirectory.Groups.Aliases.remove(groupEmail, alias);
+  } catch (e) {
+    if (e.message.includes('Resource Not Found:')) {
+      return;
+    }
+    e.message += ` when removing alias ${alias} from group ${groupEmail}`;
+    throw e;
+  }
+};

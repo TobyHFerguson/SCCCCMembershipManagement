@@ -1747,14 +1747,26 @@ declare namespace GroupSync {
             actualState: Map<string, ActualMember[]>,
             emailsToRemove: Set<string>
         ): Map<string, ActualMember[]>;
+        static findInvalidAliases(
+            groupDefinitions: ValidatedGroupDefinition[]
+        ): InvalidAliasEntry[];
+        static computeAliasActions(
+            desiredState: Map<string, DesiredGroupState>,
+            actualAliasState: Map<string, string[]>
+        ): { aliasActions: AliasAction[]; aliasSummary: AliasSummary };
     }
     namespace Internal {
         function getActiveEmails_(): string[];
         function getAllMemberEmails_(): string[];
         function fetchActualState_(groupEmails: string[]): Map<string, ActualMember[]>;
+        function fetchActualAliasState_(groupEmails: string[]): Map<string, string[]>;
         function executeActions_(actions: SyncAction[]): {
             succeeded: SyncAction[];
             failed: Array<{ action: SyncAction; error: string }>;
+        };
+        function executeAliasActions_(aliasActions: AliasAction[]): {
+            succeeded: AliasAction[];
+            failed: Array<{ action: AliasAction; error: string }>;
         };
         function runSync_(dryRun?: boolean): void;
     }
@@ -1768,6 +1780,7 @@ interface DesiredGroupState {
     groupName: string;
     desiredMembers: string[] | null;
     desiredManagers: string[] | null;
+    desiredAliases: string[];
     warnings: string[];
     usedMembersKeyword: boolean;
 }
@@ -1777,6 +1790,30 @@ interface InvalidEmailEntry {
     reason: 'malformed email' | 'non-active member' | 'not a club member';
     groupName: string;
     field: 'Members' | 'Managers';
+}
+
+interface InvalidAliasEntry {
+    alias: string;
+    reason: 'malformed alias' | 'non-sc3 domain';
+    groupName: string;
+}
+
+interface AliasAction {
+    groupEmail: string;
+    groupName: string;
+    alias: string;
+    action: 'ADD' | 'REMOVE';
+}
+
+interface AliasSummary {
+    totalAliasActions: number;
+    aliasAdds: number;
+    aliasRemoves: number;
+}
+
+interface ComputeAliasActionsResult {
+    aliasActions: AliasAction[];
+    aliasSummary: AliasSummary;
 }
 
 interface ActualMember {
