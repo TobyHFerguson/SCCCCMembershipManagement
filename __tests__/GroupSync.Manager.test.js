@@ -19,6 +19,7 @@
  * 12. formatActionsSummary    - Human-readable output
  * 13. findInvalidMemberEmails - Detect malformed/non-active emails in definitions
  * 14. removeEmailsFromDesiredState - Filter invalid emails from computed state
+ * 15. removeEmailsFromActualState  - Filter ignored emails from actual state
  */
 
 jest.mock('../src/common/config/Properties.js', () => ({}));
@@ -1416,6 +1417,85 @@ describe('removeEmailsFromDesiredState', () => {
     const map = new Map([['g@sc3.club', state]]);
     const result = Manager.removeEmailsFromDesiredState(map, new Set(['ALICE@SC3.CLUB']));
     expect(result.get('g@sc3.club').desiredMembers).toEqual([]);
+  });
+});
+
+// ============================================================================
+// 15. removeEmailsFromActualState
+// ============================================================================
+
+describe('removeEmailsFromActualState', () => {
+  /** @param {string} email @param {string} [role] */
+  function member(email, role = 'MEMBER') { return { email, role }; }
+
+  test('returns a Map with ignored email removed from a single group', () => {
+    const actual = new Map([
+      ['group@sc3.club', [member('alice@sc3.club'), member('bad@sc3.club')]]
+    ]);
+    const result = Manager.removeEmailsFromActualState(actual, new Set(['bad@sc3.club']));
+    expect(result.get('group@sc3.club').map(m => m.email)).toEqual(['alice@sc3.club']);
+  });
+
+  test('is case-insensitive', () => {
+    const actual = new Map([
+      ['group@sc3.club', [member('Bad@SC3.CLUB'), member('alice@sc3.club')]]
+    ]);
+    const result = Manager.removeEmailsFromActualState(actual, new Set(['bad@sc3.club']));
+    expect(result.get('group@sc3.club').map(m => m.email)).toEqual(['alice@sc3.club']);
+  });
+
+  test('removes email regardless of role (MEMBER, MANAGER)', () => {
+    const actual = new Map([
+      ['group@sc3.club', [member('bad@sc3.club', 'MANAGER'), member('alice@sc3.club')]]
+    ]);
+    const result = Manager.removeEmailsFromActualState(actual, new Set(['bad@sc3.club']));
+    expect(result.get('group@sc3.club').map(m => m.email)).toEqual(['alice@sc3.club']);
+  });
+
+  test('does not remove OWNER role', () => {
+    const actual = new Map([
+      ['group@sc3.club', [member('owner@sc3.club', 'OWNER'), member('bad@sc3.club')]]
+    ]);
+    const result = Manager.removeEmailsFromActualState(actual, new Set(['bad@sc3.club', 'owner@sc3.club']));
+    expect(result.get('group@sc3.club').map(m => m.email)).toEqual(['owner@sc3.club']);
+  });
+
+  test('is non-mutating', () => {
+    const members = [member('alice@sc3.club'), member('bad@sc3.club')];
+    const actual = new Map([['group@sc3.club', members]]);
+    Manager.removeEmailsFromActualState(actual, new Set(['bad@sc3.club']));
+    expect(actual.get('group@sc3.club')).toHaveLength(2);
+  });
+
+  test('empty emailsToRemove returns equivalent state', () => {
+    const actual = new Map([
+      ['group@sc3.club', [member('alice@sc3.club'), member('bob@sc3.club')]]
+    ]);
+    const result = Manager.removeEmailsFromActualState(actual, new Set());
+    expect(result.get('group@sc3.club')).toHaveLength(2);
+  });
+
+  test('handles multiple groups independently', () => {
+    const actual = new Map([
+      ['a@sc3.club', [member('bad@sc3.club'), member('alice@sc3.club')]],
+      ['b@sc3.club', [member('good@sc3.club'), member('bad@sc3.club', 'MANAGER')]],
+    ]);
+    const result = Manager.removeEmailsFromActualState(actual, new Set(['bad@sc3.club']));
+    expect(result.get('a@sc3.club').map(m => m.email)).toEqual(['alice@sc3.club']);
+    expect(result.get('b@sc3.club').map(m => m.email)).toEqual(['good@sc3.club']);
+  });
+
+  test('email not in actual state leaves group unchanged', () => {
+    const actual = new Map([
+      ['group@sc3.club', [member('alice@sc3.club')]]
+    ]);
+    const result = Manager.removeEmailsFromActualState(actual, new Set(['nobody@sc3.club']));
+    expect(result.get('group@sc3.club')).toHaveLength(1);
+  });
+
+  test('empty actual map returns empty map', () => {
+    const result = Manager.removeEmailsFromActualState(new Map(), new Set(['bad@sc3.club']));
+    expect(result.size).toBe(0);
   });
 });
 

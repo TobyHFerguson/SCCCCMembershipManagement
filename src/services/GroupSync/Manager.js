@@ -657,6 +657,36 @@ GroupSync.Manager = (function () {
       }
       return result;
     }
+
+    /**
+     * Return a new actual-state Map with a given set of email addresses removed
+     * from every group's member list. OWNERs are never removed regardless of
+     * whether their email appears in emailsToRemove.
+     *
+     * Together with removeEmailsFromDesiredState this ensures that "ignored"
+     * emails produce no diff actions at all — neither ADDs from the desired
+     * side nor REMOVEs/DEMOTEs from the actual side.
+     *
+     * The original Map is never mutated.
+     *
+     * @param {Map<string, ActualMember[]>} actualState - Actual membership keyed by lowercase group email
+     * @param {Set<string>} emailsToRemove - Email addresses to exclude (case-insensitive)
+     * @returns {Map<string, ActualMember[]>}
+     */
+    static removeEmailsFromActualState(actualState, emailsToRemove) {
+      const lowerExclusions = new Set(
+        Array.from(emailsToRemove).map(e => e.toLowerCase())
+      );
+      /** @type {Map<string, ActualMember[]>} */
+      const result = new Map();
+      for (const [groupEmail, members] of actualState) {
+        result.set(
+          groupEmail,
+          members.filter(m => m.role === 'OWNER' || !lowerExclusions.has(m.email.toLowerCase()))
+        );
+      }
+      return result;
+    }
   }
 
   return Manager;

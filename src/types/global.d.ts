@@ -1743,6 +1743,10 @@ declare namespace GroupSync {
             desiredState: Map<string, DesiredGroupState>,
             emailsToRemove: Set<string>
         ): Map<string, DesiredGroupState>;
+        static removeEmailsFromActualState(
+            actualState: Map<string, ActualMember[]>,
+            emailsToRemove: Set<string>
+        ): Map<string, ActualMember[]>;
     }
     namespace Internal {
         function getActiveEmails_(): string[];

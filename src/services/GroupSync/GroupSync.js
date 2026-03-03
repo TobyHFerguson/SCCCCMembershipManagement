@@ -165,8 +165,13 @@ GroupSync.Internal.runSync_ = function (dryRun) {
     // 7. Fetch actual state
     const actualState = GroupSync.Internal.fetchActualState_(groupEmails);
 
+    // 7b. Remove ignored emails from actual state so they generate no diff actions
+    const filteredActualState = emailsToExclude.size > 0
+        ? GroupSync.Manager.removeEmailsFromActualState(actualState, emailsToExclude)
+        : actualState;
+
     // 8. Compute actions
-    const result = GroupSync.Manager.computeActions(desiredState, actualState);
+    const result = GroupSync.Manager.computeActions(desiredState, filteredActualState);
 
     // 9. Collect groups that used the Members keyword
     /** @type {string[]} */
