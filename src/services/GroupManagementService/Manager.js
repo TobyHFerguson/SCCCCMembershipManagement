@@ -177,6 +177,20 @@ GroupManagementService.Manager = class {
   }
 
   /**
+   * Filter groups to only those visible in the Group Management UI.
+   * Only groups with Subscription 'manual' or 'auto' should be shown.
+   *
+   * @param {ValidatedPublicGroup[]} groups - All public groups
+   * @returns {ValidatedPublicGroup[]} Groups whose Subscription is 'manual' or 'auto'
+   */
+  static filterUserVisibleGroups(groups) {
+    return groups.filter(group => {
+      const sub = group.Subscription.trim().toLowerCase();
+      return sub === 'manual' || sub === 'auto';
+    });
+  }
+
+  /**
    * Build a subscription object from group and member data
    * @param {ValidatedPublicGroup} group - The group
    * @param {GroupMember|null} member - The member (null if not subscribed)

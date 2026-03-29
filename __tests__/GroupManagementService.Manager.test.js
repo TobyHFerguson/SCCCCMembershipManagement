@@ -8,14 +8,15 @@
  * 2. validateDeliveryValue - Delivery value validation
  * 3. validateSubscriptionUpdate - Single update validation
  * 4. validateSubscriptionUpdates - Multiple updates validation
- * 5. buildSubscription - Build single subscription
- * 6. buildUserSubscriptions - Build all subscriptions for a user
- * 7. determineAction - Determine action for a single update
- * 8. calculateActions - Calculate all actions for updates
- * 9. getDeliveryOptionsArray - Convert delivery options to array
- * 10. formatUpdateResult - Format update result
- * 11. normalizeEmail - Email normalization
- * 12. getDeliveryOptions - Get default delivery options
+ * 5. filterUserVisibleGroups - Filter groups by subscription type
+ * 6. buildSubscription - Build single subscription
+ * 7. buildUserSubscriptions - Build all subscriptions for a user
+ * 8. determineAction - Determine action for a single update
+ * 9. calculateActions - Calculate all actions for updates
+ * 10. getDeliveryOptionsArray - Convert delivery options to array
+ * 11. formatUpdateResult - Format update result
+ * 12. normalizeEmail - Email normalization
+ * 13. getDeliveryOptions - Get default delivery options
  */
 
 const { Manager, DEFAULT_DELIVERY_OPTIONS } = require('../src/services/GroupManagementService/Manager');
@@ -220,6 +221,78 @@ describe('GroupManagementService.Manager', () => {
       const result = Manager.validateSubscriptionUpdates(updates);
       expect(result.valid).toBe(false);
       expect(result.error).toContain('index 1');
+    });
+  });
+
+  // ==================== filterUserVisibleGroups Tests ====================
+
+  describe('filterUserVisibleGroups', () => {
+    test('includes groups with manual subscription', () => {
+      const groups = [
+        TestData.createGroup({ Name: 'Manual Group', Email: 'manual@sc3.club', Subscription: 'manual' })
+      ];
+      const result = Manager.filterUserVisibleGroups(groups);
+      expect(result).toHaveLength(1);
+      expect(result[0].Email).toBe('manual@sc3.club');
+    });
+
+    test('includes groups with auto subscription', () => {
+      const groups = [
+        TestData.createGroup({ Name: 'Auto Group', Email: 'auto@sc3.club', Subscription: 'auto' })
+      ];
+      const result = Manager.filterUserVisibleGroups(groups);
+      expect(result).toHaveLength(1);
+      expect(result[0].Email).toBe('auto@sc3.club');
+    });
+
+    test('excludes groups with invitation subscription', () => {
+      const groups = [
+        TestData.createGroup({ Name: 'Invite Group', Email: 'invite@sc3.club', Subscription: 'invitation' })
+      ];
+      const result = Manager.filterUserVisibleGroups(groups);
+      expect(result).toHaveLength(0);
+    });
+
+    test('excludes groups with other subscription values', () => {
+      const groups = [
+        TestData.createGroup({ Name: 'Other Group', Email: 'other@sc3.club', Subscription: 'something-else' })
+      ];
+      const result = Manager.filterUserVisibleGroups(groups);
+      expect(result).toHaveLength(0);
+    });
+
+    test('filters mixed subscription types correctly', () => {
+      const groups = [
+        TestData.createGroup({ Name: 'Auto Group', Email: 'auto@sc3.club', Subscription: 'auto' }),
+        TestData.createGroup({ Name: 'Invite Group', Email: 'invite@sc3.club', Subscription: 'invitation' }),
+        TestData.createGroup({ Name: 'Manual Group', Email: 'manual@sc3.club', Subscription: 'manual' }),
+        TestData.createGroup({ Name: 'Security Group', Email: 'sec@sc3.club', Subscription: 'security' })
+      ];
+      const result = Manager.filterUserVisibleGroups(groups);
+      expect(result).toHaveLength(2);
+      expect(result.map(g => g.Email)).toEqual(['auto@sc3.club', 'manual@sc3.club']);
+    });
+
+    test('handles case-insensitive subscription values', () => {
+      const groups = [
+        TestData.createGroup({ Name: 'Manual Upper', Email: 'm1@sc3.club', Subscription: 'Manual' }),
+        TestData.createGroup({ Name: 'Auto Upper', Email: 'a1@sc3.club', Subscription: 'AUTO' })
+      ];
+      const result = Manager.filterUserVisibleGroups(groups);
+      expect(result).toHaveLength(2);
+    });
+
+    test('handles whitespace in subscription values', () => {
+      const groups = [
+        TestData.createGroup({ Name: 'Padded', Email: 'pad@sc3.club', Subscription: ' manual ' })
+      ];
+      const result = Manager.filterUserVisibleGroups(groups);
+      expect(result).toHaveLength(1);
+    });
+
+    test('returns empty array for empty input', () => {
+      const result = Manager.filterUserVisibleGroups([]);
+      expect(result).toEqual([]);
     });
   });
 

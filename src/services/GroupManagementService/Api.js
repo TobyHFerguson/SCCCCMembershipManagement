@@ -121,8 +121,10 @@ GroupManagementService.Api.handleGetSubscriptions = function(params) {
       // PURE: Normalize email
       const normalizedEmail = GroupManagementService.Manager.normalizeEmail(userEmail);
 
-      // GAS: Get public groups
-      const groups = DataAccess.getPublicGroups();
+      // GAS: Get public groups, filtered to user-visible (manual/auto subscription)
+      const groups = GroupManagementService.Manager.filterUserVisibleGroups(
+        DataAccess.getPublicGroups()
+      );
       
       // GAS: Get member data for each group
       /** @type {Record<string, any>} JUSTIFIED: Google Groups API member objects have unknown/varying shape */
