@@ -3046,7 +3046,7 @@ describe('Manager tests', () => {
       });
       const { newlyStuck, recordsChanged } = manager.classifyStuckTransactions([txn], now);
       expect(txn['SC3 Status']).toBe('Stuck');
-      expect(txn['SC3 Timestamp']).toEqual(MembershipManagement.Utils.dateOnly(new Date(today)));
+      expect(txn['SC3 Timestamp']).toEqual(MembershipManagement.Utils.dateOnly(today));
       expect(newlyStuck).toHaveLength(1);
       expect(recordsChanged).toBe(true);
     });

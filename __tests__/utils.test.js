@@ -19,6 +19,12 @@ describe('utils', () => {
       const result = utils.dateOnly(date);
       expect(result).toEqual(expected);
     })
+    it('should convert UTC timestamps to the local calendar date', () => {
+      const date = new Date('2021-01-02T00:30:00.000Z');
+      const expected = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+      const result = utils.dateOnly(date);
+      expect(result).toEqual(expected);
+    })
     it('should handle strings', () => {
       const date = '2021-01-01T12:34:56';
       const expected = new Date(2021, 0, 1)

@@ -165,9 +165,23 @@ MembershipManagement.Utils.expandTemplate = function(template, row) {
  */
 MembershipManagement.Utils.dateOnly = function(date)  {
   if (!date) date = new Date();
-  if (typeof date === 'string') date = new Date(date);
-  const dateOnly = new Date(date.toISOString().split('T')[0] + "T00:00:00");
-  return dateOnly;
+
+  if (typeof date === 'string') {
+    const trimmed = String(date).trim();
+    const isoDateOnlyMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoDateOnlyMatch) {
+      const year = Number(isoDateOnlyMatch[1]);
+      const month = Number(isoDateOnlyMatch[2]) - 1;
+      const day = Number(isoDateOnlyMatch[3]);
+      return new Date(year, month, day);
+    }
+    date = new Date(trimmed);
+  } else {
+    date = new Date(date);
+  }
+
+  const normalizedDate = new Date(date);
+  return new Date(normalizedDate.getFullYear(), normalizedDate.getMonth(), normalizedDate.getDate());
 }
 
 /**
