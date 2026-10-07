@@ -15,6 +15,7 @@ MembershipManagement.Menu = {
             .addItem('Process Migrations', processMigrations.name)
             .addSeparator()
             .addItem('Sync Groups', 'syncGroups')
+            .addItem('Check RWGPS Club Account', 'checkRWGPSClubAccount')
             .addToUi();
     }
 }
