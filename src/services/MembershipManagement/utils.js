@@ -167,7 +167,7 @@ MembershipManagement.Utils.dateOnly = function(date)  {
   if (!date) date = new Date();
 
   if (typeof date === 'string') {
-    const trimmed = String(date).trim();
+    const trimmed = date.trim();
     const isoDateOnlyMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (isoDateOnlyMatch) {
       const year = Number(isoDateOnlyMatch[1]);
@@ -180,8 +180,7 @@ MembershipManagement.Utils.dateOnly = function(date)  {
     date = new Date(date);
   }
 
-  const normalizedDate = new Date(date);
-  return new Date(normalizedDate.getFullYear(), normalizedDate.getMonth(), normalizedDate.getDate());
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
 /**
@@ -191,7 +190,7 @@ MembershipManagement.Utils.dateOnly = function(date)  {
  * @returns {Member} copy of member with Form key added whose value is the html link to the prefilled renewal form for this member
  */
 MembershipManagement.Utils.addPrefillForm = function(member, prefillFormTemplate)  {
-  const memberCopy = { ...member, Form: null }; // Create a shallow copy to avoid mutating the original member
+  const memberCopy = { ...member, Form: '' }; // Create a shallow copy to avoid mutating the original member
 
   // Map Directory Share booleans to their Google Forms checkbox option text.
   // When true → the checkbox option string (e.g. "Share Name"); when false → "" (unchecked)
